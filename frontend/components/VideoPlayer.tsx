@@ -254,7 +254,7 @@ export function VideoPlayer({ videoUrl, videoPath, videoResolution, isGenerating
       const a = document.createElement('a')
       a.href = displayedVideoUrl
       const suffix = showingUpscaled ? '-upscaled' : ''
-      a.download = `ltx-desktop${suffix}-${Date.now()}.mp4`
+      a.download = `aivs${suffix}-${Date.now()}.mp4`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)

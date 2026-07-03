@@ -67,65 +67,32 @@ class TextHandler(StateHandlerBase):
         return local_available  # use whichever is available
 
     def prepare_text_encoding(self, prompt: str, enhance_prompt: bool) -> None:
-        """Validate settings and prepare text embeddings for a generation run.
+        """Local-only text encoding. Cloud API encoding is disabled.
 
-        Raises RuntimeError with a prefixed message if text encoding is
-        misconfigured, the local encoder is missing, or API encoding fails
-        with no local fallback.
+        Raises RuntimeError if no local text encoder is available.
         """
-        settings = self.state.app_settings.model_copy(deep=True)
-        api_available = bool(settings.ltx_api_key)
         text_encoder_dir = self._config.model_path("text_encoder")
         local_available = text_encoder_dir.exists() and any(text_encoder_dir.iterdir())
 
-        if not api_available and not local_available:
+        if not local_available:
             raise RuntimeError(
-                "TEXT_ENCODING_NOT_CONFIGURED: To generate videos, you need to configure text encoding. "
-                "Either enter an LTX API Key in Settings, or enable the Local Text Encoder."
+                "TEXT_ENCODING_NOT_CONFIGURED: The local text encoder is not installed. "
+                "Please download the text encoder from Settings."
             )
 
-        use_local = self.should_use_local_encoding()
         gemma_root = self.resolve_gemma_root()
-        embeddings = self._prepare_api_embeddings(prompt, enhance_prompt)
 
-        if not use_local and embeddings is None and gemma_root is None:
+        if gemma_root is None:
             raise RuntimeError(
-                "LTX API text encoding failed and local text encoder is not available. "
-                "Please download the text encoder from Settings or check your API key."
+                "TEXT_ENCODING_NOT_CONFIGURED: The local text encoder is not installed. "
+                "Please download the text encoder from Settings."
             )
 
     def resolve_gemma_root(self) -> str | None:
-        if not self.should_use_local_encoding():
-            return None
         text_encoder_dir = self._config.model_path("text_encoder")
         return str(text_encoder_dir)
 
     def _prepare_api_embeddings(self, prompt: str, enhance_prompt: bool) -> TextEncodingResult | None:
-        if self.should_use_local_encoding():
-            self.clear_api_embeddings()
-            return None
-
-        settings = self.state.app_settings.model_copy(deep=True)
-        if not settings.ltx_api_key:
-            self.clear_api_embeddings()
-            return None
-
-        cached = self._get_cached_prompt(prompt, enhance_prompt)
-        if cached is not None:
-            self._set_api_embeddings(cached)
-            return cached
-
-        te = self.state.text_encoder
-        if te is None:
-            return None
-
-        encoded = te.service.encode_via_api(
-            prompt=prompt,
-            api_key=settings.ltx_api_key,
-            checkpoint_path=str(self._config.model_path("checkpoint")),
-            enhance_prompt=enhance_prompt,
-        )
-        if encoded is not None:
-            self._cache_prompt(prompt, enhance_prompt, encoded)
-            self._set_api_embeddings(encoded)
-        return encoded
+        # Cloud text encoding is disabled — only local encoding is supported.
+        self.clear_api_embeddings()
+        return None

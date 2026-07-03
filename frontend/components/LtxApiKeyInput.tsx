@@ -61,12 +61,10 @@ interface LtxApiKeyHelperRowProps {
   stopPropagation?: boolean
 }
 
-export function LtxApiKeyHelperRow({ stopPropagation }: LtxApiKeyHelperRowProps) {
+export function LtxApiKeyHelperRow(_props: LtxApiKeyHelperRowProps) {
   return (
-    <ApiKeyHelperRow
-      stopPropagation={stopPropagation}
-      label="Get API key"
-      onOpenKey={() => window.electronAPI.openLtxApiKeyPage()}
-    />
+    <div className="mt-2 flex items-center justify-between gap-3">
+      <span className="text-xs text-zinc-500">Your key stays in your local app settings.</span>
+    </div>
   )
 }

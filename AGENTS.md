@@ -1,14 +1,22 @@
-# CLAUDE.md
+# AGENTS.md — AI Video Studio
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to AI coding agents working in this repository. It covers
+technical conventions inherited from the codebase. For the **product vision**, read
+[`AGENTS_PRD.md`](AGENTS_PRD.md) first — that document defines what we're building and
+the guardrails that constrain all work here.
+
+> **Origin:** This codebase is a fork of
+> [`deepbeepmeep/LTX-Desktop-WanGP`](https://github.com/deepbeepmeep/LTX-Desktop-WanGP)
+> (itself a fork of `Lightricks/LTX-Desktop`). We are evolving it into AI Video Studio.
 
 ## Project Overview
 
-LTX Desktop is an Electron app for AI video generation using LTX models. Three-layer architecture:
+AI Video Studio is a local-first desktop app for AI image, video, and audio generation,
+powered exclusively by WanGP. Three-layer architecture inherited from the fork:
 
 - **Frontend** (`frontend/`): React 18 + TypeScript + Tailwind CSS renderer
 - **Electron** (`electron/`): Main process managing app lifecycle, IPC, Python backend process, ffmpeg export
-- **Backend** (`backend/`): Python FastAPI server (port 8000) handling ML model orchestration and generation
+- **Backend** (`backend/`): Python FastAPI server (port 8000) handling ML model orchestration and generation via WanGP bridge
 
 ## Common Commands
 
@@ -83,8 +91,13 @@ Key patterns:
 
 ## Key File Locations
 
+- **Product vision & guardrails:** `AGENTS_PRD.md` — read this first for any feature work
+- **Project memory:** `.projectmem/summary.md` (auto-generated) + `.projectmem/PROJECT_MAP.md` (structural map)
 - Backend architecture doc: `backend/architecture.md`
+- WanGP bridge docs: `backend/WANGP_BACKEND.md`
 - Default app settings schema: `settings.json`
 - Electron builder config: `electron-builder.yml`
 - Video editor (largest frontend file): `frontend/views/VideoEditor.tsx`
+- Generation space (primary MVP target): `frontend/views/GenSpace.tsx`
 - Project types: `frontend/types/project.ts`
+- Backend composition root: `backend/app_handler.py`

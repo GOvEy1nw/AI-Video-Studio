@@ -1,4 +1,4 @@
-"""Bridge LTX Desktop requests to WanGP's in-process session API."""
+"""Bridge AiVS requests to WanGP's in-process session API."""
 
 from __future__ import annotations
 

@@ -110,7 +110,6 @@ def test_handler_attributes_are_wired(test_state):
     assert test_state.video_generation is not None
     assert test_state.image_generation is not None
     assert test_state.health is not None
-    assert test_state.suggest_gap_prompt is not None
     assert test_state.retake is not None
     assert test_state.ic_lora is not None
 

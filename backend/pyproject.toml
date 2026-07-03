@@ -1,7 +1,7 @@
 [project]
-name = "ltx-desktop-backend"
-version = "1.0.0"
-description = "LTX-2 Video Generation Backend"
+name = "aivs-backend"
+version = "0.1.0"
+description = "AiVS Generation Backend"
 requires-python = ">=3.12"
 dependencies = [
     "pillow>=10.3.0",

@@ -28,7 +28,6 @@ from server_utils.media_validation import (
 )
 from services.interfaces import LTXAPIClient
 from state.app_state_types import AppState
-from state.app_settings import should_video_generate_with_ltx_api
 
 if TYPE_CHECKING:
     from runtime_config.runtime_config import RuntimeConfig
@@ -85,82 +84,7 @@ class VideoGenerationHandler(StateHandlerBase):
         if self._config.wangp_enabled:
             return self._generate_via_wangp(req)
 
-        if should_video_generate_with_ltx_api(
-            force_api_generations=self._config.force_api_generations,
-            settings=self.state.app_settings,
-        ):
-            return self._generate_forced_api(req)
-
-        if self._generation.is_generation_running():
-            raise HTTPError(409, "Generation already in progress")
-
-        resolution = req.resolution
-
-        duration = int(float(req.duration))
-        fps = int(float(req.fps))
-
-        audio_path = normalize_optional_path(req.audioPath)
-        if audio_path:
-            return self._generate_a2v(req, duration, fps, audio_path=audio_path)
-
-        logger.info("Resolution %s - using fast pipeline", resolution)
-
-        RESOLUTION_MAP_16_9: dict[str, tuple[int, int]] = {
-            "540p": (960, 544),
-            "720p": (1280, 704),
-            "1080p": (1920, 1088),
-        }
-
-        def get_16_9_size(res: str) -> tuple[int, int]:
-            return RESOLUTION_MAP_16_9.get(res, (960, 544))
-
-        def get_9_16_size(res: str) -> tuple[int, int]:
-            w, h = get_16_9_size(res)
-            return h, w
-
-        match req.aspectRatio:
-            case "9:16":
-                width, height = get_9_16_size(resolution)
-            case "16:9":
-                width, height = get_16_9_size(resolution)
-
-        num_frames = self._compute_num_frames(duration, fps)
-
-        image = None
-        image_path = normalize_optional_path(req.imagePath)
-        if image_path:
-            image = self._prepare_image(image_path, width, height)
-            logger.info("Image: %s -> %sx%s", image_path, width, height)
-
-        generation_id = self._make_generation_id()
-        seed = self._resolve_seed()
-
-        try:
-            self._pipelines.load_gpu_pipeline("fast", should_warm=False)
-            self._generation.start_generation(generation_id)
-
-            output_path = self.generate_video(
-                prompt=req.prompt,
-                image=image,
-                height=height,
-                width=width,
-                num_frames=num_frames,
-                fps=fps,
-                seed=seed,
-                camera_motion=req.cameraMotion,
-                negative_prompt=req.negativePrompt,
-            )
-
-            self._generation.complete_generation(output_path)
-            return GenerateVideoResponse(status="complete", video_path=output_path)
-
-        except Exception as e:
-            self._generation.fail_generation(str(e))
-            if "cancelled" in str(e).lower():
-                logger.info("Generation cancelled by user")
-                return GenerateVideoResponse(status="cancelled")
-
-            raise HTTPError(500, str(e)) from e
+        raise HTTPError(503, "WANGP_REQUIRED: Video generation is only available via WanGP.")
 
     def generate_video(
         self,

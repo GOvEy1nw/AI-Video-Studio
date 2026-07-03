@@ -1,6 +1,6 @@
-appId: com.lightricks.ltx-desktop
-productName: LTX Desktop
-copyright: Copyright © 2026 Lightricks
+appId: ai.video.studio
+productName: AiVS
+copyright: Copyright © 2026 AI Video Studio
 
 directories:
   output: release
@@ -50,12 +50,6 @@ win:
         - x64
   icon: resources/icon.ico
   artifactName: ${productName}-Setup.${ext}
-  azureSignOptions:
-    publisherName: Lightricks Ltd
-    endpoint: https://eus.codesigning.azure.net/
-    certificateProfileName: ltx-desktop-trusted
-    codeSigningAccountName: ltx-trusted
-    excludeEnvironmentCredential: true
 
 nsis:
   oneClick: false
@@ -66,26 +60,10 @@ nsis:
   installerHeaderIcon: resources/icon.ico
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  shortcutName: LTX Desktop
+  shortcutName: AiVS
 
 mac:
   hardenedRuntime: true
-  entitlements: resources/entitlements.mac.plist
-  entitlementsInherit: resources/entitlements.mac.plist
-  notarize: true
-  signIgnore:
-    # Skip non-binary files in the bundled Python environment during codesign.
-    # Without this, @electron/osx-sign walks all ~25k files to find ~360 Mach-O
-    # binaries, hitting the macOS 10240 open-files-per-process limit.
-    - "/python/.*\\.(py|pyc|pyi|pxd|pyx|h|hpp|cpp|c|cuh|cu|tcl|txt|json|yaml|yml|toml|cfg|md|rst|html|css|enc|msg|cmake|gif|png|jpg|svg|xml|jinja|typed|al)$"
-    - "/python/.*\\.dist-info/"
-  extraResources:
-    - from: python-embed
-      to: python
-      filter:
-        - "**/*"
-        - "!__pycache__/**"
-        - "!*.pyc"
   target:
     - target: dmg
       arch:
@@ -105,5 +83,4 @@ dmg:
 
 publish:
   provider: github
-  owner: Lightricks
-  repo: ltx-desktop
+  repo: AI-Video-Studio

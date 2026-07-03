@@ -1,4 +1,4 @@
-// Project and Asset types for LTX Desktop
+// Project and Asset types for AiVS
 
 // Parameters needed to regenerate a shot
 export interface GenerationParams {

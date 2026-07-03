@@ -3,8 +3,6 @@ import fs from 'fs'
 import path from 'path'
 
 export interface AppState {
-  analyticsEnabled?: boolean
-  installationId?: string
   projectAssetsPath?: string
   [key: string]: unknown
 }
@@ -38,7 +36,7 @@ export function getProjectAssetsPath(): string {
     cachedProjectAssetsPath = state.projectAssetsPath
     return cachedProjectAssetsPath
   }
-  const defaultPath = path.join(app.getPath('downloads'), 'Ltx Desktop Assets')
+  const defaultPath = path.join(app.getPath('downloads'), 'AiVS Assets')
   cachedProjectAssetsPath = defaultPath
   return defaultPath
 }

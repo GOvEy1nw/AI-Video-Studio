@@ -19,7 +19,6 @@ from _routes.health import router as health_router
 from _routes.ic_lora import router as ic_lora_router
 from _routes.image_gen import router as image_gen_router
 from _routes.models import router as models_router
-from _routes.suggest_gap_prompt import router as suggest_gap_prompt_router
 from _routes.retake import router as retake_router
 from _routes.runtime_policy import router as runtime_policy_router
 from _routes.settings import router as settings_router
@@ -39,7 +38,7 @@ def create_app(
     *,
     handler: "AppHandler",
     allowed_origins: list[str] | None = None,
-    title: str = "LTX-2 Video Generation Server",
+    title: str = "AiVS Generation Server",
     auth_token: str = "",
 ) -> FastAPI:
     """Create a configured FastAPI app bound to the provided handler."""
@@ -108,7 +107,6 @@ def create_app(
     app.include_router(models_router)
     app.include_router(settings_router)
     app.include_router(image_gen_router)
-    app.include_router(suggest_gap_prompt_router)
     app.include_router(retake_router)
     app.include_router(ic_lora_router)
     app.include_router(runtime_policy_router)

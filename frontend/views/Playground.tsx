@@ -15,9 +15,7 @@ import { useGeneration } from '../hooks/use-generation'
 import { useRetake } from '../hooks/use-retake'
 import { useBackend } from '../hooks/use-backend'
 import { useProjects } from '../contexts/ProjectContext'
-import { useAppSettings } from '../contexts/AppSettingsContext'
 import { fileUrlToPath } from '../lib/url-to-path'
-import { sanitizeForcedApiVideoSettings } from '../lib/api-video-options'
 import { RetakePanel } from '../components/RetakePanel'
 
 const DEFAULT_SETTINGS: GenerationSettings = {
@@ -36,7 +34,6 @@ const DEFAULT_SETTINGS: GenerationSettings = {
 
 export function Playground() {
   const { goHome } = useProjects()
-  const { forceApiGenerations, shouldVideoGenerateWithLtxApi } = useAppSettings()
   const [mode, setMode] = useState<GenerationMode>('text-to-video')
   const [prompt, setPrompt] = useState('')
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
@@ -46,21 +43,10 @@ export function Playground() {
   const { status, processStatus } = useBackend()
 
   useEffect(() => {
-    if (!shouldVideoGenerateWithLtxApi || mode === 'text-to-image') return
-    setSettings((prev) => sanitizeForcedApiVideoSettings({ ...prev, model: 'fast' }))
-  }, [mode, shouldVideoGenerateWithLtxApi])
-
-  // Force pro model + resolution when audio is attached (A2V only supports pro @ 1080p 16:9)
-  useEffect(() => {
     if (selectedAudio && mode !== 'text-to-image') {
-      setSettings(prev => {
-        if (shouldVideoGenerateWithLtxApi) {
-          return sanitizeForcedApiVideoSettings({ ...prev, model: 'pro' }, { hasAudio: true })
-        }
-        return prev.model !== 'pro' ? { ...prev, model: 'pro' } : prev
-      })
+      setSettings(prev => prev.model !== 'pro' ? { ...prev, model: 'pro' } : prev)
     }
-  }, [mode, selectedAudio, shouldVideoGenerateWithLtxApi]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [mode, selectedAudio]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle mode change
   const handleModeChange = (newMode: GenerationMode) => {
@@ -117,12 +103,9 @@ export function Playground() {
 
     if (mode === 'text-to-image') {
       if (!prompt.trim()) return
-      // Text-to-image behavior remains tied to raw forceApiGenerations in useGeneration.
       generateImage(prompt, settings)
     } else {
-      const effectiveVideoSettings = shouldVideoGenerateWithLtxApi
-        ? sanitizeForcedApiVideoSettings(settings)
-        : settings
+      const effectiveVideoSettings = { ...settings }
       // Auto-detect: if image is loaded → I2V, otherwise → T2V
       if (!prompt.trim()) return
       const imagePath = selectedImage ? fileUrlToPath(selectedImage) : null
@@ -150,8 +133,7 @@ export function Playground() {
     setSelectedImage(null)
     setSelectedAudio(null)
     const baseDefaults = { ...DEFAULT_SETTINGS }
-    const shouldSanitizeVideoSettings = shouldVideoGenerateWithLtxApi && mode !== 'text-to-image'
-    setSettings(shouldSanitizeVideoSettings ? sanitizeForcedApiVideoSettings(baseDefaults) : baseDefaults)
+    setSettings(baseDefaults)
     if (mode !== 'text-to-image') setMode('text-to-video')
     setRetakeInput({
       videoUrl: null,
@@ -195,7 +177,7 @@ export function Playground() {
         
         <div className="flex items-center gap-4 pr-20">
           {/* Model Status Dropdown */}
-          {!forceApiGenerations && <ModelStatusDropdown />}
+          <ModelStatusDropdown />
           
           {/* GPU Info */}
           {status.gpuInfo && (
@@ -260,7 +242,6 @@ export function Playground() {
                 onSettingsChange={setSettings}
                 disabled={isBusy}
                 mode={mode}
-                forceApiGenerations={shouldVideoGenerateWithLtxApi}
                 hasAudio={!!selectedAudio}
               />
             )}

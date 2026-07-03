@@ -26,6 +26,8 @@ backend/**/__pycache__/
 # Claude Code
 .claude/
 
+.git/
+
 # IDE
 .idea/
 .vscode/*
@@ -77,3 +79,7 @@ Wan2GP/
 
 # Downloaded during CI for Windows NSIS installer
 resources/vc_redist.x64.exe
+
+.projectmem/events.jsonl
+.projectmem/watch.pid
+.projectmem/watch.log

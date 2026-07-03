@@ -49,50 +49,7 @@ class ImageGenerationHandler(StateHandlerBase):
         if self._config.wangp_enabled:
             return self._generate_via_wangp(req)
 
-        if self._generation.is_generation_running():
-            raise HTTPError(409, "Generation already in progress")
-
-        width = (req.width // 16) * 16
-        height = (req.height // 16) * 16
-        num_images = max(1, min(12, req.numImages))
-
-        generation_id = uuid.uuid4().hex[:8]
-        settings = self.state.app_settings.model_copy(deep=True)
-        if settings.seed_locked:
-            seed = settings.locked_seed
-            logger.info("Using locked seed for image: %s", seed)
-        else:
-            seed = int(time.time()) % 2147483647
-
-        if self._config.force_api_generations:
-            return self._generate_via_api(
-                prompt=req.prompt,
-                width=width,
-                height=height,
-                num_inference_steps=req.numSteps,
-                seed=seed,
-                num_images=num_images,
-            )
-
-        try:
-            self._pipelines.load_zit_to_gpu()
-            self._generation.start_generation(generation_id)
-            output_paths = self.generate_image(
-                prompt=req.prompt,
-                width=width,
-                height=height,
-                num_inference_steps=req.numSteps,
-                seed=seed,
-                num_images=num_images,
-            )
-            self._generation.complete_generation(output_paths)
-            return GenerateImageResponse(status="complete", image_paths=output_paths)
-        except Exception as e:
-            self._generation.fail_generation(str(e))
-            if "cancelled" in str(e).lower():
-                logger.info("Image generation cancelled by user")
-                return GenerateImageResponse(status="cancelled")
-            raise HTTPError(500, str(e)) from e
+        raise HTTPError(503, "WANGP_REQUIRED: Image generation is only available via WanGP.")
 
     def _generate_via_wangp(self, req: GenerateImageRequest) -> GenerateImageResponse:
         if self._generation.is_generation_running():

@@ -3,7 +3,7 @@ import {
   KeyboardLayout,
   KeyboardPreset,
   BUILT_IN_PRESETS,
-  LTX_DEFAULT_LAYOUT,
+  AIVS_DEFAULT_LAYOUT,
   cloneLayout,
   ActionId,
 } from '../lib/keyboard-shortcuts'
@@ -27,7 +27,7 @@ interface KeyboardShortcutsState {
 
 const KeyboardShortcutsContext = createContext<KeyboardShortcutsState | null>(null)
 
-const STORAGE_KEY = 'ltx-keyboard-shortcuts'
+const STORAGE_KEY = 'aivs-keyboard-shortcuts'
 
 interface PersistedState {
   activePresetId: string
@@ -52,7 +52,7 @@ function saveToStorage(state: PersistedState) {
 export function KeyboardShortcutsProvider({ children }: { children: React.ReactNode }) {
   const stored = useRef(loadFromStorage())
 
-  const [activePresetId, setActivePresetId] = useState<string>(stored.current?.activePresetId || 'ltx-default')
+  const [activePresetId, setActivePresetId] = useState<string>(stored.current?.activePresetId || 'aivs-default')
   const [customLayout, setCustomLayout] = useState<KeyboardLayout | null>(stored.current?.customLayout || null)
   const [customPresets, setCustomPresets] = useState<KeyboardPreset[]>(stored.current?.customPresets || [])
   const [isEditorOpen, setEditorOpen] = useState(false)
@@ -60,7 +60,7 @@ export function KeyboardShortcutsProvider({ children }: { children: React.ReactN
   // Resolve active layout: if customLayout is set, use it; otherwise use the preset's layout
   const activeLayout: KeyboardLayout = customLayout
     || [...BUILT_IN_PRESETS, ...customPresets].find(p => p.id === activePresetId)?.layout
-    || LTX_DEFAULT_LAYOUT
+    || AIVS_DEFAULT_LAYOUT
 
   // Keep a ref to the active layout so updateBinding always reads the latest
   const activeLayoutRef = useRef(activeLayout)
@@ -112,7 +112,7 @@ export function KeyboardShortcutsProvider({ children }: { children: React.ReactN
   const deleteCustomPreset = useCallback((presetId: string) => {
     setCustomPresets(prev => prev.filter(p => p.id !== presetId))
     if (activePresetId === presetId) {
-      setActivePresetId('ltx-default')
+      setActivePresetId('aivs-default')
       setCustomLayout(null)
     }
   }, [activePresetId])

@@ -23,6 +23,7 @@ export function createWindow(): BrowserWindow {
     height: 900,
     minWidth: 1200,
     minHeight: 700,
+    title: 'AiVS — AI Video Studio',
     icon: appIcon,
     webPreferences: {
       preload: preloadPath,

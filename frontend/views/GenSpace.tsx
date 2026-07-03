@@ -7,22 +7,14 @@ import {
 } from 'lucide-react'
 import { useProjects } from '../contexts/ProjectContext'
 import type { GenSpaceRetakeSource } from '../contexts/ProjectContext'
-import { useAppSettings } from '../contexts/AppSettingsContext'
 import { useGeneration } from '../hooks/use-generation'
 import { useRetake } from '../hooks/use-retake'
 import type { Asset } from '../types/project'
 import { GenerationErrorDialog } from '../components/GenerationErrorDialog'
 import { copyToAssetFolder } from '../lib/asset-copy'
 import { fileUrlToPath } from '../lib/url-to-path'
-import {
-  FORCED_API_VIDEO_FPS,
-  FORCED_API_VIDEO_RESOLUTIONS,
-  getAllowedForcedApiDurations,
-  sanitizeForcedApiVideoSettings,
-} from '../lib/api-video-options'
 import { logger } from '../lib/logger'
 import { RetakePanel } from '../components/RetakePanel'
-import { FreeApiKeyBubble } from '../components/FreeApiKeyBubble'
 
 // Asset card with hover overlays
 function AssetCard({ 
@@ -315,7 +307,6 @@ function PromptBar({
   onInputAudioChange,
   settings,
   onSettingsChange,
-  shouldVideoGenerateWithLtxApi,
   canGenerate,
   buttonLabel,
   buttonIcon,
@@ -344,7 +335,6 @@ function PromptBar({
     audio?: boolean
   }
   onSettingsChange: (settings: any) => void
-  shouldVideoGenerateWithLtxApi: boolean
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const audioInputRef = useRef<HTMLInputElement>(null)
@@ -353,13 +343,8 @@ function PromptBar({
   const isRetake = mode === 'retake'
   const LOCAL_MAX_DURATION: Record<string, number> = { '540p': 20, '720p': 10, '1080p': 5 }
   const localMaxDuration = LOCAL_MAX_DURATION[settings.videoResolution] ?? 20
-  const videoDurationOptions = shouldVideoGenerateWithLtxApi
-    ? [...getAllowedForcedApiDurations(settings.model, settings.videoResolution, settings.fps)]
-    : [5, 6, 8, 10, 20].filter(d => d <= localMaxDuration)
-  const videoResolutionOptions = shouldVideoGenerateWithLtxApi
-    ? (inputAudio ? ['1080p'] : [...FORCED_API_VIDEO_RESOLUTIONS])
-    : ['540p', '720p', '1080p']
-  const videoFpsOptions = shouldVideoGenerateWithLtxApi ? [...FORCED_API_VIDEO_FPS] : [24, 25, 50]
+  const videoDurationOptions = [5, 6, 8, 10, 20].filter(d => d <= localMaxDuration)
+  const videoResolutionOptions = ['540p', '720p', '1080p']
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
@@ -603,24 +588,13 @@ function PromptBar({
               title="MODEL"
               value={settings.model}
               onChange={(v) => onSettingsChange({ ...settings, model: v })}
-              options={
-                shouldVideoGenerateWithLtxApi
-                  ? [
-                      { value: 'fast', label: 'LTX-2.3 Fast (API)', disabled: !!inputAudio, tooltip: inputAudio ? 'Fast model is not available for Audio-to-Video' : undefined },
-                      { value: 'pro', label: 'LTX-2.3 Pro (API)' },
-                    ]
-                  : [
-                      { value: 'fast', label: 'LTX 2.3 Fast' },
-                    ]
-              }
+              options={[
+                { value: 'fast', label: 'LTX 2.3 Fast' },
+              ]}
               trigger={
                 <>
                   <LightricksIcon className="h-3.5 w-3.5" />
-                  <span className="text-zinc-300 font-medium">
-                    {shouldVideoGenerateWithLtxApi
-                      ? (settings.model === 'pro' ? 'LTX-2.3 Pro (API)' : 'LTX-2.3 Fast (API)')
-                      : 'LTX 2.3 Fast'}
-                  </span>
+                  <span className="text-zinc-300 font-medium">LTX 2.3 Fast</span>
                 </>
               }
             />
@@ -659,20 +633,6 @@ function PromptBar({
               }
             />
 
-            {shouldVideoGenerateWithLtxApi && (
-              <SettingsDropdown
-                title="FPS"
-                value={String(settings.fps)}
-                onChange={(v) => onSettingsChange({ ...settings, fps: parseInt(v) })}
-                options={videoFpsOptions.map((value) => ({ value: String(value), label: `${value}` }))}
-                trigger={
-                  <>
-                    <Film className="h-3.5 w-3.5" />
-                    <span>{settings.fps} FPS</span>
-                  </>
-                }
-              />
-            )}
             
             {/* Aspect Ratio dropdown */}
             <SettingsDropdown
@@ -784,7 +744,6 @@ const DEFAULT_VIDEO_SETTINGS = {
 
 export function GenSpace() {
   const { currentProject, currentProjectId, addAsset, addTakeToAsset, deleteAsset, toggleFavorite, genSpaceEditImageUrl, setGenSpaceEditImageUrl, setGenSpaceEditMode, genSpaceAudioUrl, setGenSpaceAudioUrl, genSpaceRetakeSource, setGenSpaceRetakeSource, setPendingRetakeUpdate } = useProjects()
-  const { shouldVideoGenerateWithLtxApi, forceApiGenerations, settings: appSettings } = useAppSettings()
   const [mode, setMode] = useState<'image' | 'video' | 'retake'>('video')
   const [prompt, setPrompt] = useState('')
   const [inputImage, setInputImage] = useState<string | null>(null)
@@ -806,15 +765,8 @@ export function GenSpace() {
       videoDuration: number
     }
   } | null>(null)
-  const [settings, setSettings] = useState(() => ({ ...DEFAULT_VIDEO_SETTINGS }))
-  const applyForcedVideoSettings = useCallback(
-    (next: { model: string; duration: number; videoResolution: string; fps: number; audio: boolean; aspectRatio: string; imageResolution: string; imageSteps: number; variations: number }) => {
-      if (!shouldVideoGenerateWithLtxApi || mode !== 'video') return next
-      return sanitizeForcedApiVideoSettings(next, { hasAudio: !!inputAudio })
-    },
-    [inputAudio, mode, shouldVideoGenerateWithLtxApi],
-  )
-  
+const [settings, setSettings] = useState(() => ({ ...DEFAULT_VIDEO_SETTINGS }))
+
   const {
     generate,
     generateImage,
@@ -890,22 +842,10 @@ export function GenSpace() {
   }, [genSpaceRetakeSource, setGenSpaceRetakeSource])
 
   useEffect(() => {
-    if (!shouldVideoGenerateWithLtxApi || mode !== 'video') return
-    setSettings((prev) => applyForcedVideoSettings({ ...prev, model: 'fast' }))
-  }, [applyForcedVideoSettings, mode, shouldVideoGenerateWithLtxApi])
-
-  useEffect(() => {
     if (retakeError) {
       setLocalError(retakeError)
     }
   }, [retakeError])
-
-  // Force pro model + resolution when audio is attached (A2V only supports pro @ 1080p 16:9)
-  useEffect(() => {
-    if (inputAudio) {
-      setSettings(prev => applyForcedVideoSettings({ ...prev, model: 'pro', aspectRatio: '16:9' }))
-    }
-  }, [inputAudio]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Only show assets that were generated (have generationParams), not imported files
   const assets = (currentProject?.assets || []).filter(a => a.generationParams)
@@ -922,7 +862,7 @@ export function GenSpace() {
     const genMode = inputAudio
       ? 'audio-to-video'
       : inputImage ? 'image-to-video' : 'text-to-video'
-    const savedVideoSettings = applyForcedVideoSettings(settings)
+    const savedVideoSettings = settings
 
     ;(async () => {
       try {
@@ -963,7 +903,7 @@ export function GenSpace() {
         logger.error(`Failed to persist generated video asset: ${err}`)
       }
     })()
-  }, [videoUrl, videoPath, currentProjectId, isGenerating, applyForcedVideoSettings, settings, inputImage, inputAudio, lastPrompt, addAsset, reset])
+  }, [videoUrl, videoPath, currentProjectId, isGenerating, settings, inputImage, inputAudio, lastPrompt, addAsset, reset])
 
   // When retake completes, add as take or new asset
   useEffect(() => {
@@ -1121,7 +1061,7 @@ export function GenSpace() {
       // Extract filesystem path from the file:// URL for the backend
       const imagePath = inputImage ? fileUrlToPath(inputImage) : null
       const audioPath = inputAudio ? fileUrlToPath(inputAudio) : null
-      const videoSettings = applyForcedVideoSettings(settings)
+      const videoSettings = { ...settings }
       if (audioPath) videoSettings.model = 'pro'
 
       generate(
@@ -1376,12 +1316,6 @@ export function GenSpace() {
       {/* Floating prompt panel — wider, responsive, centered */}
       <div className="absolute bottom-5 left-1/2 w-[min(700px,calc(100%-2rem))] -translate-x-1/2">
 
-        <FreeApiKeyBubble
-          forceApiGenerations={forceApiGenerations}
-          hasLtxApiKey={appSettings.hasLtxApiKey}
-          isGenerating={isGenerating}
-        />
-
         {/* Prompt bar */}
         <PromptBar
           mode={mode}
@@ -1398,8 +1332,7 @@ export function GenSpace() {
           inputAudio={inputAudio}
           onInputAudioChange={setInputAudio}
           settings={settings}
-          onSettingsChange={(nextSettings) => setSettings(applyForcedVideoSettings(nextSettings))}
-          shouldVideoGenerateWithLtxApi={shouldVideoGenerateWithLtxApi}
+          onSettingsChange={setSettings}
         />
       </div>
       
