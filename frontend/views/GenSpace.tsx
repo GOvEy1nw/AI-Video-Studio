@@ -3,13 +3,15 @@ import {
   Trash2, Download, Image, Video, X,
   Heart, Film, Volume2, VolumeX, Sparkles,
   Clock, Monitor, ChevronUp, Scissors, Music,
-  ChevronLeft, ChevronRight, Copy, Check
+  ChevronLeft, ChevronRight, Copy, Check, AlertCircle
 } from 'lucide-react'
 import { useProjects } from '../contexts/ProjectContext'
 import type { GenSpaceRetakeSource } from '../contexts/ProjectContext'
 import { useGeneration } from '../hooks/use-generation'
 import { useRetake } from '../hooks/use-retake'
+import { useImageProfiles } from '../hooks/use-image-profiles'
 import type { Asset } from '../types/project'
+import type { ModelProfile } from '../types/model-profiles'
 import { GenerationErrorDialog } from '../components/GenerationErrorDialog'
 import { copyToAssetFolder } from '../lib/asset-copy'
 import { fileUrlToPath } from '../lib/url-to-path'
@@ -274,21 +276,146 @@ function LightricksIcon({ className }: { className?: string }) {
   )
 }
 
-function ZitIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M19.113 12.2515H16.5605L14.008 8.63382L6.04545 19.9068H8.60348L14.0079 12.2518L16.5605 12.2515L11.156 19.9068H13.721L19.113 12.2515V15.8693L16.2716 19.9073V22.0063H2L14.008 5L19.113 12.2515Z" fill="currentColor"/>
-      <path d="M26 22.0064L21.9704 22.0063V19.9151L19.113 15.8693V12.2515L26 22.0064Z" fill="currentColor"/>
-    </svg>
-  )
-}
-
 // Square icon for aspect ratio
 function AspectIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <rect x="3" y="5" width="18" height="14" rx="2" />
     </svg>
+  )
+}
+
+// Profile-driven image-mode controls. Reads the curated profile list
+// from the backend and drives the model/resolution/aspect dropdowns
+// from the selected profile. When the user switches models, the current
+// aspect ratio / resolution tier are kept if the new model supports
+// them, otherwise they fall back to the new model's defaults. Per the
+// Phase 4 brief: never silently keep an invalid resolution from the
+// previous model.
+function ImageModeControls({
+  settings,
+  onSettingsChange,
+  imageProfiles,
+}: {
+  settings: {
+    imageResolution: string
+    imageAspectRatio: string
+    imageProfileId?: string
+  }
+  onSettingsChange: (settings: any) => void
+  imageProfiles: ModelProfile[]
+}) {
+  const selectedProfileId = settings.imageProfileId || 'z_image_turbo'
+  const selectedProfile =
+    imageProfiles.find((p) => p.id === selectedProfileId) || imageProfiles[0]
+
+  // If the selected profile doesn't support the current aspect ratio or
+  // resolution tier, fall back to the profile's defaults. This runs on
+  // every render but only emits a change when the values actually need
+  // to shift, so it won't loop.
+  useEffect(() => {
+    if (!selectedProfile) return
+    const allowedAspects = selectedProfile.ui.allowedAspectRatios
+    const allowedTiers = selectedProfile.ui.allowedResolutionTiers
+    const next: any = { ...settings, imageProfileId: selectedProfile.id }
+    let changed = false
+    if (!allowedAspects.includes(settings.imageAspectRatio)) {
+      next.imageAspectRatio = selectedProfile.ui.defaultAspectRatio
+      changed = true
+    }
+    if (!allowedTiers.includes(settings.imageResolution)) {
+      next.imageResolution = selectedProfile.ui.defaultResolutionTier
+      changed = true
+    }
+    if (changed) {
+      onSettingsChange(next)
+    }
+  }, [selectedProfile, settings, onSettingsChange])
+
+  if (!selectedProfile) {
+    // Profiles not loaded yet — show a placeholder.
+    return (
+      <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-zinc-800/50 text-zinc-500 text-xs">
+        <AlertCircle className="h-3.5 w-3.5" />
+        <span>Loading models…</span>
+      </div>
+    )
+  }
+
+  const isAvailable = selectedProfile.availability === 'available'
+  const isExperimental = selectedProfile.availability === 'experimental'
+  const modelOptions = imageProfiles.map((p) => ({
+    value: p.id,
+    label: p.displayName + (p.status === 'experimental' ? ' (experimental)' : ''),
+    disabled: p.availability === 'missing_model_files' || p.availability === 'unsupported',
+    tooltip:
+      p.availability === 'missing_model_files'
+        ? `${p.displayName} is supported by AiVS, but the required WanGP model files are not installed yet.`
+        : p.status === 'experimental'
+          ? 'Experimental — may be less stable.'
+          : undefined,
+  }))
+
+  return (
+    <>
+      <SettingsDropdown
+        title="IMAGE MODEL"
+        value={selectedProfile.id}
+        onChange={(v) => onSettingsChange({ ...settings, imageProfileId: v })}
+        options={modelOptions}
+        trigger={
+          <>
+            <Sparkles className="h-3.5 w-3.5" />
+            <span className="text-zinc-300 font-medium">{selectedProfile.displayName}</span>
+            {isExperimental && (
+              <span className="text-[9px] uppercase tracking-wider text-amber-500">exp</span>
+            )}
+            <ChevronUp className="h-3 w-3 text-zinc-500" />
+          </>
+        }
+      />
+
+      <div className="w-px h-4 bg-zinc-700 mx-0.5" />
+
+      <SettingsDropdown
+        title="RESOLUTION"
+        value={settings.imageResolution}
+        onChange={(v) => onSettingsChange({ ...settings, imageResolution: v })}
+        options={selectedProfile.ui.allowedResolutionTiers.map((tier) => ({
+          value: tier,
+          label: tier,
+        }))}
+        trigger={
+          <>
+            <Monitor className="h-3.5 w-3.5" />
+            <span>{settings.imageResolution.replace('p', '')}</span>
+          </>
+        }
+      />
+
+      <SettingsDropdown
+        title="ASPECT RATIO"
+        value={settings.imageAspectRatio}
+        onChange={(v) => onSettingsChange({ ...settings, imageAspectRatio: v })}
+        options={selectedProfile.ui.allowedAspectRatios.map((ratio) => ({
+          value: ratio,
+          label: ratio,
+        }))}
+        trigger={
+          <>
+            <AspectIcon className="h-3.5 w-3.5" />
+            <span>{settings.imageAspectRatio}</span>
+          </>
+        }
+      />
+
+      {!isAvailable && !isExperimental && (
+        <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-amber-500/10 text-amber-400 text-[10px]">
+          <AlertCircle className="h-3 w-3" />
+          <span>Model files missing</span>
+        </div>
+      )}
+    </>
   )
 }
 
@@ -310,6 +437,7 @@ function PromptBar({
   canGenerate,
   buttonLabel,
   buttonIcon,
+  imageProfiles,
 }: {
   mode: 'image' | 'video' | 'retake'
   onModeChange: (mode: 'image' | 'video' | 'retake') => void
@@ -331,10 +459,13 @@ function PromptBar({
     fps: number
     aspectRatio: string
     imageResolution: string
+    imageAspectRatio: string
+    imageProfileId?: string
     variations: number
     audio?: boolean
   }
   onSettingsChange: (settings: any) => void
+  imageProfiles: ModelProfile[]
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const audioInputRef = useRef<HTMLInputElement>(null)
@@ -538,50 +669,11 @@ function PromptBar({
         {isRetake ? (
           <div className="text-[10px] text-zinc-500 pr-2">Trim in the panel above, then retake</div>
         ) : mode === 'image' ? (
-          <>
-            {/* Model indicator */}
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-zinc-800/50">
-              <ZitIcon className="h-3.5 w-3.5" />
-              <span className="text-zinc-300 font-medium">Z-Image Turbo</span>
-            </div>
-            
-            {/* Resolution dropdown */}
-            <SettingsDropdown
-              title="IMAGE RESOLUTION"
-              value={settings.imageResolution}
-              onChange={(v) => onSettingsChange({ ...settings, imageResolution: v })}
-              options={[
-                { value: '1080p', label: '1080p' },
-                { value: '1440p', label: '1440p' },
-                { value: '2048p', label: '2048p' },
-              ]}
-              trigger={
-                <>
-                  <Monitor className="h-3.5 w-3.5" />
-                  <span>{settings.imageResolution.replace('p', '')}</span>
-                </>
-              }
-            />
-            
-            {/* Aspect ratio dropdown */}
-            <SettingsDropdown
-              title="RATIO"
-              value={settings.aspectRatio}
-              onChange={(v) => onSettingsChange({ ...settings, aspectRatio: v })}
-              options={[
-                { value: '16:9', label: '16:9' },
-                { value: '1:1', label: '1:1' },
-                { value: '9:16', label: '9:16' },
-              ]}
-              trigger={
-                <>
-                  <AspectIcon className="h-3.5 w-3.5" />
-                  <span>{settings.aspectRatio}</span>
-                </>
-              }
-            />
-            
-          </>
+          <ImageModeControls
+            settings={settings}
+            onSettingsChange={onSettingsChange}
+            imageProfiles={imageProfiles}
+          />
         ) : (
           <>
             <SettingsDropdown
@@ -736,10 +828,12 @@ const DEFAULT_VIDEO_SETTINGS = {
   videoResolution: '540p',
   fps: 24,
   aspectRatio: '16:9',
-  imageResolution: '1080p',
+  imageResolution: '720p',
   imageSteps: 8,
   variations: 1,
   audio: true,
+  imageProfileId: 'z_image_turbo',
+  imageAspectRatio: '1:1',
 }
 
 export function GenSpace() {
@@ -780,6 +874,8 @@ const [settings, setSettings] = useState(() => ({ ...DEFAULT_VIDEO_SETTINGS }))
     error,
     reset,
   } = useGeneration()
+
+  const { profiles: imageProfiles } = useImageProfiles()
 
   const {
     submitRetake,
@@ -991,14 +1087,15 @@ const [settings, setSettings] = useState(() => ({ ...DEFAULT_VIDEO_SETTINGS }))
               generationParams: {
                 mode: genMode,
                 prompt: lastPrompt,
-                model: 'fast',
+                model: settings.imageProfileId || 'z_image_turbo',
                 duration: 5,
                 resolution: settings.imageResolution,
                 fps: 24,
                 audio: false,
                 cameraMotion: 'none',
-                imageAspectRatio: settings.aspectRatio,
+                imageAspectRatio: settings.imageAspectRatio || settings.aspectRatio,
                 imageSteps: settings.imageSteps,
+                imageProfileId: settings.imageProfileId,
               },
               takes: [{
                 url: finalUrl,
@@ -1051,9 +1148,10 @@ const [settings, setSettings] = useState(() => ({ ...DEFAULT_VIDEO_SETTINGS }))
           audio: false,
           cameraMotion: 'none',
           imageResolution: settings.imageResolution,
-          imageAspectRatio: settings.aspectRatio,
+          imageAspectRatio: settings.imageAspectRatio || settings.aspectRatio,
           imageSteps: settings.imageSteps,
           variations: settings.variations,
+          imageProfileId: settings.imageProfileId,
         }
       )
     } else {
@@ -1333,6 +1431,7 @@ const [settings, setSettings] = useState(() => ({ ...DEFAULT_VIDEO_SETTINGS }))
           onInputAudioChange={setInputAudio}
           settings={settings}
           onSettingsChange={setSettings}
+          imageProfiles={imageProfiles}
         />
       </div>
       

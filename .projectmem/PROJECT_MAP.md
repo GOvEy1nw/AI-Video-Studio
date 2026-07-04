@@ -236,9 +236,29 @@ Integration-style tests with Starlette `TestClient`, mock-free (service fakes on
 | Phase 1 | Local-only product shell (rebrand to AiVS, remove cloud UI) | **Complete** |
 | Phase 2 | WanGP-only generation enforcement | **Complete** |
 | Phase 3 | QuickGen image baseline (1 model end-to-end) | **Complete** |
-| Phase 4 | Curated image model expansion | Pending |
+| Phase 4 | Curated image model expansion | **Complete** — see `docs/PHASE4_DETAILS.md` and `backend/model_profiles/` |
 | Phase 5 | LoRA MVP | Pending |
 | Phase 6 | QuickGen image polish | Pending |
 | Phase 7 | QuickGen video | Pending |
 | Phase 8 | QuickGen audio/TTS | Pending |
 | Phase 9 | Production planning | Pending |
+
+## Phase 4 focus — Curated Image Model Profiles
+
+**Goal:** Add WanGP-supported image models (Krea 2 Turbo next to existing Z-Image Turbo) without turning QuickGen into a raw WanGP settings UI, behind a curated, model-aware profile layer.
+
+**Detailed brief:** `docs/PHASE4_DETAILS.md` is the source of truth for Phase 4 implementation. Read it before starting Phase 4 work.
+
+**Core principle:** WanGP tells us what can exist; AiVS decides what should be visible. The curated profile layer is the source of truth for what AiVS exposes — backend validates that curated profiles still map to a real WanGP-supported model, but does not scrape/infer arbitrary WanGP options into the UI.
+
+**Key implementation areas:**
+- Curated `ModelProfile` registry (backend-owned, exposed via API) — single source of truth for which models appear, supported inputs, aspect ratios, resolution tiers, exact `WxH` per tier/aspect, LoRA capability status, and stability/install state.
+- Two initial visible image profiles: `z_image_turbo` (stable, Phase 3 baseline preserved) and `krea2_turbo` (experimental until smoke-tested end-to-end in AiVS).
+- Resolution resolver: simple UI labels (`1:1` / `16:9` / `9:16`, `540p`/`720p`/`1080p`/`1440p`) → exact WanGP `WxH` (e.g. `1080p 16:9 → 1920x1088`). One curated value per tier+aspect, prefer lower pixel count when ambiguous. No 4K/2160p by default.
+- Frontend: extend existing `ModelSelector` (already works in video mode) into image mode — reuse, do not create a parallel system. Hide/disable unsupported controls per profile (e.g. reference images off for both initial profiles). Do not redesign GenSpace/gallery/cards.
+- Backend: validate profile/resolution/aspect, translate AiVS profile ID → WanGP `model_type`, merge model defaults with user settings, resolve exact resolution, reject invalid combos with friendly errors. Optional WanGP discovery for availability/installed status (validation only, not UI source).
+- Availability states surfaced in UI: Available / Missing model files / Partially installed / Unsupported / Experimental / Hidden — friendly messages, not raw WanGP tracebacks.
+- LoRA capability fields included in profiles now (status `future` for both initial models), but LoRA UI is Phase 5 — do not build it in Phase 4.
+- Model switching keeps current aspect ratio/resolution where the new model supports it, otherwise falls back to nearest supported or model defaults.
+
+**Acceptance:** Phase 4 is complete when image-mode model selector works, both profiles are visible, options are profile-driven (not hardcoded in GenSpace), only curated aspect ratios/tiers are exposed, duplicate same-aspect resolutions are collapsed, backend validates before calling WanGP, generation still routes through WanGP only, inherited project/gallery/card behaviour is unchanged, Z-Image Turbo still works, and Krea 2 Turbo can be selected and tested without breaking the existing image baseline.

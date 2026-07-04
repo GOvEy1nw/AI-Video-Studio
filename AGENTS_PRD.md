@@ -699,12 +699,31 @@ Goal:
 
 Add more WanGP-supported image models without turning QuickGen into a technical settings dump.
 
+> **Detailed brief:** `docs/PHASE4_DETAILS.md` is the source of truth for Phase 4 implementation. Read it before starting Phase 4 work. The notes below summarise it; the detailed brief takes precedence on any conflict.
+
 Tasks:
 
-- add or adapt a lightweight model profile mechanism;
-- add candidate image models one at a time;
-- show installed/missing/experimental states;
-- keep UI simple.
+- add or adapt a lightweight curated model profile mechanism (backend-owned, exposed to frontend via API — single source of truth);
+- add candidate image models one at a time, starting with **Krea 2 Turbo** alongside the existing **Z-Image Turbo** baseline;
+- show installed/missing/experimental states with friendly messages, not raw WanGP tracebacks;
+- keep UI simple — extend the existing `ModelSelector` (already works in video mode) into image mode; do not redesign GenSpace/gallery/cards;
+- curated resolution/aspect-ratio set only: aspect ratios `1:1` / `16:9` / `9:16`, resolution tiers `540p` minimum; no 4K/2160p by default;
+- collapse duplicate same-aspect-ratio resolutions per tier to one curated `WxH` value (prefer lower pixel count when ambiguous);
+- backend resolves simple UI choices to exact WanGP `WxH` (e.g. `1080p 16:9 → 1920x1088`) and validates profile/resolution/aspect before calling WanGP;
+- model switching keeps current aspect ratio/resolution where supported, otherwise falls back to model defaults;
+- include LoRA capability fields in profiles now, but do not build LoRA UI in Phase 4 — that is Phase 5;
+- treat reference images as model-aware — hide/disable for profiles where `referenceImages` is false (both initial profiles are normal prompt-to-image);
+- WanGP discovery is used for validation/availability only, not as the raw UI source;
+- do not switch the WanGP integration to MCP for this phase — continue using the existing in-process WanGP bridge.
+
+Implementation principle:
+
+```text
+WanGP tells us what can exist.
+AiVS decides what should be visible.
+```
+
+The frontend should not scrape or infer arbitrary WanGP options directly into the UI. The curated profile layer remains the source of truth for what AiVS exposes; the backend validates that each curated profile still maps to a real WanGP-supported model.
 
 Definition of done:
 

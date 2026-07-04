@@ -78,10 +78,7 @@ class TestSettingsCamelCaseKeys:
 
 
 class TestGenerateSnakeCaseKeys:
-    def test_snake_case_keys(self, client, test_state, create_fake_model_files):
-        create_fake_model_files()
-        test_state.state.app_settings.use_local_text_encoder = True
-
+    def test_snake_case_keys(self, client, enable_wangp):
         r = client.post("/api/generate", json={"prompt": "test"})
         assert r.status_code == 200
         data = r.json()
@@ -90,8 +87,7 @@ class TestGenerateSnakeCaseKeys:
 
 
 class TestGenerateImageSnakeCaseKeys:
-    def test_snake_case_keys(self, client, create_fake_model_files):
-        create_fake_model_files(include_zit=True)
+    def test_snake_case_keys(self, client, enable_wangp):
         r = client.post("/api/generate-image", json={"prompt": "test"})
         assert r.status_code == 200
         data = r.json()

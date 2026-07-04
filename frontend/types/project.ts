@@ -12,6 +12,7 @@ export interface GenerationParams {
   cameraMotion: string
   imageAspectRatio?: string
   imageSteps?: number
+  imageProfileId?: string  // Phase 4 curated AiVS model profile id
   inputImageUrl?: string // For I2V: the input image used
   inputAudioUrl?: string // For A2V: the input audio used
   retakeVideoPath?: string

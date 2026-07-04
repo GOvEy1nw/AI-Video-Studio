@@ -18,6 +18,7 @@ from _routes.generation import router as generation_router
 from _routes.health import router as health_router
 from _routes.ic_lora import router as ic_lora_router
 from _routes.image_gen import router as image_gen_router
+from _routes.model_profiles import router as model_profiles_router
 from _routes.models import router as models_router
 from _routes.retake import router as retake_router
 from _routes.runtime_policy import router as runtime_policy_router
@@ -110,5 +111,6 @@ def create_app(
     app.include_router(retake_router)
     app.include_router(ic_lora_router)
     app.include_router(runtime_policy_router)
+    app.include_router(model_profiles_router)
 
     return app

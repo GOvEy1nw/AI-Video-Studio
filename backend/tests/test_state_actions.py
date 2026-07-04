@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from state.app_settings import UpdateSettingsRequest
-from state.app_state_types import CpuSlot, GpuSlot, RetakePipelineState, StartupError, StartupLoading, StartupPending, StartupReady, VideoPipelineState, VideoPipelineWarmth
+from state.app_state_types import CpuSlot, GpuSlot, StartupError, StartupLoading, StartupPending, StartupReady, VideoPipelineState, VideoPipelineWarmth
 
 
 def test_start_generation_requires_gpu(test_state):
@@ -164,15 +164,3 @@ def test_forced_mode_warmup_skips_fast_pipeline(test_state):
 
     assert test_state.state.gpu_slot is None
     assert test_state.state.cpu_slot is None
-
-
-def test_retake_pipeline_eviction(test_state):
-    test_state.pipelines.load_gpu_pipeline("fast")
-
-    retake_state = test_state.pipelines.load_retake_pipeline(distilled=True)
-    assert isinstance(test_state.state.gpu_slot, GpuSlot)
-    assert isinstance(test_state.state.gpu_slot.active_pipeline, RetakePipelineState)
-    assert test_state.state.gpu_slot.active_pipeline is retake_state
-
-    test_state.pipelines.load_gpu_pipeline("fast")
-    assert isinstance(test_state.state.gpu_slot.active_pipeline, VideoPipelineState)

@@ -325,7 +325,12 @@ export function useGeneration(): UseGenerationReturn {
       // Skip prompt enhancement for T2I - use original prompt directly
       const finalPrompt = prompt
 
-      const dims = getImageDimensions(settings)
+      // Phase 4: when a curated profile is selected, the backend
+      // resolves the exact WxH from (profileId, tier, aspect). We only
+      // need the legacy getImageDimensions path when no profile is set
+      // (backwards-compatible raw width/height).
+      const hasProfile = !!settings.imageProfileId
+      const dims = hasProfile ? null : getImageDimensions(settings)
       const numSteps = settings.imageSteps || 8
 
       // Poll for progress
@@ -351,19 +356,30 @@ export function useGeneration(): UseGenerationReturn {
           // Ignore polling errors
         }
       }
-      
+
       progressInterval = setInterval(pollProgress, 500)
+
+      // Phase 4: when a curated profile is selected, send the profile
+      // id + tier + aspect and let the backend resolve the exact WxH.
+      // Raw width/height still accepted for backwards compatibility.
+      const body: Record<string, unknown> = {
+        prompt: finalPrompt,
+        numSteps,
+        numImages,
+      }
+      if (hasProfile) {
+        body.modelProfileId = settings.imageProfileId
+        body.aspectRatio = settings.imageAspectRatio || '1:1'
+        body.resolutionTier = settings.imageResolution
+      } else if (dims) {
+        body.width = dims.width
+        body.height = dims.height
+      }
 
       const response = await backendFetch('/api/generate-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: finalPrompt,
-          width: dims.width,
-          height: dims.height,
-          numSteps,
-          numImages,
-        }),
+        body: JSON.stringify(body),
         signal: abortControllerRef.current.signal,
       })
 

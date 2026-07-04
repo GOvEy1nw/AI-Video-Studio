@@ -31,6 +31,7 @@ powered exclusively by WanGP. Three-layer architecture inherited from the fork:
 | `pnpm build:frontend` | Vite frontend build only |
 | `pnpm build:mac` / `pnpm build:win` | Full platform builds |
 | `pnpm setup:dev:mac` / `pnpm setup:dev:win` | One-time dev environment setup |
+| `scripts/install-wangp-stack.ps1` | Install/refresh the WanGP GPU stack (auto-detects NVIDIA GPU, picks cu130/cu128 stack, installs curated wheels). Use `-List` to dry-run detection. |
 
 Run a single backend test: `cd backend && uv run pytest tests/test_generation.py -v --tb=short`
 
@@ -85,9 +86,10 @@ Key patterns:
 
 ## Python Config
 
-- Python 3.13+ (per `.python-version`), managed with `uv`
+- Python 3.11.9 (pinned via `.python-version`), managed with `uv`
 - Pyright strict mode (`backend/pyrightconfig.json`)
 - Dependencies in `backend/pyproject.toml`
+- GPU stack (torch + CUDA kernels) installed via `scripts/install-wangp-stack.ps1`, config at `scripts/wangp-stacks.json`
 
 ## Key File Locations
 

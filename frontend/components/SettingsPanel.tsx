@@ -14,6 +14,11 @@ export interface GenerationSettings {
   imageAspectRatio: string
   imageSteps: number
   variations?: number  // Number of image variations to generate
+  // Phase 4 curated profile id. When set, the backend resolves the
+  // profile, validates tier/aspect, and overrides width/height with the
+  // curated exact WxH. Raw width/height still accepted for backwards
+  // compatibility.
+  imageProfileId?: string
 }
 
 interface SettingsPanelProps {

@@ -237,6 +237,37 @@ class ErrorResponse(BaseModel):
     message: str | None = None
 
 
+class ModelProfileCapabilities(BaseModel):
+    textToImage: bool
+    referenceImages: bool
+    controlImage: bool
+    inpainting: bool
+    lora: str
+
+
+class ModelProfileUi(BaseModel):
+    defaultAspectRatio: str
+    defaultResolutionTier: str
+    allowedAspectRatios: list[str]
+    allowedResolutionTiers: list[str]
+
+
+class ModelProfileResponse(BaseModel):
+    id: str
+    displayName: str
+    mediaType: str
+    visible: bool
+    status: str
+    wangpModelType: str
+    capabilities: ModelProfileCapabilities
+    ui: ModelProfileUi
+    availability: str = "available"
+
+
+class ModelProfileListResponse(BaseModel):
+    profiles: list[ModelProfileResponse]
+
+
 # ============================================================
 # Request Models
 # ============================================================
@@ -262,6 +293,14 @@ class GenerateImageRequest(BaseModel):
     height: int = 1024
     numSteps: int = 4
     numImages: int = 1
+    # Phase 4 curated profile path. When set, the backend resolves the
+    # profile, validates the tier/aspect, and overrides width/height with
+    # the curated exact WxH. Raw width/height still accepted for
+    # backwards compatibility but arbitrary frontend model_type values
+    # cannot bypass the curated profile layer.
+    modelProfileId: str | None = None
+    aspectRatio: Literal["1:1", "16:9", "9:16"] | None = None
+    resolutionTier: Literal["540p", "720p", "1080p", "1440p", "2160p"] | None = None
 
 
 class ModelDownloadRequest(BaseModel):

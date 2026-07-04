@@ -12,6 +12,7 @@ from handlers import (
     HealthHandler,
     IcLoraHandler,
     ImageGenerationHandler,
+    ModelProfilesHandler,
     ModelsHandler,
     PipelinesHandler,
     RetakeHandler,
@@ -221,6 +222,13 @@ class AppHandler:
             ic_lora_model_downloader=ic_lora_model_downloader,
             ic_lora_dir=config.ic_lora_dir,
             outputs_dir=config.outputs_dir,
+        )
+
+        self.model_profiles = ModelProfilesHandler(
+            state=self.state,
+            lock=self._lock,
+            config=config,
+            wangp_bridge=self.wangp_bridge,
         )
 
         self.downloads.cleanup_downloading_dir()

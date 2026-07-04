@@ -13,9 +13,9 @@ def _policy_records(caplog, *, contains: str) -> list[logging.LogRecord]:
     return [record for record in caplog.records if record.name == "logging_policy" and contains in record.getMessage()]
 
 
-def test_http_500_logs_single_traceback(caplog, client, fake_services) -> None:
+def test_http_500_logs_single_traceback(caplog, client, enable_wangp) -> None:
     caplog.set_level(logging.WARNING)
-    fake_services.image_generation_pipeline.raise_on_generate = RuntimeError("GPU OOM")
+    enable_wangp.raise_on_images = RuntimeError("GPU OOM")
 
     response = client.post("/api/generate-image", json={"prompt": "test"})
 
@@ -25,7 +25,7 @@ def test_http_500_logs_single_traceback(caplog, client, fake_services) -> None:
     assert records[0].exc_info is not None
 
 
-def test_http_400_logs_without_traceback(caplog, client) -> None:
+def test_http_400_logs_without_traceback(caplog, client, enable_wangp) -> None:
     caplog.set_level(logging.WARNING)
 
     response = client.post(

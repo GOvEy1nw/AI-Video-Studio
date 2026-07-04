@@ -501,6 +501,12 @@ class VideoGenerationHandler(StateHandlerBase):
 
             self._generation.complete_generation(output_path)
             return GenerateVideoResponse(status="complete", video_path=output_path)
+        except HTTPError as e:
+            # Validation errors (400) and conflict errors (409) are intentional
+            # client responses — propagate them unchanged instead of masking
+            # them as 500 internal errors.
+            self._generation.fail_generation(e.detail)
+            raise
         except Exception as e:
             self._generation.fail_generation(str(e))
             if "cancelled" in str(e).lower():
