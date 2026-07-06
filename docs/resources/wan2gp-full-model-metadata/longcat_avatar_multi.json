@@ -1,0 +1,508 @@
+{
+  "longcat_avatar_multi": {
+    "model_type": "longcat_avatar_multi",
+    "name": "LongCat Avatar Multi 13.6B",
+    "model_def": {
+      "frames_minimum": 5,
+      "frames_steps": 4,
+      "sliding_window": true,
+      "guidance_max_phases": 1,
+      "image_prompt_types_allowed": "TSVL",
+      "video_continuation": true,
+      "sample_solvers": [
+        [
+          "Auto (Continuation = Enhanced HF)",
+          "auto"
+        ],
+        [
+          "Default",
+          ""
+        ],
+        [
+          "Enhanced HF",
+          "enhance_hf"
+        ],
+        [
+          "Distill",
+          "distill"
+        ]
+      ],
+      "text_encoder_URLs": [
+        "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/umt5-xxl/models_t5_umt5-xxl-enc-bf16.safetensors",
+        "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/umt5-xxl/models_t5_umt5-xxl-enc-quanto_int8.safetensors"
+      ],
+      "text_encoder_folder": "umt5-xxl",
+      "fps": 16,
+      "profiles_dir": [
+        "longcat_avatar"
+      ],
+      "audio_guide_label": "Voice to follow",
+      "audio_guide2_label": "Voice to follow #2",
+      "audio_guidance": true,
+      "any_audio_prompt": true,
+      "returns_audio": true,
+      "audio_prompt_choices": true,
+      "audio_prompt_type_sources": {
+        "selection": [
+          "A",
+          "XA",
+          "CAB",
+          "PAB"
+        ],
+        "default": "A",
+        "label": "Voices",
+        "scale": 3
+      },
+      "speaker_locations": true,
+      "image_ref_choices": {
+        "choices": [
+          [
+            "Anchor Reference Image",
+            "KI"
+          ]
+        ],
+        "letters_filter": "KI",
+        "visible": false,
+        "label": "Anchor Reference Image"
+      },
+      "reference_image_enabled": true,
+      "no_background_removal": true,
+      "audio_stride": 2,
+      "name": "LongCat Avatar Multi 13.6B",
+      "architecture": "longcat_avatar",
+      "description": "LongCat Avatar (multi speaker) for dual-audio driven character video.",
+      "multi_speakers_only": true,
+      "URLs": [
+        "https://huggingface.co/DeepBeepMeep/LongCat/resolve/main/longcat_avatar_multi_bf16.safetensors",
+        "https://huggingface.co/DeepBeepMeep/LongCat/resolve/main/longcat_avatar_multi_quanto_bf16_int8.safetensors"
+      ],
+      "ref_img_index": 10,
+      "mask_frame_range": 3,
+      "path": "defaults\\longcat_avatar_multi.json",
+      "_profile_roots": [
+        "profiles"
+      ],
+      "metadata": {
+        "model_type": "longcat_avatar_multi",
+        "family": "longcat",
+        "family_label": "LongCat",
+        "base_model_type": "longcat_avatar",
+        "finetune": false,
+        "main_output": [
+          "video"
+        ],
+        "outputs": [
+          "video",
+          "audio"
+        ],
+        "inputs": [
+          "text",
+          "audio",
+          "image",
+          "video"
+        ],
+        "media_inputs": {
+          "image": {
+            "start": true,
+            "end": false,
+            "reference": true,
+            "single_reference": false,
+            "multiple_references": true,
+            "background": true,
+            "injected_frames": false,
+            "control": false,
+            "mask": false
+          },
+          "video": {
+            "continue": true,
+            "last": true,
+            "control": false,
+            "mask": false
+          },
+          "audio": {
+            "prompt": true,
+            "output": true
+          }
+        },
+        "capabilities": {
+          "text_to_video": true,
+          "image_to_video": true,
+          "video_to_video": true,
+          "text_to_image": false,
+          "image_to_image": false,
+          "text_to_audio": false,
+          "audio_to_audio": false,
+          "audio_to_video": true,
+          "audio_output": true,
+          "inpainting": false,
+          "outpainting": false,
+          "reference_images": true,
+          "background_image": true,
+          "injected_frames": false,
+          "control_image": false,
+          "control_video": false,
+          "video_continuation": true,
+          "sliding_window": true,
+          "lora": true
+        },
+        "setting_values": {
+          "image_prompt_type": {
+            "allowed": "TSVL",
+            "choices": [
+              {
+                "label": "Text/new generation",
+                "value": ""
+              },
+              {
+                "label": "Start image",
+                "value": "S"
+              },
+              {
+                "label": "Continue from source video",
+                "value": "V"
+              },
+              {
+                "label": "Continue from last generated video",
+                "value": "L"
+              }
+            ]
+          },
+          "video_prompt_type": {
+            "guide_preprocessing": null,
+            "mask_preprocessing": null,
+            "guide_custom_choices": null,
+            "image_ref_choices": {
+              "label": "Anchor Reference Image",
+              "letters_filter": "KI",
+              "visible": false,
+              "choices": [
+                {
+                  "label": "Anchor Reference Image",
+                  "value": "KI"
+                }
+              ]
+            },
+            "custom_video_selection": null,
+            "forced": ""
+          },
+          "audio_prompt_type": {
+            "sources": {
+              "default": "A",
+              "label": "Voices",
+              "scale": 3,
+              "choices": [
+                {
+                  "label": "A",
+                  "value": "A"
+                },
+                {
+                  "label": "XA",
+                  "value": "XA"
+                },
+                {
+                  "label": "CAB",
+                  "value": "CAB"
+                },
+                {
+                  "label": "PAB",
+                  "value": "PAB"
+                }
+              ]
+            },
+            "custom_option": null
+          },
+          "model_mode": null,
+          "sample_solver": {
+            "choices": [
+              {
+                "label": "Auto (Continuation = Enhanced HF)",
+                "value": "auto"
+              },
+              {
+                "label": "Default",
+                "value": ""
+              },
+              {
+                "label": "Enhanced HF",
+                "value": "enhance_hf"
+              },
+              {
+                "label": "Distill",
+                "value": "distill"
+              }
+            ]
+          },
+          "prompt_enhancer": null
+        }
+      },
+      "settings": {
+        "num_inference_steps": 50
+      },
+      "model_type": "longcat_avatar_multi"
+    },
+    "metadata": {
+      "model_type": "longcat_avatar_multi",
+      "family": "longcat",
+      "family_label": "LongCat",
+      "base_model_type": "longcat_avatar",
+      "finetune": false,
+      "main_output": [
+        "video"
+      ],
+      "outputs": [
+        "video",
+        "audio"
+      ],
+      "inputs": [
+        "text",
+        "audio",
+        "image",
+        "video"
+      ],
+      "media_inputs": {
+        "image": {
+          "start": true,
+          "end": false,
+          "reference": true,
+          "single_reference": false,
+          "multiple_references": true,
+          "background": true,
+          "injected_frames": false,
+          "control": false,
+          "mask": false
+        },
+        "video": {
+          "continue": true,
+          "last": true,
+          "control": false,
+          "mask": false
+        },
+        "audio": {
+          "prompt": true,
+          "output": true
+        }
+      },
+      "capabilities": {
+        "text_to_video": true,
+        "image_to_video": true,
+        "video_to_video": true,
+        "text_to_image": false,
+        "image_to_image": false,
+        "text_to_audio": false,
+        "audio_to_audio": false,
+        "audio_to_video": true,
+        "audio_output": true,
+        "inpainting": false,
+        "outpainting": false,
+        "reference_images": true,
+        "background_image": true,
+        "injected_frames": false,
+        "control_image": false,
+        "control_video": false,
+        "video_continuation": true,
+        "sliding_window": true,
+        "lora": true
+      },
+      "setting_values": {
+        "image_prompt_type": {
+          "allowed": "TSVL",
+          "choices": [
+            {
+              "label": "Text/new generation",
+              "value": ""
+            },
+            {
+              "label": "Start image",
+              "value": "S"
+            },
+            {
+              "label": "Continue from source video",
+              "value": "V"
+            },
+            {
+              "label": "Continue from last generated video",
+              "value": "L"
+            }
+          ]
+        },
+        "video_prompt_type": {
+          "guide_preprocessing": null,
+          "mask_preprocessing": null,
+          "guide_custom_choices": null,
+          "image_ref_choices": {
+            "label": "Anchor Reference Image",
+            "letters_filter": "KI",
+            "visible": false,
+            "choices": [
+              {
+                "label": "Anchor Reference Image",
+                "value": "KI"
+              }
+            ]
+          },
+          "custom_video_selection": null,
+          "forced": ""
+        },
+        "audio_prompt_type": {
+          "sources": {
+            "default": "A",
+            "label": "Voices",
+            "scale": 3,
+            "choices": [
+              {
+                "label": "A",
+                "value": "A"
+              },
+              {
+                "label": "XA",
+                "value": "XA"
+              },
+              {
+                "label": "CAB",
+                "value": "CAB"
+              },
+              {
+                "label": "PAB",
+                "value": "PAB"
+              }
+            ]
+          },
+          "custom_option": null
+        },
+        "model_mode": null,
+        "sample_solver": {
+          "choices": [
+            {
+              "label": "Auto (Continuation = Enhanced HF)",
+              "value": "auto"
+            },
+            {
+              "label": "Default",
+              "value": ""
+            },
+            {
+              "label": "Enhanced HF",
+              "value": "enhance_hf"
+            },
+            {
+              "label": "Distill",
+              "value": "distill"
+            }
+          ]
+        },
+        "prompt_enhancer": null
+      }
+    },
+    "setting_values": {
+      "image_prompt_type": {
+        "allowed": "TSVL",
+        "choices": [
+          {
+            "label": "Text/new generation",
+            "value": ""
+          },
+          {
+            "label": "Start image",
+            "value": "S"
+          },
+          {
+            "label": "Continue from source video",
+            "value": "V"
+          },
+          {
+            "label": "Continue from last generated video",
+            "value": "L"
+          }
+        ]
+      },
+      "video_prompt_type": {
+        "guide_preprocessing": null,
+        "mask_preprocessing": null,
+        "guide_custom_choices": null,
+        "image_ref_choices": {
+          "label": "Anchor Reference Image",
+          "letters_filter": "KI",
+          "visible": false,
+          "choices": [
+            {
+              "label": "Anchor Reference Image",
+              "value": "KI"
+            }
+          ]
+        },
+        "custom_video_selection": null,
+        "forced": ""
+      },
+      "audio_prompt_type": {
+        "sources": {
+          "default": "A",
+          "label": "Voices",
+          "scale": 3,
+          "choices": [
+            {
+              "label": "A",
+              "value": "A"
+            },
+            {
+              "label": "XA",
+              "value": "XA"
+            },
+            {
+              "label": "CAB",
+              "value": "CAB"
+            },
+            {
+              "label": "PAB",
+              "value": "PAB"
+            }
+          ]
+        },
+        "custom_option": null
+      },
+      "model_mode": null,
+      "sample_solver": {
+        "choices": [
+          {
+            "label": "Auto (Continuation = Enhanced HF)",
+            "value": "auto"
+          },
+          {
+            "label": "Default",
+            "value": ""
+          },
+          {
+            "label": "Enhanced HF",
+            "value": "enhance_hf"
+          },
+          {
+            "label": "Distill",
+            "value": "distill"
+          }
+        ]
+      },
+      "prompt_enhancer": null
+    },
+    "default_settings": {
+      "settings_version": 2.66,
+      "prompt": "A large orange octopus is seen resting on the bottom of the ocean floor, blending in with the sandy and rocky terrain. Its tentacles are spread out around its body, and its eyes are closed. The octopus is unaware of a king crab that is crawling towards it from behind a rock, its claws raised and ready to attack. The crab is brown and spiny, with long legs and antennae. The scene is captured from a wide angle, showing the vastness and depth of the ocean. The water is clear and blue, with rays of sunlight filtering through. The shot is sharp and crisp, with a high dynamic range. The octopus and the crab are in focus, while the background is slightly blurred, creating a depth of field effect.",
+      "resolution": "832x480",
+      "flow_shift": 5.0,
+      "guidance_scale": 4.0,
+      "num_inference_steps": 50,
+      "audio_guidance_scale": 4.0,
+      "sliding_window_overlap": 13,
+      "sliding_window_size": 93,
+      "video_length": 93,
+      "video_prompt_type": "KI",
+      "sample_solver": "auto",
+      "alt_prompt": "",
+      "multi_prompts_gen_type": "PG",
+      "postprocess_audio": "",
+      "replace_voice_method": "",
+      "replace_voice_sample": null,
+      "replace_voice_sample2": null,
+      "image_prompt_type": "",
+      "model_type": "longcat_avatar_multi"
+    }
+  }
+}

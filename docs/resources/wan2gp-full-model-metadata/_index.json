@@ -1,0 +1,1009 @@
+{
+  "exported_count": 200,
+  "failed_count": 0,
+  "output_dir": "wan2gp-full-model-metadata",
+  "include_availability": false,
+  "exported": [
+    {
+      "model_type": "ace_step_v1",
+      "file": "wan2gp-full-model-metadata\\ace_step_v1.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ace_step_v1_5",
+      "file": "wan2gp-full-model-metadata\\ace_step_v1_5.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ace_step_v1_5_turbo_lm_0_6b",
+      "file": "wan2gp-full-model-metadata\\ace_step_v1_5_turbo_lm_0_6b.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ace_step_v1_5_turbo_lm_1_7b",
+      "file": "wan2gp-full-model-metadata\\ace_step_v1_5_turbo_lm_1_7b.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ace_step_v1_5_turbo_lm_4b",
+      "file": "wan2gp-full-model-metadata\\ace_step_v1_5_turbo_lm_4b.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ace_step_v1_5_xl",
+      "file": "wan2gp-full-model-metadata\\ace_step_v1_5_xl.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ace_step_v1_5_xl_turbo_lm_0_6b",
+      "file": "wan2gp-full-model-metadata\\ace_step_v1_5_xl_turbo_lm_0_6b.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ace_step_v1_5_xl_turbo_lm_1_7b",
+      "file": "wan2gp-full-model-metadata\\ace_step_v1_5_xl_turbo_lm_1_7b.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ace_step_v1_5_xl_turbo_lm_4b",
+      "file": "wan2gp-full-model-metadata\\ace_step_v1_5_xl_turbo_lm_4b.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "alpha",
+      "file": "wan2gp-full-model-metadata\\alpha.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "alpha2",
+      "file": "wan2gp-full-model-metadata\\alpha2.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "alpha2_sf",
+      "file": "wan2gp-full-model-metadata\\alpha2_sf.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "alpha_sf",
+      "file": "wan2gp-full-model-metadata\\alpha_sf.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "animate",
+      "file": "wan2gp-full-model-metadata\\animate.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "bernini",
+      "file": "wan2gp-full-model-metadata\\bernini.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "bernini_1.3B",
+      "file": "wan2gp-full-model-metadata\\bernini_1.3B.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "chatterbox",
+      "file": "wan2gp-full-model-metadata\\chatterbox.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "chrono_edit",
+      "file": "wan2gp-full-model-metadata\\chrono_edit.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "chrono_edit_distill",
+      "file": "wan2gp-full-model-metadata\\chrono_edit_distill.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "dramabox_audio",
+      "file": "wan2gp-full-model-metadata\\dramabox_audio.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "fantasy",
+      "file": "wan2gp-full-model-metadata\\fantasy.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "flf2v_720p",
+      "file": "wan2gp-full-model-metadata\\flf2v_720p.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "flux",
+      "file": "wan2gp-full-model-metadata\\flux.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "flux2_dev",
+      "file": "wan2gp-full-model-metadata\\flux2_dev.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "flux2_dev_nvfp4",
+      "file": "wan2gp-full-model-metadata\\flux2_dev_nvfp4.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "flux2_klein_4b",
+      "file": "wan2gp-full-model-metadata\\flux2_klein_4b.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "flux2_klein_9b",
+      "file": "wan2gp-full-model-metadata\\flux2_klein_9b.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "flux2_klein_base_4b",
+      "file": "wan2gp-full-model-metadata\\flux2_klein_base_4b.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "flux2_klein_base_9b",
+      "file": "wan2gp-full-model-metadata\\flux2_klein_base_9b.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "flux_chroma",
+      "file": "wan2gp-full-model-metadata\\flux_chroma.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "flux_chroma_radiance",
+      "file": "wan2gp-full-model-metadata\\flux_chroma_radiance.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "flux_dev_kontext",
+      "file": "wan2gp-full-model-metadata\\flux_dev_kontext.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "flux_dev_kontext_dreamomni2",
+      "file": "wan2gp-full-model-metadata\\flux_dev_kontext_dreamomni2.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "flux_dev_umo",
+      "file": "wan2gp-full-model-metadata\\flux_dev_umo.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "flux_dev_uso",
+      "file": "wan2gp-full-model-metadata\\flux_dev_uso.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "flux_krea",
+      "file": "wan2gp-full-model-metadata\\flux_krea.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "flux_schnell",
+      "file": "wan2gp-full-model-metadata\\flux_schnell.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "flux_srpo",
+      "file": "wan2gp-full-model-metadata\\flux_srpo.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "flux_srpo_uso",
+      "file": "wan2gp-full-model-metadata\\flux_srpo_uso.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "fun_inp",
+      "file": "wan2gp-full-model-metadata\\fun_inp.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "fun_inp_1.3B",
+      "file": "wan2gp-full-model-metadata\\fun_inp_1.3B.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "heartmula_oss_3b",
+      "file": "wan2gp-full-model-metadata\\heartmula_oss_3b.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "heartmula_rl_oss_3b_20260123",
+      "file": "wan2gp-full-model-metadata\\heartmula_rl_oss_3b_20260123.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "hidream_o1",
+      "file": "wan2gp-full-model-metadata\\hidream_o1.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "hidream_o1_dev",
+      "file": "wan2gp-full-model-metadata\\hidream_o1_dev.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "hidream_o1_dev_2604",
+      "file": "wan2gp-full-model-metadata\\hidream_o1_dev_2604.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "hunyuan",
+      "file": "wan2gp-full-model-metadata\\hunyuan.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "hunyuan_1_5_480_i2v",
+      "file": "wan2gp-full-model-metadata\\hunyuan_1_5_480_i2v.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "hunyuan_1_5_480_i2v_step_distilled",
+      "file": "wan2gp-full-model-metadata\\hunyuan_1_5_480_i2v_step_distilled.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "hunyuan_1_5_480_t2v",
+      "file": "wan2gp-full-model-metadata\\hunyuan_1_5_480_t2v.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "hunyuan_1_5_480_t2v_lightx2v",
+      "file": "wan2gp-full-model-metadata\\hunyuan_1_5_480_t2v_lightx2v.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "hunyuan_1_5_i2v",
+      "file": "wan2gp-full-model-metadata\\hunyuan_1_5_i2v.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "hunyuan_1_5_t2v",
+      "file": "wan2gp-full-model-metadata\\hunyuan_1_5_t2v.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "hunyuan_1_5_upsampler",
+      "file": "wan2gp-full-model-metadata\\hunyuan_1_5_upsampler.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "hunyuan_1_5_upsampler_1080",
+      "file": "wan2gp-full-model-metadata\\hunyuan_1_5_upsampler_1080.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "hunyuan_avatar",
+      "file": "wan2gp-full-model-metadata\\hunyuan_avatar.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "hunyuan_custom",
+      "file": "wan2gp-full-model-metadata\\hunyuan_custom.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "hunyuan_custom_audio",
+      "file": "wan2gp-full-model-metadata\\hunyuan_custom_audio.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "hunyuan_custom_edit",
+      "file": "wan2gp-full-model-metadata\\hunyuan_custom_edit.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "hunyuan_i2v",
+      "file": "wan2gp-full-model-metadata\\hunyuan_i2v.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "hunyuan_t2v_accvideo",
+      "file": "wan2gp-full-model-metadata\\hunyuan_t2v_accvideo.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "hunyuan_t2v_fast",
+      "file": "wan2gp-full-model-metadata\\hunyuan_t2v_fast.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "i2v",
+      "file": "wan2gp-full-model-metadata\\i2v.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "i2v_2_2",
+      "file": "wan2gp-full-model-metadata\\i2v_2_2.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "i2v_2_2_Enhanced_Lightning_v2",
+      "file": "wan2gp-full-model-metadata\\i2v_2_2_Enhanced_Lightning_v2.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "i2v_2_2_Enhanced_Lightning_v2_svi2pro",
+      "file": "wan2gp-full-model-metadata\\i2v_2_2_Enhanced_Lightning_v2_svi2pro.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "i2v_2_2_multitalk",
+      "file": "wan2gp-full-model-metadata\\i2v_2_2_multitalk.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "i2v_2_2_svi2pro",
+      "file": "wan2gp-full-model-metadata\\i2v_2_2_svi2pro.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "i2v_720p",
+      "file": "wan2gp-full-model-metadata\\i2v_720p.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "i2v_fusionix",
+      "file": "wan2gp-full-model-metadata\\i2v_fusionix.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "i2v_nvfp4",
+      "file": "wan2gp-full-model-metadata\\i2v_nvfp4.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ideogram4",
+      "file": "wan2gp-full-model-metadata\\ideogram4.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ideogram4_nf4",
+      "file": "wan2gp-full-model-metadata\\ideogram4_nf4.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ideogram4_turbotime",
+      "file": "wan2gp-full-model-metadata\\ideogram4_turbotime.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "index_tts2",
+      "file": "wan2gp-full-model-metadata\\index_tts2.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "infinitetalk",
+      "file": "wan2gp-full-model-metadata\\infinitetalk.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "infinitetalk_multi",
+      "file": "wan2gp-full-model-metadata\\infinitetalk_multi.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "joyai_echo",
+      "file": "wan2gp-full-model-metadata\\joyai_echo.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "k5_lite_i2v",
+      "file": "wan2gp-full-model-metadata\\k5_lite_i2v.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "k5_lite_t2v",
+      "file": "wan2gp-full-model-metadata\\k5_lite_t2v.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "k5_lite_t2v_10s_distil",
+      "file": "wan2gp-full-model-metadata\\k5_lite_t2v_10s_distil.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "k5_lite_t2v_10s_distil_sparse",
+      "file": "wan2gp-full-model-metadata\\k5_lite_t2v_10s_distil_sparse.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "k5_lite_t2v_5s_distil",
+      "file": "wan2gp-full-model-metadata\\k5_lite_t2v_5s_distil.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "k5_pro_i2v",
+      "file": "wan2gp-full-model-metadata\\k5_pro_i2v.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "k5_pro_t2v",
+      "file": "wan2gp-full-model-metadata\\k5_pro_t2v.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "k5_pro_t2v_10s_sft",
+      "file": "wan2gp-full-model-metadata\\k5_pro_t2v_10s_sft.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "k5_pro_t2v_10s_sft_sparse",
+      "file": "wan2gp-full-model-metadata\\k5_pro_t2v_10s_sft_sparse.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "kiwi_edit",
+      "file": "wan2gp-full-model-metadata\\kiwi_edit.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "kiwi_edit_instruct_only",
+      "file": "wan2gp-full-model-metadata\\kiwi_edit_instruct_only.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "kiwi_edit_reference_only",
+      "file": "wan2gp-full-model-metadata\\kiwi_edit_reference_only.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "krea2_raw",
+      "file": "wan2gp-full-model-metadata\\krea2_raw.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "krea2_turbo",
+      "file": "wan2gp-full-model-metadata\\krea2_turbo.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "kugelaudio_0_open",
+      "file": "wan2gp-full-model-metadata\\kugelaudio_0_open.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "longcat_avatar",
+      "file": "wan2gp-full-model-metadata\\longcat_avatar.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "longcat_avatar_multi",
+      "file": "wan2gp-full-model-metadata\\longcat_avatar_multi.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "longcat_avatar_v1_5",
+      "file": "wan2gp-full-model-metadata\\longcat_avatar_v1_5.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "longcat_video",
+      "file": "wan2gp-full-model-metadata\\longcat_video.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ltx2_19B",
+      "file": "wan2gp-full-model-metadata\\ltx2_19B.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ltx2_19B_nvfp4",
+      "file": "wan2gp-full-model-metadata\\ltx2_19B_nvfp4.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ltx2_22B",
+      "file": "wan2gp-full-model-metadata\\ltx2_22B.json",
+      "serialisation_notes_count": 2
+    },
+    {
+      "model_type": "ltx2_22B_1_1",
+      "file": "wan2gp-full-model-metadata\\ltx2_22B_1_1.json",
+      "serialisation_notes_count": 2
+    },
+    {
+      "model_type": "ltx2_22B_1_1_edit_anything",
+      "file": "wan2gp-full-model-metadata\\ltx2_22B_1_1_edit_anything.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ltx2_22B_distilled",
+      "file": "wan2gp-full-model-metadata\\ltx2_22B_distilled.json",
+      "serialisation_notes_count": 2
+    },
+    {
+      "model_type": "ltx2_22B_distilled_1_1",
+      "file": "wan2gp-full-model-metadata\\ltx2_22B_distilled_1_1.json",
+      "serialisation_notes_count": 2
+    },
+    {
+      "model_type": "ltx2_22B_distilled_1_1_edit_anything",
+      "file": "wan2gp-full-model-metadata\\ltx2_22B_distilled_1_1_edit_anything.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ltx2_22B_distilled_edit_anything",
+      "file": "wan2gp-full-model-metadata\\ltx2_22B_distilled_edit_anything.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ltx2_22B_distilled_gguf_q4_k_m",
+      "file": "wan2gp-full-model-metadata\\ltx2_22B_distilled_gguf_q4_k_m.json",
+      "serialisation_notes_count": 2
+    },
+    {
+      "model_type": "ltx2_22B_distilled_gguf_q6_k",
+      "file": "wan2gp-full-model-metadata\\ltx2_22B_distilled_gguf_q6_k.json",
+      "serialisation_notes_count": 2
+    },
+    {
+      "model_type": "ltx2_22B_distilled_gguf_q8_0",
+      "file": "wan2gp-full-model-metadata\\ltx2_22B_distilled_gguf_q8_0.json",
+      "serialisation_notes_count": 2
+    },
+    {
+      "model_type": "ltx2_22B_edit_anything",
+      "file": "wan2gp-full-model-metadata\\ltx2_22B_edit_anything.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ltx2_22B_msr",
+      "file": "wan2gp-full-model-metadata\\ltx2_22B_msr.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ltx2_22B_nvfp4",
+      "file": "wan2gp-full-model-metadata\\ltx2_22B_nvfp4.json",
+      "serialisation_notes_count": 2
+    },
+    {
+      "model_type": "ltx2_distilled",
+      "file": "wan2gp-full-model-metadata\\ltx2_distilled.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ltx2_distilled_gguf_q4_k_m",
+      "file": "wan2gp-full-model-metadata\\ltx2_distilled_gguf_q4_k_m.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ltx2_distilled_gguf_q6_k",
+      "file": "wan2gp-full-model-metadata\\ltx2_distilled_gguf_q6_k.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ltx2_distilled_gguf_q8_0",
+      "file": "wan2gp-full-model-metadata\\ltx2_distilled_gguf_q8_0.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ltxv_13B",
+      "file": "wan2gp-full-model-metadata\\ltxv_13B.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ltxv_distilled",
+      "file": "wan2gp-full-model-metadata\\ltxv_distilled.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "lucy_edit",
+      "file": "wan2gp-full-model-metadata\\lucy_edit.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "lucy_edit_1_1",
+      "file": "wan2gp-full-model-metadata\\lucy_edit_1_1.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "lucy_edit_fastwan",
+      "file": "wan2gp-full-model-metadata\\lucy_edit_fastwan.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "lucy_edit_fastwan_1_1",
+      "file": "wan2gp-full-model-metadata\\lucy_edit_fastwan_1_1.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "lynx",
+      "file": "wan2gp-full-model-metadata\\lynx.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "magi_human",
+      "file": "wan2gp-full-model-metadata\\magi_human.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "magi_human_distill",
+      "file": "wan2gp-full-model-metadata\\magi_human_distill.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "magi_human_distill_sr1080",
+      "file": "wan2gp-full-model-metadata\\magi_human_distill_sr1080.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "magi_human_sr1080",
+      "file": "wan2gp-full-model-metadata\\magi_human_sr1080.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "mocha",
+      "file": "wan2gp-full-model-metadata\\mocha.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "moviigen",
+      "file": "wan2gp-full-model-metadata\\moviigen.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "multitalk",
+      "file": "wan2gp-full-model-metadata\\multitalk.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "multitalk_720p",
+      "file": "wan2gp-full-model-metadata\\multitalk_720p.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "omnivoice",
+      "file": "wan2gp-full-model-metadata\\omnivoice.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ovi",
+      "file": "wan2gp-full-model-metadata\\ovi.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ovi_1_1",
+      "file": "wan2gp-full-model-metadata\\ovi_1_1.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ovi_1_1_10s",
+      "file": "wan2gp-full-model-metadata\\ovi_1_1_10s.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ovi_1_1_10s_fastwan",
+      "file": "wan2gp-full-model-metadata\\ovi_1_1_10s_fastwan.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ovi_1_1_fastwan",
+      "file": "wan2gp-full-model-metadata\\ovi_1_1_fastwan.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ovi_fastwan",
+      "file": "wan2gp-full-model-metadata\\ovi_fastwan.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "phantom_1.3B",
+      "file": "wan2gp-full-model-metadata\\phantom_1.3B.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "phantom_14B",
+      "file": "wan2gp-full-model-metadata\\phantom_14B.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "pi_flux2",
+      "file": "wan2gp-full-model-metadata\\pi_flux2.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "pi_flux2_nvfp4",
+      "file": "wan2gp-full-model-metadata\\pi_flux2_nvfp4.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "qwen3_tts_base",
+      "file": "wan2gp-full-model-metadata\\qwen3_tts_base.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "qwen3_tts_customvoice",
+      "file": "wan2gp-full-model-metadata\\qwen3_tts_customvoice.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "qwen3_tts_voicedesign",
+      "file": "wan2gp-full-model-metadata\\qwen3_tts_voicedesign.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "qwen_image_20B",
+      "file": "wan2gp-full-model-metadata\\qwen_image_20B.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "qwen_image_2512_20B",
+      "file": "wan2gp-full-model-metadata\\qwen_image_2512_20B.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "qwen_image_edit_20B",
+      "file": "wan2gp-full-model-metadata\\qwen_image_edit_20B.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "qwen_image_edit_plus2_20B",
+      "file": "wan2gp-full-model-metadata\\qwen_image_edit_plus2_20B.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "qwen_image_edit_plus_20B",
+      "file": "wan2gp-full-model-metadata\\qwen_image_edit_plus_20B.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "qwen_image_edit_plus_20B_nunchaku_r128_fp4",
+      "file": "wan2gp-full-model-metadata\\qwen_image_edit_plus_20B_nunchaku_r128_fp4.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "qwen_image_edit_plus_20B_nunchaku_r128_int4",
+      "file": "wan2gp-full-model-metadata\\qwen_image_edit_plus_20B_nunchaku_r128_int4.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "qwen_image_layered_20B",
+      "file": "wan2gp-full-model-metadata\\qwen_image_layered_20B.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "recam_1.3B",
+      "file": "wan2gp-full-model-metadata\\recam_1.3B.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "scail",
+      "file": "wan2gp-full-model-metadata\\scail.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "scail2_14B",
+      "file": "wan2gp-full-model-metadata\\scail2_14B.json",
+      "serialisation_notes_count": 2
+    },
+    {
+      "model_type": "scenema_audio",
+      "file": "wan2gp-full-model-metadata\\scenema_audio.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "sky_df_1.3B",
+      "file": "wan2gp-full-model-metadata\\sky_df_1.3B.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "sky_df_14B",
+      "file": "wan2gp-full-model-metadata\\sky_df_14B.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "sky_df_720p_14B",
+      "file": "wan2gp-full-model-metadata\\sky_df_720p_14B.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "stable_audio3_medium",
+      "file": "wan2gp-full-model-metadata\\stable_audio3_medium.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "stable_audio3_small",
+      "file": "wan2gp-full-model-metadata\\stable_audio3_small.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "stable_audio3_small_sfx",
+      "file": "wan2gp-full-model-metadata\\stable_audio3_small_sfx.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "standin",
+      "file": "wan2gp-full-model-metadata\\standin.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "steadydancer",
+      "file": "wan2gp-full-model-metadata\\steadydancer.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "t2v",
+      "file": "wan2gp-full-model-metadata\\t2v.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "t2v_1.3B",
+      "file": "wan2gp-full-model-metadata\\t2v_1.3B.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "t2v_1.3B_nvfp4",
+      "file": "wan2gp-full-model-metadata\\t2v_1.3B_nvfp4.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "t2v_2_2",
+      "file": "wan2gp-full-model-metadata\\t2v_2_2.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "t2v_fusionix",
+      "file": "wan2gp-full-model-metadata\\t2v_fusionix.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "t2v_nexus_1.3B",
+      "file": "wan2gp-full-model-metadata\\t2v_nexus_1.3B.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "t2v_sf",
+      "file": "wan2gp-full-model-metadata\\t2v_sf.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ti2v_2_2",
+      "file": "wan2gp-full-model-metadata\\ti2v_2_2.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ti2v_2_2_fastwan",
+      "file": "wan2gp-full-model-metadata\\ti2v_2_2_fastwan.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "vace_1.3B",
+      "file": "wan2gp-full-model-metadata\\vace_1.3B.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "vace_14B",
+      "file": "wan2gp-full-model-metadata\\vace_14B.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "vace_14B_2_2",
+      "file": "wan2gp-full-model-metadata\\vace_14B_2_2.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "vace_14B_cocktail",
+      "file": "wan2gp-full-model-metadata\\vace_14B_cocktail.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "vace_14B_cocktail_2_2",
+      "file": "wan2gp-full-model-metadata\\vace_14B_cocktail_2_2.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "vace_14B_fusionix",
+      "file": "wan2gp-full-model-metadata\\vace_14B_fusionix.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "vace_14B_lightning_3p_2_2",
+      "file": "wan2gp-full-model-metadata\\vace_14B_lightning_3p_2_2.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "vace_14B_sf",
+      "file": "wan2gp-full-model-metadata\\vace_14B_sf.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "vace_ditto_14B",
+      "file": "wan2gp-full-model-metadata\\vace_ditto_14B.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "vace_fun_14B_2_2",
+      "file": "wan2gp-full-model-metadata\\vace_fun_14B_2_2.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "vace_fun_14B_cocktail_2_2",
+      "file": "wan2gp-full-model-metadata\\vace_fun_14B_cocktail_2_2.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "vace_lynx_14B",
+      "file": "wan2gp-full-model-metadata\\vace_lynx_14B.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "vace_multitalk_14B",
+      "file": "wan2gp-full-model-metadata\\vace_multitalk_14B.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "vace_standin_14B",
+      "file": "wan2gp-full-model-metadata\\vace_standin_14B.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "vista4d",
+      "file": "wan2gp-full-model-metadata\\vista4d.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "vista4d_720p",
+      "file": "wan2gp-full-model-metadata\\vista4d_720p.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "wanmove",
+      "file": "wan2gp-full-model-metadata\\wanmove.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "z_image",
+      "file": "wan2gp-full-model-metadata\\z_image.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "z_image_base",
+      "file": "wan2gp-full-model-metadata\\z_image_base.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "z_image_control",
+      "file": "wan2gp-full-model-metadata\\z_image_control.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "z_image_control2",
+      "file": "wan2gp-full-model-metadata\\z_image_control2.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "z_image_control2_1",
+      "file": "wan2gp-full-model-metadata\\z_image_control2_1.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "z_image_control2_1_8s",
+      "file": "wan2gp-full-model-metadata\\z_image_control2_1_8s.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "z_image_nunchaku_r128_fp4",
+      "file": "wan2gp-full-model-metadata\\z_image_nunchaku_r128_fp4.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "z_image_nunchaku_r256_int4",
+      "file": "wan2gp-full-model-metadata\\z_image_nunchaku_r256_int4.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "z_image_twinflow_turbo",
+      "file": "wan2gp-full-model-metadata\\z_image_twinflow_turbo.json",
+      "serialisation_notes_count": 0
+    }
+  ],
+  "failed": []
+}

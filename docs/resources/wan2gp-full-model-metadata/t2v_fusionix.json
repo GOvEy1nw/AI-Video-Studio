@@ -1,0 +1,571 @@
+{
+  "t2v_fusionix": {
+    "model_type": "t2v_fusionix",
+    "name": "Wan2.1 Text2video FusioniX 14B",
+    "model_def": {
+      "i2v_class": false,
+      "t2v_class": true,
+      "multitalk_class": false,
+      "standin_class": false,
+      "lynx_class": false,
+      "alpha_class": false,
+      "wan_5B_class": false,
+      "vace_class": false,
+      "bernini_class": false,
+      "scail2": false,
+      "color_correction": true,
+      "svi2pro": false,
+      "i2v_2_2": false,
+      "text_encoder_URLs": [
+        "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/umt5-xxl/models_t5_umt5-xxl-enc-bf16.safetensors",
+        "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/umt5-xxl/models_t5_umt5-xxl-enc-quanto_int8.safetensors"
+      ],
+      "text_encoder_folder": "umt5-xxl",
+      "vae_upsampler": [
+        1,
+        2
+      ],
+      "vae_block_size": 16,
+      "profiles_dir": [
+        "wan"
+      ],
+      "group": "wan",
+      "fps": 16,
+      "frames_minimum": 5,
+      "frames_steps": 4,
+      "sliding_window": true,
+      "multiple_submodels": false,
+      "guidance_max_phases": 3,
+      "perturbation": true,
+      "flow_shift": true,
+      "cfg_zero": true,
+      "cfg_star": true,
+      "adaptive_projected_guidance": true,
+      "tea_cache": true,
+      "mag_cache": true,
+      "keep_frames_video_guide_not_supported": false,
+      "sample_solvers": [
+        [
+          "unipc",
+          "unipc"
+        ],
+        [
+          "euler",
+          "euler"
+        ],
+        [
+          "dpm++",
+          "dpm++"
+        ],
+        [
+          "flowmatch causvid",
+          "causvid"
+        ],
+        [
+          "lcm + ltx",
+          "lcm"
+        ]
+      ],
+      "sub_parallel_windows": false,
+      "self_refiner": true,
+      "guide_custom_choices": {
+        "choices": [
+          [
+            "Use Text Prompt Only",
+            ""
+          ],
+          [
+            "Video to Video guided by Text Prompt",
+            "GUV"
+          ],
+          [
+            "Video to Video guided by Text Prompt and Restricted to the Area of the Video Mask",
+            "GVA"
+          ]
+        ],
+        "default": "",
+        "show_label": false,
+        "letters_filter": "GUVA",
+        "label": "Video to Video"
+      },
+      "mask_preprocessing": {
+        "selection": [
+          "",
+          "A"
+        ],
+        "visible": false
+      },
+      "v2i_switch_supported": true,
+      "image_prompt_types_allowed": "TVL",
+      "NAG": true,
+      "name": "Wan2.1 Text2video FusioniX 14B",
+      "architecture": "t2v",
+      "description": "A powerful merged text-to-video model based on the original WAN 2.1 T2V model, enhanced using multiple open-source components and LoRAs to boost motion realism, temporal consistency, and expressive detail.",
+      "URLs": [
+        "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/Wan14BT2VFusioniX_fp16.safetensors",
+        "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/Wan14BT2VFusioniX_quanto_fp16_int8.safetensors",
+        "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/Wan14BT2VFusioniX_quanto_bf16_int8.safetensors"
+      ],
+      "auto_quantize": true,
+      "path": "defaults\\t2v_fusionix.json",
+      "_profile_roots": [
+        "profiles"
+      ],
+      "metadata": {
+        "model_type": "t2v_fusionix",
+        "family": "wan",
+        "family_label": "Wan2.1",
+        "base_model_type": "t2v",
+        "finetune": false,
+        "main_output": [
+          "image",
+          "video"
+        ],
+        "outputs": [
+          "image",
+          "video"
+        ],
+        "inputs": [
+          "text",
+          "video"
+        ],
+        "media_inputs": {
+          "image": {
+            "start": false,
+            "end": false,
+            "reference": false,
+            "single_reference": false,
+            "multiple_references": false,
+            "background": false,
+            "injected_frames": false,
+            "control": false,
+            "mask": false
+          },
+          "video": {
+            "continue": true,
+            "last": true,
+            "control": true,
+            "mask": true
+          },
+          "audio": {
+            "prompt": false,
+            "output": false
+          }
+        },
+        "capabilities": {
+          "text_to_video": true,
+          "image_to_video": false,
+          "video_to_video": true,
+          "text_to_image": true,
+          "image_to_image": false,
+          "text_to_audio": false,
+          "audio_to_audio": false,
+          "audio_to_video": false,
+          "audio_output": false,
+          "inpainting": true,
+          "outpainting": false,
+          "reference_images": false,
+          "background_image": false,
+          "injected_frames": false,
+          "control_image": false,
+          "control_video": true,
+          "video_continuation": true,
+          "sliding_window": true,
+          "lora": true
+        },
+        "setting_values": {
+          "image_prompt_type": {
+            "allowed": "TVL",
+            "choices": [
+              {
+                "label": "Text/new generation",
+                "value": ""
+              },
+              {
+                "label": "Continue from source video",
+                "value": "V"
+              },
+              {
+                "label": "Continue from last generated video",
+                "value": "L"
+              }
+            ]
+          },
+          "video_prompt_type": {
+            "guide_preprocessing": null,
+            "mask_preprocessing": {
+              "visible": false,
+              "choices": [
+                {
+                  "label": "None",
+                  "value": ""
+                },
+                {
+                  "label": "A",
+                  "value": "A"
+                }
+              ]
+            },
+            "guide_custom_choices": {
+              "default": "",
+              "label": "Video to Video",
+              "letters_filter": "GUVA",
+              "show_label": false,
+              "choices": [
+                {
+                  "label": "Use Text Prompt Only",
+                  "value": ""
+                },
+                {
+                  "label": "Video to Video guided by Text Prompt",
+                  "value": "GUV"
+                },
+                {
+                  "label": "Video to Video guided by Text Prompt and Restricted to the Area of the Video Mask",
+                  "value": "GVA"
+                }
+              ]
+            },
+            "image_ref_choices": null,
+            "custom_video_selection": null,
+            "forced": ""
+          },
+          "audio_prompt_type": {
+            "sources": null,
+            "custom_option": null
+          },
+          "model_mode": null,
+          "sample_solver": {
+            "choices": [
+              {
+                "label": "unipc",
+                "value": "unipc"
+              },
+              {
+                "label": "euler",
+                "value": "euler"
+              },
+              {
+                "label": "dpm++",
+                "value": "dpm++"
+              },
+              {
+                "label": "flowmatch causvid",
+                "value": "causvid"
+              },
+              {
+                "label": "lcm + ltx",
+                "value": "lcm"
+              }
+            ]
+          },
+          "prompt_enhancer": null
+        }
+      },
+      "settings": {
+        "negative_prompt": "",
+        "prompt": "",
+        "resolution": "832x480",
+        "video_length": 81,
+        "seed": -1,
+        "num_inference_steps": 8,
+        "guidance_scale": 1,
+        "flow_shift": 5,
+        "embedded_guidance_scale": 6,
+        "repeat_generation": 1,
+        "multi_images_gen_type": 0,
+        "tea_cache_setting": 0,
+        "tea_cache_start_step_perc": 0,
+        "loras_multipliers": "",
+        "temporal_upsampling": "",
+        "spatial_upsampling": "",
+        "RIFLEx_setting": 0,
+        "perturbation_switch": 0,
+        "perturbation_start_perc": 10,
+        "perturbation_end_perc": 90,
+        "cfg_star_switch": 0,
+        "cfg_zero_step": -1,
+        "prompt_enhancer": "",
+        "activated_loras": []
+      },
+      "model_type": "t2v_fusionix"
+    },
+    "metadata": {
+      "model_type": "t2v_fusionix",
+      "family": "wan",
+      "family_label": "Wan2.1",
+      "base_model_type": "t2v",
+      "finetune": false,
+      "main_output": [
+        "image",
+        "video"
+      ],
+      "outputs": [
+        "image",
+        "video"
+      ],
+      "inputs": [
+        "text",
+        "video"
+      ],
+      "media_inputs": {
+        "image": {
+          "start": false,
+          "end": false,
+          "reference": false,
+          "single_reference": false,
+          "multiple_references": false,
+          "background": false,
+          "injected_frames": false,
+          "control": false,
+          "mask": false
+        },
+        "video": {
+          "continue": true,
+          "last": true,
+          "control": true,
+          "mask": true
+        },
+        "audio": {
+          "prompt": false,
+          "output": false
+        }
+      },
+      "capabilities": {
+        "text_to_video": true,
+        "image_to_video": false,
+        "video_to_video": true,
+        "text_to_image": true,
+        "image_to_image": false,
+        "text_to_audio": false,
+        "audio_to_audio": false,
+        "audio_to_video": false,
+        "audio_output": false,
+        "inpainting": true,
+        "outpainting": false,
+        "reference_images": false,
+        "background_image": false,
+        "injected_frames": false,
+        "control_image": false,
+        "control_video": true,
+        "video_continuation": true,
+        "sliding_window": true,
+        "lora": true
+      },
+      "setting_values": {
+        "image_prompt_type": {
+          "allowed": "TVL",
+          "choices": [
+            {
+              "label": "Text/new generation",
+              "value": ""
+            },
+            {
+              "label": "Continue from source video",
+              "value": "V"
+            },
+            {
+              "label": "Continue from last generated video",
+              "value": "L"
+            }
+          ]
+        },
+        "video_prompt_type": {
+          "guide_preprocessing": null,
+          "mask_preprocessing": {
+            "visible": false,
+            "choices": [
+              {
+                "label": "None",
+                "value": ""
+              },
+              {
+                "label": "A",
+                "value": "A"
+              }
+            ]
+          },
+          "guide_custom_choices": {
+            "default": "",
+            "label": "Video to Video",
+            "letters_filter": "GUVA",
+            "show_label": false,
+            "choices": [
+              {
+                "label": "Use Text Prompt Only",
+                "value": ""
+              },
+              {
+                "label": "Video to Video guided by Text Prompt",
+                "value": "GUV"
+              },
+              {
+                "label": "Video to Video guided by Text Prompt and Restricted to the Area of the Video Mask",
+                "value": "GVA"
+              }
+            ]
+          },
+          "image_ref_choices": null,
+          "custom_video_selection": null,
+          "forced": ""
+        },
+        "audio_prompt_type": {
+          "sources": null,
+          "custom_option": null
+        },
+        "model_mode": null,
+        "sample_solver": {
+          "choices": [
+            {
+              "label": "unipc",
+              "value": "unipc"
+            },
+            {
+              "label": "euler",
+              "value": "euler"
+            },
+            {
+              "label": "dpm++",
+              "value": "dpm++"
+            },
+            {
+              "label": "flowmatch causvid",
+              "value": "causvid"
+            },
+            {
+              "label": "lcm + ltx",
+              "value": "lcm"
+            }
+          ]
+        },
+        "prompt_enhancer": null
+      }
+    },
+    "setting_values": {
+      "image_prompt_type": {
+        "allowed": "TVL",
+        "choices": [
+          {
+            "label": "Text/new generation",
+            "value": ""
+          },
+          {
+            "label": "Continue from source video",
+            "value": "V"
+          },
+          {
+            "label": "Continue from last generated video",
+            "value": "L"
+          }
+        ]
+      },
+      "video_prompt_type": {
+        "guide_preprocessing": null,
+        "mask_preprocessing": {
+          "visible": false,
+          "choices": [
+            {
+              "label": "None",
+              "value": ""
+            },
+            {
+              "label": "A",
+              "value": "A"
+            }
+          ]
+        },
+        "guide_custom_choices": {
+          "default": "",
+          "label": "Video to Video",
+          "letters_filter": "GUVA",
+          "show_label": false,
+          "choices": [
+            {
+              "label": "Use Text Prompt Only",
+              "value": ""
+            },
+            {
+              "label": "Video to Video guided by Text Prompt",
+              "value": "GUV"
+            },
+            {
+              "label": "Video to Video guided by Text Prompt and Restricted to the Area of the Video Mask",
+              "value": "GVA"
+            }
+          ]
+        },
+        "image_ref_choices": null,
+        "custom_video_selection": null,
+        "forced": ""
+      },
+      "audio_prompt_type": {
+        "sources": null,
+        "custom_option": null
+      },
+      "model_mode": null,
+      "sample_solver": {
+        "choices": [
+          {
+            "label": "unipc",
+            "value": "unipc"
+          },
+          {
+            "label": "euler",
+            "value": "euler"
+          },
+          {
+            "label": "dpm++",
+            "value": "dpm++"
+          },
+          {
+            "label": "flowmatch causvid",
+            "value": "causvid"
+          },
+          {
+            "label": "lcm + ltx",
+            "value": "lcm"
+          }
+        ]
+      },
+      "prompt_enhancer": null
+    },
+    "default_settings": {
+      "settings_version": 2.66,
+      "prompt": "A large orange octopus is seen resting on the bottom of the ocean floor, blending in with the sandy and rocky terrain. Its tentacles are spread out around its body, and its eyes are closed. The octopus is unaware of a king crab that is crawling towards it from behind a rock, its claws raised and ready to attack. The crab is brown and spiny, with long legs and antennae. The scene is captured from a wide angle, showing the vastness and depth of the ocean. The water is clear and blue, with rays of sunlight filtering through. The shot is sharp and crisp, with a high dynamic range. The octopus and the crab are in focus, while the background is slightly blurred, creating a depth of field effect.",
+      "resolution": "832x480",
+      "flow_shift": 5,
+      "sample_solver": "unipc",
+      "negative_prompt": "",
+      "video_length": 81,
+      "seed": -1,
+      "num_inference_steps": 8,
+      "guidance_scale": 1,
+      "embedded_guidance_scale": 6,
+      "repeat_generation": 1,
+      "multi_images_gen_type": 0,
+      "loras_multipliers": "",
+      "temporal_upsampling": "",
+      "spatial_upsampling": "",
+      "RIFLEx_setting": 0,
+      "perturbation_switch": 0,
+      "perturbation_start_perc": 10,
+      "perturbation_end_perc": 90,
+      "cfg_star_switch": 0,
+      "cfg_zero_step": -1,
+      "prompt_enhancer": "",
+      "activated_loras": [],
+      "alt_prompt": "",
+      "multi_prompts_gen_type": "PG",
+      "postprocess_audio": "",
+      "replace_voice_method": "",
+      "replace_voice_sample": null,
+      "replace_voice_sample2": null,
+      "video_prompt_type": "",
+      "skip_steps_multiplier": 1.75,
+      "skip_steps_cache_type": "",
+      "skip_steps_start_step_perc": 0,
+      "image_prompt_type": "",
+      "model_type": "t2v_fusionix"
+    }
+  }
+}

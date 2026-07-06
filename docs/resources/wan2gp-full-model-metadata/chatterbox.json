@@ -1,0 +1,680 @@
+{
+  "chatterbox": {
+    "model_type": "chatterbox",
+    "name": "TTS Chatterbox Multilingual",
+    "model_def": {
+      "audio_only": true,
+      "image_outputs": false,
+      "sliding_window": false,
+      "guidance_max_phases": 0,
+      "no_negative_prompt": true,
+      "inference_steps": false,
+      "temperature": true,
+      "image_prompt_types_allowed": "",
+      "profiles_dir": [
+        "chatterbox"
+      ],
+      "audio_guide_label": "Voice to Replicate",
+      "model_modes": {
+        "choices": [
+          [
+            "Arabic (ar)",
+            "ar"
+          ],
+          [
+            "Chinese (zh)",
+            "zh"
+          ],
+          [
+            "Danish (da)",
+            "da"
+          ],
+          [
+            "Dutch (nl)",
+            "nl"
+          ],
+          [
+            "English (en)",
+            "en"
+          ],
+          [
+            "Finnish (fi)",
+            "fi"
+          ],
+          [
+            "French (fr)",
+            "fr"
+          ],
+          [
+            "German (de)",
+            "de"
+          ],
+          [
+            "Greek (el)",
+            "el"
+          ],
+          [
+            "Hebrew (he)",
+            "he"
+          ],
+          [
+            "Hindi (hi)",
+            "hi"
+          ],
+          [
+            "Italian (it)",
+            "it"
+          ],
+          [
+            "Japanese (ja)",
+            "ja"
+          ],
+          [
+            "Korean (ko)",
+            "ko"
+          ],
+          [
+            "Malay (ms)",
+            "ms"
+          ],
+          [
+            "Norwegian (no)",
+            "no"
+          ],
+          [
+            "Polish (pl)",
+            "pl"
+          ],
+          [
+            "Portuguese (pt)",
+            "pt"
+          ],
+          [
+            "Russian (ru)",
+            "ru"
+          ],
+          [
+            "Spanish (es)",
+            "es"
+          ],
+          [
+            "Swahili (sw)",
+            "sw"
+          ],
+          [
+            "Swedish (sv)",
+            "sv"
+          ],
+          [
+            "Turkish (tr)",
+            "tr"
+          ]
+        ],
+        "default": "en",
+        "label": "Language"
+      },
+      "any_audio_prompt": true,
+      "custom_settings": [
+        {
+          "id": "exaggeration",
+          "label": "Emotion Exaggeration (0.25-2.0, 0.5 = neutral)",
+          "name": "Exaggeration",
+          "type": "float",
+          "default": 0.5
+        },
+        {
+          "id": "pace",
+          "label": "Pace (0.2-1.0)",
+          "name": "Pace",
+          "type": "float",
+          "default": 0.5
+        }
+      ],
+      "text_prompt_enhancer_instructions": "You are a speechwriting assistant. Generate a single-speaker monologue for a text-to-speech model based on the user prompt. Output only the monologue text. Do not include explanations, bullet lists, or stage directions. Keep a consistent tone and point of view. Use natural, spoken sentences with clear punctuation for pauses. Aim for a short monologue (4-8 sentences) unless the prompt asks for a different length.\n\nExample:\nI never thought a small town would teach me so much about patience. Every morning the same faces pass the bakery window, and I know their stories without a word. The bell over the door rings, the coffee steams, and time slows down just enough to breathe. Some days I miss the noise of the city, but most days I am grateful for the quiet. It lets me hear myself think, and that has become its own kind of music.",
+      "prompt_enhancer_button_label": "Write Speech",
+      "name": "TTS Chatterbox Multilingual",
+      "architecture": "chatterbox",
+      "description": "Resemble AI's open multilingual TTS with language selection via model mode.",
+      "URLs": [
+        "https://huggingface.co/DeepBeepMeep/TTS/resolve/main/t3_mtl23ls_v2.safetensors|chatterbox"
+      ],
+      "path": "defaults\\chatterbox.json",
+      "_profile_roots": [
+        "profiles"
+      ],
+      "metadata": {
+        "model_type": "chatterbox",
+        "family": "tts",
+        "family_label": "TTS",
+        "base_model_type": "chatterbox",
+        "finetune": false,
+        "main_output": [
+          "audio"
+        ],
+        "outputs": [
+          "audio"
+        ],
+        "inputs": [
+          "text",
+          "audio"
+        ],
+        "media_inputs": {
+          "image": {
+            "start": false,
+            "end": false,
+            "reference": false,
+            "single_reference": false,
+            "multiple_references": false,
+            "background": false,
+            "injected_frames": false,
+            "control": false,
+            "mask": false
+          },
+          "video": {
+            "continue": false,
+            "last": false,
+            "control": false,
+            "mask": false
+          },
+          "audio": {
+            "prompt": true,
+            "output": true
+          }
+        },
+        "capabilities": {
+          "text_to_video": false,
+          "image_to_video": false,
+          "video_to_video": false,
+          "text_to_image": false,
+          "image_to_image": false,
+          "text_to_audio": true,
+          "audio_to_audio": true,
+          "audio_to_video": false,
+          "audio_output": true,
+          "inpainting": false,
+          "outpainting": false,
+          "reference_images": false,
+          "background_image": false,
+          "injected_frames": false,
+          "control_image": false,
+          "control_video": false,
+          "video_continuation": false,
+          "sliding_window": false,
+          "lora": true
+        },
+        "setting_values": {
+          "image_prompt_type": {
+            "allowed": "",
+            "choices": [
+              {
+                "label": "Text/new generation",
+                "value": ""
+              }
+            ]
+          },
+          "video_prompt_type": {
+            "guide_preprocessing": null,
+            "mask_preprocessing": null,
+            "guide_custom_choices": null,
+            "image_ref_choices": null,
+            "custom_video_selection": null,
+            "forced": ""
+          },
+          "audio_prompt_type": {
+            "sources": null,
+            "custom_option": null
+          },
+          "model_mode": {
+            "default": "en",
+            "label": "Language",
+            "choices": [
+              {
+                "label": "Arabic (ar)",
+                "value": "ar"
+              },
+              {
+                "label": "Chinese (zh)",
+                "value": "zh"
+              },
+              {
+                "label": "Danish (da)",
+                "value": "da"
+              },
+              {
+                "label": "Dutch (nl)",
+                "value": "nl"
+              },
+              {
+                "label": "English (en)",
+                "value": "en"
+              },
+              {
+                "label": "Finnish (fi)",
+                "value": "fi"
+              },
+              {
+                "label": "French (fr)",
+                "value": "fr"
+              },
+              {
+                "label": "German (de)",
+                "value": "de"
+              },
+              {
+                "label": "Greek (el)",
+                "value": "el"
+              },
+              {
+                "label": "Hebrew (he)",
+                "value": "he"
+              },
+              {
+                "label": "Hindi (hi)",
+                "value": "hi"
+              },
+              {
+                "label": "Italian (it)",
+                "value": "it"
+              },
+              {
+                "label": "Japanese (ja)",
+                "value": "ja"
+              },
+              {
+                "label": "Korean (ko)",
+                "value": "ko"
+              },
+              {
+                "label": "Malay (ms)",
+                "value": "ms"
+              },
+              {
+                "label": "Norwegian (no)",
+                "value": "no"
+              },
+              {
+                "label": "Polish (pl)",
+                "value": "pl"
+              },
+              {
+                "label": "Portuguese (pt)",
+                "value": "pt"
+              },
+              {
+                "label": "Russian (ru)",
+                "value": "ru"
+              },
+              {
+                "label": "Spanish (es)",
+                "value": "es"
+              },
+              {
+                "label": "Swahili (sw)",
+                "value": "sw"
+              },
+              {
+                "label": "Swedish (sv)",
+                "value": "sv"
+              },
+              {
+                "label": "Turkish (tr)",
+                "value": "tr"
+              }
+            ]
+          },
+          "sample_solver": null,
+          "prompt_enhancer": null
+        }
+      },
+      "settings": {
+        "prompt": "Welcome to Chatterbox !",
+        "negative_prompt": "",
+        "audio_prompt_type": "A",
+        "model_mode": "en",
+        "repeat_generation": 1,
+        "video_length": 0,
+        "num_inference_steps": 0,
+        "custom_settings": {
+          "exaggeration": 0.5,
+          "pace": 0.5
+        },
+        "temperature": 0.8
+      },
+      "model_type": "chatterbox"
+    },
+    "metadata": {
+      "model_type": "chatterbox",
+      "family": "tts",
+      "family_label": "TTS",
+      "base_model_type": "chatterbox",
+      "finetune": false,
+      "main_output": [
+        "audio"
+      ],
+      "outputs": [
+        "audio"
+      ],
+      "inputs": [
+        "text",
+        "audio"
+      ],
+      "media_inputs": {
+        "image": {
+          "start": false,
+          "end": false,
+          "reference": false,
+          "single_reference": false,
+          "multiple_references": false,
+          "background": false,
+          "injected_frames": false,
+          "control": false,
+          "mask": false
+        },
+        "video": {
+          "continue": false,
+          "last": false,
+          "control": false,
+          "mask": false
+        },
+        "audio": {
+          "prompt": true,
+          "output": true
+        }
+      },
+      "capabilities": {
+        "text_to_video": false,
+        "image_to_video": false,
+        "video_to_video": false,
+        "text_to_image": false,
+        "image_to_image": false,
+        "text_to_audio": true,
+        "audio_to_audio": true,
+        "audio_to_video": false,
+        "audio_output": true,
+        "inpainting": false,
+        "outpainting": false,
+        "reference_images": false,
+        "background_image": false,
+        "injected_frames": false,
+        "control_image": false,
+        "control_video": false,
+        "video_continuation": false,
+        "sliding_window": false,
+        "lora": true
+      },
+      "setting_values": {
+        "image_prompt_type": {
+          "allowed": "",
+          "choices": [
+            {
+              "label": "Text/new generation",
+              "value": ""
+            }
+          ]
+        },
+        "video_prompt_type": {
+          "guide_preprocessing": null,
+          "mask_preprocessing": null,
+          "guide_custom_choices": null,
+          "image_ref_choices": null,
+          "custom_video_selection": null,
+          "forced": ""
+        },
+        "audio_prompt_type": {
+          "sources": null,
+          "custom_option": null
+        },
+        "model_mode": {
+          "default": "en",
+          "label": "Language",
+          "choices": [
+            {
+              "label": "Arabic (ar)",
+              "value": "ar"
+            },
+            {
+              "label": "Chinese (zh)",
+              "value": "zh"
+            },
+            {
+              "label": "Danish (da)",
+              "value": "da"
+            },
+            {
+              "label": "Dutch (nl)",
+              "value": "nl"
+            },
+            {
+              "label": "English (en)",
+              "value": "en"
+            },
+            {
+              "label": "Finnish (fi)",
+              "value": "fi"
+            },
+            {
+              "label": "French (fr)",
+              "value": "fr"
+            },
+            {
+              "label": "German (de)",
+              "value": "de"
+            },
+            {
+              "label": "Greek (el)",
+              "value": "el"
+            },
+            {
+              "label": "Hebrew (he)",
+              "value": "he"
+            },
+            {
+              "label": "Hindi (hi)",
+              "value": "hi"
+            },
+            {
+              "label": "Italian (it)",
+              "value": "it"
+            },
+            {
+              "label": "Japanese (ja)",
+              "value": "ja"
+            },
+            {
+              "label": "Korean (ko)",
+              "value": "ko"
+            },
+            {
+              "label": "Malay (ms)",
+              "value": "ms"
+            },
+            {
+              "label": "Norwegian (no)",
+              "value": "no"
+            },
+            {
+              "label": "Polish (pl)",
+              "value": "pl"
+            },
+            {
+              "label": "Portuguese (pt)",
+              "value": "pt"
+            },
+            {
+              "label": "Russian (ru)",
+              "value": "ru"
+            },
+            {
+              "label": "Spanish (es)",
+              "value": "es"
+            },
+            {
+              "label": "Swahili (sw)",
+              "value": "sw"
+            },
+            {
+              "label": "Swedish (sv)",
+              "value": "sv"
+            },
+            {
+              "label": "Turkish (tr)",
+              "value": "tr"
+            }
+          ]
+        },
+        "sample_solver": null,
+        "prompt_enhancer": null
+      }
+    },
+    "setting_values": {
+      "image_prompt_type": {
+        "allowed": "",
+        "choices": [
+          {
+            "label": "Text/new generation",
+            "value": ""
+          }
+        ]
+      },
+      "video_prompt_type": {
+        "guide_preprocessing": null,
+        "mask_preprocessing": null,
+        "guide_custom_choices": null,
+        "image_ref_choices": null,
+        "custom_video_selection": null,
+        "forced": ""
+      },
+      "audio_prompt_type": {
+        "sources": null,
+        "custom_option": null
+      },
+      "model_mode": {
+        "default": "en",
+        "label": "Language",
+        "choices": [
+          {
+            "label": "Arabic (ar)",
+            "value": "ar"
+          },
+          {
+            "label": "Chinese (zh)",
+            "value": "zh"
+          },
+          {
+            "label": "Danish (da)",
+            "value": "da"
+          },
+          {
+            "label": "Dutch (nl)",
+            "value": "nl"
+          },
+          {
+            "label": "English (en)",
+            "value": "en"
+          },
+          {
+            "label": "Finnish (fi)",
+            "value": "fi"
+          },
+          {
+            "label": "French (fr)",
+            "value": "fr"
+          },
+          {
+            "label": "German (de)",
+            "value": "de"
+          },
+          {
+            "label": "Greek (el)",
+            "value": "el"
+          },
+          {
+            "label": "Hebrew (he)",
+            "value": "he"
+          },
+          {
+            "label": "Hindi (hi)",
+            "value": "hi"
+          },
+          {
+            "label": "Italian (it)",
+            "value": "it"
+          },
+          {
+            "label": "Japanese (ja)",
+            "value": "ja"
+          },
+          {
+            "label": "Korean (ko)",
+            "value": "ko"
+          },
+          {
+            "label": "Malay (ms)",
+            "value": "ms"
+          },
+          {
+            "label": "Norwegian (no)",
+            "value": "no"
+          },
+          {
+            "label": "Polish (pl)",
+            "value": "pl"
+          },
+          {
+            "label": "Portuguese (pt)",
+            "value": "pt"
+          },
+          {
+            "label": "Russian (ru)",
+            "value": "ru"
+          },
+          {
+            "label": "Spanish (es)",
+            "value": "es"
+          },
+          {
+            "label": "Swahili (sw)",
+            "value": "sw"
+          },
+          {
+            "label": "Swedish (sv)",
+            "value": "sv"
+          },
+          {
+            "label": "Turkish (tr)",
+            "value": "tr"
+          }
+        ]
+      },
+      "sample_solver": null,
+      "prompt_enhancer": null
+    },
+    "default_settings": {
+      "settings_version": 2.66,
+      "prompt": "Welcome to Chatterbox !",
+      "resolution": "832x480",
+      "flow_shift": 5.0,
+      "audio_prompt_type": "A",
+      "model_mode": "en",
+      "repeat_generation": 1,
+      "video_length": 0,
+      "num_inference_steps": 0,
+      "negative_prompt": "",
+      "custom_settings": {
+        "exaggeration": 0.5,
+        "pace": 0.5
+      },
+      "temperature": 0.8,
+      "guidance_scale": 1.0,
+      "multi_prompts_gen_type": "FG",
+      "alt_prompt": "",
+      "postprocess_audio": "",
+      "replace_voice_method": "",
+      "replace_voice_sample": null,
+      "replace_voice_sample2": null,
+      "video_prompt_type": "",
+      "image_prompt_type": "",
+      "model_type": "chatterbox"
+    }
+  }
+}

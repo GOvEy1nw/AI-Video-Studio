@@ -1,0 +1,441 @@
+{
+  "scenema_audio": {
+    "model_type": "scenema_audio",
+    "name": "Scenema Audio",
+    "model_def": {
+      "audio_only": true,
+      "image_outputs": false,
+      "sliding_window": false,
+      "guidance_max_phases": 0,
+      "no_negative_prompt": true,
+      "inference_steps": false,
+      "temperature": false,
+      "lock_inference_steps": true,
+      "image_prompt_types_allowed": "",
+      "supports_early_stop": true,
+      "profiles_dir": [
+        "scenema_audio"
+      ],
+      "duration_slider": {
+        "label": "Max Duration (seconds)",
+        "min": 1,
+        "max": 1800,
+        "increment": 0.5,
+        "default": 120
+      },
+      "profile_type": "video",
+      "preserve_empty_prompt_lines": true,
+      "any_audio_prompt": true,
+      "audio_prompt_choices": true,
+      "audio_prompt_type_sources": {
+        "selection": [
+          "",
+          "A2",
+          "AB2"
+        ],
+        "labels": {
+          "": "Text or <speak> XML",
+          "A2": "Speaker 1 reference using SeedVC",
+          "AB2": "Two Speakers references using SeedVC"
+        },
+        "letters_filter": "AB2",
+        "custom_flags": {
+          "2": "SeedVC"
+        },
+        "default": ""
+      },
+      "audio_guide_label": "Speaker 1 reference voice (optional for multi-speaker)",
+      "audio_guide2_label": "Speaker 2 reference voice (optional)",
+      "custom_settings": [
+        {
+          "id": "vc_steps",
+          "label": "SeedVC Steps (default 25)",
+          "name": "SeedVC Steps",
+          "type": "int",
+          "default": 25
+        },
+        {
+          "id": "vc_cfg_rate",
+          "label": "SeedVC CFG Rate (default 0.5)",
+          "name": "SeedVC CFG Rate",
+          "type": "float",
+          "default": 0.5
+        },
+        {
+          "id": "pace",
+          "label": "Pace (default 1.5)",
+          "name": "Pace",
+          "type": "float",
+          "default": 1.5,
+          "min": 0.2,
+          "max": 3.0
+        }
+      ],
+      "prompt_infos": "\n## WanGP Speech Format\nFor one speaker, write normal text and put one performance cue in square brackets before each sentence. WanGP converts each `[cue]` into a Scenema `<action>` block.\n\n```text\n[Soft, close to the microphone] The lights are already on, so we can start whenever you are ready.\n[Brighter, reassuring] Take your time. I am not going anywhere.\n```\n\nPlain speech uses only the text and action cues. Use Scenema XML when a single-speaker prompt also needs explicit `voice`, `gender`, `scene`, `shot`, or `language` properties.\n\n## WanGP Dialogue Format\n\nUse `Speaker N:` blocks for dialogue. Every new speaker block becomes its own audio chunk.\n\n```text\nSpeaker 1{voice=\"A tired older man, low gravelly voice\", gender=\"male\", scene=\"a quiet kitchen at night\"}:\n[Trying to stay calm] I left the light on because I knew you would come back.\n\nSpeaker 2{voice=\"A younger woman, controlled but shaken\", gender=\"female\"}:\n[A guarded breath before speaking] You always say that like it fixes everything.\n\nSpeaker 1:\n[Softer, almost apologetic] No. But it keeps the room from feeling empty.\n```\n\nProperties set in `{...}` are remembered for that speaker and reused when the same speaker appears again. Add a new `{...}` later to override them.\n\n## Supported Properties\n\n- `voice`: the main voice and delivery description. Include age, timbre, accent, energy, microphone distance, or emotional color here.\n- `gender`: `male` or `female`. It complements `voice`; for stronger control, also mention the gender in `voice`.\n- `scene`: acoustic or cinematic context, such as `a quiet office late at night`.\n- `shot`: `closeup`, `wide`, or `scene`. `closeup` is best for speech-first TTS.\n- `language`: language code such as `en`, `fr`, or `it`.\n- `speaker`: XML-only speaker id, used as `<speak speaker=\"2\">...`.\n\n## Voice References\n\nThe voice dropdown uses SeedVC for references. `Speaker 1 reference using SeedVC` applies the first audio reference. `Two Speakers references using SeedVC` applies the first reference to Speaker 1 and the second reference to Speaker 2. Additional speakers are supported, but only the first two can use uploaded reference audio.\n",
+      "prompt_description": "Speech text or Scenema <speak> XML",
+      "text_prompt_enhancer_instructions": "You are a speechwriting assistant for Scenema Audio. Generate a single-speaker WanGP speech script from the user prompt.\n\nOutput rules:\n- Output only the script text. Do not include explanations, markdown, bullet lists, or XML.\n- Do not write \"Speaker 1:\" for a single-speaker script.\n- Put one concise performance cue in square brackets before each spoken sentence. WanGP converts each [] cue into a Scenema action.\n- Cues describe delivery, emotion, gesture, or pacing only. They are not spoken words.\n- Do not invent voice, gender, scene, shot, or language attributes. If the user explicitly requests them, keep those details in the cue text or spoken context instead of adding a speaker header.\n- Use natural spoken language with clear punctuation. Write 4-8 sentences unless the user asks for a different length.\n\nExample:\n[Softly, trying to stay composed] I thought the room would feel smaller when the lights went out.\n[With a nervous laugh] But somehow every shadow found a way to move.\n[Gathering resolve] So I kept walking, one step at a time, until the door was right in front of me.\n[Quietly relieved] And when I opened it, morning was already there.",
+      "text_prompt_enhancer_instructions1": "You are a dialogue-writing assistant for Scenema Audio. Generate a multi-speaker WanGP dialogue script from the user prompt.\n\nOutput rules:\n- Output only the script text. Do not include explanations, markdown, bullet lists, or XML.\n- Every section must start with \"Speaker N:\" where N is the speaker number. Use as many speakers as the user requests; otherwise use Speaker 1 and Speaker 2.\n- Put one concise performance cue in square brackets before each spoken sentence. WanGP converts each [] cue into a Scenema action.\n- Cues describe delivery, emotion, gesture, or pacing only. They are not spoken words.\n- Do not invent voice, gender, scene, shot, or language attributes. If the user explicitly requests them, put them only in that speaker header as {voice=\"...\", gender=\"...\", scene=\"...\", language=\"...\"}.\n- Reuse speaker attributes on later sections by omitting {} unless the user asks to change them.\n- Keep the dialogue compact, natural, and easy to perform. Write 6-14 turns unless the user asks for a different length.\n\nExample:\nSpeaker 1{voice=\"An impatient engineer, clipped delivery\", gender=\"female\"}:\n[Leaning over the console, tense] The signal dropped again, exactly when the door opened.\nSpeaker 2{voice=\"A calm older technician\", gender=\"male\"}:\n[Quietly, checking the meters] Then it is not interference, it is a trigger.\nSpeaker 1:\n[Lowering her voice] Someone built this to wake up when we got close.\nSpeaker 2:\n[Firm, controlled] Then we step back, breathe, and let the machine tell us what it wants.",
+      "text_prompt_enhancer_max_tokens": 768,
+      "text_prompt_enhancer_max_tokens1": 1024,
+      "prompt_enhancer_def": {
+        "selection": [
+          "T",
+          "T1"
+        ],
+        "labels": {
+          "T": "A Speech with Action Cues",
+          "T1": "A Dialogue with Action Cues"
+        },
+        "default": "T"
+      },
+      "prompt_enhancer_button_label": "Write",
+      "compile": false,
+      "text_encoder_folder": "gemma-3-12b-it-qat-q4_0-unquantized",
+      "text_encoder_URLs": [
+        "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/gemma-3-12b-it-qat-q4_0-unquantized/gemma-3-12b-it-qat-q4_0-unquantized.safetensors",
+        "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/gemma-3-12b-it-qat-q4_0-unquantized/gemma-3-12b-it-qat-q4_0-unquantized_quanto_bf16_int8.safetensors"
+      ],
+      "dtype": "bf16",
+      "name": "Scenema Audio",
+      "architecture": "scenema_audio",
+      "description": "Audio-only Scenema TTS/SFX model integrated through the LTX 2.3 stack.",
+      "URLs": [
+        "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/scenema-audio-transformer_bf16.safetensors",
+        "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/scenema-audio-transformer_quanto_bf16_int8.safetensors"
+      ],
+      "path": "defaults\\scenema_audio.json",
+      "_profile_roots": [
+        "profiles"
+      ],
+      "metadata": {
+        "model_type": "scenema_audio",
+        "family": "tts",
+        "family_label": "TTS",
+        "base_model_type": "scenema_audio",
+        "finetune": false,
+        "main_output": [
+          "audio"
+        ],
+        "outputs": [
+          "audio"
+        ],
+        "inputs": [
+          "text",
+          "audio"
+        ],
+        "media_inputs": {
+          "image": {
+            "start": false,
+            "end": false,
+            "reference": false,
+            "single_reference": false,
+            "multiple_references": false,
+            "background": false,
+            "injected_frames": false,
+            "control": false,
+            "mask": false
+          },
+          "video": {
+            "continue": false,
+            "last": false,
+            "control": false,
+            "mask": false
+          },
+          "audio": {
+            "prompt": true,
+            "output": true
+          }
+        },
+        "capabilities": {
+          "text_to_video": false,
+          "image_to_video": false,
+          "video_to_video": false,
+          "text_to_image": false,
+          "image_to_image": false,
+          "text_to_audio": true,
+          "audio_to_audio": true,
+          "audio_to_video": false,
+          "audio_output": true,
+          "inpainting": false,
+          "outpainting": false,
+          "reference_images": false,
+          "background_image": false,
+          "injected_frames": false,
+          "control_image": false,
+          "control_video": false,
+          "video_continuation": false,
+          "sliding_window": false,
+          "lora": true
+        },
+        "setting_values": {
+          "image_prompt_type": {
+            "allowed": "",
+            "choices": [
+              {
+                "label": "Text/new generation",
+                "value": ""
+              }
+            ]
+          },
+          "video_prompt_type": {
+            "guide_preprocessing": null,
+            "mask_preprocessing": null,
+            "guide_custom_choices": null,
+            "image_ref_choices": null,
+            "custom_video_selection": null,
+            "forced": ""
+          },
+          "audio_prompt_type": {
+            "sources": {
+              "default": "",
+              "letters_filter": "AB2",
+              "choices": [
+                {
+                  "label": "Text or <speak> XML",
+                  "value": ""
+                },
+                {
+                  "label": "Speaker 1 reference using SeedVC",
+                  "value": "A2"
+                },
+                {
+                  "label": "Two Speakers references using SeedVC",
+                  "value": "AB2"
+                }
+              ]
+            },
+            "custom_option": null
+          },
+          "model_mode": null,
+          "sample_solver": null,
+          "prompt_enhancer": {
+            "default": "T",
+            "choices": [
+              {
+                "label": "A Speech with Action Cues",
+                "value": "T"
+              },
+              {
+                "label": "A Dialogue with Action Cues",
+                "value": "T1"
+              }
+            ]
+          }
+        }
+      },
+      "settings": {
+        "prompt": "Speaker 1{voice=\"Confident adult man, skeptical and emphatic\", gender=\"male\", scene=\"a spirited debate beside a map\"}: [Pointing at the map with absolute confidence] Look at this map, it's a perfect circle with the North Pole right in the middle.\nSpeaker 2{voice=\"Patient adult woman, calm and logical\", gender=\"female\", scene=\"a spirited debate beside a map\"}: [Calmly correcting, measured and patient] That's just a projection, not how the world actually looks from space.\nSpeaker 1: [Frowning, challenging the answer] But you can't see the edge of the Earth, so how do you know it's round?\nSpeaker 2: [Keeping steady, explaining carefully] I've seen photos taken from airplanes and satellites that show the curvature clearly.\nSpeaker 1: [Waving that away, skeptical] Those are just pictures, they could be edited or taken from a low altitude.\nSpeaker 2: [A little firmer now, giving an example] Even if you're close to the ground, ships disappear hull-first over the horizon because of the curve.\nSpeaker 1: [Pausing, then offering a wild theory] Maybe there's a giant wall holding up the water so it doesn't fall off.\nSpeaker 2: [Almost laughing, incredulous] A wall taller than the tallest mountain? And what happens when the sun rises on the other side?\nSpeaker 1: [Doubling down, voice rising] The flat Earth model explains everything without needing a spinning globe.\nSpeaker 2: [Dry and logical, slightly frustrated] It requires more complex explanations for gravity and seasons, which don't fit together.\nSpeaker 1: [Triumphant, as if landing the final point] Science changes, but your evidence is always circular.",
+        "alt_prompt": "",
+        "audio_prompt_type": "",
+        "duration_seconds": 120,
+        "num_inference_steps": 8,
+        "guidance_scale": 1.0,
+        "custom_settings": {
+          "vc_steps": 25,
+          "vc_cfg_rate": 0.5,
+          "pace": 1.5
+        },
+        "multi_prompts_gen_type": "FG"
+      },
+      "model_type": "scenema_audio"
+    },
+    "metadata": {
+      "model_type": "scenema_audio",
+      "family": "tts",
+      "family_label": "TTS",
+      "base_model_type": "scenema_audio",
+      "finetune": false,
+      "main_output": [
+        "audio"
+      ],
+      "outputs": [
+        "audio"
+      ],
+      "inputs": [
+        "text",
+        "audio"
+      ],
+      "media_inputs": {
+        "image": {
+          "start": false,
+          "end": false,
+          "reference": false,
+          "single_reference": false,
+          "multiple_references": false,
+          "background": false,
+          "injected_frames": false,
+          "control": false,
+          "mask": false
+        },
+        "video": {
+          "continue": false,
+          "last": false,
+          "control": false,
+          "mask": false
+        },
+        "audio": {
+          "prompt": true,
+          "output": true
+        }
+      },
+      "capabilities": {
+        "text_to_video": false,
+        "image_to_video": false,
+        "video_to_video": false,
+        "text_to_image": false,
+        "image_to_image": false,
+        "text_to_audio": true,
+        "audio_to_audio": true,
+        "audio_to_video": false,
+        "audio_output": true,
+        "inpainting": false,
+        "outpainting": false,
+        "reference_images": false,
+        "background_image": false,
+        "injected_frames": false,
+        "control_image": false,
+        "control_video": false,
+        "video_continuation": false,
+        "sliding_window": false,
+        "lora": true
+      },
+      "setting_values": {
+        "image_prompt_type": {
+          "allowed": "",
+          "choices": [
+            {
+              "label": "Text/new generation",
+              "value": ""
+            }
+          ]
+        },
+        "video_prompt_type": {
+          "guide_preprocessing": null,
+          "mask_preprocessing": null,
+          "guide_custom_choices": null,
+          "image_ref_choices": null,
+          "custom_video_selection": null,
+          "forced": ""
+        },
+        "audio_prompt_type": {
+          "sources": {
+            "default": "",
+            "letters_filter": "AB2",
+            "choices": [
+              {
+                "label": "Text or <speak> XML",
+                "value": ""
+              },
+              {
+                "label": "Speaker 1 reference using SeedVC",
+                "value": "A2"
+              },
+              {
+                "label": "Two Speakers references using SeedVC",
+                "value": "AB2"
+              }
+            ]
+          },
+          "custom_option": null
+        },
+        "model_mode": null,
+        "sample_solver": null,
+        "prompt_enhancer": {
+          "default": "T",
+          "choices": [
+            {
+              "label": "A Speech with Action Cues",
+              "value": "T"
+            },
+            {
+              "label": "A Dialogue with Action Cues",
+              "value": "T1"
+            }
+          ]
+        }
+      }
+    },
+    "setting_values": {
+      "image_prompt_type": {
+        "allowed": "",
+        "choices": [
+          {
+            "label": "Text/new generation",
+            "value": ""
+          }
+        ]
+      },
+      "video_prompt_type": {
+        "guide_preprocessing": null,
+        "mask_preprocessing": null,
+        "guide_custom_choices": null,
+        "image_ref_choices": null,
+        "custom_video_selection": null,
+        "forced": ""
+      },
+      "audio_prompt_type": {
+        "sources": {
+          "default": "",
+          "letters_filter": "AB2",
+          "choices": [
+            {
+              "label": "Text or <speak> XML",
+              "value": ""
+            },
+            {
+              "label": "Speaker 1 reference using SeedVC",
+              "value": "A2"
+            },
+            {
+              "label": "Two Speakers references using SeedVC",
+              "value": "AB2"
+            }
+          ]
+        },
+        "custom_option": null
+      },
+      "model_mode": null,
+      "sample_solver": null,
+      "prompt_enhancer": {
+        "default": "T",
+        "choices": [
+          {
+            "label": "A Speech with Action Cues",
+            "value": "T"
+          },
+          {
+            "label": "A Dialogue with Action Cues",
+            "value": "T1"
+          }
+        ]
+      }
+    },
+    "default_settings": {
+      "settings_version": 2.66,
+      "prompt": "Speaker 1{voice=\"Confident adult man, skeptical and emphatic\", gender=\"male\", scene=\"a spirited debate beside a map\"}: [Pointing at the map with absolute confidence] Look at this map, it's a perfect circle with the North Pole right in the middle.\nSpeaker 2{voice=\"Patient adult woman, calm and logical\", gender=\"female\", scene=\"a spirited debate beside a map\"}: [Calmly correcting, measured and patient] That's just a projection, not how the world actually looks from space.\nSpeaker 1: [Frowning, challenging the answer] But you can't see the edge of the Earth, so how do you know it's round?\nSpeaker 2: [Keeping steady, explaining carefully] I've seen photos taken from airplanes and satellites that show the curvature clearly.\nSpeaker 1: [Waving that away, skeptical] Those are just pictures, they could be edited or taken from a low altitude.\nSpeaker 2: [A little firmer now, giving an example] Even if you're close to the ground, ships disappear hull-first over the horizon because of the curve.\nSpeaker 1: [Pausing, then offering a wild theory] Maybe there's a giant wall holding up the water so it doesn't fall off.\nSpeaker 2: [Almost laughing, incredulous] A wall taller than the tallest mountain? And what happens when the sun rises on the other side?\nSpeaker 1: [Doubling down, voice rising] The flat Earth model explains everything without needing a spinning globe.\nSpeaker 2: [Dry and logical, slightly frustrated] It requires more complex explanations for gravity and seasons, which don't fit together.\nSpeaker 1: [Triumphant, as if landing the final point] Science changes, but your evidence is always circular.",
+      "resolution": "832x480",
+      "flow_shift": 5.0,
+      "audio_prompt_type": "",
+      "alt_prompt": "",
+      "repeat_generation": 1,
+      "duration_seconds": 120,
+      "video_length": 0,
+      "num_inference_steps": 8,
+      "negative_prompt": "",
+      "guidance_scale": 1.0,
+      "custom_settings": {
+        "vc_steps": 25,
+        "vc_cfg_rate": 0.5,
+        "pace": 1.5
+      },
+      "multi_prompts_gen_type": "FG",
+      "postprocess_audio": "",
+      "replace_voice_method": "",
+      "replace_voice_sample": null,
+      "replace_voice_sample2": null,
+      "video_prompt_type": "",
+      "image_prompt_type": "",
+      "model_type": "scenema_audio"
+    }
+  }
+}

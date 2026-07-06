@@ -1,0 +1,904 @@
+{
+  "vace_fun_14B_cocktail_2_2": {
+    "model_type": "vace_fun_14B_cocktail_2_2",
+    "name": "Wan2.2 Vace Fun Cocktail 14B",
+    "model_def": {
+      "no_steps_skipping": true,
+      "compile": [
+        "transformer",
+        "transformer2"
+      ],
+      "i2v_class": false,
+      "t2v_class": false,
+      "multitalk_class": false,
+      "standin_class": false,
+      "lynx_class": false,
+      "alpha_class": false,
+      "wan_5B_class": false,
+      "vace_class": true,
+      "bernini_class": false,
+      "scail2": false,
+      "infos": "\n# VACE ControlNet Guide\n\nVACE is a ControlNet-style Wan model for Video-to-Video and Reference-to-Video generation. It can inject images into output videos, animate characters, perform masked edits, continue existing videos, transfer motion, and preserve scene structure while changing style or content.\n\n## Overview\n\nWith VACE you can:\n\n- Inject people or objects into scenes.\n- Animate characters from a motion or pose source.\n- Perform video inpainting and outpainting.\n- Continue existing videos.\n- Transfer motion from one video to another.\n- Change the style of scenes while preserving their structure.\n\n## Getting Started\n\n### Model Selection\n\n1. Select a VACE model such as `Vace 1.3B`, `Vace 14B`, or a derived VACE model.\n2. VACE works best with short windows. For long videos, use sliding windows from the Processing guide.\n\nDerived VACE models, such as VACE FusioniX, can be combined with accelerator LoRAs such as Causvid when the model supports them.\n\n### Control Video\n\nThe Control Video is the source material that contains the visual instructions. VACE expects hints in the Control Video about the intended operation: replacing an area, converting an Open Pose wireframe into human motion, colorizing an area, transferring depth, and similar controls.\n\nFor example, an area colored grey, value 127, is treated as an inpainting region and replaced by content from the prompt and/or reference images. If the Control Video contains an Open Pose wireframe, VACE can turn that pose into a generated person based on the prompt and reference images.\n\nYou can build a VACE-formatted Control Video with the official VACE annotator tools, or let WanGP generate it from your normal source media.\n\nWanGP needs:\n\n- **Control Video:** the original source video, not already processed by an external annotator.\n- **Control Video Process:** the process to apply, such as `Transfer Human Motion`, `Depth`, `Inpainting`, or `Keep Unchanged`.\n- **Area Processed:** whether the process applies to the whole video, the masked area, or the non-masked area.\n\nIf you target an area, provide a Video Mask. You can create masks with the embedded Mask Generator / Matanyone workflow.\n\nWanGP previews the processed Control Video and Video Mask in the Generation Preview area. Launch with `--save-masks` when you need to inspect the complete generated control media.\n\n### Reference Images\n\nReference Images let you inject people, objects, landscapes, or exact frames into a video. You can also force images to appear at specific frame numbers.\n\nDescribe injected people or objects explicitly in the prompt so VACE can connect the references to the generated video.\n\n## VACE Control Video And Mask Format\n\nThe Video Mask decides where the Control Video is interpreted.\n\n- Black mask areas are kept as-is.\n- White mask areas are processed.\n- If there is no Video Mask, the selected VACE process applies to the whole video.\n\nThe content of the Control Video decides what process VACE sees in the selected area:\n\n- Grey, value 127, means the area is replaced by new content from the prompt or image references.\n- Open Pose wireframes are converted into an animated person.\n- Multiple shades of grey can represent image depth, letting VACE generate new content at similar depth.\n\nThere are more VACE representations. Refer to the official VACE documentation for the full mapping.\n\n## Example 1: Replace A Person While Keeping The Background\n\n1. Select `Control Video Process` = `Transfer human pose` and `Area processed` = `Masked area`.\n2. In Mask Generator, load the source video and mask the person to replace.\n3. Click `Export to Control Video Input and Video Mask Input`.\n4. In VACE, set Reference Image to `Inject Landscapes / People / Objects` and upload one or more pictures of the new person.\n5. Generate.\n\nThis also works with several people if you mask several targets. Use `Expand / Shrink Mask` when the replacement subject needs more or less room.\n\n## Example 2: Change The Background Behind Characters\n\n1. Select `Control Video Process` = `Inpainting` and `Area processed` = `Non Masked area`.\n2. In Mask Generator, create a mask for the people you want to keep.\n3. Click `Export to Control Video Input and Video Mask Input`.\n4. Generate.\n\nIf you use `Depth` instead of `Inpainting`, the new background can keep geometry closer to the original control video.\n\n## Example 3: Outpaint A Video And Inject A Character\n\n1. Select `Control Video Process` = `Keep Unchanged`.\n2. In `Control Video Outpainting in Percentage`, enter the desired expansion amount, such as `40` for Left.\n3. In Reference Image, select `Inject Landscapes / People / Objects` and upload a person reference.\n4. Prompt the new action, such as `a person is coming from the left`.\n5. Generate.\n\n## Creating Face / Object Replacement Masks\n\nMatanyone can generate the Video Mask that is combined with the Control Video.\n\n1. Load your video in Matanyone.\n2. Click the face or object in the first frame.\n3. Validate the mask with `Set Mask`.\n4. Generate a copy of the control video and a new mask video with `Generate Video Matting`.\n5. Export to VACE with `Export to Control Video Input and Video Mask Input`.\n\nAdvanced tips:\n\n- Use negative point prompts to remove unwanted areas from the mask.\n- Use sub masks when one selection is difficult to define cleanly.\n\n## Recommended Settings\n\n- **Skip Layer Guidance:** turn on with the default configuration for better results when using original CFG-based VACE models. This is not useful with FusioniX or Causvid-style no-CFG workflows.\n- **Long Prompts:** describe the whole scene, especially background elements not provided by reference images.\n- **Steps:** use at least 15 steps for good quality with original VACE, or 30+ for best quality. FusioniX and accelerator LoRAs often work with about 8-10 steps.\n\n## External Resources\n\n- **GitHub:** https://github.com/ali-vilab/VACE/tree/main/vace/gradios\n- **User Guide:** https://github.com/ali-vilab/VACE/blob/main/UserGuide.md\n- **Preprocessors:** official tools for preparing VACE materials.\n\n## Troubleshooting\n\n### Poor Quality Results\n\n1. Use longer, more detailed prompts.\n2. Enable Skip Layer Guidance when the model supports CFG.\n3. Increase the number of steps.\n4. Check reference image quality.\n5. Ensure the mask targets the intended area.\n\n### Memory Issues\n\n1. Use VACE 1.3B instead of 14B.\n2. Reduce video length or resolution.\n3. Enable quantization.\n\n## Tips For Best Results\n\n1. **Detailed Prompts:** describe everything in the scene, especially elements not in reference images.\n2. **Quality Reference Images:** use high-resolution, well-lit reference images.\n3. **Proper Masking:** take time to create precise masks with Matanyone.\n4. **Consistent Lighting:** match lighting between reference images and the intended scene.\n",
+      "color_correction": true,
+      "svi2pro": false,
+      "i2v_2_2": false,
+      "text_encoder_URLs": [
+        "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/umt5-xxl/models_t5_umt5-xxl-enc-bf16.safetensors",
+        "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/umt5-xxl/models_t5_umt5-xxl-enc-quanto_int8.safetensors"
+      ],
+      "text_encoder_folder": "umt5-xxl",
+      "vae_upsampler": [
+        1,
+        2
+      ],
+      "vae_block_size": 16,
+      "profiles_dir": [
+        ""
+      ],
+      "group": "wan2_2",
+      "fps": 16,
+      "frames_minimum": 17,
+      "frames_steps": 4,
+      "sliding_window": true,
+      "multiple_submodels": true,
+      "guidance_max_phases": 3,
+      "perturbation": true,
+      "flow_shift": true,
+      "cfg_zero": true,
+      "cfg_star": true,
+      "adaptive_projected_guidance": true,
+      "tea_cache": false,
+      "mag_cache": true,
+      "keep_frames_video_guide_not_supported": false,
+      "sample_solvers": [
+        [
+          "unipc",
+          "unipc"
+        ],
+        [
+          "euler",
+          "euler"
+        ],
+        [
+          "dpm++",
+          "dpm++"
+        ],
+        [
+          "flowmatch causvid",
+          "causvid"
+        ],
+        [
+          "lcm + ltx",
+          "lcm"
+        ]
+      ],
+      "sub_parallel_windows": false,
+      "self_refiner": true,
+      "control_net_weight_name": "Vace",
+      "control_net_weight_size": 2,
+      "guide_preprocessing": {
+        "selection": [
+          "",
+          "UV",
+          "PV",
+          "OV",
+          "DV",
+          "SV",
+          "LV",
+          "CV",
+          "MV",
+          "V",
+          "PDV",
+          "PSV",
+          "PLV",
+          "DSV",
+          "DLV",
+          "SLV"
+        ],
+        "labels": {
+          "V": "Use Vace raw format"
+        }
+      },
+      "mask_preprocessing": {
+        "selection": [
+          "",
+          "A",
+          "NA",
+          "XA",
+          "XNA",
+          "YA",
+          "YNA",
+          "WA",
+          "WNA",
+          "ZA",
+          "ZNA"
+        ]
+      },
+      "image_ref_choices": {
+        "choices": [
+          [
+            "None",
+            ""
+          ],
+          [
+            "People / Objects",
+            "I"
+          ],
+          [
+            "Landscape followed by People / Objects (if any)",
+            "KI"
+          ],
+          [
+            "Positioned Frames followed by People / Objects (if any)",
+            "FI"
+          ]
+        ],
+        "letters_filter": "KFI"
+      },
+      "background_removal_label": "Remove Backgrounds behind People / Objects, keep it for Landscape or Positioned Frames",
+      "video_guide_outpainting": [
+        0,
+        1
+      ],
+      "pad_guide_video": true,
+      "guide_inpaint_color": 127.5,
+      "forced_guide_mask_inputs": true,
+      "return_image_refs_tensor": true,
+      "v2i_switch_supported": true,
+      "image_prompt_types_allowed": "TVL",
+      "NAG": true,
+      "name": "Wan2.2 Vace Fun Cocktail 14B",
+      "architecture": "vace_14B_2_2",
+      "description": "This model has been created on the fly using the Wan text 2.2 video model and the Loras of FusioniX. The weight of the Detail Enhancer Lora has been reduced to improve identity preservation. This is the Fun Vace 2.2, that is not the official Vace 2.2",
+      "URLs": "vace_fun_14B_2_2",
+      "URLs2": "vace_fun_14B_2_2",
+      "loras": [
+        "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/loras_accelerators/Wan21_CausVid_14B_T2V_lora_rank32_v2.safetensors",
+        "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/loras_accelerators/DetailEnhancerV1.safetensors",
+        "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/loras_accelerators/Wan21_AccVid_T2V_14B_lora_rank32_fp16.safetensors",
+        "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/loras_accelerators/Wan21_T2V_14B_MoviiGen_lora_rank32_fp16.safetensors"
+      ],
+      "loras_multipliers": [
+        1,
+        0.2,
+        0.5,
+        0.5
+      ],
+      "path": "defaults\\vace_fun_14B_cocktail_2_2.json",
+      "_profile_roots": [
+        "profiles"
+      ],
+      "metadata": {
+        "model_type": "vace_fun_14B_cocktail_2_2",
+        "family": "wan2_2",
+        "family_label": "Wan2.2",
+        "base_model_type": "vace_14B_2_2",
+        "finetune": false,
+        "main_output": [
+          "image",
+          "video"
+        ],
+        "outputs": [
+          "image",
+          "video"
+        ],
+        "inputs": [
+          "text",
+          "image",
+          "video"
+        ],
+        "media_inputs": {
+          "image": {
+            "start": false,
+            "end": false,
+            "reference": true,
+            "single_reference": false,
+            "multiple_references": true,
+            "background": true,
+            "injected_frames": true,
+            "control": false,
+            "mask": false
+          },
+          "video": {
+            "continue": true,
+            "last": true,
+            "control": true,
+            "mask": true
+          },
+          "audio": {
+            "prompt": false,
+            "output": false
+          }
+        },
+        "capabilities": {
+          "text_to_video": true,
+          "image_to_video": false,
+          "video_to_video": true,
+          "text_to_image": true,
+          "image_to_image": true,
+          "text_to_audio": false,
+          "audio_to_audio": false,
+          "audio_to_video": false,
+          "audio_output": false,
+          "inpainting": true,
+          "outpainting": true,
+          "reference_images": true,
+          "background_image": true,
+          "injected_frames": true,
+          "control_image": false,
+          "control_video": true,
+          "video_continuation": true,
+          "sliding_window": true,
+          "lora": true
+        },
+        "setting_values": {
+          "image_prompt_type": {
+            "allowed": "TVL",
+            "choices": [
+              {
+                "label": "Text/new generation",
+                "value": ""
+              },
+              {
+                "label": "Continue from source video",
+                "value": "V"
+              },
+              {
+                "label": "Continue from last generated video",
+                "value": "L"
+              }
+            ]
+          },
+          "video_prompt_type": {
+            "guide_preprocessing": {
+              "choices": [
+                {
+                  "label": "Use Vace raw format",
+                  "value": ""
+                },
+                {
+                  "label": "UV",
+                  "value": "UV"
+                },
+                {
+                  "label": "PV",
+                  "value": "PV"
+                },
+                {
+                  "label": "OV",
+                  "value": "OV"
+                },
+                {
+                  "label": "DV",
+                  "value": "DV"
+                },
+                {
+                  "label": "SV",
+                  "value": "SV"
+                },
+                {
+                  "label": "LV",
+                  "value": "LV"
+                },
+                {
+                  "label": "CV",
+                  "value": "CV"
+                },
+                {
+                  "label": "MV",
+                  "value": "MV"
+                },
+                {
+                  "label": "Use Vace raw format",
+                  "value": "V"
+                },
+                {
+                  "label": "PDV",
+                  "value": "PDV"
+                },
+                {
+                  "label": "PSV",
+                  "value": "PSV"
+                },
+                {
+                  "label": "PLV",
+                  "value": "PLV"
+                },
+                {
+                  "label": "DSV",
+                  "value": "DSV"
+                },
+                {
+                  "label": "DLV",
+                  "value": "DLV"
+                },
+                {
+                  "label": "SLV",
+                  "value": "SLV"
+                }
+              ]
+            },
+            "mask_preprocessing": {
+              "choices": [
+                {
+                  "label": "None",
+                  "value": ""
+                },
+                {
+                  "label": "A",
+                  "value": "A"
+                },
+                {
+                  "label": "NA",
+                  "value": "NA"
+                },
+                {
+                  "label": "XA",
+                  "value": "XA"
+                },
+                {
+                  "label": "XNA",
+                  "value": "XNA"
+                },
+                {
+                  "label": "YA",
+                  "value": "YA"
+                },
+                {
+                  "label": "YNA",
+                  "value": "YNA"
+                },
+                {
+                  "label": "WA",
+                  "value": "WA"
+                },
+                {
+                  "label": "WNA",
+                  "value": "WNA"
+                },
+                {
+                  "label": "ZA",
+                  "value": "ZA"
+                },
+                {
+                  "label": "ZNA",
+                  "value": "ZNA"
+                }
+              ]
+            },
+            "guide_custom_choices": null,
+            "image_ref_choices": {
+              "letters_filter": "KFI",
+              "choices": [
+                {
+                  "label": "None",
+                  "value": ""
+                },
+                {
+                  "label": "People / Objects",
+                  "value": "I"
+                },
+                {
+                  "label": "Landscape followed by People / Objects (if any)",
+                  "value": "KI"
+                },
+                {
+                  "label": "Positioned Frames followed by People / Objects (if any)",
+                  "value": "FI"
+                }
+              ]
+            },
+            "custom_video_selection": null,
+            "forced": ""
+          },
+          "audio_prompt_type": {
+            "sources": null,
+            "custom_option": null
+          },
+          "model_mode": null,
+          "sample_solver": {
+            "choices": [
+              {
+                "label": "unipc",
+                "value": "unipc"
+              },
+              {
+                "label": "euler",
+                "value": "euler"
+              },
+              {
+                "label": "dpm++",
+                "value": "dpm++"
+              },
+              {
+                "label": "flowmatch causvid",
+                "value": "causvid"
+              },
+              {
+                "label": "lcm + ltx",
+                "value": "lcm"
+              }
+            ]
+          },
+          "prompt_enhancer": null
+        }
+      },
+      "settings": {
+        "guidance_phases": 2,
+        "num_inference_steps": 10,
+        "guidance_scale": 1,
+        "guidance2_scale": 1,
+        "flow_shift": 2,
+        "switch_threshold": 875
+      },
+      "model_type": "vace_fun_14B_cocktail_2_2"
+    },
+    "metadata": {
+      "model_type": "vace_fun_14B_cocktail_2_2",
+      "family": "wan2_2",
+      "family_label": "Wan2.2",
+      "base_model_type": "vace_14B_2_2",
+      "finetune": false,
+      "main_output": [
+        "image",
+        "video"
+      ],
+      "outputs": [
+        "image",
+        "video"
+      ],
+      "inputs": [
+        "text",
+        "image",
+        "video"
+      ],
+      "media_inputs": {
+        "image": {
+          "start": false,
+          "end": false,
+          "reference": true,
+          "single_reference": false,
+          "multiple_references": true,
+          "background": true,
+          "injected_frames": true,
+          "control": false,
+          "mask": false
+        },
+        "video": {
+          "continue": true,
+          "last": true,
+          "control": true,
+          "mask": true
+        },
+        "audio": {
+          "prompt": false,
+          "output": false
+        }
+      },
+      "capabilities": {
+        "text_to_video": true,
+        "image_to_video": false,
+        "video_to_video": true,
+        "text_to_image": true,
+        "image_to_image": true,
+        "text_to_audio": false,
+        "audio_to_audio": false,
+        "audio_to_video": false,
+        "audio_output": false,
+        "inpainting": true,
+        "outpainting": true,
+        "reference_images": true,
+        "background_image": true,
+        "injected_frames": true,
+        "control_image": false,
+        "control_video": true,
+        "video_continuation": true,
+        "sliding_window": true,
+        "lora": true
+      },
+      "setting_values": {
+        "image_prompt_type": {
+          "allowed": "TVL",
+          "choices": [
+            {
+              "label": "Text/new generation",
+              "value": ""
+            },
+            {
+              "label": "Continue from source video",
+              "value": "V"
+            },
+            {
+              "label": "Continue from last generated video",
+              "value": "L"
+            }
+          ]
+        },
+        "video_prompt_type": {
+          "guide_preprocessing": {
+            "choices": [
+              {
+                "label": "Use Vace raw format",
+                "value": ""
+              },
+              {
+                "label": "UV",
+                "value": "UV"
+              },
+              {
+                "label": "PV",
+                "value": "PV"
+              },
+              {
+                "label": "OV",
+                "value": "OV"
+              },
+              {
+                "label": "DV",
+                "value": "DV"
+              },
+              {
+                "label": "SV",
+                "value": "SV"
+              },
+              {
+                "label": "LV",
+                "value": "LV"
+              },
+              {
+                "label": "CV",
+                "value": "CV"
+              },
+              {
+                "label": "MV",
+                "value": "MV"
+              },
+              {
+                "label": "Use Vace raw format",
+                "value": "V"
+              },
+              {
+                "label": "PDV",
+                "value": "PDV"
+              },
+              {
+                "label": "PSV",
+                "value": "PSV"
+              },
+              {
+                "label": "PLV",
+                "value": "PLV"
+              },
+              {
+                "label": "DSV",
+                "value": "DSV"
+              },
+              {
+                "label": "DLV",
+                "value": "DLV"
+              },
+              {
+                "label": "SLV",
+                "value": "SLV"
+              }
+            ]
+          },
+          "mask_preprocessing": {
+            "choices": [
+              {
+                "label": "None",
+                "value": ""
+              },
+              {
+                "label": "A",
+                "value": "A"
+              },
+              {
+                "label": "NA",
+                "value": "NA"
+              },
+              {
+                "label": "XA",
+                "value": "XA"
+              },
+              {
+                "label": "XNA",
+                "value": "XNA"
+              },
+              {
+                "label": "YA",
+                "value": "YA"
+              },
+              {
+                "label": "YNA",
+                "value": "YNA"
+              },
+              {
+                "label": "WA",
+                "value": "WA"
+              },
+              {
+                "label": "WNA",
+                "value": "WNA"
+              },
+              {
+                "label": "ZA",
+                "value": "ZA"
+              },
+              {
+                "label": "ZNA",
+                "value": "ZNA"
+              }
+            ]
+          },
+          "guide_custom_choices": null,
+          "image_ref_choices": {
+            "letters_filter": "KFI",
+            "choices": [
+              {
+                "label": "None",
+                "value": ""
+              },
+              {
+                "label": "People / Objects",
+                "value": "I"
+              },
+              {
+                "label": "Landscape followed by People / Objects (if any)",
+                "value": "KI"
+              },
+              {
+                "label": "Positioned Frames followed by People / Objects (if any)",
+                "value": "FI"
+              }
+            ]
+          },
+          "custom_video_selection": null,
+          "forced": ""
+        },
+        "audio_prompt_type": {
+          "sources": null,
+          "custom_option": null
+        },
+        "model_mode": null,
+        "sample_solver": {
+          "choices": [
+            {
+              "label": "unipc",
+              "value": "unipc"
+            },
+            {
+              "label": "euler",
+              "value": "euler"
+            },
+            {
+              "label": "dpm++",
+              "value": "dpm++"
+            },
+            {
+              "label": "flowmatch causvid",
+              "value": "causvid"
+            },
+            {
+              "label": "lcm + ltx",
+              "value": "lcm"
+            }
+          ]
+        },
+        "prompt_enhancer": null
+      }
+    },
+    "setting_values": {
+      "image_prompt_type": {
+        "allowed": "TVL",
+        "choices": [
+          {
+            "label": "Text/new generation",
+            "value": ""
+          },
+          {
+            "label": "Continue from source video",
+            "value": "V"
+          },
+          {
+            "label": "Continue from last generated video",
+            "value": "L"
+          }
+        ]
+      },
+      "video_prompt_type": {
+        "guide_preprocessing": {
+          "choices": [
+            {
+              "label": "Use Vace raw format",
+              "value": ""
+            },
+            {
+              "label": "UV",
+              "value": "UV"
+            },
+            {
+              "label": "PV",
+              "value": "PV"
+            },
+            {
+              "label": "OV",
+              "value": "OV"
+            },
+            {
+              "label": "DV",
+              "value": "DV"
+            },
+            {
+              "label": "SV",
+              "value": "SV"
+            },
+            {
+              "label": "LV",
+              "value": "LV"
+            },
+            {
+              "label": "CV",
+              "value": "CV"
+            },
+            {
+              "label": "MV",
+              "value": "MV"
+            },
+            {
+              "label": "Use Vace raw format",
+              "value": "V"
+            },
+            {
+              "label": "PDV",
+              "value": "PDV"
+            },
+            {
+              "label": "PSV",
+              "value": "PSV"
+            },
+            {
+              "label": "PLV",
+              "value": "PLV"
+            },
+            {
+              "label": "DSV",
+              "value": "DSV"
+            },
+            {
+              "label": "DLV",
+              "value": "DLV"
+            },
+            {
+              "label": "SLV",
+              "value": "SLV"
+            }
+          ]
+        },
+        "mask_preprocessing": {
+          "choices": [
+            {
+              "label": "None",
+              "value": ""
+            },
+            {
+              "label": "A",
+              "value": "A"
+            },
+            {
+              "label": "NA",
+              "value": "NA"
+            },
+            {
+              "label": "XA",
+              "value": "XA"
+            },
+            {
+              "label": "XNA",
+              "value": "XNA"
+            },
+            {
+              "label": "YA",
+              "value": "YA"
+            },
+            {
+              "label": "YNA",
+              "value": "YNA"
+            },
+            {
+              "label": "WA",
+              "value": "WA"
+            },
+            {
+              "label": "WNA",
+              "value": "WNA"
+            },
+            {
+              "label": "ZA",
+              "value": "ZA"
+            },
+            {
+              "label": "ZNA",
+              "value": "ZNA"
+            }
+          ]
+        },
+        "guide_custom_choices": null,
+        "image_ref_choices": {
+          "letters_filter": "KFI",
+          "choices": [
+            {
+              "label": "None",
+              "value": ""
+            },
+            {
+              "label": "People / Objects",
+              "value": "I"
+            },
+            {
+              "label": "Landscape followed by People / Objects (if any)",
+              "value": "KI"
+            },
+            {
+              "label": "Positioned Frames followed by People / Objects (if any)",
+              "value": "FI"
+            }
+          ]
+        },
+        "custom_video_selection": null,
+        "forced": ""
+      },
+      "audio_prompt_type": {
+        "sources": null,
+        "custom_option": null
+      },
+      "model_mode": null,
+      "sample_solver": {
+        "choices": [
+          {
+            "label": "unipc",
+            "value": "unipc"
+          },
+          {
+            "label": "euler",
+            "value": "euler"
+          },
+          {
+            "label": "dpm++",
+            "value": "dpm++"
+          },
+          {
+            "label": "flowmatch causvid",
+            "value": "causvid"
+          },
+          {
+            "label": "lcm + ltx",
+            "value": "lcm"
+          }
+        ]
+      },
+      "prompt_enhancer": null
+    },
+    "default_settings": {
+      "settings_version": 2.66,
+      "prompt": "A large orange octopus is seen resting on the bottom of the ocean floor, blending in with the sandy and rocky terrain. Its tentacles are spread out around its body, and its eyes are closed. The octopus is unaware of a king crab that is crawling towards it from behind a rock, its claws raised and ready to attack. The crab is brown and spiny, with long legs and antennae. The scene is captured from a wide angle, showing the vastness and depth of the ocean. The water is clear and blue, with rays of sunlight filtering through. The shot is sharp and crisp, with a high dynamic range. The octopus and the crab are in focus, while the background is slightly blurred, creating a depth of field effect.",
+      "resolution": "832x480",
+      "flow_shift": 2,
+      "sample_solver": "unipc",
+      "guidance_phases": 2,
+      "num_inference_steps": 10,
+      "guidance_scale": 1,
+      "guidance2_scale": 1,
+      "switch_threshold": 875,
+      "alt_prompt": "",
+      "multi_prompts_gen_type": "PG",
+      "postprocess_audio": "",
+      "replace_voice_method": "",
+      "replace_voice_sample": null,
+      "replace_voice_sample2": null,
+      "video_prompt_type": "",
+      "image_prompt_type": "",
+      "model_type": "vace_fun_14B_cocktail_2_2"
+    }
+  }
+}

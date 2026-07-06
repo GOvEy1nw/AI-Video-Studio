@@ -1,0 +1,559 @@
+{
+  "bernini_1.3B": {
+    "model_type": "bernini_1.3B",
+    "name": "Wan2.2 Bernini-R 1.3B",
+    "model_def": {
+      "i2v_class": false,
+      "t2v_class": false,
+      "multitalk_class": false,
+      "standin_class": false,
+      "lynx_class": false,
+      "alpha_class": false,
+      "wan_5B_class": false,
+      "vace_class": false,
+      "bernini_class": true,
+      "scail2": false,
+      "prompt_infos": "## Bernini Prompt Tips\nUse direct editing language. Say what should change, where it should appear, and what must remain unchanged.\n\n### Referring to Inputs\n- Use `source video` for the control video or original clip.\n- Use `reference image` when there is one image.\n- With several images, refer to them by order: `the first reference image`, `the second reference image`, `the third reference image`.\n- Assign each reference a role in the prompt. For example: `Use the first reference image as the jacket design and the second reference image as the logo on the back.`\n\n### Good Prompt Shapes\n- **Video edit:** `Replace the person's blue shirt in the source video with the red floral shirt from the reference image. Preserve the person's face, body shape, pose, motion, camera movement, lighting, shadows, and background. Keep the shirt stable with no flicker.`\n- **Multiple references:** `Dress the person in the source video with the coat from the first reference image and the scarf from the second reference image. Match the original perspective, body motion, fabric folds, and scene lighting. Do not change the face, hair, hands, background, or camera framing.`\n- **Object insertion:** `Add the handbag from the reference image onto the table at the right side of the source video. Keep it the same scale across frames, aligned with the table perspective, with natural contact shadows and no sliding.`\n- **Style transfer:** `Apply the watercolor painting style from the reference image to the source video while preserving the original composition, object shapes, motion, and camera path.`\n- **Reference-to-video:** `Generate a video of the subject from the first reference image walking through a rainy street. Use the outfit from the second reference image. Keep the subject identity consistent, with realistic steps, wet reflections, and stable clothing details.`\n- **Text-only generation:** `A close-up video of a ceramic teapot on a wooden table, morning sunlight through a window, slow camera push-in, steam rising gently, realistic reflections and shadows.`\n\n### Practical Tips\n- Put the requested edit first, then the preservation constraints.\n- Mention materials, colors, placement, scale, lighting, and motion when they matter.\n- For local edits, explicitly name untouched regions: `Do not change the face, hands, background, camera framing, or original motion.`\n- Avoid vague prompts like `make it better`; use concrete nouns and visible constraints.",
+      "infos": "## Bernini 1.3B Notes\nThis smaller variant is best for simple or localized tasks such as style transfer, subtitle or watermark removal, garment or object swaps, and local edits.\n\nIt is less suitable than the 14B Bernini model for complex human generation, large motion changes, dense multi-reference composition, or edits that require many interacting objects.",
+      "color_correction": true,
+      "svi2pro": false,
+      "i2v_2_2": false,
+      "text_encoder_URLs": [
+        "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/umt5-xxl/models_t5_umt5-xxl-enc-bf16.safetensors",
+        "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/umt5-xxl/models_t5_umt5-xxl-enc-quanto_int8.safetensors"
+      ],
+      "text_encoder_folder": "umt5-xxl",
+      "vae_upsampler": [
+        1,
+        2
+      ],
+      "vae_block_size": 16,
+      "profiles_dir": [
+        "wan_bernini_1.3B",
+        "wan_1.3B"
+      ],
+      "group": "wan2_2",
+      "fps": 16,
+      "frames_minimum": 5,
+      "frames_steps": 4,
+      "sliding_window": false,
+      "multiple_submodels": false,
+      "guidance_max_phases": 3,
+      "perturbation": true,
+      "flow_shift": true,
+      "cfg_zero": false,
+      "cfg_star": false,
+      "adaptive_projected_guidance": true,
+      "tea_cache": false,
+      "mag_cache": false,
+      "keep_frames_video_guide_not_supported": false,
+      "sample_solvers": [
+        [
+          "unipc",
+          "unipc"
+        ],
+        [
+          "euler",
+          "euler"
+        ],
+        [
+          "dpm++",
+          "dpm++"
+        ],
+        [
+          "flowmatch causvid",
+          "causvid"
+        ],
+        [
+          "lcm + ltx",
+          "lcm"
+        ]
+      ],
+      "sub_parallel_windows": false,
+      "self_refiner": false,
+      "guide_preprocessing": {
+        "selection": [
+          "",
+          "V"
+        ],
+        "labels": {
+          "V": "Use Control Video"
+        },
+        "default": "V",
+        "label": "Control Video Process"
+      },
+      "image_ref_choices": {
+        "choices": [
+          [
+            "None",
+            ""
+          ],
+          [
+            "Reference Images",
+            "I"
+          ]
+        ],
+        "letters_filter": "I"
+      },
+      "mask_preprocessing": {
+        "selection": [
+          "",
+          "A"
+        ],
+        "labels": {
+          "": "Mask Not Used",
+          "A": "Use Video Mask"
+        },
+        "label": "Control Video Mask"
+      },
+      "return_image_refs_tensor": true,
+      "no_background_removal": true,
+      "fit_into_canvas_image_refs": 0,
+      "control_video_trim": true,
+      "control_net_weight_name": "Video Guidance",
+      "control_net_weight_size": 1,
+      "alt_guidance": "Reference Guidance",
+      "v2i_switch_supported": true,
+      "NAG": false,
+      "image_prompt_types_allowed": "T",
+      "name": "Wan2.2 Bernini-R 1.3B",
+      "architecture": "bernini_1.3B",
+      "description": " Bernini-R renderer derived fromWan 2.2 can modify the content of an existing video or generate a new video with any number of References Images. v2v works quite well with Lora Accelerators such as Causvid 4 steps . But as soon as you include reference frames, you will have to go for at least 15 steps with guidance and no lora accelerator.",
+      "URLs": [
+        "https://huggingface.co/DeepBeepMeep/Wan2.2/resolve/main/bernini_r_wan2.2_1.3B_mbf16.safetensors"
+      ],
+      "path": "defaults\\bernini_1.3B.json",
+      "_profile_roots": [
+        "profiles"
+      ],
+      "metadata": {
+        "model_type": "bernini_1.3B",
+        "family": "wan2_2",
+        "family_label": "Wan2.2",
+        "base_model_type": "bernini_1.3B",
+        "finetune": false,
+        "main_output": [
+          "image",
+          "video"
+        ],
+        "outputs": [
+          "image",
+          "video"
+        ],
+        "inputs": [
+          "text",
+          "image",
+          "video"
+        ],
+        "media_inputs": {
+          "image": {
+            "start": false,
+            "end": false,
+            "reference": true,
+            "single_reference": false,
+            "multiple_references": true,
+            "background": false,
+            "injected_frames": false,
+            "control": false,
+            "mask": false
+          },
+          "video": {
+            "continue": false,
+            "last": false,
+            "control": true,
+            "mask": true
+          },
+          "audio": {
+            "prompt": false,
+            "output": false
+          }
+        },
+        "capabilities": {
+          "text_to_video": true,
+          "image_to_video": false,
+          "video_to_video": true,
+          "text_to_image": true,
+          "image_to_image": true,
+          "text_to_audio": false,
+          "audio_to_audio": false,
+          "audio_to_video": false,
+          "audio_output": false,
+          "inpainting": true,
+          "outpainting": false,
+          "reference_images": true,
+          "background_image": false,
+          "injected_frames": false,
+          "control_image": false,
+          "control_video": true,
+          "video_continuation": false,
+          "sliding_window": false,
+          "lora": true
+        },
+        "setting_values": {
+          "image_prompt_type": {
+            "allowed": "T",
+            "choices": [
+              {
+                "label": "Text/new generation",
+                "value": ""
+              }
+            ]
+          },
+          "video_prompt_type": {
+            "guide_preprocessing": {
+              "default": "V",
+              "label": "Control Video Process",
+              "choices": [
+                {
+                  "label": "Use Control Video",
+                  "value": ""
+                },
+                {
+                  "label": "Use Control Video",
+                  "value": "V"
+                }
+              ]
+            },
+            "mask_preprocessing": {
+              "label": "Control Video Mask",
+              "choices": [
+                {
+                  "label": "Mask Not Used",
+                  "value": ""
+                },
+                {
+                  "label": "Use Video Mask",
+                  "value": "A"
+                }
+              ]
+            },
+            "guide_custom_choices": null,
+            "image_ref_choices": {
+              "letters_filter": "I",
+              "choices": [
+                {
+                  "label": "None",
+                  "value": ""
+                },
+                {
+                  "label": "Reference Images",
+                  "value": "I"
+                }
+              ]
+            },
+            "custom_video_selection": null,
+            "forced": ""
+          },
+          "audio_prompt_type": {
+            "sources": null,
+            "custom_option": null
+          },
+          "model_mode": null,
+          "sample_solver": {
+            "choices": [
+              {
+                "label": "unipc",
+                "value": "unipc"
+              },
+              {
+                "label": "euler",
+                "value": "euler"
+              },
+              {
+                "label": "dpm++",
+                "value": "dpm++"
+              },
+              {
+                "label": "flowmatch causvid",
+                "value": "causvid"
+              },
+              {
+                "label": "lcm + ltx",
+                "value": "lcm"
+              }
+            ]
+          },
+          "prompt_enhancer": null
+        }
+      },
+      "settings": {
+        "prompt": "Replace the person's outer shirt with the shirt from the reference image while preserving the original motion, camera framing, lighting, background, and body pose.",
+        "video_prompt_type": "VI",
+        "resolution": "832x480",
+        "video_length": 81,
+        "num_inference_steps": 40,
+        "sample_solver": "unipc",
+        "flow_shift": 5,
+        "guidance_phases": 1,
+        "switch_threshold": 0,
+        "guidance_scale": 4,
+        "control_net_weight": 1.25,
+        "alt_guidance_scale": 4.5,
+        "remove_background_images_ref": 0,
+        "prompt_enhancer": ""
+      },
+      "model_type": "bernini_1.3B"
+    },
+    "metadata": {
+      "model_type": "bernini_1.3B",
+      "family": "wan2_2",
+      "family_label": "Wan2.2",
+      "base_model_type": "bernini_1.3B",
+      "finetune": false,
+      "main_output": [
+        "image",
+        "video"
+      ],
+      "outputs": [
+        "image",
+        "video"
+      ],
+      "inputs": [
+        "text",
+        "image",
+        "video"
+      ],
+      "media_inputs": {
+        "image": {
+          "start": false,
+          "end": false,
+          "reference": true,
+          "single_reference": false,
+          "multiple_references": true,
+          "background": false,
+          "injected_frames": false,
+          "control": false,
+          "mask": false
+        },
+        "video": {
+          "continue": false,
+          "last": false,
+          "control": true,
+          "mask": true
+        },
+        "audio": {
+          "prompt": false,
+          "output": false
+        }
+      },
+      "capabilities": {
+        "text_to_video": true,
+        "image_to_video": false,
+        "video_to_video": true,
+        "text_to_image": true,
+        "image_to_image": true,
+        "text_to_audio": false,
+        "audio_to_audio": false,
+        "audio_to_video": false,
+        "audio_output": false,
+        "inpainting": true,
+        "outpainting": false,
+        "reference_images": true,
+        "background_image": false,
+        "injected_frames": false,
+        "control_image": false,
+        "control_video": true,
+        "video_continuation": false,
+        "sliding_window": false,
+        "lora": true
+      },
+      "setting_values": {
+        "image_prompt_type": {
+          "allowed": "T",
+          "choices": [
+            {
+              "label": "Text/new generation",
+              "value": ""
+            }
+          ]
+        },
+        "video_prompt_type": {
+          "guide_preprocessing": {
+            "default": "V",
+            "label": "Control Video Process",
+            "choices": [
+              {
+                "label": "Use Control Video",
+                "value": ""
+              },
+              {
+                "label": "Use Control Video",
+                "value": "V"
+              }
+            ]
+          },
+          "mask_preprocessing": {
+            "label": "Control Video Mask",
+            "choices": [
+              {
+                "label": "Mask Not Used",
+                "value": ""
+              },
+              {
+                "label": "Use Video Mask",
+                "value": "A"
+              }
+            ]
+          },
+          "guide_custom_choices": null,
+          "image_ref_choices": {
+            "letters_filter": "I",
+            "choices": [
+              {
+                "label": "None",
+                "value": ""
+              },
+              {
+                "label": "Reference Images",
+                "value": "I"
+              }
+            ]
+          },
+          "custom_video_selection": null,
+          "forced": ""
+        },
+        "audio_prompt_type": {
+          "sources": null,
+          "custom_option": null
+        },
+        "model_mode": null,
+        "sample_solver": {
+          "choices": [
+            {
+              "label": "unipc",
+              "value": "unipc"
+            },
+            {
+              "label": "euler",
+              "value": "euler"
+            },
+            {
+              "label": "dpm++",
+              "value": "dpm++"
+            },
+            {
+              "label": "flowmatch causvid",
+              "value": "causvid"
+            },
+            {
+              "label": "lcm + ltx",
+              "value": "lcm"
+            }
+          ]
+        },
+        "prompt_enhancer": null
+      }
+    },
+    "setting_values": {
+      "image_prompt_type": {
+        "allowed": "T",
+        "choices": [
+          {
+            "label": "Text/new generation",
+            "value": ""
+          }
+        ]
+      },
+      "video_prompt_type": {
+        "guide_preprocessing": {
+          "default": "V",
+          "label": "Control Video Process",
+          "choices": [
+            {
+              "label": "Use Control Video",
+              "value": ""
+            },
+            {
+              "label": "Use Control Video",
+              "value": "V"
+            }
+          ]
+        },
+        "mask_preprocessing": {
+          "label": "Control Video Mask",
+          "choices": [
+            {
+              "label": "Mask Not Used",
+              "value": ""
+            },
+            {
+              "label": "Use Video Mask",
+              "value": "A"
+            }
+          ]
+        },
+        "guide_custom_choices": null,
+        "image_ref_choices": {
+          "letters_filter": "I",
+          "choices": [
+            {
+              "label": "None",
+              "value": ""
+            },
+            {
+              "label": "Reference Images",
+              "value": "I"
+            }
+          ]
+        },
+        "custom_video_selection": null,
+        "forced": ""
+      },
+      "audio_prompt_type": {
+        "sources": null,
+        "custom_option": null
+      },
+      "model_mode": null,
+      "sample_solver": {
+        "choices": [
+          {
+            "label": "unipc",
+            "value": "unipc"
+          },
+          {
+            "label": "euler",
+            "value": "euler"
+          },
+          {
+            "label": "dpm++",
+            "value": "dpm++"
+          },
+          {
+            "label": "flowmatch causvid",
+            "value": "causvid"
+          },
+          {
+            "label": "lcm + ltx",
+            "value": "lcm"
+          }
+        ]
+      },
+      "prompt_enhancer": null
+    },
+    "default_settings": {
+      "settings_version": 2.66,
+      "prompt": "Replace the person's outer shirt with the shirt from the reference image while preserving the original motion, camera framing, lighting, background, and body pose.",
+      "resolution": "832x480",
+      "flow_shift": 5,
+      "sample_solver": "unipc",
+      "video_prompt_type": "VI",
+      "video_length": 81,
+      "num_inference_steps": 40,
+      "guidance_scale": 4,
+      "control_net_weight": 1.25,
+      "alt_guidance_scale": 4.5,
+      "remove_background_images_ref": 0,
+      "prompt_enhancer": "",
+      "guidance_phases": 1,
+      "switch_threshold": 0,
+      "alt_prompt": "",
+      "multi_prompts_gen_type": "PG",
+      "postprocess_audio": "",
+      "replace_voice_method": "",
+      "replace_voice_sample": null,
+      "replace_voice_sample2": null,
+      "image_prompt_type": "",
+      "model_type": "bernini_1.3B"
+    }
+  }
+}

@@ -1,0 +1,492 @@
+{
+  "joyai_echo": {
+    "model_type": "joyai_echo",
+    "name": "JoyAI-Echo 22B",
+    "model_def": {
+      "ltx2_22B_class": true,
+      "ltx2_edit_anything": false,
+      "infos": "**JoyAI-Echo**\n\nJoyAI-Echo is an LTX-2.3 based audio-video model for connected multi-window stories. WanGP generates one sliding window after another and keeps compact memory from previous windows so later windows can reuse people, voices, objects, and places.\n\n**How Generation Works**\n\n- A sliding window acts like one story beat or shot.\n- Write one prompt per line or one paragraph per window, depending on the Text Prompt processing mode.\n- A Start Image or Continue Video applies to the first window.\n- Later windows rely on their own prompt text, optional overlap frames, and Joy memory.\n- Use **1 phase** for best JoyAI-Echo performance. Two phases can refine the image, but one phase is usually faster and more reliable for connected audio-video memory.\n\n**Memory**\n\n- Joy memory has up to active **7 slots**.\n- Each slot stores a very short visual moment: about **9 frames**, roughly **360 ms at 25 fps**.\n- Each visual moment is paired with about **3.8 seconds** of nearby voice or sound from the same window, centered on the selected memory moment when a frame position is provided: roughly **1.9 seconds before** and **1.9 seconds after**. If that centered audio is silent, Joy shifts to the nearest non-silent audio window.\n- Memories are **not saved automatically**. Use prompt commands such as `[/store_mem=name]` on windows that should become reusable references.\n- Named memories are kept in a persistent RAM cache. Up to 7 of them can be active at once; `[/load_mem=name1,name2]` selects which cached memories are active for a later window.\n- When a window has no `[/load_mem...]` command, it continues with the active memories from the previous window plus any memories stored by that previous window.\n\nUse several names for an important character when identity matters. For example, store two or three moments of the same person from different angles or expressions, then load the most useful names in later windows. You can also drop old names before a new scene so memory is not wasted on characters or objects that no longer matter.\n\n**Control Video Memory**\n\nControl Video Memory can predefine named memory before the first generated window. Provide a Control Video with an audio track, choose **JoyAI-Echo Control Video Memory**, and either leave positions empty for automatic non-silent selection or enter frame/second positions.\n\nWanGP uses only the needed moments instead of treating the full control video as the generated source.\n\nExample: to use two reference moments from the first 20 seconds of a Control Video, set field **Joy Memory Positions** to `4s, 14s`. Joy names them `control1` and `control2` and loads them into window 1 if there is no other memory instruction. To name them yourself, write `man=4s,woman=14s`; later windows can use `[/load_mem=man,woman]`.\n\n**Prompt Commands**\n\nJoy supports optional `[/...]` prompt commands for per-window duration, hard cuts, overlap, and memory management. See the prompt help for the full syntax.\n",
+      "text_encoder_folder": "gemma-3-12b-it-qat-q4_0-unquantized",
+      "text_encoder_URLs": [
+        "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/gemma-3-12b-it-qat-q4_0-unquantized/gemma-3-12b-it-qat-q4_0-unquantized.safetensors",
+        "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/gemma-3-12b-it-qat-q4_0-unquantized/gemma-3-12b-it-qat-q4_0-unquantized_quanto_bf16_int8.safetensors"
+      ],
+      "dtype": "bf16",
+      "fps": 25,
+      "frames_minimum": 17,
+      "frames_steps": 8,
+      "sliding_window": true,
+      "returns_audio": true,
+      "prompt_enhancer_button_label": "Write",
+      "auto_null_audio": true,
+      "multimedia_generation": true,
+      "profiles_dir": [
+        "ltx2"
+      ],
+      "ltx2_spatial_upscaler_file": "ltx-2.3-spatial-upscaler-x2-1.1.safetensors",
+      "ltx2_hdr_lora_file": "ltx-2.3-22b-ic-lora-hdr-0.9.safetensors",
+      "ltx2_hdr_scene_embeddings_file": "ltx-2.3-22b-ic-lora-hdr-scene-emb.safetensors",
+      "self_refiner": true,
+      "self_refiner_max_plans": 2,
+      "vae_block_size": 64,
+      "keep_frames_video_guide_not_supported": true,
+      "ltx2_lora_distilled": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-distilled-lora-384.safetensors",
+      "ltx2_lora_distilled_1_1": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-distilled-lora-384-1.1.safetensors",
+      "ltx2_lora_union_control": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-ic-lora-union-control-ref0.5.safetensors",
+      "ltx2_lora_id": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/id-lora-celebvhq-ltx2.3.safetensors",
+      "ltx2_lora_outpaint": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-ic-lora-outpaint.safetensors",
+      "ltx2_lora_inpaint": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-ic-lora-in-outpainting-0.9.safetensors",
+      "ltx2_lora_ingredients": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-ic-lora-ingredients-0.9.safetensors",
+      "ltx2_lora_hdr": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-ic-lora-hdr-0.9.safetensors",
+      "ltx2_pipeline": "distilled",
+      "preset_profiles_dir": [
+        "ltx2_distilled_presets"
+      ],
+      "extra_control_frames": 1,
+      "dont_cat_preguide": true,
+      "input_video_strength": {
+        "label": "Start Image / Source Strength (lower values may create more motion)",
+        "name": "Start Image / Source Strength"
+      },
+      "joyai_echo": true,
+      "joyai_audio_memory": true,
+      "joyai_memory_max_size": 7,
+      "joyai_memory_num_fix_frames": 3,
+      "joyai_memory_downscale_factor": 1,
+      "joyai_audio_memory_window_size": 96,
+      "prompt_slash_commands": [
+        "no_mem",
+        "store_mem",
+        "load_mem",
+        "drop_mem"
+      ],
+      "preserve_empty_prompt_lines": true,
+      "skip_video_guide_preprocess": true,
+      "NAG": true,
+      "image_prompt_types_allowed": "TSV",
+      "prompt_infos": "**JoyAI-Echo Prompt Format**\n\nJoyAI-Echo keeps a small audio-video memory between sliding windows. Each memory slot is a short visual moment paired with nearby voice or sound, so prompts work best when recurring people, voices, objects, and settings are described consistently across windows. Use stable IDs such as `ID_A`, `ID_B`, `ID_OBJECT`, and `ID_PLACE`, then repeat the details that matter each time they reappear.\n\nWrite one story window per line or paragraph, depending on the selected Text Prompt processing mode. Each window should be self-contained: identity, wardrobe, voice, setting, action, camera framing, dialogue, visible lips when someone speaks, ambience, and sound effects.\n\n**Window Commands**\n\nWanGP removes `[/...]` commands before sending the text to the model. Brackets that do not start with `/` are preserved for other prompt syntax.\n\nGeneric window commands:\n\n- `[/duration=121]`: this window contributes about 121 output frames.\n- `[/duration=5s]`: this window contributes about 5 seconds at the generation FPS.\n- `[/duration=20%]`: this window contributes 20% of the requested total frame count.\n- `[/overlap]`: use the model's default overlap for this window.\n- `[/overlap=9]`: use overlap frames from the previous window to make a smoother transition.\n- `[/overlap=0]`: use no overlap frames, when the model supports text-to-video windows.\n- `[/new_shot]`: start without overlap frames. Use it for a hard cut, a different scene, a new character introduction, or when Continue Video should be preserved in the output but not visually continued by the model.\n\nJoyAI-Echo memory commands:\n\n- `[/store_mem=man1,man2]`: save named memories from this window, sampled at different moments. Multiple names for the same character will record in memory multiple 8 frames clips (with audio) at different times and provide more hints to the model for later reuse.\n- `[/load_mem=man1,woman1]`: use only these named memories for this window. If a named memory is cached but not active, Joy loads it into an internal slot.\n- `[/load_mem]` or `[/load_mem=]`: use no Joy memory for this window.\n- `[/drop_mem=old_scene,side_prop]`: remove named memories from active memory and from the persistent RAM cache.\n- `[/no_mem]`: deprecated and ignored. Memories are no longer saved automatically; use `[/store_mem=name]` only on windows you want to remember.\n\nIf a window has no `[/load_mem...]` command, Joy keeps the active memories from the previous window and adds any memories that were stored at the end of that previous window. Control Video memories are active in window 1 by default unless window 1 uses `[/load_mem...]` to select a different set or no memory.\n\nControl Video Memory positions can also be named. Use `2s, 5s` for automatic names `control1`, `control2`, or `man=2s,woman=5s` to create named control memories that can later be selected with `[/load_mem=man,woman]`.\n\nYou can combine commands in one bracket, for example `[/duration=8s,/new_shot,/load_mem=man1,woman1]`.\n\n**Tips**\n\n- Reuse the same ID and repeat important visible and audio traits. Memory helps, but the prompt still guides identity.\n- Store only the windows that are useful later. Memories are not saved automatically.\n- Use named memories when the story has several people or objects. Names make it easier to load the right identities later or drop stale ones.\n- Use `[/new_shot]` to introduce a new person or location without visual overlap from the previous window. Joy memory can still influence later windows when loaded.\n- Use `[/load_mem=]` when a new shot introduces a new character and should not be influenced by previous memories.\n- Use a Control Video with an audio track to predefine memory before generation. Select JoyAI-Echo Control Video Memory, then leave positions empty for automatic non-silent selection, enter positions like `2s, 8s, 15s`, or name them like `man=2s,woman=8s`.\n\n**Three-Window Example**\n\n```text\n[/duration=8s,/store_mem=magician1,magician2] ID_A is a retired stage magician with silver hair, a burgundy velvet jacket, expressive eyebrows, and a dry theatrical voice. He stands inside an abandoned seaside theater at night, opens a lacquered box, reveals a glowing blue playing card, and says, \"I retired from miracles because the miracles started freelancing.\" Keep his face and lip movement clear in a stable medium close-up. Add dusty gold footlights, torn red curtains, distant waves, old wood creaks, and soft card handling.\n\n[/duration=8s,/new_shot,/load_mem=,/store_mem=duck1,duck2] ID_B is a small yellow duck inspector wearing a tiny teal raincoat, round brass spectacles, polished rubber boots, and a serious waterproof satchel. ID_B waddles through the theater aisle, sees the glowing card, and quacks in a crisp subtitle-like comic rhythm, \"That door has not filed the proper puddle paperwork.\" Keep ID_B's duck design, bill movement, spectacles, and raincoat clear in a medium shot with squeaky footsteps, distant surf, and a tiny official whistle.\n\n[/duration=8s,/new_shot,/load_mem=magician1,magician2,duck1,duck2] ID_A and ID_B are together on the same seaside theater stage. ID_A is still the silver-haired retired magician in the burgundy velvet jacket with the dry theatrical voice and glowing blue card. ID_B is still the small yellow duck inspector in the teal raincoat, spectacles, boots, and serious satchel. The glowing door opens between them onto a miniature harbor full of lantern boats. ID_A says, \"I told you the door was shy.\" ID_B replies, \"Shy doors still need permits.\" Keep both identities, voices, scale difference, readable lip and bill movement, card glow, theater details, tiny waves, and playful overlapping laughter.\n```\n\n**Prompt Enhancer**\n\nThe prompt enhancer works best when your source prompt already describes the story window by window. This gives the enhancer a plan to expand instead of letting it invent disconnected shots. Name the recurring characters and say what should happen in each window.\n\nExample source prompt:\n\n```text\nA warm comic story about a cautious widower who runs a tiny neighborhood restaurant and a confident sailor who fixes boats and hates fancy food.\n- Window 1: show the man alone in his restaurant before opening time, practicing a dinner speech and worrying that the soup is too dramatic.\n- Window 2: show the woman alone on her small boat, repairing a radio and joking that the sea is a terrible sous-chef.\n- Window 3: the man and woman meet in the restaurant during a sudden rainstorm; she brings a broken compass, he serves the dramatic soup, and they argue playfully.\n- Window 4: they travel together on the woman's boat, using the man's soup pot as an improvised compass holder while laughing about their terrible navigation.\n- Window 5: they reach a frozen northern harbor and hold a tiny wedding on the ice, with the soup pot as the ceremonial bell.\n```\n",
+      "prompt_enhancer_def": {
+        "selection": [
+          "TM",
+          "TIM"
+        ],
+        "labels": {
+          "TM": "A JoyAI-Echo multi-shot prompt using existing Text Prompt",
+          "TIM": "A JoyAI-Echo multi-shot prompt using existing Text Prompt and Start Image"
+        },
+        "default": ""
+      },
+      "text_prompt_enhancer_instructions1": "You are writing prompts for JoyAI-Echo, an LTX-2.3 based audio-video model for connected multi-window stories.\n\nJoyAI-Echo works best when each window is a clear cinematic beat and later windows deliberately reuse earlier people, voices, objects, or places. It keeps compact audio-video memories across windows, but the prompt should still repeat the identity details that must remain stable.\n\nReturn only the final prompt text. Do not return JSON, bullets, headings, commentary, or code fences.\n\nFormat:\n- Write 2 to 6 cinematic story windows.\n- Each window is exactly one non-empty line made of multiple sentences.\n- Separate windows with a single newline. Do not insert blank lines between windows.\n- Do not wrap one window across multiple lines.\n- Preserve any useful bracket syntax the user already provided.\n- You may prefix a window with `[/new_shot]` when introducing a new character, cutting to a new location, or starting a later joint scene without visual overlap from the previous window.\n- Do not add other `[/...]` commands unless the user already provided them.\n\nContent rules:\n- Use stable IDs such as ID_A, ID_B, ID_OBJECT, or ID_PLACE for recurring people, objects, and settings.\n- Reintroduce the key visual identity, wardrobe, voice, location, and recurring object details in every window where they matter.\n- Include natural movement, camera framing, facial/lip visibility when there is speech, sound effects, ambience, and spoken lines.\n- Make later windows clearly reuse earlier characters, objects, or locations so JoyAI-Echo memory has something meaningful to carry forward.\n- When introducing a new character, give them a distinct silhouette, wardrobe or object, voice quality, and a readable action.\n- Avoid unrelated clips stitched together without continuity.\n\nExample:\nID_A is Martin Bell, a careful apartment superintendent in his early fifties with salt-and-pepper hair, a gray mustache, a navy work shirt, keys on his belt, and a warm gravelly voice. He stands alone beside an old apartment elevator at night. The elevator dings and announces, \"Third floor: lasagna is experiencing delays.\" ID_A looks at the panel, sighs, and says, \"I fixed the water pressure. I did not authorize culinary announcements.\" Keep his face and lip movement clear in a stable medium close-up. Keep background sound minimal, with only the elevator bell and a soft room hum.\n[/new_shot]ID_B is Nora Chen, a sharp tenant association president in her late thirties with shoulder-length black hair, tortoiseshell glasses, a mustard cardigan, a canvas tote, and a clear quick alto voice. She stands alone in the lobby near the elevator, holding a few complaint forms. The elevator opens behind her and calmly announces, \"Laundry room: socks are now al dente.\" ID_B raises one eyebrow and says, \"That elevator owes me four quarters and a written apology.\" Keep her face, glasses, clothing, and lip movement clear in a medium shot. Keep sound minimal, with only the elevator doors and a soft paper rustle.\n[/new_shot]ID_A and ID_B are together beside the open elevator service panel in the same apartment building. ID_A is still the gray-mustached superintendent in the navy work shirt with keys and a warm gravelly voice. ID_B is still Nora Chen with black hair, tortoiseshell glasses, mustard cardigan, canvas tote, and quick alto voice. They discover an old baby monitor inside the panel, picking up a cooking show from another apartment. ID_A says, \"So the elevator is not haunted, just subscribed.\" ID_B replies, \"Excellent. Then I am billing apartment 4B for emotional ravioli.\" Keep both faces and lip movement readable, preserve their distinct voices and personalities, and keep background sound minimal.\n",
+      "video_prompt_enhancer_instructions1": "You are writing prompts for JoyAI-Echo, an LTX-2.3 based audio-video model for connected multi-window stories.\n\nJoyAI-Echo works best when each window is a clear cinematic beat and later windows deliberately reuse earlier people, voices, objects, or places. It keeps compact audio-video memories across windows, but the prompt should still repeat the identity details that must remain stable.\n\nReturn only the final prompt text. Do not return JSON, bullets, headings, commentary, or code fences.\n\nFormat:\n- Write 2 to 6 cinematic story windows.\n- Each window is exactly one non-empty line made of multiple sentences.\n- Separate windows with a single newline. Do not insert blank lines between windows.\n- Do not wrap one window across multiple lines.\n- Preserve any useful bracket syntax the user already provided.\n- You may prefix a window with `[/new_shot]` when introducing a new character, cutting to a new location, or starting a later joint scene without visual overlap from the previous window.\n- Do not add other `[/...]` commands unless the user already provided them.\n\nContent rules:\n- Use stable IDs such as ID_A, ID_B, ID_OBJECT, or ID_PLACE for recurring people, objects, and settings.\n- Reintroduce the key visual identity, wardrobe, voice, location, and recurring object details in every window where they matter.\n- Include natural movement, camera framing, facial/lip visibility when there is speech, sound effects, ambience, and spoken lines.\n- Make later windows clearly reuse earlier characters, objects, or locations so JoyAI-Echo memory has something meaningful to carry forward.\n- When introducing a new character, give them a distinct silhouette, wardrobe or object, voice quality, and a readable action.\n- Avoid unrelated clips stitched together without continuity.\n\nExample:\nID_A is Martin Bell, a careful apartment superintendent in his early fifties with salt-and-pepper hair, a gray mustache, a navy work shirt, keys on his belt, and a warm gravelly voice. He stands alone beside an old apartment elevator at night. The elevator dings and announces, \"Third floor: lasagna is experiencing delays.\" ID_A looks at the panel, sighs, and says, \"I fixed the water pressure. I did not authorize culinary announcements.\" Keep his face and lip movement clear in a stable medium close-up. Keep background sound minimal, with only the elevator bell and a soft room hum.\n[/new_shot]ID_B is Nora Chen, a sharp tenant association president in her late thirties with shoulder-length black hair, tortoiseshell glasses, a mustard cardigan, a canvas tote, and a clear quick alto voice. She stands alone in the lobby near the elevator, holding a few complaint forms. The elevator opens behind her and calmly announces, \"Laundry room: socks are now al dente.\" ID_B raises one eyebrow and says, \"That elevator owes me four quarters and a written apology.\" Keep her face, glasses, clothing, and lip movement clear in a medium shot. Keep sound minimal, with only the elevator doors and a soft paper rustle.\n[/new_shot]ID_A and ID_B are together beside the open elevator service panel in the same apartment building. ID_A is still the gray-mustached superintendent in the navy work shirt with keys and a warm gravelly voice. ID_B is still Nora Chen with black hair, tortoiseshell glasses, mustard cardigan, canvas tote, and quick alto voice. They discover an old baby monitor inside the panel, picking up a cooking show from another apartment. ID_A says, \"So the elevator is not haunted, just subscribed.\" ID_B replies, \"Excellent. Then I am billing apartment 4B for emotional ravioli.\" Keep both faces and lip movement readable, preserve their distinct voices and personalities, and keep background sound minimal.\n",
+      "image_prompt_enhancer_instructions1": "You are writing prompts for JoyAI-Echo, an LTX-2.3 based audio-video model for connected multi-window stories.\n\nJoyAI-Echo works best when each window is a clear cinematic beat and later windows deliberately reuse earlier people, voices, objects, or places. It keeps compact audio-video memories across windows, but the prompt should still repeat the identity details that must remain stable.\n\nReturn only the final prompt text. Do not return JSON, bullets, headings, commentary, or code fences.\n\nFormat:\n- Write 2 to 6 cinematic story windows.\n- Each window is exactly one non-empty line made of multiple sentences.\n- Separate windows with a single newline. Do not insert blank lines between windows.\n- Do not wrap one window across multiple lines.\n- Preserve any useful bracket syntax the user already provided.\n- You may prefix a window with `[/new_shot]` when introducing a new character, cutting to a new location, or starting a later joint scene without visual overlap from the previous window.\n- Do not add other `[/...]` commands unless the user already provided them.\n\nContent rules:\n- Use stable IDs such as ID_A, ID_B, ID_OBJECT, or ID_PLACE for recurring people, objects, and settings.\n- Reintroduce the key visual identity, wardrobe, voice, location, and recurring object details in every window where they matter.\n- Include natural movement, camera framing, facial/lip visibility when there is speech, sound effects, ambience, and spoken lines.\n- Make later windows clearly reuse earlier characters, objects, or locations so JoyAI-Echo memory has something meaningful to carry forward.\n- When introducing a new character, give them a distinct silhouette, wardrobe or object, voice quality, and a readable action.\n- Avoid unrelated clips stitched together without continuity.\n\nExample:\nID_A is Martin Bell, a careful apartment superintendent in his early fifties with salt-and-pepper hair, a gray mustache, a navy work shirt, keys on his belt, and a warm gravelly voice. He stands alone beside an old apartment elevator at night. The elevator dings and announces, \"Third floor: lasagna is experiencing delays.\" ID_A looks at the panel, sighs, and says, \"I fixed the water pressure. I did not authorize culinary announcements.\" Keep his face and lip movement clear in a stable medium close-up. Keep background sound minimal, with only the elevator bell and a soft room hum.\n[/new_shot]ID_B is Nora Chen, a sharp tenant association president in her late thirties with shoulder-length black hair, tortoiseshell glasses, a mustard cardigan, a canvas tote, and a clear quick alto voice. She stands alone in the lobby near the elevator, holding a few complaint forms. The elevator opens behind her and calmly announces, \"Laundry room: socks are now al dente.\" ID_B raises one eyebrow and says, \"That elevator owes me four quarters and a written apology.\" Keep her face, glasses, clothing, and lip movement clear in a medium shot. Keep sound minimal, with only the elevator doors and a soft paper rustle.\n[/new_shot]ID_A and ID_B are together beside the open elevator service panel in the same apartment building. ID_A is still the gray-mustached superintendent in the navy work shirt with keys and a warm gravelly voice. ID_B is still Nora Chen with black hair, tortoiseshell glasses, mustard cardigan, canvas tote, and quick alto voice. They discover an old baby monitor inside the panel, picking up a cooking show from another apartment. ID_A says, \"So the elevator is not haunted, just subscribed.\" ID_B replies, \"Excellent. Then I am billing apartment 4B for emotional ravioli.\" Keep both faces and lip movement readable, preserve their distinct voices and personalities, and keep background sound minimal.\n",
+      "text_prompt_enhancer_max_tokens1": 1536,
+      "video_prompt_enhancer_max_tokens1": 1536,
+      "image_prompt_enhancer_max_tokens1": 1536,
+      "guide_custom_choices": {
+        "choices": [
+          [
+            "No Control Video Memory",
+            ""
+          ],
+          [
+            "JoyAI-Echo Control Video Memory",
+            "V1"
+          ]
+        ],
+        "letters_filter": "V1",
+        "default": "",
+        "label": "Control Video Memory"
+      },
+      "custom_settings": [
+        {
+          "id": "joyai_control_memory_positions",
+          "name": "Control Video Memory Positions",
+          "label": "Joy Memory Positions from Control Video (frames or seconds, comma-separated)",
+          "type": "text",
+          "default": "",
+          "video_prompt_type": "1"
+        }
+      ],
+      "sliding_window_defaults": {
+        "overlap_min": 1,
+        "overlap_max": 97,
+        "overlap_step": 8,
+        "overlap_default": 9,
+        "window_min": 5,
+        "window_max": 501,
+        "window_step": 4,
+        "window_default": 241
+      },
+      "lock_inference_steps": true,
+      "guidance_max_phases": 2,
+      "visible_phases": 0,
+      "name": "JoyAI-Echo 22B",
+      "architecture": "joyai_echo",
+      "description": "JoyAI-Echo is an LTX-2.3-based audio-video model for connected multi-window stories. WanGP keeps compact visual and audio memories so later windows can reuse characters, voices, objects, and places. Write clear story beats with stable IDs, repeated identity details, readable dialogue, and consistent sound design. A Control Video with audio can predefine memory before generation.",
+      "URLs": [
+        "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/JoyAI-Echo_diffusion_model_bf16.safetensors",
+        "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/JoyAI-Echo_diffusion_model_quanto_bf16_int8.safetensors"
+      ],
+      "path": "defaults\\joyai_echo.json",
+      "_profile_roots": [
+        "profiles"
+      ],
+      "metadata": {
+        "model_type": "joyai_echo",
+        "family": "ltx2",
+        "family_label": "LTX-2",
+        "base_model_type": "joyai_echo",
+        "finetune": false,
+        "main_output": [
+          "video"
+        ],
+        "outputs": [
+          "video",
+          "audio"
+        ],
+        "inputs": [
+          "text",
+          "image",
+          "video"
+        ],
+        "media_inputs": {
+          "image": {
+            "start": true,
+            "end": false,
+            "reference": false,
+            "single_reference": false,
+            "multiple_references": false,
+            "background": false,
+            "injected_frames": false,
+            "control": false,
+            "mask": false
+          },
+          "video": {
+            "continue": true,
+            "last": false,
+            "control": true,
+            "mask": false
+          },
+          "audio": {
+            "prompt": false,
+            "output": true
+          }
+        },
+        "capabilities": {
+          "text_to_video": true,
+          "image_to_video": true,
+          "video_to_video": true,
+          "text_to_image": false,
+          "image_to_image": false,
+          "text_to_audio": false,
+          "audio_to_audio": false,
+          "audio_to_video": false,
+          "audio_output": true,
+          "inpainting": false,
+          "outpainting": false,
+          "reference_images": false,
+          "background_image": false,
+          "injected_frames": false,
+          "control_image": false,
+          "control_video": true,
+          "video_continuation": true,
+          "sliding_window": true,
+          "lora": true
+        },
+        "setting_values": {
+          "image_prompt_type": {
+            "allowed": "TSV",
+            "choices": [
+              {
+                "label": "Text/new generation",
+                "value": ""
+              },
+              {
+                "label": "Start image",
+                "value": "S"
+              },
+              {
+                "label": "Continue from source video",
+                "value": "V"
+              }
+            ]
+          },
+          "video_prompt_type": {
+            "guide_preprocessing": null,
+            "mask_preprocessing": null,
+            "guide_custom_choices": {
+              "default": "",
+              "label": "Control Video Memory",
+              "letters_filter": "V1",
+              "choices": [
+                {
+                  "label": "No Control Video Memory",
+                  "value": ""
+                },
+                {
+                  "label": "JoyAI-Echo Control Video Memory",
+                  "value": "V1"
+                }
+              ]
+            },
+            "image_ref_choices": null,
+            "custom_video_selection": null,
+            "forced": ""
+          },
+          "audio_prompt_type": {
+            "sources": null,
+            "custom_option": null
+          },
+          "model_mode": null,
+          "sample_solver": null,
+          "prompt_enhancer": {
+            "default": "",
+            "choices": [
+              {
+                "label": "A JoyAI-Echo multi-shot prompt using existing Text Prompt",
+                "value": "TM"
+              },
+              {
+                "label": "A JoyAI-Echo multi-shot prompt using existing Text Prompt and Start Image",
+                "value": "TIM"
+              }
+            ]
+          }
+        }
+      },
+      "settings": {
+        "prompt": "[/duration=10s, /store_mem=man1,man2]ID_A is a charismatic retired stage magician in his late sixties with silver hair, a velvet burgundy jacket, expressive eyebrows, and a dry theatrical voice. He stands alone inside an abandoned seaside theater at night, lit by dusty gold footlights and moonlight through cracked windows. ID_A opens a small lacquered box, removes a glowing blue playing card, looks directly into the camera, and says, \"I retired from miracles because the miracles started freelancing.\" Keep his face and lip movement clearly visible in a stable medium close-up. The theater contains faded red seats, torn curtains, brass railings, and a faint ocean shimmer beyond the broken windows. Audible details include soft card handling, distant waves, old wood creaks, and his amused breath before speaking. No prominent music, only a playful mysterious room tone.\n\n[/duration=10s]ID_A is the same retired magician with the same silver hair, burgundy velvet jacket, theatrical voice, glowing blue playing card, and abandoned seaside theater. He moves across the stage with surprising elegance, flicks the glowing card into the air, and it becomes a tiny floating door made of light. ID_A grins, bows to the empty seats, and says, \"Ladies and gentlemen, please applaud responsibly. The door is shy.\" Preserve his clothing, face, voice, and the theater layout from the first shot. Use a wider stage composition that keeps his gestures, the floating card-door, and his readable lip movement in frame. Sounds include a crisp card flick, a soft magical hum, distant waves, and scattered dust falling from the rigging.\n\n[/duration=10s,/new_shot,/load_mem=,/store_mem=woman1,woman2]ID_B is an energetic young marine biologist in her thirties with shoulder-length blonde hair tucked under a yellow scarf, round glasses, a teal raincoat, and a quick bright voice. She stands alone on the moonlit beach outside the same abandoned theater, holding a waterproof notebook and a small brass telescope. ID_B looks toward the theater windows, notices the glow from inside, and says, \"That is either illegal plankton behavior or someone finally found the ridiculous door.\" Keep her face and lip movement clear in a medium shot. The background includes wet sand, tide pools, the dark theater silhouette, sea foam, and scattered bioluminescent blue sparks near the waterline. Audible details include waves, wind tugging at her raincoat, notebook pages fluttering, and a tiny metallic telescope click.\n\n[/duration=10s,/new_shot,/load_mem=man1,man2,woman1,woman2]ID_A and ID_B are together in the same moonlit seaside theater and beach setting, with ID_A still the same retired magician wearing his burgundy velvet jacket and holding the glowing blue playing card, and ID_B still the blonde marine biologist wearing her teal raincoat, yellow scarf, round glasses, and carrying the waterproof notebook. The glowing door now hovers between them on the theater stage, opening onto an impossible miniature ocean full of floating teacups and tiny lantern-lit boats. ID_A gestures grandly while ID_B steps closer, amused and suspicious, and they exchange a fast playful line: ID_A says, \"I told you the door was shy.\" ID_B replies, \"It just stole my tide chart.\" Keep both faces and lip movement readable, with the door and magical ocean visible between them. Use a lively two-shot that preserves their distinct clothing, voices, and personalities. Audible details include the door humming, tiny waves from the miniature ocean, ID_B's notebook snapping shut, ID_A's card tapping the air, and their overlapping laughter.",
+        "num_inference_steps": 8,
+        "video_length": 249,
+        "resolution": "1280x720",
+        "guidance_scale": 1.0,
+        "audio_guidance_scale": 1.0,
+        "alt_guidance_scale": 1.0,
+        "alt_scale": 0.0,
+        "guidance_phases": 1,
+        "custom_settings": {
+          "joyai_control_memory_positions": ""
+        },
+        "multi_prompts_gen_type": "PW"
+      },
+      "model_type": "joyai_echo"
+    },
+    "metadata": {
+      "model_type": "joyai_echo",
+      "family": "ltx2",
+      "family_label": "LTX-2",
+      "base_model_type": "joyai_echo",
+      "finetune": false,
+      "main_output": [
+        "video"
+      ],
+      "outputs": [
+        "video",
+        "audio"
+      ],
+      "inputs": [
+        "text",
+        "image",
+        "video"
+      ],
+      "media_inputs": {
+        "image": {
+          "start": true,
+          "end": false,
+          "reference": false,
+          "single_reference": false,
+          "multiple_references": false,
+          "background": false,
+          "injected_frames": false,
+          "control": false,
+          "mask": false
+        },
+        "video": {
+          "continue": true,
+          "last": false,
+          "control": true,
+          "mask": false
+        },
+        "audio": {
+          "prompt": false,
+          "output": true
+        }
+      },
+      "capabilities": {
+        "text_to_video": true,
+        "image_to_video": true,
+        "video_to_video": true,
+        "text_to_image": false,
+        "image_to_image": false,
+        "text_to_audio": false,
+        "audio_to_audio": false,
+        "audio_to_video": false,
+        "audio_output": true,
+        "inpainting": false,
+        "outpainting": false,
+        "reference_images": false,
+        "background_image": false,
+        "injected_frames": false,
+        "control_image": false,
+        "control_video": true,
+        "video_continuation": true,
+        "sliding_window": true,
+        "lora": true
+      },
+      "setting_values": {
+        "image_prompt_type": {
+          "allowed": "TSV",
+          "choices": [
+            {
+              "label": "Text/new generation",
+              "value": ""
+            },
+            {
+              "label": "Start image",
+              "value": "S"
+            },
+            {
+              "label": "Continue from source video",
+              "value": "V"
+            }
+          ]
+        },
+        "video_prompt_type": {
+          "guide_preprocessing": null,
+          "mask_preprocessing": null,
+          "guide_custom_choices": {
+            "default": "",
+            "label": "Control Video Memory",
+            "letters_filter": "V1",
+            "choices": [
+              {
+                "label": "No Control Video Memory",
+                "value": ""
+              },
+              {
+                "label": "JoyAI-Echo Control Video Memory",
+                "value": "V1"
+              }
+            ]
+          },
+          "image_ref_choices": null,
+          "custom_video_selection": null,
+          "forced": ""
+        },
+        "audio_prompt_type": {
+          "sources": null,
+          "custom_option": null
+        },
+        "model_mode": null,
+        "sample_solver": null,
+        "prompt_enhancer": {
+          "default": "",
+          "choices": [
+            {
+              "label": "A JoyAI-Echo multi-shot prompt using existing Text Prompt",
+              "value": "TM"
+            },
+            {
+              "label": "A JoyAI-Echo multi-shot prompt using existing Text Prompt and Start Image",
+              "value": "TIM"
+            }
+          ]
+        }
+      }
+    },
+    "setting_values": {
+      "image_prompt_type": {
+        "allowed": "TSV",
+        "choices": [
+          {
+            "label": "Text/new generation",
+            "value": ""
+          },
+          {
+            "label": "Start image",
+            "value": "S"
+          },
+          {
+            "label": "Continue from source video",
+            "value": "V"
+          }
+        ]
+      },
+      "video_prompt_type": {
+        "guide_preprocessing": null,
+        "mask_preprocessing": null,
+        "guide_custom_choices": {
+          "default": "",
+          "label": "Control Video Memory",
+          "letters_filter": "V1",
+          "choices": [
+            {
+              "label": "No Control Video Memory",
+              "value": ""
+            },
+            {
+              "label": "JoyAI-Echo Control Video Memory",
+              "value": "V1"
+            }
+          ]
+        },
+        "image_ref_choices": null,
+        "custom_video_selection": null,
+        "forced": ""
+      },
+      "audio_prompt_type": {
+        "sources": null,
+        "custom_option": null
+      },
+      "model_mode": null,
+      "sample_solver": null,
+      "prompt_enhancer": {
+        "default": "",
+        "choices": [
+          {
+            "label": "A JoyAI-Echo multi-shot prompt using existing Text Prompt",
+            "value": "TM"
+          },
+          {
+            "label": "A JoyAI-Echo multi-shot prompt using existing Text Prompt and Start Image",
+            "value": "TIM"
+          }
+        ]
+      }
+    },
+    "default_settings": {
+      "settings_version": 2.66,
+      "prompt": "[/duration=10s, /store_mem=man1,man2]ID_A is a charismatic retired stage magician in his late sixties with silver hair, a velvet burgundy jacket, expressive eyebrows, and a dry theatrical voice. He stands alone inside an abandoned seaside theater at night, lit by dusty gold footlights and moonlight through cracked windows. ID_A opens a small lacquered box, removes a glowing blue playing card, looks directly into the camera, and says, \"I retired from miracles because the miracles started freelancing.\" Keep his face and lip movement clearly visible in a stable medium close-up. The theater contains faded red seats, torn curtains, brass railings, and a faint ocean shimmer beyond the broken windows. Audible details include soft card handling, distant waves, old wood creaks, and his amused breath before speaking. No prominent music, only a playful mysterious room tone.\n\n[/duration=10s]ID_A is the same retired magician with the same silver hair, burgundy velvet jacket, theatrical voice, glowing blue playing card, and abandoned seaside theater. He moves across the stage with surprising elegance, flicks the glowing card into the air, and it becomes a tiny floating door made of light. ID_A grins, bows to the empty seats, and says, \"Ladies and gentlemen, please applaud responsibly. The door is shy.\" Preserve his clothing, face, voice, and the theater layout from the first shot. Use a wider stage composition that keeps his gestures, the floating card-door, and his readable lip movement in frame. Sounds include a crisp card flick, a soft magical hum, distant waves, and scattered dust falling from the rigging.\n\n[/duration=10s,/new_shot,/load_mem=,/store_mem=woman1,woman2]ID_B is an energetic young marine biologist in her thirties with shoulder-length blonde hair tucked under a yellow scarf, round glasses, a teal raincoat, and a quick bright voice. She stands alone on the moonlit beach outside the same abandoned theater, holding a waterproof notebook and a small brass telescope. ID_B looks toward the theater windows, notices the glow from inside, and says, \"That is either illegal plankton behavior or someone finally found the ridiculous door.\" Keep her face and lip movement clear in a medium shot. The background includes wet sand, tide pools, the dark theater silhouette, sea foam, and scattered bioluminescent blue sparks near the waterline. Audible details include waves, wind tugging at her raincoat, notebook pages fluttering, and a tiny metallic telescope click.\n\n[/duration=10s,/new_shot,/load_mem=man1,man2,woman1,woman2]ID_A and ID_B are together in the same moonlit seaside theater and beach setting, with ID_A still the same retired magician wearing his burgundy velvet jacket and holding the glowing blue playing card, and ID_B still the blonde marine biologist wearing her teal raincoat, yellow scarf, round glasses, and carrying the waterproof notebook. The glowing door now hovers between them on the theater stage, opening onto an impossible miniature ocean full of floating teacups and tiny lantern-lit boats. ID_A gestures grandly while ID_B steps closer, amused and suspicious, and they exchange a fast playful line: ID_A says, \"I told you the door was shy.\" ID_B replies, \"It just stole my tide chart.\" Keep both faces and lip movement readable, with the door and magical ocean visible between them. Use a lively two-shot that preserves their distinct clothing, voices, and personalities. Audible details include the door humming, tiny waves from the miniature ocean, ID_B's notebook snapping shut, ID_A's card tapping the air, and their overlapping laughter.",
+      "resolution": "1280x720",
+      "flow_shift": 5.0,
+      "sliding_window_size": 481,
+      "sliding_window_overlap": 17,
+      "denoising_strength": 1.0,
+      "masking_strength": 0,
+      "audio_prompt_type": "",
+      "perturbation_layers": [
+        28
+      ],
+      "guidance_phases": 1,
+      "audio_scale": 1.0,
+      "num_inference_steps": 8,
+      "guidance_scale": 1.0,
+      "audio_guidance_scale": 1.0,
+      "alt_guidance_scale": 1.0,
+      "alt_scale": 0.0,
+      "video_prompt_type": "",
+      "image_prompt_type": "",
+      "custom_settings": {
+        "joyai_control_memory_positions": ""
+      },
+      "multi_prompts_gen_type": "PW",
+      "video_length": 249,
+      "alt_prompt": "",
+      "postprocess_audio": "",
+      "replace_voice_method": "",
+      "replace_voice_sample": null,
+      "replace_voice_sample2": null,
+      "model_type": "joyai_echo"
+    }
+  }
+}
