@@ -3,13 +3,13 @@ import {
   Trash2, Download, Image, Video, X,
   Heart, Film, Volume2, VolumeX, Sparkles,
   Clock, Monitor, ChevronUp, Scissors, Music,
-  ChevronLeft, ChevronRight, Copy, Check, AlertCircle
+  ChevronLeft, ChevronRight, Copy, Check, AlertCircle, Pencil
 } from 'lucide-react'
 import { useProjects } from '../contexts/ProjectContext'
 import type { GenSpaceRetakeSource } from '../contexts/ProjectContext'
 import { useGeneration } from '../hooks/use-generation'
 import { useRetake } from '../hooks/use-retake'
-import { useImageProfiles } from '../hooks/use-image-profiles'
+import { useImageProfiles, useVideoProfiles } from '../hooks/use-image-profiles'
 import type { Asset } from '../types/project'
 import type { ModelProfile } from '../types/model-profiles'
 import { GenerationErrorDialog } from '../components/GenerationErrorDialog'
@@ -17,6 +17,12 @@ import { copyToAssetFolder } from '../lib/asset-copy'
 import { fileUrlToPath } from '../lib/url-to-path'
 import { logger } from '../lib/logger'
 import { RetakePanel } from '../components/RetakePanel'
+
+type ImageInputItem = {
+  id: string
+  url: string
+  role: string
+}
 
 // Asset card with hover overlays
 function AssetCard({ 
@@ -301,6 +307,7 @@ function ImageModeControls({
     imageResolution: string
     imageAspectRatio: string
     imageProfileId?: string
+    imageInputRole?: string
   }
   onSettingsChange: (settings: any) => void
   imageProfiles: ModelProfile[]
@@ -430,6 +437,8 @@ function PromptBar({
   isGenerating,
   inputImage,
   onInputImageChange,
+  imageInputs,
+  onImageInputsChange,
   inputAudio,
   onInputAudioChange,
   settings,
@@ -438,6 +447,7 @@ function PromptBar({
   buttonLabel,
   buttonIcon,
   imageProfiles,
+  videoProfiles,
 }: {
   mode: 'image' | 'video' | 'retake'
   onModeChange: (mode: 'image' | 'video' | 'retake') => void
@@ -450,10 +460,13 @@ function PromptBar({
   buttonIcon: React.ReactNode
   inputImage: string | null
   onInputImageChange: (url: string | null) => void
+  imageInputs: ImageInputItem[]
+  onImageInputsChange: (items: ImageInputItem[]) => void
   inputAudio: string | null
   onInputAudioChange: (url: string | null) => void
   settings: {
     model: string
+    videoProfileId?: string
     duration: number
     videoResolution: string
     fps: number
@@ -461,21 +474,113 @@ function PromptBar({
     imageResolution: string
     imageAspectRatio: string
     imageProfileId?: string
+    imageInputRole?: string
     variations: number
     audio?: boolean
   }
   onSettingsChange: (settings: any) => void
   imageProfiles: ModelProfile[]
+  videoProfiles: ModelProfile[]
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const audioInputRef = useRef<HTMLInputElement>(null)
   const [isDragOver, setIsDragOver] = useState(false)
   const [isAudioDragOver, setIsAudioDragOver] = useState(false)
+  const [activeImageInputId, setActiveImageInputId] = useState<string | null>(null)
   const isRetake = mode === 'retake'
   const LOCAL_MAX_DURATION: Record<string, number> = { '540p': 20, '720p': 10, '1080p': 5 }
   const localMaxDuration = LOCAL_MAX_DURATION[settings.videoResolution] ?? 20
   const videoDurationOptions = [5, 6, 8, 10, 20].filter(d => d <= localMaxDuration)
-  const videoResolutionOptions = ['540p', '720p', '1080p']
+  const selectedVideoProfile = videoProfiles.find((profile) => profile.id === settings.videoProfileId) || videoProfiles[0]
+  const videoResolutionOptions = selectedVideoProfile?.ui.allowedResolutionTiers ?? ['540p', '720p', '1080p']
+  const selectedImageProfile = imageProfiles.find((profile) => profile.id === settings.imageProfileId) || imageProfiles[0]
+  const imageInputPolicy = selectedImageProfile?.inputMedia
+  const supportsImageInput = mode === 'image' && !!imageInputPolicy?.supportsImageInputs
+  const imageMaxInputs = imageInputPolicy?.maxImages ?? 0
+  const canAddImageInput = supportsImageInput && imageInputs.length < imageMaxInputs
+  const defaultImageInputRole = imageInputPolicy?.defaultRole || imageInputPolicy?.roles[0]?.role || 'reference_subject'
+
+  useEffect(() => {
+    if (mode !== 'video' || !selectedVideoProfile) return
+    const allowedAspects = selectedVideoProfile.ui.allowedAspectRatios
+    const allowedTiers = selectedVideoProfile.ui.allowedResolutionTiers
+    const next: any = { ...settings, videoProfileId: selectedVideoProfile.id }
+    let changed = false
+    if (!allowedAspects.includes(settings.aspectRatio)) {
+      next.aspectRatio = selectedVideoProfile.ui.defaultAspectRatio
+      changed = true
+    }
+    if (!allowedTiers.includes(settings.videoResolution)) {
+      next.videoResolution = selectedVideoProfile.ui.defaultResolutionTier
+      changed = true
+    }
+    if (!settings.videoProfileId) {
+      changed = true
+    }
+    if (changed) {
+      onSettingsChange(next)
+    }
+  }, [mode, selectedVideoProfile, settings, onSettingsChange])
+
+  useEffect(() => {
+    if (mode !== 'image') return
+    if (!imageInputPolicy?.supportsImageInputs) {
+      if (imageInputs.length > 0) {
+        onImageInputsChange([])
+      }
+      setActiveImageInputId(null)
+      return
+    }
+    const supportedRoles = new Set(imageInputPolicy.roles.map((role) => role.role))
+    const normalized = imageInputs
+      .slice(0, imageInputPolicy.maxImages)
+      .map((item) => supportedRoles.has(item.role) ? item : { ...item, role: defaultImageInputRole })
+    const changed =
+      normalized.length !== imageInputs.length ||
+      normalized.some((item, index) => item.role !== imageInputs[index]?.role)
+    if (changed) {
+      onImageInputsChange(normalized)
+    }
+    if (activeImageInputId && !normalized.some((item) => item.id === activeImageInputId)) {
+      setActiveImageInputId(null)
+    }
+  }, [mode, imageInputPolicy, imageInputs, activeImageInputId, defaultImageInputRole, onImageInputsChange])
+
+  const resetImageFileInput = () => {
+    if (inputRef.current) {
+      inputRef.current.value = ''
+    }
+  }
+
+  const addImageInput = (url: string) => {
+    if (mode === 'image' && supportsImageInput) {
+      if (!canAddImageInput) return
+      const nextItem = {
+        id: crypto.randomUUID(),
+        url,
+        role: defaultImageInputRole,
+      }
+      onImageInputsChange([...imageInputs, nextItem])
+      setActiveImageInputId(nextItem.id)
+      resetImageFileInput()
+      return
+    }
+    onInputImageChange(url)
+    resetImageFileInput()
+  }
+
+  const updateImageInputRole = (id: string, role: string) => {
+    onImageInputsChange(imageInputs.map((item) => item.id === id ? { ...item, role } : item))
+    setActiveImageInputId(null)
+  }
+
+  const removeImageInput = (id: string) => {
+    onImageInputsChange(imageInputs.filter((item) => item.id !== id))
+    if (activeImageInputId === id) {
+      setActiveImageInputId(null)
+    }
+    resetImageFileInput()
+  }
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
@@ -485,7 +590,20 @@ function PromptBar({
     if (assetData) {
       const asset = JSON.parse(assetData) as Asset
       if (asset.type === 'image') {
-        onInputImageChange(asset.url)
+        addImageInput(asset.url)
+        return
+      }
+    }
+
+    const file = e.dataTransfer.files?.[0]
+    if (file && file.type.startsWith('image/')) {
+      const filePath = (file as any).path as string | undefined
+      if (filePath) {
+        const normalized = filePath.replace(/\\/g, '/')
+        const fileUrl = normalized.startsWith('/') ? `file://${normalized}` : `file:///${normalized}`
+        addImageInput(fileUrl)
+      } else {
+        addImageInput(URL.createObjectURL(file))
       }
     }
   }
@@ -537,10 +655,10 @@ function PromptBar({
       if (filePath) {
         const normalized = filePath.replace(/\\/g, '/')
         const fileUrl = normalized.startsWith('/') ? `file://${normalized}` : `file:///${normalized}`
-        onInputImageChange(fileUrl)
+        addImageInput(fileUrl)
       } else {
         const url = URL.createObjectURL(file)
-        onInputImageChange(url)
+        addImageInput(url)
       }
     }
   }
@@ -552,9 +670,95 @@ function PromptBar({
     }
   }
 
+  const videoModelOptions = videoProfiles.map((profile) => ({
+    value: profile.id,
+    label: profile.displayName + (profile.status === 'experimental' ? ' (experimental)' : ''),
+    disabled: profile.availability === 'missing_model_files' || profile.availability === 'unsupported',
+    tooltip:
+      profile.availability === 'missing_model_files'
+        ? `${profile.displayName} is supported by AiVS, but the required WanGP model files are not installed yet.`
+        : profile.status === 'experimental'
+          ? 'Experimental — may be less stable.'
+          : undefined,
+  }))
+  const selectedVideoIsExperimental = selectedVideoProfile?.availability === 'experimental'
+
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-visible">
-      {/* Top row: Image ref | Prompt | Generate */}
+      {supportsImageInput && (
+        <div className="relative flex items-center gap-2 overflow-visible px-2 pt-2 pb-1">
+          {imageInputs.map((item) => {
+            const role = imageInputPolicy?.roles.find((candidate) => candidate.role === item.role)
+            const isActive = activeImageInputId === item.id
+            return (
+              <div key={item.id} className="relative">
+                {isActive && imageInputPolicy && (
+                  <div className="absolute bottom-full left-0 mb-2 w-56 rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl z-[10000]">
+                    <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">Image input</div>
+                    <div className="space-y-1">
+                      {imageInputPolicy.roles.map((option) => (
+                        <button
+                          key={option.role}
+                          onClick={() => updateImageInputRole(item.id, option.role)}
+                          className={`w-full flex items-center gap-2 px-2 py-2 rounded-md text-left transition-colors ${
+                            item.role === option.role ? 'bg-white/20 text-white' : 'text-zinc-400 hover:bg-zinc-700'
+                          }`}
+                          title={option.description}
+                        >
+                          <Image className="h-3.5 w-3.5 flex-shrink-0" />
+                          <span className="text-xs">{option.label}</span>
+                        </button>
+                      ))}
+                      <div className="h-px bg-zinc-700 my-1" />
+                      <button
+                        onClick={() => removeImageInput(item.id)}
+                        className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-left text-red-300 hover:bg-red-500/15 transition-colors"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 flex-shrink-0" />
+                        <span className="text-xs">Remove</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setActiveImageInputId(isActive ? null : item.id)}
+                  className="group relative h-14 w-14 overflow-hidden rounded-lg border border-zinc-700 bg-zinc-800"
+                  title={role?.label || imageInputPolicy?.tooltipLabel}
+                >
+                  <img src={item.url} alt="" className="h-full w-full object-cover" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                    <Pencil className="h-4 w-4 text-white" />
+                  </div>
+                </button>
+              </div>
+            )
+          })}
+          {canAddImageInput && (
+            <div
+              className={`relative h-14 w-14 rounded-lg border-2 border-dashed transition-colors flex items-center justify-center flex-shrink-0 cursor-pointer ${
+                isDragOver ? 'border-blue-500 bg-blue-500/10' : 'border-zinc-700 hover:border-zinc-500'
+              }`}
+              onDragOver={(e) => { e.preventDefault(); setIsDragOver(true) }}
+              onDragLeave={() => setIsDragOver(false)}
+              onDrop={handleDrop}
+              onClick={() => inputRef.current?.click()}
+              title={imageInputPolicy?.tooltipLabel}
+            >
+              <Image className="h-4 w-4 text-zinc-500" />
+            </div>
+          )}
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+        </div>
+      )}
+
+      {/* Top row: media inputs | Prompt */}
       <div className="flex items-start">
         {/* Input image drop zone — video mode only (I2V) */}
         {mode === 'video' && !isRetake && (
@@ -566,12 +770,13 @@ function PromptBar({
             onDragLeave={() => setIsDragOver(false)}
             onDrop={handleDrop}
             onClick={() => inputRef.current?.click()}
+            title="Attach image for I2V"
           >
             {inputImage ? (
               <>
                 <img src={inputImage} alt="" className="w-full h-full object-cover rounded-md" />
                 <button
-                  onClick={(e) => { e.stopPropagation(); onInputImageChange(null) }}
+                  onClick={(e) => { e.stopPropagation(); onInputImageChange(null); resetImageFileInput() }}
                   className="absolute -top-1 -right-1 p-0.5 rounded-full bg-zinc-800 text-zinc-400 hover:text-white z-10"
                 >
                   <X className="h-3 w-3" />
@@ -676,20 +881,28 @@ function PromptBar({
           />
         ) : (
           <>
-            <SettingsDropdown
-              title="MODEL"
-              value={settings.model}
-              onChange={(v) => onSettingsChange({ ...settings, model: v })}
-              options={[
-                { value: 'fast', label: 'LTX 2.3 Fast' },
-              ]}
-              trigger={
-                <>
-                  <LightricksIcon className="h-3.5 w-3.5" />
-                  <span className="text-zinc-300 font-medium">LTX 2.3 Fast</span>
-                </>
-              }
-            />
+            {selectedVideoProfile ? (
+              <SettingsDropdown
+                title="MODEL"
+                value={selectedVideoProfile.id}
+                onChange={(v) => onSettingsChange({ ...settings, videoProfileId: v })}
+                options={videoModelOptions}
+                trigger={
+                  <>
+                    <LightricksIcon className="h-3.5 w-3.5" />
+                    <span className="text-zinc-300 font-medium">{selectedVideoProfile.displayName}</span>
+                    {selectedVideoIsExperimental && (
+                      <span className="text-[9px] uppercase tracking-wider text-amber-500">exp</span>
+                    )}
+                  </>
+                }
+              />
+            ) : (
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-zinc-800/50 text-zinc-500 text-xs">
+                <AlertCircle className="h-3.5 w-3.5" />
+                <span>Loading models…</span>
+              </div>
+            )}
 
             <div className="w-px h-4 bg-zinc-700 mx-0.5" />
             
@@ -824,6 +1037,7 @@ const gallerySizeClasses: Record<GallerySize, string> = {
 
 const DEFAULT_VIDEO_SETTINGS = {
   model: 'fast',
+  videoProfileId: 'ltx2_22b_distilled',
   duration: 5,
   videoResolution: '540p',
   fps: 24,
@@ -834,6 +1048,7 @@ const DEFAULT_VIDEO_SETTINGS = {
   audio: true,
   imageProfileId: 'z_image_turbo',
   imageAspectRatio: '1:1',
+  imageInputRole: undefined as string | undefined,
 }
 
 export function GenSpace() {
@@ -841,6 +1056,7 @@ export function GenSpace() {
   const [mode, setMode] = useState<'image' | 'video' | 'retake'>('video')
   const [prompt, setPrompt] = useState('')
   const [inputImage, setInputImage] = useState<string | null>(null)
+  const [imageInputs, setImageInputs] = useState<ImageInputItem[]>([])
   const [inputAudio, setInputAudio] = useState<string | null>(null)
   const [localError, setLocalError] = useState<string | null>(null)
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
@@ -850,6 +1066,7 @@ export function GenSpace() {
   const [showSizeMenu, setShowSizeMenu] = useState(false)
   const sizeMenuRef = useRef<HTMLDivElement>(null)
   const persistedVideoKeyRef = useRef<string | null>(null)
+  const persistedImageKeyRef = useRef<string | null>(null)
   const retakeSubmissionRef = useRef<{
     prompt: string
     input: {
@@ -859,7 +1076,7 @@ export function GenSpace() {
       videoDuration: number
     }
   } | null>(null)
-const [settings, setSettings] = useState(() => ({ ...DEFAULT_VIDEO_SETTINGS }))
+  const [settings, setSettings] = useState(() => ({ ...DEFAULT_VIDEO_SETTINGS }))
 
   const {
     generate,
@@ -876,6 +1093,7 @@ const [settings, setSettings] = useState(() => ({ ...DEFAULT_VIDEO_SETTINGS }))
   } = useGeneration()
 
   const { profiles: imageProfiles } = useImageProfiles()
+  const { profiles: videoProfiles } = useVideoProfiles()
 
   const {
     submitRetake,
@@ -976,6 +1194,7 @@ const [settings, setSettings] = useState(() => ({ ...DEFAULT_VIDEO_SETTINGS }))
             mode: genMode as 'text-to-video' | 'image-to-video' | 'audio-to-video',
             prompt: lastPrompt,
             model: savedVideoSettings.model,
+            videoProfileId: savedVideoSettings.videoProfileId,
             duration: savedVideoSettings.duration,
             resolution: savedVideoSettings.videoResolution,
             fps: savedVideoSettings.fps,
@@ -1067,13 +1286,22 @@ const [settings, setSettings] = useState(() => ({ ...DEFAULT_VIDEO_SETTINGS }))
   
   // When image generation/editing completes, add all images to project assets
   useEffect(() => {
-    if (imageUrls.length > 0 && currentProjectId && !isGenerating) {
-      const genMode = 'text-to-image'
-      ;(async () => {
+    if (imageUrls.length === 0 || !currentProjectId || isGenerating) return
+
+    const generationKey = `${imageUrls.join('|')}|${imagePaths.join('|')}`
+    if (persistedImageKeyRef.current === generationKey) return
+    persistedImageKeyRef.current = generationKey
+
+    const genMode = 'text-to-image'
+    const savedSettings = settings
+    const savedImageInputs = imageInputs
+
+    ;(async () => {
+      try {
         for (let i = 0; i < imageUrls.length; i++) {
           const imageUrl = imageUrls[i]
           const imgPath = imagePaths[i] || null
-          const exists = assets.some(a => a.url === imageUrl)
+          const exists = assets.some(a => a.url === imageUrl || a.path === imgPath)
           if (!exists) {
             const copied = imgPath ? await copyToAssetFolder(imgPath, currentProjectId) : null
             const finalPath = copied?.path ?? imgPath ?? imageUrl
@@ -1083,19 +1311,22 @@ const [settings, setSettings] = useState(() => ({ ...DEFAULT_VIDEO_SETTINGS }))
               path: finalPath,
               url: finalUrl,
               prompt: lastPrompt,
-              resolution: settings.imageResolution,
+              resolution: savedSettings.imageResolution,
               generationParams: {
                 mode: genMode,
                 prompt: lastPrompt,
-                model: settings.imageProfileId || 'z_image_turbo',
+                model: savedSettings.imageProfileId || 'z_image_turbo',
                 duration: 5,
-                resolution: settings.imageResolution,
+                resolution: savedSettings.imageResolution,
                 fps: 24,
                 audio: false,
                 cameraMotion: 'none',
-                imageAspectRatio: settings.imageAspectRatio || settings.aspectRatio,
-                imageSteps: settings.imageSteps,
-                imageProfileId: settings.imageProfileId,
+                imageAspectRatio: savedSettings.imageAspectRatio || savedSettings.aspectRatio,
+                imageSteps: savedSettings.imageSteps,
+                imageProfileId: savedSettings.imageProfileId,
+                inputImageUrl: savedImageInputs[0]?.url,
+                imageInputRole: savedImageInputs[0]?.role,
+                imageInputMedia: savedImageInputs.map((item) => ({ url: item.url, role: item.role })),
               },
               takes: [{
                 url: finalUrl,
@@ -1106,9 +1337,13 @@ const [settings, setSettings] = useState(() => ({ ...DEFAULT_VIDEO_SETTINGS }))
             })
           }
         }
-      })()
-    }
-  }, [imageUrls, imagePaths, currentProjectId, isGenerating])
+        reset()
+      } catch (err) {
+        persistedImageKeyRef.current = null
+        logger.error(`Failed to persist generated image asset: ${err}`)
+      }
+    })()
+  }, [imageUrls, imagePaths, currentProjectId, isGenerating, settings, imageInputs, lastPrompt, assets, addAsset, reset])
   
   const handleGenerate = async () => {
     if (mode === 'retake') {
@@ -1138,6 +1373,12 @@ const [settings, setSettings] = useState(() => ({ ...DEFAULT_VIDEO_SETTINGS }))
     setLastPrompt(prompt)
 
     if (mode === 'image') {
+      const inputMedia = imageInputs
+        .map((item) => {
+          const path = fileUrlToPath(item.url)
+          return path ? { path, role: item.role } : null
+        })
+        .filter((item): item is { path: string; role: string } => item !== null)
       generateImage(
         prompt,
         {
@@ -1152,7 +1393,9 @@ const [settings, setSettings] = useState(() => ({ ...DEFAULT_VIDEO_SETTINGS }))
           imageSteps: settings.imageSteps,
           variations: settings.variations,
           imageProfileId: settings.imageProfileId,
-        }
+          imageInputRole: settings.imageInputRole,
+        },
+        inputMedia,
       )
     } else {
       // Generate video (t2v if no image/audio, i2v if image, a2v if audio)
@@ -1167,6 +1410,7 @@ const [settings, setSettings] = useState(() => ({ ...DEFAULT_VIDEO_SETTINGS }))
         imagePath,
         {
           model: videoSettings.model as 'fast' | 'pro',
+          videoProfileId: videoSettings.videoProfileId,
           duration: videoSettings.duration,
           videoResolution: videoSettings.videoResolution,
           fps: videoSettings.fps,
@@ -1427,12 +1671,15 @@ const [settings, setSettings] = useState(() => ({ ...DEFAULT_VIDEO_SETTINGS }))
           buttonIcon={promptButtonIcon}
           inputImage={inputImage}
           onInputImageChange={setInputImage}
+          imageInputs={imageInputs}
+          onImageInputsChange={setImageInputs}
           inputAudio={inputAudio}
           onInputAudioChange={setInputAudio}
           settings={settings}
           onSettingsChange={setSettings}
-          imageProfiles={imageProfiles}
-        />
+              imageProfiles={imageProfiles}
+              videoProfiles={videoProfiles}
+            />
       </div>
       
       {/* Asset preview modal */}

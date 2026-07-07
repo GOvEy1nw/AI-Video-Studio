@@ -25,7 +25,7 @@ interface GenerationProgress {
 
 interface UseGenerationReturn extends GenerationState {
   generate: (prompt: string, imagePath: string | null, settings: GenerationSettings, audioPath?: string | null) => Promise<void>
-  generateImage: (prompt: string, settings: GenerationSettings) => Promise<void>
+  generateImage: (prompt: string, settings: GenerationSettings, inputMedia?: { path: string; role: string }[]) => Promise<void>
   cancel: () => void
   reset: () => void
 }
@@ -148,6 +148,7 @@ export function useGeneration(): UseGenerationReturn {
       const body: Record<string, unknown> = {
         prompt,
         model: settings.model,
+        modelProfileId: settings.videoProfileId,
         duration: String(settings.duration),
         resolution: settings.videoResolution,
         fps: String(settings.fps),
@@ -301,7 +302,8 @@ export function useGeneration(): UseGenerationReturn {
 
   const generateImage = useCallback(async (
     prompt: string,
-    settings: GenerationSettings
+    settings: GenerationSettings,
+    inputMedia?: { path: string; role: string }[],
   ) => {
     const numImages = settings.variations || 1
     
@@ -371,6 +373,13 @@ export function useGeneration(): UseGenerationReturn {
         body.modelProfileId = settings.imageProfileId
         body.aspectRatio = settings.imageAspectRatio || '1:1'
         body.resolutionTier = settings.imageResolution
+        if (inputMedia && inputMedia.length > 0) {
+          body.inputMedia = inputMedia.map((item) => ({
+            type: 'image',
+            path: item.path,
+            role: item.role,
+          }))
+        }
       } else if (dims) {
         body.width = dims.width
         body.height = dims.height

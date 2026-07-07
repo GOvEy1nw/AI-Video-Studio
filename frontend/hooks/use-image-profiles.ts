@@ -15,7 +15,7 @@ import { logger } from '../lib/logger'
  * after a model download completes). The hook exposes a `refresh`
  * callback for that.
  */
-export function useImageProfiles() {
+function useProfilesByMediaType(mediaType: 'image' | 'video') {
   const [profiles, setProfiles] = useState<ModelProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -27,22 +27,28 @@ export function useImageProfiles() {
         throw new Error(`Failed to load model profiles: ${res.status}`)
       }
       const data: ModelProfileListResponse = await res.json()
-      // Only surface image profiles; the endpoint may eventually carry
-      // video/audio profiles too.
-      setProfiles(data.profiles.filter((p) => p.mediaType === 'image'))
+      setProfiles(data.profiles.filter((p) => p.mediaType === mediaType))
       setError(null)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error'
       setError(message)
-      logger.error(`useImageProfiles: ${message}`)
+      logger.error(`useProfilesByMediaType(${mediaType}): ${message}`)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [mediaType])
 
   useEffect(() => {
     refresh()
   }, [refresh])
 
   return { profiles, loading, error, refresh }
+}
+
+export function useImageProfiles() {
+  return useProfilesByMediaType('image')
+}
+
+export function useVideoProfiles() {
+  return useProfilesByMediaType('video')
 }

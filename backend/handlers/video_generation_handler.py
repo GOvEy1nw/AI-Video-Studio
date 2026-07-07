@@ -20,6 +20,8 @@ from handlers.base import StateHandlerBase
 from handlers.generation_handler import GenerationHandler
 from handlers.pipelines_handler import PipelinesHandler
 from handlers.text_handler import TextHandler
+from model_profiles import get_video_profile
+from model_profiles.profiles import ModelProfile
 from services.wangp_bridge import WanGPBridge
 from server_utils.media_validation import (
     normalize_optional_path,
@@ -476,11 +478,17 @@ class VideoGenerationHandler(StateHandlerBase):
         audio_path = normalize_optional_path(req.audioPath)
 
         try:
+            profile = self._resolve_video_profile(req)
+            self._validate_video_profile_request(profile, req, bool(image_path), bool(audio_path))
             validated_image_path = str(validate_image_file(image_path)) if image_path else None
             validated_audio_path = str(validate_audio_file(audio_path)) if audio_path else None
 
             settings = self.state.app_settings.model_copy(deep=True)
-            steps = 8 if req.model.strip().lower() == "fast" else max(1, settings.pro_model.steps)
+            default_steps = profile.wangp_default_settings.get("num_inference_steps")
+            if isinstance(default_steps, int):
+                steps = max(1, default_steps)
+            else:
+                steps = 8 if req.model.strip().lower() == "fast" else max(1, settings.pro_model.steps)
             seed = self._resolve_seed()
 
             output_path = self._wangp_bridge.generate_video(
@@ -497,6 +505,8 @@ class VideoGenerationHandler(StateHandlerBase):
                 audio_path=validated_audio_path,
                 on_progress=self._generation.update_progress,
                 is_cancelled=self._generation.is_generation_cancelled,
+                model_type=profile.wangp_model_type,
+                default_settings=profile.wangp_default_settings,
             )
 
             self._generation.complete_generation(output_path)
@@ -513,6 +523,37 @@ class VideoGenerationHandler(StateHandlerBase):
                 logger.info("WanGP generation cancelled by user")
                 return GenerateVideoResponse(status="cancelled")
             raise HTTPError(500, str(e)) from e
+
+    @staticmethod
+    def _resolve_video_profile(req: GenerateVideoRequest) -> ModelProfile:
+        profile_id = req.modelProfileId
+        if not profile_id:
+            # Backwards compatibility for existing clients.
+            legacy_model = req.model.strip().lower()
+            if legacy_model == "fast":
+                profile_id = "ltx2_22b_distilled"
+        if not profile_id:
+            raise HTTPError(400, "UNKNOWN_VIDEO_MODEL_PROFILE")
+        profile = get_video_profile(profile_id)
+        if profile is None or not profile.visible:
+            raise HTTPError(400, "UNKNOWN_VIDEO_MODEL_PROFILE")
+        return profile
+
+    @staticmethod
+    def _validate_video_profile_request(
+        profile: ModelProfile,
+        req: GenerateVideoRequest,
+        has_input_image: bool,
+        has_input_audio: bool,
+    ) -> None:
+        if req.resolution not in profile.allowed_resolution_tiers:
+            raise HTTPError(400, "UNSUPPORTED_VIDEO_RESOLUTION_TIER")
+        if req.aspectRatio not in profile.allowed_aspect_ratios:
+            raise HTTPError(400, "UNSUPPORTED_VIDEO_ASPECT_RATIO")
+        if has_input_image and not profile.image_to_video:
+            raise HTTPError(400, "VIDEO_IMAGE_INPUT_NOT_SUPPORTED")
+        if has_input_audio and not profile.audio_to_video:
+            raise HTTPError(400, "VIDEO_AUDIO_INPUT_NOT_SUPPORTED")
 
     @staticmethod
     def _parse_forced_numeric_field(raw_value: str, error_detail: str) -> int:

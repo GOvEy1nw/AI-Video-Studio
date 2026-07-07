@@ -66,6 +66,54 @@ class TestGenerate:
         assert call.aspect_ratio == "16:9"
         assert call.duration_seconds == 2
         assert call.fps == 24
+        assert call.model_type == "ltx2_22B_distilled_1_1"
+        assert call.default_settings == {"num_inference_steps": 8}
+
+    def test_video_profile_request_routes_to_ltx2(
+        self, client, enable_wangp: FakeWanGPBridge
+    ):
+        r = client.post(
+            "/api/generate",
+            json={
+                "prompt": "A beautiful sunset",
+                "resolution": "720p",
+                "modelProfileId": "ltx2_22b_distilled",
+                "duration": "5",
+                "fps": "24",
+                "aspectRatio": "9:16",
+            },
+        )
+
+        assert r.status_code == 200
+        call = enable_wangp.video_calls[0]
+        assert call.model_type == "ltx2_22B_distilled_1_1"
+        assert call.resolution_label == "720p"
+        assert call.aspect_ratio == "9:16"
+        assert call.steps == 8
+
+    def test_unknown_video_profile_rejected(
+        self, client, enable_wangp: FakeWanGPBridge
+    ):
+        r = client.post(
+            "/api/generate",
+            json={**_T2V_JSON, "modelProfileId": "not_real"},
+        )
+
+        assert r.status_code == 400
+        assert "UNKNOWN_VIDEO_MODEL_PROFILE" in r.json()["error"]
+        assert enable_wangp.video_calls == []
+
+    def test_unsupported_video_resolution_rejected(
+        self, client, enable_wangp: FakeWanGPBridge
+    ):
+        r = client.post(
+            "/api/generate",
+            json={**_T2V_JSON, "modelProfileId": "ltx2_22b_distilled", "resolution": "1440p"},
+        )
+
+        assert r.status_code == 400
+        assert "UNSUPPORTED_VIDEO_RESOLUTION_TIER" in r.json()["error"]
+        assert enable_wangp.video_calls == []
 
     def test_already_running(self, client, enable_wangp: FakeWanGPBridge, test_state):
         _fake_running_generation_state(test_state)

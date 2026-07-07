@@ -10,7 +10,7 @@ This backend can delegate `/api/generate` and `/api/generate-image` to an existi
 ## Optional
 
 - `WANGP_VIDEO_MODEL_TYPE`
-  - Defaults to `ltx2_22B_distilled`.
+  - Defaults to `ltx2_22B_distilled_1_1`.
 - `WANGP_IMAGE_MODEL_TYPE`
   - Defaults to `z_image`.
 - `WANGP_EXTRA_ARGS`

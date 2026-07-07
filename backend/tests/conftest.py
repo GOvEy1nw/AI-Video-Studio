@@ -68,7 +68,7 @@ def test_state(tmp_path: Path, fake_services: FakeServices):
         wangp_root=None,
         wangp_python=None,
         wangp_config_dir=app_data / "wangp_bridge",
-        wangp_video_model_type="ltx2_22B_distilled",
+        wangp_video_model_type="ltx2_22B_distilled_1_1",
         wangp_image_model_type="z_image",
         wangp_extra_args=(),
     )

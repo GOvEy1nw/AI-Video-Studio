@@ -18,10 +18,35 @@ export type ModelProfileStatus = 'stable' | 'experimental' | 'hidden'
 
 export interface ModelProfileCapabilities {
   textToImage: boolean
+  textToVideo: boolean
+  imageToVideo: boolean
+  videoToVideo: boolean
+  audioToVideo: boolean
+  audioOutput: boolean
+  startImage: boolean
+  endImage: boolean
+  controlVideo: boolean
+  videoContinuation: boolean
+  slidingWindow: boolean
   referenceImages: boolean
   controlImage: boolean
   inpainting: boolean
   lora: 'supported' | 'unsupported' | 'future' | 'experimental'
+}
+
+export interface ModelProfileInputMediaRole {
+  role: string
+  label: string
+  description: string
+  kind: 'reference' | 'control' | 'inpaint'
+}
+
+export interface ModelProfileInputMedia {
+  supportsImageInputs: boolean
+  tooltipLabel: string
+  maxImages: number
+  defaultRole: string | null
+  roles: ModelProfileInputMediaRole[]
 }
 
 export interface ModelProfileUi {
@@ -63,6 +88,7 @@ export interface ModelProfile {
   wangpMetadata: ModelProfileWanGPMetadata
   capabilities: ModelProfileCapabilities
   ui: ModelProfileUi
+  inputMedia: ModelProfileInputMedia
   availability: ModelProfileAvailability
 }
 

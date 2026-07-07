@@ -31,6 +31,8 @@ class FakeWangpVideoCall:
     negative_prompt: str
     image_path: str | None
     audio_path: str | None
+    model_type: str
+    default_settings: dict[str, object]
 
 
 @dataclass
@@ -61,7 +63,7 @@ class FakeWanGPBridge:
     python_executable: str | None = None
     config_dir: Path = field(default_factory=lambda: Path("."))
     output_dir: Path = field(default_factory=lambda: Path("."))
-    video_model_type: str = "ltx2_22B_distilled"
+    video_model_type: str = "ltx2_22B_distilled_1_1"
     image_model_type: str = "z_image"
     camera_motion_prompts: dict[str, str] = field(default_factory=dict)
     extra_args: Iterable[str] = ()
@@ -97,6 +99,8 @@ class FakeWanGPBridge:
         audio_path: str | None,
         on_progress: ProgressCallback,
         is_cancelled: Callable[[], bool],
+        model_type: str | None = None,
+        default_settings: dict[str, object] | None = None,
     ) -> str:
         self.video_calls.append(
             FakeWangpVideoCall(
@@ -111,6 +115,8 @@ class FakeWanGPBridge:
                 negative_prompt=negative_prompt,
                 image_path=image_path,
                 audio_path=audio_path,
+                model_type=model_type if model_type is not None else self.video_model_type,
+                default_settings=dict(default_settings) if default_settings else {},
             )
         )
         if self.raise_on_video is not None:
@@ -165,7 +171,7 @@ def build_fake_wangp_bridge(
     *,
     output_dir: Path,
     image_model_type: str = "z_image",
-    video_model_type: str = "ltx2_22B_distilled",
+    video_model_type: str = "ltx2_22B_distilled_1_1",
 ) -> FakeWanGPBridge:
     """Construct a default-available fake bridge bound to ``output_dir``."""
     return FakeWanGPBridge(

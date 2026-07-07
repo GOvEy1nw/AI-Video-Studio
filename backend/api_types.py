@@ -239,10 +239,35 @@ class ErrorResponse(BaseModel):
 
 class ModelProfileCapabilities(BaseModel):
     textToImage: bool
+    textToVideo: bool
+    imageToVideo: bool
+    videoToVideo: bool
+    audioToVideo: bool
+    audioOutput: bool
+    startImage: bool
+    endImage: bool
+    controlVideo: bool
+    videoContinuation: bool
+    slidingWindow: bool
     referenceImages: bool
     controlImage: bool
     inpainting: bool
     lora: str
+
+
+class ModelProfileInputMediaRole(BaseModel):
+    role: str
+    label: str
+    description: str
+    kind: str
+
+
+class ModelProfileInputMedia(BaseModel):
+    supportsImageInputs: bool
+    tooltipLabel: str
+    maxImages: int
+    defaultRole: str | None
+    roles: list[ModelProfileInputMediaRole]
 
 
 class ModelProfileUi(BaseModel):
@@ -276,6 +301,7 @@ class ModelProfileResponse(BaseModel):
     wangpMetadata: ModelProfileWanGPMetadata
     capabilities: ModelProfileCapabilities
     ui: ModelProfileUi
+    inputMedia: ModelProfileInputMedia
     availability: str = "available"
 
 
@@ -290,8 +316,9 @@ class ModelProfileListResponse(BaseModel):
 
 class GenerateVideoRequest(BaseModel):
     prompt: NonEmptyPrompt
-    resolution: str = "512p"
+    resolution: str = "540p"
     model: str = "fast"
+    modelProfileId: str | None = None
     cameraMotion: VideoCameraMotion = "none"
     negativePrompt: str = ""
     duration: str = "2"
@@ -300,6 +327,24 @@ class GenerateVideoRequest(BaseModel):
     imagePath: str | None = None
     audioPath: str | None = None
     aspectRatio: Literal["16:9", "9:16"] = "16:9"
+
+
+class GenerateImageInputMedia(BaseModel):
+    id: str | None = None
+    type: Literal["image"] = "image"
+    path: str
+    role: Literal[
+        "reference_subject",
+        "reference_people_objects",
+        "control_image",
+        "control_pose",
+        "control_depth",
+        "control_canny",
+    ]
+
+
+def _default_image_input_media() -> list[GenerateImageInputMedia]:
+    return []
 
 
 class GenerateImageRequest(BaseModel):
@@ -316,6 +361,7 @@ class GenerateImageRequest(BaseModel):
     modelProfileId: str | None = None
     aspectRatio: Literal["1:1", "16:9", "9:16"] | None = None
     resolutionTier: Literal["540p", "720p", "1080p", "1440p", "2160p"] | None = None
+    inputMedia: list[GenerateImageInputMedia] = Field(default_factory=_default_image_input_media)
 
 
 class ModelDownloadRequest(BaseModel):

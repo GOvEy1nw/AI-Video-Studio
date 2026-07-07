@@ -222,7 +222,7 @@ WANGP_ROOT = _resolve_wangp_root()
 WANGP_ENABLED = platform.system() in ("Windows", "Linux") and WANGP_ROOT is not None
 WANGP_PYTHON = _resolve_wangp_python(WANGP_ROOT) if WANGP_ENABLED else None
 WANGP_CONFIG_DIR = APP_DATA_DIR / "wangp_bridge"
-WANGP_VIDEO_MODEL_TYPE = os.environ.get("WANGP_VIDEO_MODEL_TYPE", "ltx2_22B_distilled")
+WANGP_VIDEO_MODEL_TYPE = os.environ.get("WANGP_VIDEO_MODEL_TYPE", "ltx2_22B_distilled_1_1")
 WANGP_IMAGE_MODEL_TYPE = os.environ.get("WANGP_IMAGE_MODEL_TYPE", "z_image")
 WANGP_EXTRA_ARGS = _resolve_wangp_extra_args()
 

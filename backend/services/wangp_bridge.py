@@ -147,13 +147,16 @@ class WanGPBridge:
         audio_path: str | None,
         on_progress: ProgressCallback,
         is_cancelled: CancelledCallback,
+        model_type: str | None = None,
+        default_settings: dict[str, object] | None = None,
     ) -> str:
+        active_model_type = model_type if model_type is not None else self._video_model_type
         resolution = self._map_video_resolution(resolution_label, aspect_ratio)
         merged_prompt = prompt + self._camera_motion_prompts.get(camera_motion, "")
         video_length = self.compute_num_frames(duration_seconds, fps)
 
         settings: dict[str, object] = {
-            "model_type": self._video_model_type,
+            "model_type": active_model_type,
             "prompt": merged_prompt,
             "resolution": resolution,
             "num_inference_steps": max(1, steps),
@@ -161,7 +164,10 @@ class WanGPBridge:
             "duration_seconds": duration_seconds,
             "force_fps": fps,
         }
-        if self._video_model_type.startswith("ltx2_"):
+        if default_settings:
+            for key, value in default_settings.items():
+                settings.setdefault(key, value)
+        if active_model_type.startswith("ltx2_"):
             settings["sliding_window_size"] = video_length
         if negative_prompt.strip():
             settings["negative_prompt"] = negative_prompt.strip()
