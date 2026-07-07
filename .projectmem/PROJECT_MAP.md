@@ -1,0 +1,219 @@
+# Project Map - AI Video Studio
+
+Status: Updated 2026-07-07 after image/video profile alignment and README rewrite.
+
+## Purpose
+
+AI Video Studio is a local-first desktop creative app for AI image, video, and future audio/TTS generation. It is forked from `deepbeepmeep/LTX-Desktop-WanGP` and evolves that inherited foundation into an AiVS product powered by WanGP / Wan2GP.
+
+## Stack
+
+- Frontend: React 18, TypeScript, Vite 5, Tailwind CSS
+- Electron: Electron 31 main process plus context-isolated preload
+- Backend: Python 3.11.9, FastAPI, uvicorn, uv
+- Package manager: pnpm 10.30.3
+- Packaging: electron-builder
+- Runtime: WanGP / Wan2GP through in-process `WanGPSession`
+- GPU stack: configured by `scripts/wangp-stacks.json` and installed by `scripts/install-wangp-stack.ps1`
+- Testing: backend pytest with service fakes, pyright strict mode, TypeScript `tsc --noEmit`
+
+## Architecture
+
+```text
+Renderer (React + TS)
+  | HTTP localhost:8000
+  v
+Backend (FastAPI + Python)
+  | in-process API
+  v
+WanGP / Wan2GP
+
+Renderer
+  | IPC through preload
+  v
+Electron main
+  | OS integration
+  v
+Files, dialogs, ffmpeg, backend process management
+```
+
+## Main folders
+
+- `frontend/` - React renderer, QuickGen UI, project views, editor views, hooks, types.
+- `electron/` - Electron main process, preload bridge, app lifecycle, IPC, export, backend supervision.
+- `backend/` - FastAPI server, handlers, services, state, runtime config, tests.
+- `backend/model_profiles/` - backend-owned curated AiVS model profiles and resolution resolver.
+- `scripts/` - dev setup, build scripts, WanGP GPU stack installer.
+- `docs/` - phase docs, WanGP docs, installer/backend docs.
+- `resources/` - app/build resources.
+- `.projectmem/` - project memory snapshots for agents.
+- `Wan2GP/` - optional repo-local WanGP checkout, untracked.
+
+## Frontend map
+
+### Primary files
+
+- `frontend/views/GenSpace.tsx` - QuickGen surface for image/video/retake modes, prompt bar, profile-driven controls, media input strip, gallery persistence.
+- `frontend/hooks/use-generation.ts` - submit/cancel/progress polling for video and image generation.
+- `frontend/hooks/use-image-profiles.ts` - fetches model profiles and exposes image/video filtered hooks.
+- `frontend/types/model-profiles.ts` - frontend mirror of backend model profile API.
+- `frontend/types/project.ts` - project, asset, generation metadata types.
+- `frontend/contexts/ProjectContext.tsx` - project state, assets, view routing, editor-to-GenSpace handoff.
+- `frontend/views/VideoEditor.tsx` - inherited video editor, retained as beta/future workflow surface.
+
+### Current QuickGen behavior
+
+- Image and video modes use profile-driven model dropdowns.
+- Image mode shows media input strip above prompt only when selected profile supports inputs.
+- Supported image profiles expose role selector per input thumbnail.
+- Video mode is profile-driven but currently exposes only existing simple controls.
+- Gallery persistence guards avoid repeated save loops after generation completion.
+
+## Backend map
+
+### Primary files
+
+- `backend/ltx2_server.py` - runtime bootstrap, config, uvicorn entry.
+- `backend/app_factory.py` - FastAPI app factory, routers, exception/logging boundary.
+- `backend/app_handler.py` - composition root for handlers, state, services.
+- `backend/api_types.py` - Pydantic request/response models.
+- `backend/handlers/image_generation_handler.py` - WanGP image generation routing and profile validation.
+- `backend/handlers/video_generation_handler.py` - WanGP video generation routing and profile validation.
+- `backend/handlers/model_profiles_handler.py` - `GET /api/model-profiles`.
+- `backend/services/wangp_bridge.py` - WanGP API bridge for image/video manifest execution.
+- `backend/model_profiles/profiles.py` - curated image/video model profiles plus raw WanGP metadata.
+- `backend/model_profiles/resolution_resolver.py` - curated image profile resolution table.
+- `backend/tests/fakes/fake_wangp_bridge.py` - fake bridge used by tests.
+
+### Route pattern
+
+Routes remain thin. Request flow:
+
+```text
+_routes/* -> AppHandler -> handlers/* -> services/* + state/*
+```
+
+Heavy side effects live behind services. Tests use fakes instead of mocks.
+
+## Model profile contract
+
+Backend owns the curated profile registry. Frontend does not scrape WanGP directly.
+
+Profile response includes:
+
+- AiVS id and display name
+- media type
+- visibility/status
+- WanGP model type
+- raw `wangpMetadata`
+- curated capabilities
+- default/allowed aspect ratios
+- default/allowed resolution tiers
+- input media policy
+- availability state
+
+### Image profiles
+
+- `z_image_turbo`
+- `krea2_turbo`
+- `flux2_klein_4b`
+- `hidream_o1_dev`
+
+### Video profiles
+
+- `ltx2_22b_distilled`, display name `LTX 2.3 Fast`, WanGP model type `ltx2_22B_distilled_1_1`
+
+### Profile rules
+
+- UI-visible model options come from `GET /api/model-profiles`.
+- Backend validates profile id and UI choices before WanGP.
+- Image generation sends `modelProfileId`, `aspectRatio`, and `resolutionTier`; backend resolves exact `WxH`.
+- Video generation sends `modelProfileId`; legacy `model: fast` maps to the curated LTX2 video profile.
+- Raw WanGP metadata is retained separately from AiVS-curated UI capability fields.
+
+## Runtime map
+
+- Python version pinned to 3.11.9.
+- `backend/pyproject.toml` pins torch stack versions aligned with installer.
+- `scripts/wangp-stacks.json` is the curated GPU stack source.
+- `scripts/install-wangp-stack.ps1` detects GPU generation and installs compatible torch/performance wheels.
+- `WANGP_VIDEO_MODEL_TYPE` default: `ltx2_22B_distilled_1_1`.
+- `WANGP_IMAGE_MODEL_TYPE` default: `z_image`.
+- App data folder: AiVS.
+
+## Testing map
+
+- `backend/tests/conftest.py` wires a fresh `AppHandler` per test.
+- `enable_wangp` fixture turns on WanGP path and yields `FakeWanGPBridge`.
+- `backend/tests/test_model_profiles.py` covers profile shape, endpoint response, availability, image input routing, and profile generation routing.
+- `backend/tests/test_generation.py` covers video/image generation behavior through fake WanGP.
+- `backend/tests/test_wangp_bridge.py` covers bridge mapping behavior.
+- `backend/tests/test_pyright.py` enforces pyright strict mode.
+
+Current verified checks:
+
+- `uv run --extra test pytest -q` -> 214 passed.
+- `uv run pyright` -> 0 errors.
+- TypeScript `tsc --noEmit` -> passed.
+- `pnpm run build:frontend` via direct pnpm -> passed.
+
+## Development commands
+
+| Command | Purpose |
+| --- | --- |
+| `pnpm dev` | Start Vite/Electron/backend dev app |
+| `pnpm dev:debug` | Dev app with Electron inspector and Python debugpy |
+| `pnpm typecheck` | TypeScript + Python type checks |
+| `pnpm typecheck:ts` | TypeScript only |
+| `pnpm typecheck:py` | Pyright only |
+| `pnpm backend:test` | Backend pytest |
+| `pnpm build:frontend` | Renderer/Electron build |
+| `pnpm setup:dev:win` | Windows setup |
+| `scripts/install-wangp-stack.ps1` | Install/refresh WanGP GPU stack |
+
+## Known tooling caveat
+
+The Codex bundled `pnpm` wrapper can trigger dependency layout checks and attempt to recreate `node_modules` in non-TTY mode. If this leaves `node_modules` partial, use direct pnpm:
+
+```powershell
+C:\Users\rais\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe C:\Users\rais\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\node_modules\pnpm\bin\pnpm.mjs install --force --offline --frozen-lockfile
+```
+
+Then run scripts through the same direct pnpm entry if needed.
+
+## Roadmap
+
+| Phase | Goal | Status |
+| --- | --- | --- |
+| Phase 0 | Fork audit + preservation map | Complete |
+| Phase 1 | Local-only product shell | Complete |
+| Phase 2 | WanGP-only generation enforcement | Complete |
+| Phase 3 | QuickGen image baseline | Complete |
+| Phase 4 | Curated image model expansion | Complete |
+| Phase 4.1 | Image input media roles + multi-image support | Complete |
+| Phase 4.2 | Video model profile alignment | Complete |
+| Phase 5 | LoRA MVP | Pending |
+| Phase 6 | QuickGen image polish | Pending |
+| Phase 7 | Video input capabilities (start/end/control/source video) | Pending |
+| Phase 8 | QuickGen audio/TTS | Pending |
+| Phase 9 | Production planning | Pending |
+
+## Next work
+
+- Add video start frame / end frame / source video / control video UI and backend mapping from existing LTX2 raw metadata.
+- Add LoRA folder detection, selection, strength, and metadata.
+- Improve model availability/missing-model UX.
+- Keep inherited editor stable and avoid major rewrites until QuickGen is stronger.
+
+## Suggested first reads
+
+1. `AGENTS_PRD.md`
+2. `AGENTS.md`
+3. `README.md`
+4. `.projectmem/summary.md`
+5. `docs/PHASE0_AUDIT.md`
+6. `docs/PHASE4_DETAILS.md`
+7. `backend/architecture.md`
+8. `backend/model_profiles/profiles.py`
+9. `backend/services/wangp_bridge.py`
+10. `frontend/views/GenSpace.tsx`

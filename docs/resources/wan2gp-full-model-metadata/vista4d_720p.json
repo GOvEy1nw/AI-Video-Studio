@@ -1,0 +1,922 @@
+{
+  "vista4d_720p": {
+    "model_type": "vista4d_720p",
+    "name": "Wan2.1 Vista4D 720p 14B",
+    "model_def": {
+      "i2v_class": false,
+      "t2v_class": true,
+      "multitalk_class": false,
+      "standin_class": false,
+      "lynx_class": false,
+      "alpha_class": false,
+      "wan_5B_class": false,
+      "vace_class": false,
+      "bernini_class": false,
+      "scail2": false,
+      "color_correction": true,
+      "svi2pro": false,
+      "i2v_2_2": false,
+      "text_encoder_URLs": [
+        "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/umt5-xxl/models_t5_umt5-xxl-enc-bf16.safetensors",
+        "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/umt5-xxl/models_t5_umt5-xxl-enc-quanto_int8.safetensors"
+      ],
+      "text_encoder_folder": "umt5-xxl",
+      "vae_upsampler": [
+        1,
+        2
+      ],
+      "vae_block_size": 16,
+      "profiles_dir": [
+        "wan"
+      ],
+      "group": "wan",
+      "fps": 16,
+      "frames_minimum": 5,
+      "frames_steps": 4,
+      "sliding_window": false,
+      "multiple_submodels": false,
+      "guidance_max_phases": 3,
+      "perturbation": true,
+      "flow_shift": true,
+      "cfg_zero": true,
+      "cfg_star": true,
+      "adaptive_projected_guidance": true,
+      "tea_cache": true,
+      "mag_cache": true,
+      "keep_frames_video_guide_not_supported": true,
+      "sample_solvers": [
+        [
+          "unipc",
+          "unipc"
+        ],
+        [
+          "euler",
+          "euler"
+        ],
+        [
+          "dpm++",
+          "dpm++"
+        ],
+        [
+          "flowmatch causvid",
+          "causvid"
+        ],
+        [
+          "lcm + ltx",
+          "lcm"
+        ]
+      ],
+      "sub_parallel_windows": false,
+      "self_refiner": true,
+      "guide_custom_choices": {
+        "choices": [
+          [
+            "Use Vista4D control video",
+            "UV"
+          ]
+        ],
+        "default": "UV",
+        "visible": false,
+        "show_label": false,
+        "letters_filter": "UV",
+        "label": "Vista4D Control"
+      },
+      "mask_preprocessing": {
+        "selection": [
+          ""
+        ],
+        "visible": false
+      },
+      "v2i_switch_supported": false,
+      "model_modes": {
+        "label": "Vista4D Camera Movement",
+        "default": "dolly_zoom",
+        "image_modes": [
+          0
+        ],
+        "choices": [
+          [
+            "Dolly Zoom",
+            "dolly_zoom"
+          ],
+          [
+            "Left Front Zoom",
+            "left_front_zoom"
+          ],
+          [
+            "Right Front Zoom",
+            "right_front_zoom"
+          ],
+          [
+            "Close Crane Above",
+            "close_crane_above"
+          ],
+          [
+            "Close Crane Below",
+            "close_crane_below"
+          ],
+          [
+            "Arc Right 45 deg",
+            "arc_right_45"
+          ],
+          [
+            "Arc Left 45 deg",
+            "arc_left_45"
+          ],
+          [
+            "Push In",
+            "push_in"
+          ],
+          [
+            "Pull Back",
+            "pull_back"
+          ],
+          [
+            "Truck Right",
+            "truck_right"
+          ],
+          [
+            "Truck Left",
+            "truck_left"
+          ],
+          [
+            "Pedestal Up",
+            "pedestal_up"
+          ],
+          [
+            "Pedestal Down",
+            "pedestal_down"
+          ],
+          [
+            "Pan Right 45 deg",
+            "pan_right_45"
+          ],
+          [
+            "Pan Left 45 deg",
+            "pan_left_45"
+          ],
+          [
+            "Tilt Up 45 deg",
+            "tilt_up_45"
+          ],
+          [
+            "Tilt Down 45 deg",
+            "tilt_down_45"
+          ],
+          [
+            "Zoom In",
+            "zoom_in"
+          ],
+          [
+            "Zoom Out",
+            "zoom_out"
+          ],
+          [
+            "Bird View",
+            "bird_view"
+          ],
+          [
+            "Crane Above Right",
+            "crane_above_right"
+          ],
+          [
+            "Crane Above Left",
+            "crane_above_left"
+          ],
+          [
+            "Crane Below Right",
+            "crane_below_right"
+          ],
+          [
+            "Crane Below Left",
+            "crane_below_left"
+          ]
+        ]
+      },
+      "custom_guide": {
+        "label": "Custom Camera Movement (.npz)",
+        "required": false,
+        "file_types": [
+          ".npz"
+        ]
+      },
+      "custom_settings": [
+        {
+          "id": "vista4d_scene_scale",
+          "name": "Scene scale",
+          "label": "Vista4D scene scale",
+          "type": "float",
+          "default": 1.0
+        },
+        {
+          "id": "vista4d_camera_strength",
+          "name": "Camera strength",
+          "label": "Vista4D camera strength (%)",
+          "type": "float",
+          "default": 100.0
+        },
+        {
+          "id": "vista4d_seg_keywords",
+          "name": "Dynamic object keywords",
+          "label": "Dynamic object keywords",
+          "type": "text",
+          "default": "_all_",
+          "info": "Comma-separated prompts; use _all_ for all pixels."
+        }
+      ],
+      "control_video_trim": true,
+      "no_guide2_refresh": true,
+      "preprocess_all": false,
+      "image_prompt_types_allowed": "",
+      "NAG": true,
+      "name": "Wan2.1 Vista4D 720p 14B",
+      "architecture": "vista4d",
+      "description": "Vista4D is a video reshooting framework which synthesizes the dynamic scene represented by an input source video from novel camera trajectories and viewpoints. For best efficiency, you must list all the dynamic objects / people in the 'Dynamic object keywords' input. ",
+      "URLs": [
+        "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/wan2.1_vista4d_720p49_14B_bf16.safetensors",
+        "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/wan2.1_vista4d_720p49_14B_quanto_bf16_int8.safetensors"
+      ],
+      "path": "defaults\\vista4d_720p.json",
+      "_profile_roots": [
+        "profiles"
+      ],
+      "metadata": {
+        "model_type": "vista4d_720p",
+        "family": "wan",
+        "family_label": "Wan2.1",
+        "base_model_type": "vista4d",
+        "finetune": false,
+        "main_output": [
+          "video"
+        ],
+        "outputs": [
+          "video"
+        ],
+        "inputs": [
+          "text",
+          "video"
+        ],
+        "media_inputs": {
+          "image": {
+            "start": false,
+            "end": false,
+            "reference": false,
+            "single_reference": false,
+            "multiple_references": false,
+            "background": false,
+            "injected_frames": false,
+            "control": false,
+            "mask": false
+          },
+          "video": {
+            "continue": false,
+            "last": false,
+            "control": true,
+            "mask": false
+          },
+          "audio": {
+            "prompt": false,
+            "output": false
+          }
+        },
+        "capabilities": {
+          "text_to_video": true,
+          "image_to_video": false,
+          "video_to_video": true,
+          "text_to_image": false,
+          "image_to_image": false,
+          "text_to_audio": false,
+          "audio_to_audio": false,
+          "audio_to_video": false,
+          "audio_output": false,
+          "inpainting": false,
+          "outpainting": false,
+          "reference_images": false,
+          "background_image": false,
+          "injected_frames": false,
+          "control_image": false,
+          "control_video": true,
+          "video_continuation": false,
+          "sliding_window": false,
+          "lora": true
+        },
+        "setting_values": {
+          "image_prompt_type": {
+            "allowed": "",
+            "choices": [
+              {
+                "label": "Text/new generation",
+                "value": ""
+              }
+            ]
+          },
+          "video_prompt_type": {
+            "guide_preprocessing": null,
+            "mask_preprocessing": {
+              "visible": false,
+              "choices": [
+                {
+                  "label": "None",
+                  "value": ""
+                }
+              ]
+            },
+            "guide_custom_choices": {
+              "default": "UV",
+              "label": "Vista4D Control",
+              "letters_filter": "UV",
+              "visible": false,
+              "show_label": false,
+              "choices": [
+                {
+                  "label": "Use Vista4D control video",
+                  "value": "UV"
+                }
+              ]
+            },
+            "image_ref_choices": null,
+            "custom_video_selection": null,
+            "forced": ""
+          },
+          "audio_prompt_type": {
+            "sources": null,
+            "custom_option": null
+          },
+          "model_mode": {
+            "default": "dolly_zoom",
+            "label": "Vista4D Camera Movement",
+            "choices": [
+              {
+                "label": "Dolly Zoom",
+                "value": "dolly_zoom"
+              },
+              {
+                "label": "Left Front Zoom",
+                "value": "left_front_zoom"
+              },
+              {
+                "label": "Right Front Zoom",
+                "value": "right_front_zoom"
+              },
+              {
+                "label": "Close Crane Above",
+                "value": "close_crane_above"
+              },
+              {
+                "label": "Close Crane Below",
+                "value": "close_crane_below"
+              },
+              {
+                "label": "Arc Right 45 deg",
+                "value": "arc_right_45"
+              },
+              {
+                "label": "Arc Left 45 deg",
+                "value": "arc_left_45"
+              },
+              {
+                "label": "Push In",
+                "value": "push_in"
+              },
+              {
+                "label": "Pull Back",
+                "value": "pull_back"
+              },
+              {
+                "label": "Truck Right",
+                "value": "truck_right"
+              },
+              {
+                "label": "Truck Left",
+                "value": "truck_left"
+              },
+              {
+                "label": "Pedestal Up",
+                "value": "pedestal_up"
+              },
+              {
+                "label": "Pedestal Down",
+                "value": "pedestal_down"
+              },
+              {
+                "label": "Pan Right 45 deg",
+                "value": "pan_right_45"
+              },
+              {
+                "label": "Pan Left 45 deg",
+                "value": "pan_left_45"
+              },
+              {
+                "label": "Tilt Up 45 deg",
+                "value": "tilt_up_45"
+              },
+              {
+                "label": "Tilt Down 45 deg",
+                "value": "tilt_down_45"
+              },
+              {
+                "label": "Zoom In",
+                "value": "zoom_in"
+              },
+              {
+                "label": "Zoom Out",
+                "value": "zoom_out"
+              },
+              {
+                "label": "Bird View",
+                "value": "bird_view"
+              },
+              {
+                "label": "Crane Above Right",
+                "value": "crane_above_right"
+              },
+              {
+                "label": "Crane Above Left",
+                "value": "crane_above_left"
+              },
+              {
+                "label": "Crane Below Right",
+                "value": "crane_below_right"
+              },
+              {
+                "label": "Crane Below Left",
+                "value": "crane_below_left"
+              }
+            ]
+          },
+          "sample_solver": {
+            "choices": [
+              {
+                "label": "unipc",
+                "value": "unipc"
+              },
+              {
+                "label": "euler",
+                "value": "euler"
+              },
+              {
+                "label": "dpm++",
+                "value": "dpm++"
+              },
+              {
+                "label": "flowmatch causvid",
+                "value": "causvid"
+              },
+              {
+                "label": "lcm + ltx",
+                "value": "lcm"
+              }
+            ]
+          },
+          "prompt_enhancer": null
+        }
+      },
+      "settings": {
+        "prompt": "a cinematic video of the scene with realistic motion and consistent geometry",
+        "negative_prompt": "",
+        "video_prompt_type": "UV",
+        "resolution": "1280x720",
+        "fps": "control",
+        "video_length": 49,
+        "model_mode": "dolly_zoom",
+        "num_inference_steps": 50,
+        "guidance_scale": 5,
+        "flow_shift": 5,
+        "custom_settings": {
+          "vista4d_scene_scale": 1.0,
+          "vista4d_camera_strength": 100.0,
+          "vista4d_seg_keywords": "_all_"
+        }
+      },
+      "model_type": "vista4d_720p"
+    },
+    "metadata": {
+      "model_type": "vista4d_720p",
+      "family": "wan",
+      "family_label": "Wan2.1",
+      "base_model_type": "vista4d",
+      "finetune": false,
+      "main_output": [
+        "video"
+      ],
+      "outputs": [
+        "video"
+      ],
+      "inputs": [
+        "text",
+        "video"
+      ],
+      "media_inputs": {
+        "image": {
+          "start": false,
+          "end": false,
+          "reference": false,
+          "single_reference": false,
+          "multiple_references": false,
+          "background": false,
+          "injected_frames": false,
+          "control": false,
+          "mask": false
+        },
+        "video": {
+          "continue": false,
+          "last": false,
+          "control": true,
+          "mask": false
+        },
+        "audio": {
+          "prompt": false,
+          "output": false
+        }
+      },
+      "capabilities": {
+        "text_to_video": true,
+        "image_to_video": false,
+        "video_to_video": true,
+        "text_to_image": false,
+        "image_to_image": false,
+        "text_to_audio": false,
+        "audio_to_audio": false,
+        "audio_to_video": false,
+        "audio_output": false,
+        "inpainting": false,
+        "outpainting": false,
+        "reference_images": false,
+        "background_image": false,
+        "injected_frames": false,
+        "control_image": false,
+        "control_video": true,
+        "video_continuation": false,
+        "sliding_window": false,
+        "lora": true
+      },
+      "setting_values": {
+        "image_prompt_type": {
+          "allowed": "",
+          "choices": [
+            {
+              "label": "Text/new generation",
+              "value": ""
+            }
+          ]
+        },
+        "video_prompt_type": {
+          "guide_preprocessing": null,
+          "mask_preprocessing": {
+            "visible": false,
+            "choices": [
+              {
+                "label": "None",
+                "value": ""
+              }
+            ]
+          },
+          "guide_custom_choices": {
+            "default": "UV",
+            "label": "Vista4D Control",
+            "letters_filter": "UV",
+            "visible": false,
+            "show_label": false,
+            "choices": [
+              {
+                "label": "Use Vista4D control video",
+                "value": "UV"
+              }
+            ]
+          },
+          "image_ref_choices": null,
+          "custom_video_selection": null,
+          "forced": ""
+        },
+        "audio_prompt_type": {
+          "sources": null,
+          "custom_option": null
+        },
+        "model_mode": {
+          "default": "dolly_zoom",
+          "label": "Vista4D Camera Movement",
+          "choices": [
+            {
+              "label": "Dolly Zoom",
+              "value": "dolly_zoom"
+            },
+            {
+              "label": "Left Front Zoom",
+              "value": "left_front_zoom"
+            },
+            {
+              "label": "Right Front Zoom",
+              "value": "right_front_zoom"
+            },
+            {
+              "label": "Close Crane Above",
+              "value": "close_crane_above"
+            },
+            {
+              "label": "Close Crane Below",
+              "value": "close_crane_below"
+            },
+            {
+              "label": "Arc Right 45 deg",
+              "value": "arc_right_45"
+            },
+            {
+              "label": "Arc Left 45 deg",
+              "value": "arc_left_45"
+            },
+            {
+              "label": "Push In",
+              "value": "push_in"
+            },
+            {
+              "label": "Pull Back",
+              "value": "pull_back"
+            },
+            {
+              "label": "Truck Right",
+              "value": "truck_right"
+            },
+            {
+              "label": "Truck Left",
+              "value": "truck_left"
+            },
+            {
+              "label": "Pedestal Up",
+              "value": "pedestal_up"
+            },
+            {
+              "label": "Pedestal Down",
+              "value": "pedestal_down"
+            },
+            {
+              "label": "Pan Right 45 deg",
+              "value": "pan_right_45"
+            },
+            {
+              "label": "Pan Left 45 deg",
+              "value": "pan_left_45"
+            },
+            {
+              "label": "Tilt Up 45 deg",
+              "value": "tilt_up_45"
+            },
+            {
+              "label": "Tilt Down 45 deg",
+              "value": "tilt_down_45"
+            },
+            {
+              "label": "Zoom In",
+              "value": "zoom_in"
+            },
+            {
+              "label": "Zoom Out",
+              "value": "zoom_out"
+            },
+            {
+              "label": "Bird View",
+              "value": "bird_view"
+            },
+            {
+              "label": "Crane Above Right",
+              "value": "crane_above_right"
+            },
+            {
+              "label": "Crane Above Left",
+              "value": "crane_above_left"
+            },
+            {
+              "label": "Crane Below Right",
+              "value": "crane_below_right"
+            },
+            {
+              "label": "Crane Below Left",
+              "value": "crane_below_left"
+            }
+          ]
+        },
+        "sample_solver": {
+          "choices": [
+            {
+              "label": "unipc",
+              "value": "unipc"
+            },
+            {
+              "label": "euler",
+              "value": "euler"
+            },
+            {
+              "label": "dpm++",
+              "value": "dpm++"
+            },
+            {
+              "label": "flowmatch causvid",
+              "value": "causvid"
+            },
+            {
+              "label": "lcm + ltx",
+              "value": "lcm"
+            }
+          ]
+        },
+        "prompt_enhancer": null
+      }
+    },
+    "setting_values": {
+      "image_prompt_type": {
+        "allowed": "",
+        "choices": [
+          {
+            "label": "Text/new generation",
+            "value": ""
+          }
+        ]
+      },
+      "video_prompt_type": {
+        "guide_preprocessing": null,
+        "mask_preprocessing": {
+          "visible": false,
+          "choices": [
+            {
+              "label": "None",
+              "value": ""
+            }
+          ]
+        },
+        "guide_custom_choices": {
+          "default": "UV",
+          "label": "Vista4D Control",
+          "letters_filter": "UV",
+          "visible": false,
+          "show_label": false,
+          "choices": [
+            {
+              "label": "Use Vista4D control video",
+              "value": "UV"
+            }
+          ]
+        },
+        "image_ref_choices": null,
+        "custom_video_selection": null,
+        "forced": ""
+      },
+      "audio_prompt_type": {
+        "sources": null,
+        "custom_option": null
+      },
+      "model_mode": {
+        "default": "dolly_zoom",
+        "label": "Vista4D Camera Movement",
+        "choices": [
+          {
+            "label": "Dolly Zoom",
+            "value": "dolly_zoom"
+          },
+          {
+            "label": "Left Front Zoom",
+            "value": "left_front_zoom"
+          },
+          {
+            "label": "Right Front Zoom",
+            "value": "right_front_zoom"
+          },
+          {
+            "label": "Close Crane Above",
+            "value": "close_crane_above"
+          },
+          {
+            "label": "Close Crane Below",
+            "value": "close_crane_below"
+          },
+          {
+            "label": "Arc Right 45 deg",
+            "value": "arc_right_45"
+          },
+          {
+            "label": "Arc Left 45 deg",
+            "value": "arc_left_45"
+          },
+          {
+            "label": "Push In",
+            "value": "push_in"
+          },
+          {
+            "label": "Pull Back",
+            "value": "pull_back"
+          },
+          {
+            "label": "Truck Right",
+            "value": "truck_right"
+          },
+          {
+            "label": "Truck Left",
+            "value": "truck_left"
+          },
+          {
+            "label": "Pedestal Up",
+            "value": "pedestal_up"
+          },
+          {
+            "label": "Pedestal Down",
+            "value": "pedestal_down"
+          },
+          {
+            "label": "Pan Right 45 deg",
+            "value": "pan_right_45"
+          },
+          {
+            "label": "Pan Left 45 deg",
+            "value": "pan_left_45"
+          },
+          {
+            "label": "Tilt Up 45 deg",
+            "value": "tilt_up_45"
+          },
+          {
+            "label": "Tilt Down 45 deg",
+            "value": "tilt_down_45"
+          },
+          {
+            "label": "Zoom In",
+            "value": "zoom_in"
+          },
+          {
+            "label": "Zoom Out",
+            "value": "zoom_out"
+          },
+          {
+            "label": "Bird View",
+            "value": "bird_view"
+          },
+          {
+            "label": "Crane Above Right",
+            "value": "crane_above_right"
+          },
+          {
+            "label": "Crane Above Left",
+            "value": "crane_above_left"
+          },
+          {
+            "label": "Crane Below Right",
+            "value": "crane_below_right"
+          },
+          {
+            "label": "Crane Below Left",
+            "value": "crane_below_left"
+          }
+        ]
+      },
+      "sample_solver": {
+        "choices": [
+          {
+            "label": "unipc",
+            "value": "unipc"
+          },
+          {
+            "label": "euler",
+            "value": "euler"
+          },
+          {
+            "label": "dpm++",
+            "value": "dpm++"
+          },
+          {
+            "label": "flowmatch causvid",
+            "value": "causvid"
+          },
+          {
+            "label": "lcm + ltx",
+            "value": "lcm"
+          }
+        ]
+      },
+      "prompt_enhancer": null
+    },
+    "default_settings": {
+      "settings_version": 2.66,
+      "prompt": "a cinematic video of the scene with realistic motion and consistent geometry",
+      "resolution": "1280x720",
+      "flow_shift": 5,
+      "sample_solver": "unipc",
+      "negative_prompt": "",
+      "video_prompt_type": "UV",
+      "fps": "control",
+      "video_length": 49,
+      "model_mode": "dolly_zoom",
+      "num_inference_steps": 50,
+      "guidance_scale": 5,
+      "custom_settings": {
+        "vista4d_scene_scale": 1.0,
+        "vista4d_camera_strength": 100.0,
+        "vista4d_seg_keywords": "_all_"
+      },
+      "alt_prompt": "",
+      "multi_prompts_gen_type": "PG",
+      "postprocess_audio": "",
+      "replace_voice_method": "",
+      "replace_voice_sample": null,
+      "replace_voice_sample2": null,
+      "image_prompt_type": "",
+      "model_type": "vista4d_720p"
+    }
+  }
+}

@@ -1,0 +1,128 @@
+{
+  "ltx2_22B": [
+    {
+      "path": "$.ltx2_22B.model_def.guide_inpaint_color",
+      "type": "function",
+      "converted_to": "<function ltx2_guide_inpaint_color at 0x00000110BEE0CD60>",
+      "reason": "Callable/function object is not JSON serializable."
+    },
+    {
+      "path": "$.ltx2_22B.model_def.background_removal_color",
+      "type": "function",
+      "converted_to": "<function ltx2_background_removal_color at 0x00000110BEE0CE00>",
+      "reason": "Callable/function object is not JSON serializable."
+    }
+  ],
+  "ltx2_22B_1_1": [
+    {
+      "path": "$.ltx2_22B_1_1.model_def.guide_inpaint_color",
+      "type": "function",
+      "converted_to": "<function ltx2_guide_inpaint_color at 0x00000110BEE0CD60>",
+      "reason": "Callable/function object is not JSON serializable."
+    },
+    {
+      "path": "$.ltx2_22B_1_1.model_def.background_removal_color",
+      "type": "function",
+      "converted_to": "<function ltx2_background_removal_color at 0x00000110BEE0CE00>",
+      "reason": "Callable/function object is not JSON serializable."
+    }
+  ],
+  "ltx2_22B_distilled": [
+    {
+      "path": "$.ltx2_22B_distilled.model_def.guide_inpaint_color",
+      "type": "function",
+      "converted_to": "<function ltx2_guide_inpaint_color at 0x00000110BEE0CD60>",
+      "reason": "Callable/function object is not JSON serializable."
+    },
+    {
+      "path": "$.ltx2_22B_distilled.model_def.background_removal_color",
+      "type": "function",
+      "converted_to": "<function ltx2_background_removal_color at 0x00000110BEE0CE00>",
+      "reason": "Callable/function object is not JSON serializable."
+    }
+  ],
+  "ltx2_22B_distilled_1_1": [
+    {
+      "path": "$.ltx2_22B_distilled_1_1.model_def.guide_inpaint_color",
+      "type": "function",
+      "converted_to": "<function ltx2_guide_inpaint_color at 0x00000110BEE0CD60>",
+      "reason": "Callable/function object is not JSON serializable."
+    },
+    {
+      "path": "$.ltx2_22B_distilled_1_1.model_def.background_removal_color",
+      "type": "function",
+      "converted_to": "<function ltx2_background_removal_color at 0x00000110BEE0CE00>",
+      "reason": "Callable/function object is not JSON serializable."
+    }
+  ],
+  "ltx2_22B_distilled_gguf_q4_k_m": [
+    {
+      "path": "$.ltx2_22B_distilled_gguf_q4_k_m.model_def.guide_inpaint_color",
+      "type": "function",
+      "converted_to": "<function ltx2_guide_inpaint_color at 0x00000110BEE0CD60>",
+      "reason": "Callable/function object is not JSON serializable."
+    },
+    {
+      "path": "$.ltx2_22B_distilled_gguf_q4_k_m.model_def.background_removal_color",
+      "type": "function",
+      "converted_to": "<function ltx2_background_removal_color at 0x00000110BEE0CE00>",
+      "reason": "Callable/function object is not JSON serializable."
+    }
+  ],
+  "ltx2_22B_distilled_gguf_q6_k": [
+    {
+      "path": "$.ltx2_22B_distilled_gguf_q6_k.model_def.guide_inpaint_color",
+      "type": "function",
+      "converted_to": "<function ltx2_guide_inpaint_color at 0x00000110BEE0CD60>",
+      "reason": "Callable/function object is not JSON serializable."
+    },
+    {
+      "path": "$.ltx2_22B_distilled_gguf_q6_k.model_def.background_removal_color",
+      "type": "function",
+      "converted_to": "<function ltx2_background_removal_color at 0x00000110BEE0CE00>",
+      "reason": "Callable/function object is not JSON serializable."
+    }
+  ],
+  "ltx2_22B_distilled_gguf_q8_0": [
+    {
+      "path": "$.ltx2_22B_distilled_gguf_q8_0.model_def.guide_inpaint_color",
+      "type": "function",
+      "converted_to": "<function ltx2_guide_inpaint_color at 0x00000110BEE0CD60>",
+      "reason": "Callable/function object is not JSON serializable."
+    },
+    {
+      "path": "$.ltx2_22B_distilled_gguf_q8_0.model_def.background_removal_color",
+      "type": "function",
+      "converted_to": "<function ltx2_background_removal_color at 0x00000110BEE0CE00>",
+      "reason": "Callable/function object is not JSON serializable."
+    }
+  ],
+  "ltx2_22B_nvfp4": [
+    {
+      "path": "$.ltx2_22B_nvfp4.model_def.guide_inpaint_color",
+      "type": "function",
+      "converted_to": "<function ltx2_guide_inpaint_color at 0x00000110BEE0CD60>",
+      "reason": "Callable/function object is not JSON serializable."
+    },
+    {
+      "path": "$.ltx2_22B_nvfp4.model_def.background_removal_color",
+      "type": "function",
+      "converted_to": "<function ltx2_background_removal_color at 0x00000110BEE0CE00>",
+      "reason": "Callable/function object is not JSON serializable."
+    }
+  ],
+  "scail2_14B": [
+    {
+      "path": "$.scail2_14B.model_def.preprocess_all",
+      "type": "function",
+      "converted_to": "<function preprocess_all_scail2 at 0x00000110BD7B0720>",
+      "reason": "Callable/function object is not JSON serializable."
+    },
+    {
+      "path": "$.scail2_14B.model_def.custom_image_ref_postprocessor",
+      "type": "function",
+      "converted_to": "<function custom_image_ref_postprocessor_scail2 at 0x00000110BD7B0FE0>",
+      "reason": "Callable/function object is not JSON serializable."
+    }
+  ]
+}

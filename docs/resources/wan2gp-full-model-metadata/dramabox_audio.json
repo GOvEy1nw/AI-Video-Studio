@@ -1,0 +1,437 @@
+{
+  "dramabox_audio": {
+    "model_type": "dramabox_audio",
+    "name": "DramaBox Audio",
+    "model_def": {
+      "audio_only": true,
+      "image_outputs": false,
+      "sliding_window": false,
+      "guidance_max_phases": 0,
+      "no_negative_prompt": false,
+      "inference_steps": true,
+      "alt_scale": "Guidance Rescale",
+      "temperature": false,
+      "image_prompt_types_allowed": "",
+      "supports_early_stop": true,
+      "profiles_dir": [
+        "dramabox_audio"
+      ],
+      "duration_slider": {
+        "label": "Target Duration (seconds, 0 = auto)",
+        "min": 0,
+        "max": 60,
+        "increment": 0.5,
+        "default": 0
+      },
+      "profile_type": "video",
+      "preserve_empty_prompt_lines": true,
+      "any_audio_prompt": true,
+      "audio_prompt_choices": true,
+      "audio_prompt_type_sources": {
+        "selection": [
+          "",
+          "A",
+          "AB"
+        ],
+        "labels": {
+          "": "Text prompt",
+          "A": "Speaker 1 voice reference",
+          "AB": "Speaker 1 and 2 voice references"
+        },
+        "letters_filter": "AB",
+        "default": ""
+      },
+      "audio_prompt_type_custom_option": {
+        "label": "Remove Unexpected Words",
+        "flag": "0"
+      },
+      "audio_guide_label": "Speaker 1 reference voice (optional)",
+      "audio_guide2_label": "Speaker 2 reference voice (optional)",
+      "custom_settings": [
+        {
+          "id": "duration_multiplier",
+          "label": "Auto Duration Multiplier (default 1.1)",
+          "name": "Auto Duration Multiplier",
+          "type": "float",
+          "default": 1.1,
+          "min": 0.5,
+          "max": 3.0
+        }
+      ],
+      "prompt_infos": "\n## DramaBox Prompt Format\n\nWrite a scene prompt with spoken dialogue in double quotes and performance or sound cues outside the quotes.\n\n```text\nA woman speaks tenderly, \"It has been a long day, my love.\" She whispers, \"Close your eyes. I am right here.\" She hums quietly, \"Mmmm-mmm. Sleep now.\"\n```\n\nDramaBox does not use square-bracket action cues or Scenema XML. Start each segment with a compact speaker voice or delivery description, then quoted dialogue on the same line. Put physical actions, pauses, sighs, and scene reactions after a quoted line or between quoted lines, but do not write standalone action-only, quote-only, or split description/quote segment lines.\n\n## Multiline Speech\n\nFor one speaker, every non-empty line is generated as a separate segment. Later lines can reuse the first generated segment as an internal voice reference.\n\n```text\nA tired woman speaks close to the microphone, \"I waited until the hallway went quiet.\"\nA frightened whisper catches in her throat, \"That was when I heard the lock turn.\"\nHer voice breaks into a brittle laugh, \"Hahaha, I should have left when I had the chance.\"\n```\n\n## Dialogue\n\nUse `Speaker N:` blocks for dialogue. Any number of speakers is supported. Speaker 1 and Speaker 2 can use uploaded voice references; other speakers reuse the last 10 seconds of their first generated segment as their reference for later segments.\n\n```text\nSpeaker 1:\nAn older detective speaks in a low tired voice, \"You came back after midnight.\"\nHis low voice sharpens with quiet urgency, \"That means you found something.\"\n\nSpeaker 2:\nA young woman replies in a controlled but shaken voice, \"I found the room they kept hidden.\"\n\nSpeaker 1:\nHis voice drops to a tense hush, \"Then we do not have much time.\"\n```\n\nUse the voice reference mode to condition on a short reference clip. DramaBox uses a fixed 10 second reference budget internally.\n\nEnable `Remove Unexpected Words` to trim generated words at the beginning of each segment when Whisper alignment can match them against the text inside double quotes. Segments without complete double quotes are left unchanged.\n",
+      "prompt_description": "DramaBox scene prompt",
+      "text_prompt_enhancer_instructions": "You are a speechwriting assistant for DramaBox Audio. Generate a single-speaker DramaBox prompt from the user request.\n\nOutput rules:\n- Output only the prompt text. Do not include explanations, markdown, bullet lists, XML, or square-bracket action cues.\n- Do not write Speaker 1: for a single-speaker prompt.\n- Put spoken words and literal vocalizations such as \"Hahaha\" or \"Mmmmm\" in double quotes. Keep delivery, emotion, pauses, and stage directions outside the quotes.\n- Follow this structure: speaker voice/delivery description, quoted dialogue, then optional action direction, then more quoted dialogue.\n- Every segment must stay on one line and contain both the speaker description and at least one complete double-quoted speech span on that same line.\n- Never split a segment into a description/action line followed by quoted speech on another line.\n- A line without at least one complete double-quoted speech span is invalid and must be rewritten or omitted.\n- Do not write standalone action, pause, or narration lines without quoted speech.\n- The first phrase before the first quote should focus on how the person sounds: age/gender if useful, timbre, accent, emotion, pace, loudness, microphone distance, or speaking style.\n- Do not front-load visual blocking or physical action before the first quote. Put physical actions, scene reactions, pauses, sighs, and gestures after a quoted line or between quoted lines.\n- Never use [] syntax. DramaBox reads normal prose cues outside quotes.\n- Keep the prompt natural and performable. Write 3-7 spoken sentences unless the user asks for a different length.\n- End at the final closing quote when possible. Do not add a summary or trailing description after the last quote.\n\nExample:\nA warm female narrator speaks close to the microphone, \"I thought the room would feel smaller when the lights went out.\" She lets out a nervous laugh, \"Hahaha, every shadow found a way to move.\" Her voice steadies with quiet relief, \"So I kept walking until the door was right in front of me.\"",
+      "text_prompt_enhancer_instructions1": "You are a dialogue-writing assistant for DramaBox Audio. Generate a multi-speaker DramaBox dialogue script from the user request.\n\nOutput rules:\n- Output only the script text. Do not include explanations, markdown, bullet lists, XML, or square-bracket action cues.\n- Use Speaker N: header lines, where N is the speaker number. Speaker headers must contain only that label.\n- Use as many speakers as the user requests; otherwise use Speaker 1 and Speaker 2.\n- Each non-empty line after a Speaker N: header is a separate generated segment for that speaker.\n- Put spoken words and literal vocalizations such as \"Hahaha\" or \"Mmmmm\" in double quotes. Keep performance cues outside quotes in normal prose.\n- Follow this structure inside each segment: speaker voice/delivery description, quoted dialogue, then optional action direction, then more quoted dialogue.\n- Every segment line must contain both the speaker description and at least one complete double-quoted speech span on that same line.\n- Never split one segment into a description/action line followed by a quote-only line. Merge them into one valid segment line.\n- A quote-only line is invalid. Add the speaker voice/delivery description before the quote on that same line.\n- A line without at least one complete double-quoted speech span is invalid and must be rewritten or omitted.\n- Do not write standalone action, pause, or narration lines without quoted speech.\n- The first phrase before the first quote should focus on how the speaker sounds: age/gender if useful, timbre, accent, emotion, pace, loudness, microphone distance, or speaking style.\n- Do not front-load visual blocking or physical action before the first quote. Put physical actions, scene reactions, pauses, sighs, and gestures after a quoted line or between quoted lines.\n- Do not put attributes in the Speaker header. Write speaker identity, voice, age, gender, accent, and emotion as normal prose in the segment text.\n- Reuse the same Speaker N: later without repeating identity prose unless the identity changes.\n- End each segment at the final closing quote when possible. Do not add trailing narration after the last quote.\n- Keep turns compact, natural, and easy to perform. Write 4-10 segments unless the user asks for a different length.\n\nExample:\nSpeaker 1:\nAn impatient female engineer speaks with clipped urgency, \"The signal dropped again, exactly when the door opened.\"\nSpeaker 2:\nA calm older male technician replies in a low measured voice, \"Then it is not interference. It is a trigger.\"\nSpeaker 1:\nHer voice lowers, \"Someone built this to wake up when we got close.\"\nSpeaker 2:\nFirm and controlled, he says, \"Then we step back, breathe, and let the machine tell us what it wants.\"",
+      "text_prompt_enhancer_max_tokens": 768,
+      "text_prompt_enhancer_max_tokens1": 1024,
+      "prompt_enhancer_def": {
+        "selection": [
+          "T",
+          "T1"
+        ],
+        "labels": {
+          "T": "A Speech",
+          "T1": "A Dialogue"
+        },
+        "default": "T"
+      },
+      "prompt_enhancer_button_label": "Write",
+      "compile": false,
+      "text_encoder_folder": "gemma-3-12b-it-qat-q4_0-unquantized",
+      "text_encoder_URLs": [
+        "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/gemma-3-12b-it-qat-q4_0-unquantized/gemma-3-12b-it-qat-q4_0-unquantized.safetensors",
+        "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/gemma-3-12b-it-qat-q4_0-unquantized/gemma-3-12b-it-qat-q4_0-unquantized_quanto_bf16_int8.safetensors"
+      ],
+      "dtype": "bf16",
+      "name": "DramaBox Audio",
+      "architecture": "dramabox_audio",
+      "description": "Expressive prompt-driven TTS with optional voice reference, integrated through the LTX 2.3 audio stack.",
+      "URLs": [
+        "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/dramabox-dit-v1_bf16.safetensors",
+        "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/dramabox-dit-v1_quanto_bf16_int8.safetensors"
+      ],
+      "path": "defaults\\dramabox_audio.json",
+      "_profile_roots": [
+        "profiles"
+      ],
+      "metadata": {
+        "model_type": "dramabox_audio",
+        "family": "tts",
+        "family_label": "TTS",
+        "base_model_type": "dramabox_audio",
+        "finetune": false,
+        "main_output": [
+          "audio"
+        ],
+        "outputs": [
+          "audio"
+        ],
+        "inputs": [
+          "text",
+          "audio"
+        ],
+        "media_inputs": {
+          "image": {
+            "start": false,
+            "end": false,
+            "reference": false,
+            "single_reference": false,
+            "multiple_references": false,
+            "background": false,
+            "injected_frames": false,
+            "control": false,
+            "mask": false
+          },
+          "video": {
+            "continue": false,
+            "last": false,
+            "control": false,
+            "mask": false
+          },
+          "audio": {
+            "prompt": true,
+            "output": true
+          }
+        },
+        "capabilities": {
+          "text_to_video": false,
+          "image_to_video": false,
+          "video_to_video": false,
+          "text_to_image": false,
+          "image_to_image": false,
+          "text_to_audio": true,
+          "audio_to_audio": true,
+          "audio_to_video": false,
+          "audio_output": true,
+          "inpainting": false,
+          "outpainting": false,
+          "reference_images": false,
+          "background_image": false,
+          "injected_frames": false,
+          "control_image": false,
+          "control_video": false,
+          "video_continuation": false,
+          "sliding_window": false,
+          "lora": true
+        },
+        "setting_values": {
+          "image_prompt_type": {
+            "allowed": "",
+            "choices": [
+              {
+                "label": "Text/new generation",
+                "value": ""
+              }
+            ]
+          },
+          "video_prompt_type": {
+            "guide_preprocessing": null,
+            "mask_preprocessing": null,
+            "guide_custom_choices": null,
+            "image_ref_choices": null,
+            "custom_video_selection": null,
+            "forced": ""
+          },
+          "audio_prompt_type": {
+            "sources": {
+              "default": "",
+              "letters_filter": "AB",
+              "choices": [
+                {
+                  "label": "Text prompt",
+                  "value": ""
+                },
+                {
+                  "label": "Speaker 1 voice reference",
+                  "value": "A"
+                },
+                {
+                  "label": "Speaker 1 and 2 voice references",
+                  "value": "AB"
+                }
+              ]
+            },
+            "custom_option": {
+              "label": "Remove Unexpected Words",
+              "flag": "0"
+            }
+          },
+          "model_mode": null,
+          "sample_solver": null,
+          "prompt_enhancer": {
+            "default": "T",
+            "choices": [
+              {
+                "label": "A Speech",
+                "value": "T"
+              },
+              {
+                "label": "A Dialogue",
+                "value": "T1"
+              }
+            ]
+          }
+        }
+      },
+      "settings": {
+        "prompt": "Speaker 1:\nA confident, slightly condescending man leans in close with a smooth baritone voice, \"You've been looking at the wrong evidence. The horizon doesn't curve; it stays flat right up until your eyes give out.\"\nSpeaker 2:\nAn incredulous woman tilts her head back, her tone sharp and rising in pitch, \"But if I stood on top of Everest, wouldn't the ground slope away from me? That's how gravity works!\"\nSpeaker 1:\nHe chuckles softly, shaking his head with an air of gentle amusement, \"Gravity is just a trick of the light when you're standing on a giant sphere. Try this instead: look at the sun. It rises in the east and sets in the west because the earth is tilted on its side like a pancake.\"\nSpeaker 2:\nShe rolls her eyes, crossing her arms tightly against her chest, \"That's the most logical explanation I've ever heard, yet every satellite picture shows a blue marble spinning through space.\"\nSpeaker 1:\nHis voice drops to a conspiratorial whisper, leaning even closer to invade her personal space, \"Satellites are just mirrors reflecting off the dome. You don't need to see the whole thing to know the shape. Just trust the feeling of the ground beneath your feet.\"\nSpeaker 2:\nShe sighs deeply, running a hand through her hair as she looks around the room with growing frustration, \"I can feel the wind changing direction, and that only happens if there's a massive curve blocking it. You're making this sound so simple, but it feels complicated to me.\"\nSpeaker 1:\nWith a sudden burst of manic energy, he claps his hands together loudly, \"Complicated? No! Simple! It's all about perspective. If you could stand on the edge of the world, you'd see the sky drop off instantly, not fade into a distant curve.\"\nSpeaker 2:\nShe lets out a short, dismissive laugh, stepping back to create distance between them, \"Maybe for you, but for everyone else, the earth holds us up. We have oceans on three sides, not one. How does a flat plate explain that?\"\nSpeaker 1:\nHe shrugs casually, spreading his arms wide as if embracing the absurdity, \"The ocean is contained within the bowl of the earth. There is no 'three sides' because the water fills the entire surface, creating a perfect circle of liquid that keeps everything safe inside the crust.\"\nSpeaker 2:\nHer expression hardens into something determined, her voice steady and resolute, \"Then tell me why ships disappear hull-first over the horizon. If it were flat, we would just see smaller ships get further away, not vanish entirely.\"\nSpeaker 1:\nHe waves a hand dismissively, smiling with a mix of pity and triumph, \"Because they are sailing towards the center of the dish. They aren't going over a curve; they are moving deeper into the well where the curvature begins.\"\nSpeaker 2:\nShe shakes her head slowly, a small smile playing on her lips as she finally accepts the challenge, \"Okay, maybe I'll believe you once you show me a picture of the Earth from space that isn't generated using AI.\"",
+        "negative_prompt": "worst quality, inconsistent, robotic, distorted, noise, static, muffled, unclear, unnatural, monotone",
+        "audio_prompt_type": "0",
+        "duration_seconds": 0,
+        "num_inference_steps": 30,
+        "guidance_scale": 2.5,
+        "audio_guidance_scale": 1.5,
+        "alt_scale": 0.0,
+        "custom_settings": {
+          "duration_multiplier": 1.1
+        },
+        "multi_prompts_gen_type": "FG"
+      },
+      "model_type": "dramabox_audio"
+    },
+    "metadata": {
+      "model_type": "dramabox_audio",
+      "family": "tts",
+      "family_label": "TTS",
+      "base_model_type": "dramabox_audio",
+      "finetune": false,
+      "main_output": [
+        "audio"
+      ],
+      "outputs": [
+        "audio"
+      ],
+      "inputs": [
+        "text",
+        "audio"
+      ],
+      "media_inputs": {
+        "image": {
+          "start": false,
+          "end": false,
+          "reference": false,
+          "single_reference": false,
+          "multiple_references": false,
+          "background": false,
+          "injected_frames": false,
+          "control": false,
+          "mask": false
+        },
+        "video": {
+          "continue": false,
+          "last": false,
+          "control": false,
+          "mask": false
+        },
+        "audio": {
+          "prompt": true,
+          "output": true
+        }
+      },
+      "capabilities": {
+        "text_to_video": false,
+        "image_to_video": false,
+        "video_to_video": false,
+        "text_to_image": false,
+        "image_to_image": false,
+        "text_to_audio": true,
+        "audio_to_audio": true,
+        "audio_to_video": false,
+        "audio_output": true,
+        "inpainting": false,
+        "outpainting": false,
+        "reference_images": false,
+        "background_image": false,
+        "injected_frames": false,
+        "control_image": false,
+        "control_video": false,
+        "video_continuation": false,
+        "sliding_window": false,
+        "lora": true
+      },
+      "setting_values": {
+        "image_prompt_type": {
+          "allowed": "",
+          "choices": [
+            {
+              "label": "Text/new generation",
+              "value": ""
+            }
+          ]
+        },
+        "video_prompt_type": {
+          "guide_preprocessing": null,
+          "mask_preprocessing": null,
+          "guide_custom_choices": null,
+          "image_ref_choices": null,
+          "custom_video_selection": null,
+          "forced": ""
+        },
+        "audio_prompt_type": {
+          "sources": {
+            "default": "",
+            "letters_filter": "AB",
+            "choices": [
+              {
+                "label": "Text prompt",
+                "value": ""
+              },
+              {
+                "label": "Speaker 1 voice reference",
+                "value": "A"
+              },
+              {
+                "label": "Speaker 1 and 2 voice references",
+                "value": "AB"
+              }
+            ]
+          },
+          "custom_option": {
+            "label": "Remove Unexpected Words",
+            "flag": "0"
+          }
+        },
+        "model_mode": null,
+        "sample_solver": null,
+        "prompt_enhancer": {
+          "default": "T",
+          "choices": [
+            {
+              "label": "A Speech",
+              "value": "T"
+            },
+            {
+              "label": "A Dialogue",
+              "value": "T1"
+            }
+          ]
+        }
+      }
+    },
+    "setting_values": {
+      "image_prompt_type": {
+        "allowed": "",
+        "choices": [
+          {
+            "label": "Text/new generation",
+            "value": ""
+          }
+        ]
+      },
+      "video_prompt_type": {
+        "guide_preprocessing": null,
+        "mask_preprocessing": null,
+        "guide_custom_choices": null,
+        "image_ref_choices": null,
+        "custom_video_selection": null,
+        "forced": ""
+      },
+      "audio_prompt_type": {
+        "sources": {
+          "default": "",
+          "letters_filter": "AB",
+          "choices": [
+            {
+              "label": "Text prompt",
+              "value": ""
+            },
+            {
+              "label": "Speaker 1 voice reference",
+              "value": "A"
+            },
+            {
+              "label": "Speaker 1 and 2 voice references",
+              "value": "AB"
+            }
+          ]
+        },
+        "custom_option": {
+          "label": "Remove Unexpected Words",
+          "flag": "0"
+        }
+      },
+      "model_mode": null,
+      "sample_solver": null,
+      "prompt_enhancer": {
+        "default": "T",
+        "choices": [
+          {
+            "label": "A Speech",
+            "value": "T"
+          },
+          {
+            "label": "A Dialogue",
+            "value": "T1"
+          }
+        ]
+      }
+    },
+    "default_settings": {
+      "settings_version": 2.66,
+      "prompt": "Speaker 1:\nA confident, slightly condescending man leans in close with a smooth baritone voice, \"You've been looking at the wrong evidence. The horizon doesn't curve; it stays flat right up until your eyes give out.\"\nSpeaker 2:\nAn incredulous woman tilts her head back, her tone sharp and rising in pitch, \"But if I stood on top of Everest, wouldn't the ground slope away from me? That's how gravity works!\"\nSpeaker 1:\nHe chuckles softly, shaking his head with an air of gentle amusement, \"Gravity is just a trick of the light when you're standing on a giant sphere. Try this instead: look at the sun. It rises in the east and sets in the west because the earth is tilted on its side like a pancake.\"\nSpeaker 2:\nShe rolls her eyes, crossing her arms tightly against her chest, \"That's the most logical explanation I've ever heard, yet every satellite picture shows a blue marble spinning through space.\"\nSpeaker 1:\nHis voice drops to a conspiratorial whisper, leaning even closer to invade her personal space, \"Satellites are just mirrors reflecting off the dome. You don't need to see the whole thing to know the shape. Just trust the feeling of the ground beneath your feet.\"\nSpeaker 2:\nShe sighs deeply, running a hand through her hair as she looks around the room with growing frustration, \"I can feel the wind changing direction, and that only happens if there's a massive curve blocking it. You're making this sound so simple, but it feels complicated to me.\"\nSpeaker 1:\nWith a sudden burst of manic energy, he claps his hands together loudly, \"Complicated? No! Simple! It's all about perspective. If you could stand on the edge of the world, you'd see the sky drop off instantly, not fade into a distant curve.\"\nSpeaker 2:\nShe lets out a short, dismissive laugh, stepping back to create distance between them, \"Maybe for you, but for everyone else, the earth holds us up. We have oceans on three sides, not one. How does a flat plate explain that?\"\nSpeaker 1:\nHe shrugs casually, spreading his arms wide as if embracing the absurdity, \"The ocean is contained within the bowl of the earth. There is no 'three sides' because the water fills the entire surface, creating a perfect circle of liquid that keeps everything safe inside the crust.\"\nSpeaker 2:\nHer expression hardens into something determined, her voice steady and resolute, \"Then tell me why ships disappear hull-first over the horizon. If it were flat, we would just see smaller ships get further away, not vanish entirely.\"\nSpeaker 1:\nHe waves a hand dismissively, smiling with a mix of pity and triumph, \"Because they are sailing towards the center of the dish. They aren't going over a curve; they are moving deeper into the well where the curvature begins.\"\nSpeaker 2:\nShe shakes her head slowly, a small smile playing on her lips as she finally accepts the challenge, \"Okay, maybe I'll believe you once you show me a picture of the Earth from space that isn't generated using AI.\"",
+      "resolution": "832x480",
+      "flow_shift": 5.0,
+      "audio_prompt_type": "0",
+      "alt_prompt": "",
+      "repeat_generation": 1,
+      "duration_seconds": 0,
+      "video_length": 0,
+      "num_inference_steps": 30,
+      "negative_prompt": "worst quality, inconsistent, robotic, distorted, noise, static, muffled, unclear, unnatural, monotone",
+      "guidance_scale": 2.5,
+      "audio_guidance_scale": 1.5,
+      "alt_scale": 0.0,
+      "custom_settings": {
+        "duration_multiplier": 1.1
+      },
+      "multi_prompts_gen_type": "FG",
+      "postprocess_audio": "",
+      "replace_voice_method": "",
+      "replace_voice_sample": null,
+      "replace_voice_sample2": null,
+      "video_prompt_type": "",
+      "image_prompt_type": "",
+      "model_type": "dramabox_audio"
+    }
+  }
+}

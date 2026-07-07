@@ -1,4 +1,4 @@
-// Project and Asset types for LTX Desktop
+// Project and Asset types for AiVS
 
 // Parameters needed to regenerate a shot
 export interface GenerationParams {
@@ -12,7 +12,11 @@ export interface GenerationParams {
   cameraMotion: string
   imageAspectRatio?: string
   imageSteps?: number
+  videoProfileId?: string  // Curated AiVS video model profile id
+  imageProfileId?: string  // Phase 4 curated AiVS model profile id
   inputImageUrl?: string // For I2V: the input image used
+  imageInputRole?: string
+  imageInputMedia?: { url: string; role: string }[]
   inputAudioUrl?: string // For A2V: the input audio used
   retakeVideoPath?: string
   retakeStartTime?: number

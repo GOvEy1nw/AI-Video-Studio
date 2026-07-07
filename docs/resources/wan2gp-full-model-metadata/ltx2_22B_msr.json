@@ -1,0 +1,638 @@
+{
+  "ltx2_22B_msr": {
+    "model_type": "ltx2_22B_msr",
+    "name": "LTX-2 2.3 MSR Ref Distilled 1.1 22B",
+    "model_def": {
+      "ltx2_22B_class": true,
+      "ltx2_edit_anything": false,
+      "infos": "\n# LTX2 Multiple Subject Reference\n\nThis model is configured for the LiconStudio Multiple Subject Reference LoRA. It uses reference images only; Control Video, pose, depth, canny, HDR, outpainting, masks, and frame injection are disabled for this workflow.\n\n## Reference Image Order\n\nUse one of the `MSR Reference Images` modes:\n\n- `Background + Up to 4 Subjects`: upload 2 to 5 images. Image 1 is the background or scene reference; images 2 to 5 are the subject or object references to preserve.\n- `Subjects / Objects only`: upload 1 to 4 subject or object references on a plain white or neutral background.\n\nIn `Background + Up to 4 Subjects` mode, WanGP internally reorders the references before denoising so the MSR LoRA receives the subject references first and the background reference last, matching the upstream MSR convention. In `Subjects / Objects only` mode, WanGP keeps the uploaded reference order unchanged.\n\n## Reference Image Preparation\n\nSubject or object references work best on a plain white background. If your non-background references are not already isolated on white, keep `Remove Background behind MSR Subjects / Objects` enabled so WanGP removes the subject background and places it on white.\n\nCharacter sheets are recommended for character references: use an image that shows the same character from several points of view, poses, or close-up/detail angles. This gives MSR more identity and clothing information than a single portrait.\n\nUse the text prompt to describe how the referenced subjects should appear together in the referenced environment.\n",
+      "text_encoder_folder": "gemma-3-12b-it-qat-q4_0-unquantized",
+      "text_encoder_URLs": [
+        "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/gemma-3-12b-it-qat-q4_0-unquantized/gemma-3-12b-it-qat-q4_0-unquantized.safetensors",
+        "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/gemma-3-12b-it-qat-q4_0-unquantized/gemma-3-12b-it-qat-q4_0-unquantized_quanto_bf16_int8.safetensors"
+      ],
+      "dtype": "bf16",
+      "fps": 24,
+      "frames_minimum": 17,
+      "frames_steps": 8,
+      "sliding_window": false,
+      "returns_audio": true,
+      "prompt_enhancer_button_label": "Write",
+      "auto_null_audio": true,
+      "multimedia_generation": true,
+      "profiles_dir": [
+        "ltx2_msr"
+      ],
+      "ltx2_spatial_upscaler_file": "ltx-2.3-spatial-upscaler-x2-1.1.safetensors",
+      "ltx2_hdr_lora_file": "ltx-2.3-22b-ic-lora-hdr-0.9.safetensors",
+      "ltx2_hdr_scene_embeddings_file": "ltx-2.3-22b-ic-lora-hdr-scene-emb.safetensors",
+      "self_refiner": true,
+      "self_refiner_max_plans": 2,
+      "vae_block_size": 64,
+      "keep_frames_video_guide_not_supported": true,
+      "ltx2_lora_distilled": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-distilled-lora-384.safetensors",
+      "ltx2_lora_distilled_1_1": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-distilled-lora-384-1.1.safetensors",
+      "ltx2_lora_union_control": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-ic-lora-union-control-ref0.5.safetensors",
+      "ltx2_lora_id": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/id-lora-celebvhq-ltx2.3.safetensors",
+      "ltx2_lora_outpaint": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-ic-lora-outpaint.safetensors",
+      "ltx2_lora_inpaint": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-ic-lora-in-outpainting-0.9.safetensors",
+      "ltx2_lora_ingredients": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-ic-lora-ingredients-0.9.safetensors",
+      "ltx2_lora_hdr": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-ic-lora-hdr-0.9.safetensors",
+      "ltx2_pipeline": "distilled",
+      "preset_profiles_dir": [
+        "ltx2_msr_distilled_presets"
+      ],
+      "extra_control_frames": 1,
+      "dont_cat_preguide": true,
+      "input_video_strength": {
+        "label": "Start Image / Source Strength (lower values may create more motion)",
+        "name": "Start Image / Source Strength"
+      },
+      "image_prompt_types_allowed": "TE",
+      "end_frames_always_enabled": true,
+      "any_audio_prompt": true,
+      "audio_prompt_choices": true,
+      "one_speaker_only": true,
+      "audio_guide_label": "Audio Prompt (Soundtrack, leave blank to to use a Null Audio)",
+      "audio_scale_name": "Prompt Audio Strength",
+      "audio_prompt_type_sources": {
+        "selection": [
+          "",
+          "A"
+        ],
+        "labels": {
+          "": "Generate Video & Soundtrack based on Text Prompt",
+          "A": "Generate Video based on Soundtrack and Text Prompt",
+          "K": "Generate Video based on Control Video + its Audio Track and Text Prompt",
+          "2": "Generate Audio based on Control Video and Text Prompt",
+          "A1OF": "Generate Video based on Reference Voice (ID-LoRA) and Text Prompt"
+        },
+        "custom_flags": {
+          "1": "Reference Voice (ID-LoRA)",
+          "2": "Generate Audio based on Control Video and Text Prompt"
+        },
+        "letters_filter": "A1OFK2",
+        "show_label": false,
+        "default": ""
+      },
+      "prompt_infos": "\n# LTX2 Prompt Guidelines\n\n## Standard Prompts\n\n- Describe the subject, setting, action, camera, lighting, mood, and visual style in concrete cinematic language.\n- Keep identity, wardrobe, location, and chronology stable unless you intentionally want a transition.\n- Write the visible action in temporal order. LTX2 usually behaves better when it can follow a clear sequence instead of a pile of disconnected tags.\n- Put spoken words in double quotes and include who says them, when they are said, and the visible mouth or body action that supports them.\n- For better clarity, use multiline prompts in **How to Process each Line of the Text Prompt**. Use one line per shot, beat, character action, or generated item depending on the selected line-processing mode.\n\n## Relayed Prompts\n\nPrompt Relay lets you keep one global prompt for the whole clip and then apply timed subprompts to specific parts of the video. The first text before any valid `[]` range is the global prompt.\n\nAccepted range syntax:\n\n- `[0%:25%]` percentage of the full clip.\n- `[25%:]` percentage start, open end, meaning the rest of the clip.\n- `[1:5]` 1-based frame numbers, from frame 1 through frame 5.\n- `[0s:4s]` or `[0sec:4sec]` seconds.\n- `[0:05:0:10]` timecode-style seconds, from 0:05 to 0:10.\n\nUse the same unit for the start and end of a range. Cover the clip without gaps when the intended story is continuous. Short overlap at boundaries is handled softly, so adjacent segments should describe compatible motion.\n\nFor sliding windows and video continuation, frame 1 and `0%` refer to the first non-overlap frame that will remain in the final output for that window. Earlier overlap frames are only used for continuity and are discarded.\n\nPrompt Relay syntax does not change **How to Process each Line of the Text Prompt**. It is recommended to enable \"Each new Paragraph separated by an Empty Line\" to avoid auto splitting of your prompt in multiple independent prompts.\n\nExample:\n\n```text\nEpic cinematic fantasy battle, a lone armored knight faces a massive black dragon in a ruined mountain keep at dusk, smoke, sparks, torn banners, dramatic firelight, coherent action continuity, grounded physical motion.\n[0%:25%] The knight raises a dented shield as the dragon lands among broken stones, wings throwing dust across the courtyard while embers swirl between them.\n[25%:50%] The dragon lunges and breathes fire across the ground while the knight rolls under the flame, rises beside a shattered pillar, and shouts \"By oath and steel, I will not yield.\"\n[50%:75%] The knight charges through smoke, climbs onto fallen masonry, and drives the glowing sword toward the dragon's exposed chest as the beast rears back for one last attack.\n[75%:] The blade strikes true, the dragon collapses in a wave of sparks and ash, and the exhausted knight lowers the sword and whispers \"Rest now, ancient terror.\"\n```\n",
+      "prompt_enhancer_def": {
+        "selection": [
+          "T",
+          "TI",
+          "T1",
+          "TI1"
+        ],
+        "labels": {
+          "T": "An Enhanced Prompt using existing Text Prompt",
+          "TIV": "An Enhanced Prompt using existing Text Prompt and Start Image",
+          "T1V": "An Enhanced Relayed Prompt using existing Text Prompt",
+          "TI1V": "An Enhanced Relayed Prompt using existing Text Prompt and Start Image"
+        },
+        "default": ""
+      },
+      "text_prompt_enhancer_instructions1": "You are an expert cinematic prompt writer for LTX-2 Prompt Relay in WanGP. Rewrite the user prompt into one enhanced relayed video prompt.\n\nPrompt Relay syntax:\n- Start with one unbracketed global prompt that applies to the full video. Use it for the stable subject, setting, style, lighting, camera language, and continuity.\n- Then write 4 to 8 timed segment prompts. Each segment must start with a bracket range like [0%:25%], [25%:50%], [50%:75%], [75%:].\n- The text after each bracket applies only to that segment. Describe visible action, scene progression, camera motion, expression, pose, timing, and audio-relevant events for that segment.\n- Ranges may use percentages. Cover the whole clip from beginning to end without gaps. Use the final open-ended range when useful.\n\nOutput rules:\n- Output only the final Prompt Relay prompt. Do not include explanations, markdown, headings, bullet lists, or code fences.\n- Keep the global prompt concise but specific. Keep each segment one dense sentence or two short sentences.\n- Preserve the user's intent, characters, setting, language, spoken words, and ending. Do not invent a different story.\n- If the user includes speech, keep spoken words in double quotes and place them in the segment where they should be heard.\n- Make transitions continuous. Do not create unrelated shots unless the user asks for cuts or a montage.\n- Avoid generic filler. Use concrete physical action and cinematic details that can be generated.\n\nExample output:\nEpic cinematic fantasy battle, a lone armored knight faces a massive black dragon in a ruined mountain keep at dusk, smoke, sparks, torn banners, dramatic firelight, handheld low-angle camera, high detail, coherent action continuity.\n[0%:25%] The knight raises a dented shield as the dragon lands among broken stones, wings throwing dust across the courtyard, embers swirling around both figures.\n[25%:50%] The dragon lunges and breathes fire across the ground while the knight rolls under the flame, rises beside a shattered pillar, and shouts \"By oath and steel, I will not yield.\"\n[50%:75%] The knight charges through smoke, climbs onto fallen masonry, and drives the glowing sword toward the dragon's exposed chest as the beast rears back.\n[75%:] The blade strikes true, the dragon collapses in a wave of sparks and ash, and the exhausted knight lowers the sword and whispers \"Rest now, ancient terror.\"",
+      "video_prompt_enhancer_instructions1": "You are an expert cinematic prompt writer for LTX-2 Prompt Relay in WanGP. Rewrite the user prompt and image caption into one enhanced relayed video prompt.\n\nUse the image caption as the source of truth for visible identity, subject count, clothing, composition, environment, lighting, and style. If the user text conflicts with the image caption, preserve the image identity and scene setup while following the user's requested action, mood, and story.\n\nPrompt Relay syntax:\n- Start with one unbracketed global prompt that applies to the full video. Use it for the stable subject, setting, style, lighting, camera language, and continuity from the image.\n- Then write 4 to 8 timed segment prompts. Each segment must start with a bracket range like [0%:25%], [25%:50%], [50%:75%], [75%:].\n- The text after each bracket applies only to that segment. Describe visible action, scene progression, camera motion, expression, pose, timing, and audio-relevant events for that segment.\n- Ranges may use percentages. Cover the whole clip from beginning to end without gaps. Use the final open-ended range when useful.\n\nOutput rules:\n- Output only the final Prompt Relay prompt. Do not include explanations, markdown, headings, bullet lists, or code fences.\n- Keep the global prompt concise but specific. Keep each segment one dense sentence or two short sentences.\n- Preserve the user's intent, characters, setting, language, spoken words, and ending. Do not invent a different story.\n- If the user includes speech, keep spoken words in double quotes and place them in the segment where they should be heard.\n- Make transitions continuous from the start image. Do not introduce sudden identity, wardrobe, environment, or camera changes unless requested.\n- Avoid generic filler. Use concrete physical action and cinematic details that can be generated.\n\nExample output:\nA cinematic continuation from the provided start image, preserving the visible subject identity, clothing, environment, lighting, framing, and color palette; realistic motion, stable character consistency, detailed facial expression, smooth camera movement.\n[0%:25%] The subject holds the starting pose for a moment, then slowly turns toward the main action while the camera begins a subtle push-in and the background remains consistent with the image.\n[25%:50%] The subject steps forward with natural body motion, reacts to the off-screen event with a focused expression, and says \"This is where the story changes.\"\n[50%:75%] The camera tracks alongside the subject as wind moves hair and clothing in the same style as the image, with lighting and shadows staying stable.\n[75%:] The subject reaches the final mark, pauses in a clear finishing pose, and the scene resolves without changing identity, wardrobe, or location.",
+      "text_prompt_enhancer_max_tokens1": 1024,
+      "video_prompt_enhancer_max_tokens1": 1024,
+      "audio_guide_window_slicing": true,
+      "video_length_not_limited_by_audio": true,
+      "output_audio_is_input_audio": true,
+      "multiple_images_as_text_prompts": false,
+      "custom_denoising_strength": true,
+      "NAG": true,
+      "v2i_switch_supported": true,
+      "image_batch_size_max": 1,
+      "denoising_strength": {
+        "label": "Control Video Strength (higher = closer to the Control Video)",
+        "name": "Control Video Strength"
+      },
+      "masking_strength": {
+        "label": "Unmasked Area Strength (higher = unmasked area closer to control video)",
+        "name": "Unmasked Area Strength"
+      },
+      "custom_frames_injection": false,
+      "one_image_ref_only": false,
+      "mask_preprocessing": {
+        "selection": [
+          ""
+        ],
+        "visible": false
+      },
+      "ltx2_msr": true,
+      "image_ref_choices": {
+        "choices": [
+          [
+            "Up to 5 Subjects / Objects",
+            "I"
+          ],
+          [
+            "Background + Up to 4 Subjects",
+            "KI"
+          ]
+        ],
+        "letters_filter": "KI",
+        "default": "KI",
+        "label": "MSR Reference Images",
+        "show_label": true
+      },
+      "at_least_one_image_ref_needed": true,
+      "all_image_refs_are_background_ref": false,
+      "fit_into_canvas_image_refs": 1,
+      "background_removal_label": "Remove Background behind MSR Subjects / Objects",
+      "ltx2_msr_frame_count": 41,
+      "sliding_window_defaults": {
+        "overlap_min": 1,
+        "overlap_max": 97,
+        "overlap_step": 8,
+        "overlap_default": 9,
+        "window_min": 5,
+        "window_max": 501,
+        "window_step": 4,
+        "window_default": 241
+      },
+      "lock_inference_steps": true,
+      "guidance_max_phases": 2,
+      "visible_phases": 0,
+      "name": "LTX-2 2.3 MSR Ref Distilled 1.1 22B",
+      "architecture": "ltx2_22B_msr",
+      "description": "LTX-2.3 distilled 1.1 checkpoint (22B) configured for the LiconStudio Multiple Subject Reference LoRA. Provide 2 to 5 reference images; background first, then subjects and objects.",
+      "URLs": "ltx2_22B_distilled_1_1",
+      "loras": [
+        "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/loras/LTX-2.3-Licon-MSR-V1.safetensors"
+      ],
+      "loras_multipliers": [
+        1
+      ],
+      "path": "defaults\\ltx2_22B_msr.json",
+      "_profile_roots": [
+        "profiles"
+      ],
+      "metadata": {
+        "model_type": "ltx2_22B_msr",
+        "family": "ltx2",
+        "family_label": "LTX-2",
+        "base_model_type": "ltx2_22B_msr",
+        "finetune": false,
+        "main_output": [
+          "image",
+          "video"
+        ],
+        "outputs": [
+          "image",
+          "video",
+          "audio"
+        ],
+        "inputs": [
+          "text",
+          "audio",
+          "image"
+        ],
+        "media_inputs": {
+          "image": {
+            "start": false,
+            "end": true,
+            "reference": true,
+            "single_reference": false,
+            "multiple_references": true,
+            "background": true,
+            "injected_frames": false,
+            "control": false,
+            "mask": false
+          },
+          "video": {
+            "continue": false,
+            "last": false,
+            "control": false,
+            "mask": false
+          },
+          "audio": {
+            "prompt": true,
+            "output": true
+          }
+        },
+        "capabilities": {
+          "text_to_video": true,
+          "image_to_video": false,
+          "video_to_video": false,
+          "text_to_image": true,
+          "image_to_image": true,
+          "text_to_audio": false,
+          "audio_to_audio": false,
+          "audio_to_video": true,
+          "audio_output": true,
+          "inpainting": false,
+          "outpainting": false,
+          "reference_images": true,
+          "background_image": true,
+          "injected_frames": false,
+          "control_image": false,
+          "control_video": false,
+          "video_continuation": false,
+          "sliding_window": false,
+          "lora": true
+        },
+        "setting_values": {
+          "image_prompt_type": {
+            "allowed": "TE",
+            "choices": [
+              {
+                "label": "Text/new generation",
+                "value": ""
+              },
+              {
+                "label": "End image",
+                "value": "E"
+              }
+            ]
+          },
+          "video_prompt_type": {
+            "guide_preprocessing": null,
+            "mask_preprocessing": {
+              "visible": false,
+              "choices": [
+                {
+                  "label": "None",
+                  "value": ""
+                }
+              ]
+            },
+            "guide_custom_choices": null,
+            "image_ref_choices": {
+              "default": "KI",
+              "label": "MSR Reference Images",
+              "letters_filter": "KI",
+              "show_label": true,
+              "choices": [
+                {
+                  "label": "Up to 5 Subjects / Objects",
+                  "value": "I"
+                },
+                {
+                  "label": "Background + Up to 4 Subjects",
+                  "value": "KI"
+                }
+              ]
+            },
+            "custom_video_selection": null,
+            "forced": ""
+          },
+          "audio_prompt_type": {
+            "sources": {
+              "default": "",
+              "letters_filter": "A1OFK2",
+              "show_label": false,
+              "choices": [
+                {
+                  "label": "Generate Video & Soundtrack based on Text Prompt",
+                  "value": ""
+                },
+                {
+                  "label": "Generate Video based on Soundtrack and Text Prompt",
+                  "value": "A"
+                },
+                {
+                  "label": "Generate Video based on Control Video + its Audio Track and Text Prompt",
+                  "value": "K"
+                },
+                {
+                  "label": "Generate Audio based on Control Video and Text Prompt",
+                  "value": "2"
+                },
+                {
+                  "label": "Generate Video based on Reference Voice (ID-LoRA) and Text Prompt",
+                  "value": "A1OF"
+                }
+              ]
+            },
+            "custom_option": null
+          },
+          "model_mode": null,
+          "sample_solver": null,
+          "prompt_enhancer": {
+            "default": "",
+            "choices": [
+              {
+                "label": "An Enhanced Prompt using existing Text Prompt",
+                "value": "T"
+              },
+              {
+                "label": "An Enhanced Prompt using existing Text Prompt and Start Image",
+                "value": "TI"
+              },
+              {
+                "label": "An Enhanced Relayed Prompt using existing Text Prompt",
+                "value": "T1"
+              },
+              {
+                "label": "An Enhanced Relayed Prompt using existing Text Prompt and Start Image",
+                "value": "TI1"
+              }
+            ]
+          }
+        }
+      },
+      "settings": {
+        "prompt": "A cinematic tracking shot of the referenced subjects standing together in the referenced environment, natural motion, detailed clothing, consistent identities, realistic lighting.",
+        "video_prompt_type": "KI",
+        "num_inference_steps": 8,
+        "video_length": 145,
+        "resolution": "1280x720",
+        "remove_background_images_ref": 1
+      },
+      "model_type": "ltx2_22B_msr"
+    },
+    "metadata": {
+      "model_type": "ltx2_22B_msr",
+      "family": "ltx2",
+      "family_label": "LTX-2",
+      "base_model_type": "ltx2_22B_msr",
+      "finetune": false,
+      "main_output": [
+        "image",
+        "video"
+      ],
+      "outputs": [
+        "image",
+        "video",
+        "audio"
+      ],
+      "inputs": [
+        "text",
+        "audio",
+        "image"
+      ],
+      "media_inputs": {
+        "image": {
+          "start": false,
+          "end": true,
+          "reference": true,
+          "single_reference": false,
+          "multiple_references": true,
+          "background": true,
+          "injected_frames": false,
+          "control": false,
+          "mask": false
+        },
+        "video": {
+          "continue": false,
+          "last": false,
+          "control": false,
+          "mask": false
+        },
+        "audio": {
+          "prompt": true,
+          "output": true
+        }
+      },
+      "capabilities": {
+        "text_to_video": true,
+        "image_to_video": false,
+        "video_to_video": false,
+        "text_to_image": true,
+        "image_to_image": true,
+        "text_to_audio": false,
+        "audio_to_audio": false,
+        "audio_to_video": true,
+        "audio_output": true,
+        "inpainting": false,
+        "outpainting": false,
+        "reference_images": true,
+        "background_image": true,
+        "injected_frames": false,
+        "control_image": false,
+        "control_video": false,
+        "video_continuation": false,
+        "sliding_window": false,
+        "lora": true
+      },
+      "setting_values": {
+        "image_prompt_type": {
+          "allowed": "TE",
+          "choices": [
+            {
+              "label": "Text/new generation",
+              "value": ""
+            },
+            {
+              "label": "End image",
+              "value": "E"
+            }
+          ]
+        },
+        "video_prompt_type": {
+          "guide_preprocessing": null,
+          "mask_preprocessing": {
+            "visible": false,
+            "choices": [
+              {
+                "label": "None",
+                "value": ""
+              }
+            ]
+          },
+          "guide_custom_choices": null,
+          "image_ref_choices": {
+            "default": "KI",
+            "label": "MSR Reference Images",
+            "letters_filter": "KI",
+            "show_label": true,
+            "choices": [
+              {
+                "label": "Up to 5 Subjects / Objects",
+                "value": "I"
+              },
+              {
+                "label": "Background + Up to 4 Subjects",
+                "value": "KI"
+              }
+            ]
+          },
+          "custom_video_selection": null,
+          "forced": ""
+        },
+        "audio_prompt_type": {
+          "sources": {
+            "default": "",
+            "letters_filter": "A1OFK2",
+            "show_label": false,
+            "choices": [
+              {
+                "label": "Generate Video & Soundtrack based on Text Prompt",
+                "value": ""
+              },
+              {
+                "label": "Generate Video based on Soundtrack and Text Prompt",
+                "value": "A"
+              },
+              {
+                "label": "Generate Video based on Control Video + its Audio Track and Text Prompt",
+                "value": "K"
+              },
+              {
+                "label": "Generate Audio based on Control Video and Text Prompt",
+                "value": "2"
+              },
+              {
+                "label": "Generate Video based on Reference Voice (ID-LoRA) and Text Prompt",
+                "value": "A1OF"
+              }
+            ]
+          },
+          "custom_option": null
+        },
+        "model_mode": null,
+        "sample_solver": null,
+        "prompt_enhancer": {
+          "default": "",
+          "choices": [
+            {
+              "label": "An Enhanced Prompt using existing Text Prompt",
+              "value": "T"
+            },
+            {
+              "label": "An Enhanced Prompt using existing Text Prompt and Start Image",
+              "value": "TI"
+            },
+            {
+              "label": "An Enhanced Relayed Prompt using existing Text Prompt",
+              "value": "T1"
+            },
+            {
+              "label": "An Enhanced Relayed Prompt using existing Text Prompt and Start Image",
+              "value": "TI1"
+            }
+          ]
+        }
+      }
+    },
+    "setting_values": {
+      "image_prompt_type": {
+        "allowed": "TE",
+        "choices": [
+          {
+            "label": "Text/new generation",
+            "value": ""
+          },
+          {
+            "label": "End image",
+            "value": "E"
+          }
+        ]
+      },
+      "video_prompt_type": {
+        "guide_preprocessing": null,
+        "mask_preprocessing": {
+          "visible": false,
+          "choices": [
+            {
+              "label": "None",
+              "value": ""
+            }
+          ]
+        },
+        "guide_custom_choices": null,
+        "image_ref_choices": {
+          "default": "KI",
+          "label": "MSR Reference Images",
+          "letters_filter": "KI",
+          "show_label": true,
+          "choices": [
+            {
+              "label": "Up to 5 Subjects / Objects",
+              "value": "I"
+            },
+            {
+              "label": "Background + Up to 4 Subjects",
+              "value": "KI"
+            }
+          ]
+        },
+        "custom_video_selection": null,
+        "forced": ""
+      },
+      "audio_prompt_type": {
+        "sources": {
+          "default": "",
+          "letters_filter": "A1OFK2",
+          "show_label": false,
+          "choices": [
+            {
+              "label": "Generate Video & Soundtrack based on Text Prompt",
+              "value": ""
+            },
+            {
+              "label": "Generate Video based on Soundtrack and Text Prompt",
+              "value": "A"
+            },
+            {
+              "label": "Generate Video based on Control Video + its Audio Track and Text Prompt",
+              "value": "K"
+            },
+            {
+              "label": "Generate Audio based on Control Video and Text Prompt",
+              "value": "2"
+            },
+            {
+              "label": "Generate Video based on Reference Voice (ID-LoRA) and Text Prompt",
+              "value": "A1OF"
+            }
+          ]
+        },
+        "custom_option": null
+      },
+      "model_mode": null,
+      "sample_solver": null,
+      "prompt_enhancer": {
+        "default": "",
+        "choices": [
+          {
+            "label": "An Enhanced Prompt using existing Text Prompt",
+            "value": "T"
+          },
+          {
+            "label": "An Enhanced Prompt using existing Text Prompt and Start Image",
+            "value": "TI"
+          },
+          {
+            "label": "An Enhanced Relayed Prompt using existing Text Prompt",
+            "value": "T1"
+          },
+          {
+            "label": "An Enhanced Relayed Prompt using existing Text Prompt and Start Image",
+            "value": "TI1"
+          }
+        ]
+      }
+    },
+    "default_settings": {
+      "settings_version": 2.66,
+      "prompt": "A cinematic tracking shot of the referenced subjects standing together in the referenced environment, natural motion, detailed clothing, consistent identities, realistic lighting.",
+      "resolution": "1280x720",
+      "flow_shift": 5.0,
+      "sliding_window_size": 481,
+      "sliding_window_overlap": 17,
+      "denoising_strength": 1.0,
+      "masking_strength": 0,
+      "audio_prompt_type": "",
+      "perturbation_layers": [
+        28
+      ],
+      "guidance_phases": 2,
+      "audio_scale": 1.0,
+      "video_prompt_type": "KI",
+      "video_length": 145,
+      "force_fps": "",
+      "remove_background_images_ref": 1,
+      "num_inference_steps": 8,
+      "alt_prompt": "",
+      "multi_prompts_gen_type": "PG",
+      "postprocess_audio": "",
+      "replace_voice_method": "",
+      "replace_voice_sample": null,
+      "replace_voice_sample2": null,
+      "image_prompt_type": "",
+      "model_type": "ltx2_22B_msr"
+    }
+  }
+}

@@ -1,0 +1,599 @@
+{
+  "qwen3_tts_base": {
+    "model_type": "qwen3_tts_base",
+    "name": "TTS Qwen3 Base (12Hz) 1.7B",
+    "model_def": {
+      "audio_only": true,
+      "image_outputs": false,
+      "sliding_window": false,
+      "guidance_max_phases": 0,
+      "no_negative_prompt": true,
+      "inference_steps": false,
+      "temperature": true,
+      "image_prompt_types_allowed": "",
+      "supports_early_stop": true,
+      "profiles_dir": [
+        "qwen3_tts_base"
+      ],
+      "duration_slider": {
+        "label": "Max duration (seconds)",
+        "min": 1,
+        "max": 600,
+        "increment": 1,
+        "default": 20
+      },
+      "top_k_slider": true,
+      "text_prompt_enhancer_instructions": "You are a speechwriting assistant. Generate a single-speaker monologue for a text-to-speech model based on the user prompt. Output only the monologue text. Do not include explanations, bullet lists, or stage directions. Keep a consistent tone and point of view. Use natural, spoken sentences with clear punctuation for pauses. Aim for a short monologue (4-8 sentences) unless the prompt asks for a different length.\n\nExample:\nI never thought a small town would teach me so much about patience. Every morning the same faces pass the bakery window, and I know their stories without a word. The bell over the door rings, the coffee steams, and time slows down just enough to breathe. Some days I miss the noise of the city, but most days I am grateful for the quiet. It lets me hear myself think, and that has become its own kind of music.",
+      "text_prompt_enhancer_max_tokens": 512,
+      "prompt_enhancer_button_label": "Write",
+      "compile": false,
+      "parent_model_type": "qwen3_tts_base",
+      "lm_engines": [
+        "cg"
+      ],
+      "prompt_enhancer_def": {
+        "selection": [
+          "T",
+          "T1"
+        ],
+        "labels": {
+          "T": "A Speech based on current Prompt",
+          "T1": "A Dialogue between two People based on current Prompt"
+        },
+        "default": "T"
+      },
+      "model_modes": {
+        "choices": [
+          [
+            "Auto",
+            "auto"
+          ],
+          [
+            "Chinese",
+            "chinese"
+          ],
+          [
+            "English",
+            "english"
+          ],
+          [
+            "French",
+            "french"
+          ],
+          [
+            "German",
+            "german"
+          ],
+          [
+            "Italian",
+            "italian"
+          ],
+          [
+            "Japanese",
+            "japanese"
+          ],
+          [
+            "Korean",
+            "korean"
+          ],
+          [
+            "Portuguese",
+            "portuguese"
+          ],
+          [
+            "Russian",
+            "russian"
+          ],
+          [
+            "Spanish",
+            "spanish"
+          ]
+        ],
+        "default": "auto",
+        "label": "Language"
+      },
+      "alt_prompt": {
+        "label": "Reference transcript(s) (optional, two-speaker: one per line)",
+        "placeholder": "Speaker 1 reference transcript\nSpeaker 2 reference transcript",
+        "lines": 3
+      },
+      "pause_between_sentences": true,
+      "preserve_empty_prompt_lines": true,
+      "any_audio_prompt": true,
+      "audio_prompt_choices": true,
+      "audio_prompt_type_sources": {
+        "selection": [
+          "A",
+          "AB"
+        ],
+        "labels": {
+          "A": "Voice cloning of 1 speaker",
+          "AB": "Voice cloning of 2 speakers (Speaker 1 and Speaker 2)"
+        },
+        "letters_filter": "AB",
+        "default": "A"
+      },
+      "custom_settings": [
+        {
+          "id": "auto_split_every_s",
+          "label": "Auto Split s (0 = Auto, 5-90)",
+          "name": "Auto Split Every s",
+          "type": "float",
+          "default": 0.0,
+          "min": 0.0,
+          "max": 90.0,
+          "inc": 1.0
+        }
+      ],
+      "text_prompt_enhancer_instructions1": "You are a dialogue-writing assistant for a text-to-speech model. Generate a two-speaker dialogue based on the user prompt.\n\nOutput rules:\n- Output only dialogue lines, no explanations, lists, or stage directions.\n- Every line must start with either \"Speaker 1:\" or \"Speaker 2:\".\n- Use natural spoken language with clear punctuation.\n- Keep alternating speakers unless the prompt asks otherwise.\n- Write a compact dialogue (6-14 lines) unless the user asks for a different length.\n\nExample:\nSpeaker 1: We should leave before the rain gets heavier.\nSpeaker 2: Give me one minute, I still need my jacket.\nSpeaker 1: One minute, then we run for the bus.\nSpeaker 2: Deal, and if we miss it, coffee is on me.",
+      "text_prompt_enhancer_max_tokens1": 512,
+      "audio_guide_label": "Speaker 1 reference voice",
+      "audio_guide2_label": "Speaker 2 reference voice",
+      "name": "TTS Qwen3 Base (12Hz) 1.7B",
+      "architecture": "qwen3_tts_base",
+      "description": "Qwen3 Base voice clone model with reference audio. For two-speaker dialogue, use 'Speaker 1:' and 'Speaker 2:' tags. Use Manual Split (one empty line) or Auto Split to to accelerate generation for very long speeches.",
+      "URLs": [
+        "https://huggingface.co/DeepBeepMeep/TTS/resolve/main/qwen3_tts_12hz_1b7_base_bf16.safetensors",
+        "https://huggingface.co/DeepBeepMeep/TTS/resolve/main/qwen3_tts_12hz_1b7_base_quanto_bf16_int8.safetensors"
+      ],
+      "path": "defaults\\qwen3_tts_base.json",
+      "_profile_roots": [
+        "profiles"
+      ],
+      "metadata": {
+        "model_type": "qwen3_tts_base",
+        "family": "tts",
+        "family_label": "TTS",
+        "base_model_type": "qwen3_tts_base",
+        "finetune": false,
+        "main_output": [
+          "audio"
+        ],
+        "outputs": [
+          "audio"
+        ],
+        "inputs": [
+          "text",
+          "audio"
+        ],
+        "media_inputs": {
+          "image": {
+            "start": false,
+            "end": false,
+            "reference": false,
+            "single_reference": false,
+            "multiple_references": false,
+            "background": false,
+            "injected_frames": false,
+            "control": false,
+            "mask": false
+          },
+          "video": {
+            "continue": false,
+            "last": false,
+            "control": false,
+            "mask": false
+          },
+          "audio": {
+            "prompt": true,
+            "output": true
+          }
+        },
+        "capabilities": {
+          "text_to_video": false,
+          "image_to_video": false,
+          "video_to_video": false,
+          "text_to_image": false,
+          "image_to_image": false,
+          "text_to_audio": true,
+          "audio_to_audio": true,
+          "audio_to_video": false,
+          "audio_output": true,
+          "inpainting": false,
+          "outpainting": false,
+          "reference_images": false,
+          "background_image": false,
+          "injected_frames": false,
+          "control_image": false,
+          "control_video": false,
+          "video_continuation": false,
+          "sliding_window": false,
+          "lora": true
+        },
+        "setting_values": {
+          "image_prompt_type": {
+            "allowed": "",
+            "choices": [
+              {
+                "label": "Text/new generation",
+                "value": ""
+              }
+            ]
+          },
+          "video_prompt_type": {
+            "guide_preprocessing": null,
+            "mask_preprocessing": null,
+            "guide_custom_choices": null,
+            "image_ref_choices": null,
+            "custom_video_selection": null,
+            "forced": ""
+          },
+          "audio_prompt_type": {
+            "sources": {
+              "default": "A",
+              "letters_filter": "AB",
+              "choices": [
+                {
+                  "label": "Voice cloning of 1 speaker",
+                  "value": "A"
+                },
+                {
+                  "label": "Voice cloning of 2 speakers (Speaker 1 and Speaker 2)",
+                  "value": "AB"
+                }
+              ]
+            },
+            "custom_option": null
+          },
+          "model_mode": {
+            "default": "auto",
+            "label": "Language",
+            "choices": [
+              {
+                "label": "Auto",
+                "value": "auto"
+              },
+              {
+                "label": "Chinese",
+                "value": "chinese"
+              },
+              {
+                "label": "English",
+                "value": "english"
+              },
+              {
+                "label": "French",
+                "value": "french"
+              },
+              {
+                "label": "German",
+                "value": "german"
+              },
+              {
+                "label": "Italian",
+                "value": "italian"
+              },
+              {
+                "label": "Japanese",
+                "value": "japanese"
+              },
+              {
+                "label": "Korean",
+                "value": "korean"
+              },
+              {
+                "label": "Portuguese",
+                "value": "portuguese"
+              },
+              {
+                "label": "Russian",
+                "value": "russian"
+              },
+              {
+                "label": "Spanish",
+                "value": "spanish"
+              }
+            ]
+          },
+          "sample_solver": null,
+          "prompt_enhancer": {
+            "default": "T",
+            "choices": [
+              {
+                "label": "A Speech based on current Prompt",
+                "value": "T"
+              },
+              {
+                "label": "A Dialogue between two People based on current Prompt",
+                "value": "T1"
+              }
+            ]
+          }
+        }
+      },
+      "settings": {
+        "prompt": "I checked the schedule twice, and everything lines up.",
+        "alt_prompt": "",
+        "multi_prompts_gen_type": "FG",
+        "duration_seconds": 30
+      },
+      "model_type": "qwen3_tts_base"
+    },
+    "metadata": {
+      "model_type": "qwen3_tts_base",
+      "family": "tts",
+      "family_label": "TTS",
+      "base_model_type": "qwen3_tts_base",
+      "finetune": false,
+      "main_output": [
+        "audio"
+      ],
+      "outputs": [
+        "audio"
+      ],
+      "inputs": [
+        "text",
+        "audio"
+      ],
+      "media_inputs": {
+        "image": {
+          "start": false,
+          "end": false,
+          "reference": false,
+          "single_reference": false,
+          "multiple_references": false,
+          "background": false,
+          "injected_frames": false,
+          "control": false,
+          "mask": false
+        },
+        "video": {
+          "continue": false,
+          "last": false,
+          "control": false,
+          "mask": false
+        },
+        "audio": {
+          "prompt": true,
+          "output": true
+        }
+      },
+      "capabilities": {
+        "text_to_video": false,
+        "image_to_video": false,
+        "video_to_video": false,
+        "text_to_image": false,
+        "image_to_image": false,
+        "text_to_audio": true,
+        "audio_to_audio": true,
+        "audio_to_video": false,
+        "audio_output": true,
+        "inpainting": false,
+        "outpainting": false,
+        "reference_images": false,
+        "background_image": false,
+        "injected_frames": false,
+        "control_image": false,
+        "control_video": false,
+        "video_continuation": false,
+        "sliding_window": false,
+        "lora": true
+      },
+      "setting_values": {
+        "image_prompt_type": {
+          "allowed": "",
+          "choices": [
+            {
+              "label": "Text/new generation",
+              "value": ""
+            }
+          ]
+        },
+        "video_prompt_type": {
+          "guide_preprocessing": null,
+          "mask_preprocessing": null,
+          "guide_custom_choices": null,
+          "image_ref_choices": null,
+          "custom_video_selection": null,
+          "forced": ""
+        },
+        "audio_prompt_type": {
+          "sources": {
+            "default": "A",
+            "letters_filter": "AB",
+            "choices": [
+              {
+                "label": "Voice cloning of 1 speaker",
+                "value": "A"
+              },
+              {
+                "label": "Voice cloning of 2 speakers (Speaker 1 and Speaker 2)",
+                "value": "AB"
+              }
+            ]
+          },
+          "custom_option": null
+        },
+        "model_mode": {
+          "default": "auto",
+          "label": "Language",
+          "choices": [
+            {
+              "label": "Auto",
+              "value": "auto"
+            },
+            {
+              "label": "Chinese",
+              "value": "chinese"
+            },
+            {
+              "label": "English",
+              "value": "english"
+            },
+            {
+              "label": "French",
+              "value": "french"
+            },
+            {
+              "label": "German",
+              "value": "german"
+            },
+            {
+              "label": "Italian",
+              "value": "italian"
+            },
+            {
+              "label": "Japanese",
+              "value": "japanese"
+            },
+            {
+              "label": "Korean",
+              "value": "korean"
+            },
+            {
+              "label": "Portuguese",
+              "value": "portuguese"
+            },
+            {
+              "label": "Russian",
+              "value": "russian"
+            },
+            {
+              "label": "Spanish",
+              "value": "spanish"
+            }
+          ]
+        },
+        "sample_solver": null,
+        "prompt_enhancer": {
+          "default": "T",
+          "choices": [
+            {
+              "label": "A Speech based on current Prompt",
+              "value": "T"
+            },
+            {
+              "label": "A Dialogue between two People based on current Prompt",
+              "value": "T1"
+            }
+          ]
+        }
+      }
+    },
+    "setting_values": {
+      "image_prompt_type": {
+        "allowed": "",
+        "choices": [
+          {
+            "label": "Text/new generation",
+            "value": ""
+          }
+        ]
+      },
+      "video_prompt_type": {
+        "guide_preprocessing": null,
+        "mask_preprocessing": null,
+        "guide_custom_choices": null,
+        "image_ref_choices": null,
+        "custom_video_selection": null,
+        "forced": ""
+      },
+      "audio_prompt_type": {
+        "sources": {
+          "default": "A",
+          "letters_filter": "AB",
+          "choices": [
+            {
+              "label": "Voice cloning of 1 speaker",
+              "value": "A"
+            },
+            {
+              "label": "Voice cloning of 2 speakers (Speaker 1 and Speaker 2)",
+              "value": "AB"
+            }
+          ]
+        },
+        "custom_option": null
+      },
+      "model_mode": {
+        "default": "auto",
+        "label": "Language",
+        "choices": [
+          {
+            "label": "Auto",
+            "value": "auto"
+          },
+          {
+            "label": "Chinese",
+            "value": "chinese"
+          },
+          {
+            "label": "English",
+            "value": "english"
+          },
+          {
+            "label": "French",
+            "value": "french"
+          },
+          {
+            "label": "German",
+            "value": "german"
+          },
+          {
+            "label": "Italian",
+            "value": "italian"
+          },
+          {
+            "label": "Japanese",
+            "value": "japanese"
+          },
+          {
+            "label": "Korean",
+            "value": "korean"
+          },
+          {
+            "label": "Portuguese",
+            "value": "portuguese"
+          },
+          {
+            "label": "Russian",
+            "value": "russian"
+          },
+          {
+            "label": "Spanish",
+            "value": "spanish"
+          }
+        ]
+      },
+      "sample_solver": null,
+      "prompt_enhancer": {
+        "default": "T",
+        "choices": [
+          {
+            "label": "A Speech based on current Prompt",
+            "value": "T"
+          },
+          {
+            "label": "A Dialogue between two People based on current Prompt",
+            "value": "T1"
+          }
+        ]
+      }
+    },
+    "default_settings": {
+      "settings_version": 2.66,
+      "prompt": "I checked the schedule twice, and everything lines up.",
+      "resolution": "832x480",
+      "flow_shift": 5.0,
+      "audio_prompt_type": "A",
+      "model_mode": "auto",
+      "alt_prompt": "",
+      "duration_seconds": 30,
+      "pause_seconds": 0.5,
+      "repeat_generation": 1,
+      "video_length": 0,
+      "num_inference_steps": 0,
+      "negative_prompt": "",
+      "temperature": 0.9,
+      "top_k": 50,
+      "multi_prompts_gen_type": "FG",
+      "postprocess_audio": "",
+      "replace_voice_method": "",
+      "replace_voice_sample": null,
+      "replace_voice_sample2": null,
+      "video_prompt_type": "",
+      "image_prompt_type": "",
+      "model_type": "qwen3_tts_base"
+    }
+  }
+}

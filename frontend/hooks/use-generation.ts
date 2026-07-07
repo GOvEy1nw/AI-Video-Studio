@@ -1,7 +1,6 @@
 import { useState, useCallback, useRef } from 'react'
-import type { GenerationSettings } from '../components/SettingsPanel'
+import { GenerationSettings } from '../components/SettingsPanel'
 import { backendFetch } from '../lib/backend'
-import { useAppSettings } from '../contexts/AppSettingsContext'
 
 interface GenerationState {
   isGenerating: boolean
@@ -26,7 +25,7 @@ interface GenerationProgress {
 
 interface UseGenerationReturn extends GenerationState {
   generate: (prompt: string, imagePath: string | null, settings: GenerationSettings, audioPath?: string | null) => Promise<void>
-  generateImage: (prompt: string, settings: GenerationSettings) => Promise<void>
+  generateImage: (prompt: string, settings: GenerationSettings, inputMedia?: { path: string; role: string }[]) => Promise<void>
   cancel: () => void
   reset: () => void
 }
@@ -102,7 +101,6 @@ function getPhaseMessage(phase: string): string {
 }
 
 export function useGeneration(): UseGenerationReturn {
-  const { settings: appSettings, forceApiGenerations, refreshSettings } = useAppSettings()
   const [state, setState] = useState<GenerationState>({
     isGenerating: false,
     progress: 0,
@@ -150,6 +148,7 @@ export function useGeneration(): UseGenerationReturn {
       const body: Record<string, unknown> = {
         prompt,
         model: settings.model,
+        modelProfileId: settings.videoProfileId,
         duration: String(settings.duration),
         resolution: settings.videoResolution,
         fps: String(settings.fps),
@@ -303,41 +302,9 @@ export function useGeneration(): UseGenerationReturn {
 
   const generateImage = useCallback(async (
     prompt: string,
-    settings: GenerationSettings
+    settings: GenerationSettings,
+    inputMedia?: { path: string; role: string }[],
   ) => {
-    if (forceApiGenerations) {
-      try {
-        const response = await backendFetch('/api/settings')
-        if (response.ok) {
-          const payload = await response.json()
-          if (!payload?.hasFalApiKey) {
-            void refreshSettings()
-            window.dispatchEvent(new CustomEvent('open-api-gateway', {
-              detail: {
-                requiredKeys: ['fal'],
-                title: 'Connect FAL AI',
-                description: 'FAL AI is required for generating images with Z Image Turbo when API generations are enabled.',
-                blocking: false,
-              },
-            }))
-            return
-          }
-        }
-      } catch {
-        if (!appSettings.hasFalApiKey) {
-          window.dispatchEvent(new CustomEvent('open-api-gateway', {
-            detail: {
-              requiredKeys: ['fal'],
-              title: 'Connect FAL AI',
-              description: 'FAL AI is required for generating images with Z Image Turbo when API generations are enabled.',
-              blocking: false,
-            },
-          }))
-          return
-        }
-      }
-    }
-
     const numImages = settings.variations || 1
     
     setState({
@@ -360,7 +327,12 @@ export function useGeneration(): UseGenerationReturn {
       // Skip prompt enhancement for T2I - use original prompt directly
       const finalPrompt = prompt
 
-      const dims = getImageDimensions(settings)
+      // Phase 4: when a curated profile is selected, the backend
+      // resolves the exact WxH from (profileId, tier, aspect). We only
+      // need the legacy getImageDimensions path when no profile is set
+      // (backwards-compatible raw width/height).
+      const hasProfile = !!settings.imageProfileId
+      const dims = hasProfile ? null : getImageDimensions(settings)
       const numSteps = settings.imageSteps || 8
 
       // Poll for progress
@@ -386,19 +358,37 @@ export function useGeneration(): UseGenerationReturn {
           // Ignore polling errors
         }
       }
-      
+
       progressInterval = setInterval(pollProgress, 500)
+
+      // Phase 4: when a curated profile is selected, send the profile
+      // id + tier + aspect and let the backend resolve the exact WxH.
+      // Raw width/height still accepted for backwards compatibility.
+      const body: Record<string, unknown> = {
+        prompt: finalPrompt,
+        numSteps,
+        numImages,
+      }
+      if (hasProfile) {
+        body.modelProfileId = settings.imageProfileId
+        body.aspectRatio = settings.imageAspectRatio || '1:1'
+        body.resolutionTier = settings.imageResolution
+        if (inputMedia && inputMedia.length > 0) {
+          body.inputMedia = inputMedia.map((item) => ({
+            type: 'image',
+            path: item.path,
+            role: item.role,
+          }))
+        }
+      } else if (dims) {
+        body.width = dims.width
+        body.height = dims.height
+      }
 
       const response = await backendFetch('/api/generate-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: finalPrompt,
-          width: dims.width,
-          height: dims.height,
-          numSteps,
-          numImages,
-        }),
+        body: JSON.stringify(body),
         signal: abortControllerRef.current.signal,
       })
 
@@ -472,7 +462,7 @@ export function useGeneration(): UseGenerationReturn {
         clearInterval(progressInterval)
       }
     }
-  }, [appSettings.hasFalApiKey, forceApiGenerations, refreshSettings])
+  }, [])
 
   const reset = useCallback(() => {
     setState({

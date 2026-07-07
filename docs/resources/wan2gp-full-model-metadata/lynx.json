@@ -1,0 +1,593 @@
+{
+  "lynx": {
+    "model_type": "lynx",
+    "name": "Wan2.1 Lynx 14B",
+    "model_def": {
+      "i2v_class": false,
+      "t2v_class": true,
+      "multitalk_class": false,
+      "standin_class": false,
+      "lynx_class": true,
+      "alpha_class": false,
+      "wan_5B_class": false,
+      "vace_class": false,
+      "bernini_class": false,
+      "scail2": false,
+      "color_correction": true,
+      "svi2pro": false,
+      "i2v_2_2": false,
+      "text_encoder_URLs": [
+        "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/umt5-xxl/models_t5_umt5-xxl-enc-bf16.safetensors",
+        "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/umt5-xxl/models_t5_umt5-xxl-enc-quanto_int8.safetensors"
+      ],
+      "text_encoder_folder": "umt5-xxl",
+      "vae_upsampler": [
+        1,
+        2
+      ],
+      "vae_block_size": 16,
+      "profiles_dir": [
+        "wan"
+      ],
+      "group": "wan",
+      "fps": 16,
+      "frames_minimum": 5,
+      "frames_steps": 4,
+      "sliding_window": true,
+      "multiple_submodels": false,
+      "guidance_max_phases": 3,
+      "perturbation": true,
+      "flow_shift": true,
+      "cfg_zero": true,
+      "cfg_star": true,
+      "adaptive_projected_guidance": true,
+      "tea_cache": true,
+      "mag_cache": true,
+      "keep_frames_video_guide_not_supported": false,
+      "sample_solvers": [
+        [
+          "unipc",
+          "unipc"
+        ],
+        [
+          "euler",
+          "euler"
+        ],
+        [
+          "dpm++",
+          "dpm++"
+        ],
+        [
+          "flowmatch causvid",
+          "causvid"
+        ],
+        [
+          "lcm + ltx",
+          "lcm"
+        ]
+      ],
+      "sub_parallel_windows": false,
+      "self_refiner": true,
+      "guide_custom_choices": {
+        "choices": [
+          [
+            "Use Reference Image which is a Person Face",
+            ""
+          ],
+          [
+            "Video to Video guided by Text Prompt & Reference Image",
+            "GUV"
+          ],
+          [
+            "Video to Video on the Area of the Video Mask",
+            "GVA"
+          ]
+        ],
+        "default": "",
+        "letters_filter": "GUVA",
+        "label": "Video to Video",
+        "show_label": false
+      },
+      "mask_preprocessing": {
+        "selection": [
+          "",
+          "A"
+        ],
+        "visible": false
+      },
+      "v2i_switch_supported": true,
+      "fit_into_canvas_image_refs": 0,
+      "image_ref_choices": {
+        "choices": [
+          [
+            "No Reference Image",
+            ""
+          ],
+          [
+            "Reference Image is a Person Face",
+            "I"
+          ]
+        ],
+        "visible": false,
+        "letters_filter": "I"
+      },
+      "one_image_ref_needed": true,
+      "set_video_prompt_type": "Q",
+      "no_background_removal": true,
+      "control_net_weight_alt_name": "Lynx",
+      "image_prompt_types_allowed": "TVL",
+      "NAG": true,
+      "name": "Wan2.1 Lynx 14B",
+      "modules": [
+        [
+          "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/wan2.1_lynx_full_module_14B_bf16.safetensors",
+          "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/wan2.1_lynx_full_module_14B_quanto_bf16_int8.safetensors",
+          "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/wan2.1_lynx_full_module_14B_quanto_fp16_int8.safetensors"
+        ]
+      ],
+      "architecture": "lynx",
+      "description": "The Lynx ControlNet offers State of the Art Identity Preservation. You need to provide a Reference Image which is a close up of a person face to transfer this person in the Video.",
+      "URLs": "t2v",
+      "preload_URLs": [
+        "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/wan2.1_lynx_full_arc_resampler.safetensors"
+      ],
+      "path": "defaults\\lynx.json",
+      "_profile_roots": [
+        "profiles"
+      ],
+      "metadata": {
+        "model_type": "lynx",
+        "family": "wan",
+        "family_label": "Wan2.1",
+        "base_model_type": "lynx",
+        "finetune": false,
+        "main_output": [
+          "image",
+          "video"
+        ],
+        "outputs": [
+          "image",
+          "video"
+        ],
+        "inputs": [
+          "text",
+          "image",
+          "video"
+        ],
+        "media_inputs": {
+          "image": {
+            "start": false,
+            "end": false,
+            "reference": true,
+            "single_reference": true,
+            "multiple_references": false,
+            "background": false,
+            "injected_frames": false,
+            "control": false,
+            "mask": false
+          },
+          "video": {
+            "continue": true,
+            "last": true,
+            "control": true,
+            "mask": true
+          },
+          "audio": {
+            "prompt": false,
+            "output": false
+          }
+        },
+        "capabilities": {
+          "text_to_video": true,
+          "image_to_video": false,
+          "video_to_video": true,
+          "text_to_image": true,
+          "image_to_image": true,
+          "text_to_audio": false,
+          "audio_to_audio": false,
+          "audio_to_video": false,
+          "audio_output": false,
+          "inpainting": true,
+          "outpainting": false,
+          "reference_images": true,
+          "background_image": false,
+          "injected_frames": false,
+          "control_image": false,
+          "control_video": true,
+          "video_continuation": true,
+          "sliding_window": true,
+          "lora": true
+        },
+        "setting_values": {
+          "image_prompt_type": {
+            "allowed": "TVL",
+            "choices": [
+              {
+                "label": "Text/new generation",
+                "value": ""
+              },
+              {
+                "label": "Continue from source video",
+                "value": "V"
+              },
+              {
+                "label": "Continue from last generated video",
+                "value": "L"
+              }
+            ]
+          },
+          "video_prompt_type": {
+            "guide_preprocessing": null,
+            "mask_preprocessing": {
+              "visible": false,
+              "choices": [
+                {
+                  "label": "None",
+                  "value": ""
+                },
+                {
+                  "label": "A",
+                  "value": "A"
+                }
+              ]
+            },
+            "guide_custom_choices": {
+              "default": "",
+              "label": "Video to Video",
+              "letters_filter": "GUVA",
+              "show_label": false,
+              "choices": [
+                {
+                  "label": "Use Reference Image which is a Person Face",
+                  "value": ""
+                },
+                {
+                  "label": "Video to Video guided by Text Prompt & Reference Image",
+                  "value": "GUV"
+                },
+                {
+                  "label": "Video to Video on the Area of the Video Mask",
+                  "value": "GVA"
+                }
+              ]
+            },
+            "image_ref_choices": {
+              "letters_filter": "I",
+              "visible": false,
+              "choices": [
+                {
+                  "label": "No Reference Image",
+                  "value": ""
+                },
+                {
+                  "label": "Reference Image is a Person Face",
+                  "value": "I"
+                }
+              ]
+            },
+            "custom_video_selection": null,
+            "forced": "Q"
+          },
+          "audio_prompt_type": {
+            "sources": null,
+            "custom_option": null
+          },
+          "model_mode": null,
+          "sample_solver": {
+            "choices": [
+              {
+                "label": "unipc",
+                "value": "unipc"
+              },
+              {
+                "label": "euler",
+                "value": "euler"
+              },
+              {
+                "label": "dpm++",
+                "value": "dpm++"
+              },
+              {
+                "label": "flowmatch causvid",
+                "value": "causvid"
+              },
+              {
+                "label": "lcm + ltx",
+                "value": "lcm"
+              }
+            ]
+          },
+          "prompt_enhancer": null
+        }
+      },
+      "settings": {},
+      "model_type": "lynx"
+    },
+    "metadata": {
+      "model_type": "lynx",
+      "family": "wan",
+      "family_label": "Wan2.1",
+      "base_model_type": "lynx",
+      "finetune": false,
+      "main_output": [
+        "image",
+        "video"
+      ],
+      "outputs": [
+        "image",
+        "video"
+      ],
+      "inputs": [
+        "text",
+        "image",
+        "video"
+      ],
+      "media_inputs": {
+        "image": {
+          "start": false,
+          "end": false,
+          "reference": true,
+          "single_reference": true,
+          "multiple_references": false,
+          "background": false,
+          "injected_frames": false,
+          "control": false,
+          "mask": false
+        },
+        "video": {
+          "continue": true,
+          "last": true,
+          "control": true,
+          "mask": true
+        },
+        "audio": {
+          "prompt": false,
+          "output": false
+        }
+      },
+      "capabilities": {
+        "text_to_video": true,
+        "image_to_video": false,
+        "video_to_video": true,
+        "text_to_image": true,
+        "image_to_image": true,
+        "text_to_audio": false,
+        "audio_to_audio": false,
+        "audio_to_video": false,
+        "audio_output": false,
+        "inpainting": true,
+        "outpainting": false,
+        "reference_images": true,
+        "background_image": false,
+        "injected_frames": false,
+        "control_image": false,
+        "control_video": true,
+        "video_continuation": true,
+        "sliding_window": true,
+        "lora": true
+      },
+      "setting_values": {
+        "image_prompt_type": {
+          "allowed": "TVL",
+          "choices": [
+            {
+              "label": "Text/new generation",
+              "value": ""
+            },
+            {
+              "label": "Continue from source video",
+              "value": "V"
+            },
+            {
+              "label": "Continue from last generated video",
+              "value": "L"
+            }
+          ]
+        },
+        "video_prompt_type": {
+          "guide_preprocessing": null,
+          "mask_preprocessing": {
+            "visible": false,
+            "choices": [
+              {
+                "label": "None",
+                "value": ""
+              },
+              {
+                "label": "A",
+                "value": "A"
+              }
+            ]
+          },
+          "guide_custom_choices": {
+            "default": "",
+            "label": "Video to Video",
+            "letters_filter": "GUVA",
+            "show_label": false,
+            "choices": [
+              {
+                "label": "Use Reference Image which is a Person Face",
+                "value": ""
+              },
+              {
+                "label": "Video to Video guided by Text Prompt & Reference Image",
+                "value": "GUV"
+              },
+              {
+                "label": "Video to Video on the Area of the Video Mask",
+                "value": "GVA"
+              }
+            ]
+          },
+          "image_ref_choices": {
+            "letters_filter": "I",
+            "visible": false,
+            "choices": [
+              {
+                "label": "No Reference Image",
+                "value": ""
+              },
+              {
+                "label": "Reference Image is a Person Face",
+                "value": "I"
+              }
+            ]
+          },
+          "custom_video_selection": null,
+          "forced": "Q"
+        },
+        "audio_prompt_type": {
+          "sources": null,
+          "custom_option": null
+        },
+        "model_mode": null,
+        "sample_solver": {
+          "choices": [
+            {
+              "label": "unipc",
+              "value": "unipc"
+            },
+            {
+              "label": "euler",
+              "value": "euler"
+            },
+            {
+              "label": "dpm++",
+              "value": "dpm++"
+            },
+            {
+              "label": "flowmatch causvid",
+              "value": "causvid"
+            },
+            {
+              "label": "lcm + ltx",
+              "value": "lcm"
+            }
+          ]
+        },
+        "prompt_enhancer": null
+      }
+    },
+    "setting_values": {
+      "image_prompt_type": {
+        "allowed": "TVL",
+        "choices": [
+          {
+            "label": "Text/new generation",
+            "value": ""
+          },
+          {
+            "label": "Continue from source video",
+            "value": "V"
+          },
+          {
+            "label": "Continue from last generated video",
+            "value": "L"
+          }
+        ]
+      },
+      "video_prompt_type": {
+        "guide_preprocessing": null,
+        "mask_preprocessing": {
+          "visible": false,
+          "choices": [
+            {
+              "label": "None",
+              "value": ""
+            },
+            {
+              "label": "A",
+              "value": "A"
+            }
+          ]
+        },
+        "guide_custom_choices": {
+          "default": "",
+          "label": "Video to Video",
+          "letters_filter": "GUVA",
+          "show_label": false,
+          "choices": [
+            {
+              "label": "Use Reference Image which is a Person Face",
+              "value": ""
+            },
+            {
+              "label": "Video to Video guided by Text Prompt & Reference Image",
+              "value": "GUV"
+            },
+            {
+              "label": "Video to Video on the Area of the Video Mask",
+              "value": "GVA"
+            }
+          ]
+        },
+        "image_ref_choices": {
+          "letters_filter": "I",
+          "visible": false,
+          "choices": [
+            {
+              "label": "No Reference Image",
+              "value": ""
+            },
+            {
+              "label": "Reference Image is a Person Face",
+              "value": "I"
+            }
+          ]
+        },
+        "custom_video_selection": null,
+        "forced": "Q"
+      },
+      "audio_prompt_type": {
+        "sources": null,
+        "custom_option": null
+      },
+      "model_mode": null,
+      "sample_solver": {
+        "choices": [
+          {
+            "label": "unipc",
+            "value": "unipc"
+          },
+          {
+            "label": "euler",
+            "value": "euler"
+          },
+          {
+            "label": "dpm++",
+            "value": "dpm++"
+          },
+          {
+            "label": "flowmatch causvid",
+            "value": "causvid"
+          },
+          {
+            "label": "lcm + ltx",
+            "value": "lcm"
+          }
+        ]
+      },
+      "prompt_enhancer": null
+    },
+    "default_settings": {
+      "settings_version": 2.66,
+      "prompt": "A large orange octopus is seen resting on the bottom of the ocean floor, blending in with the sandy and rocky terrain. Its tentacles are spread out around its body, and its eyes are closed. The octopus is unaware of a king crab that is crawling towards it from behind a rock, its claws raised and ready to attack. The crab is brown and spiny, with long legs and antennae. The scene is captured from a wide angle, showing the vastness and depth of the ocean. The water is clear and blue, with rays of sunlight filtering through. The shot is sharp and crisp, with a high dynamic range. The octopus and the crab are in focus, while the background is slightly blurred, creating a depth of field effect.",
+      "resolution": "832x480",
+      "flow_shift": 7,
+      "sample_solver": "unipc",
+      "guidance_scale": 5.0,
+      "sliding_window_overlap": 9,
+      "video_prompt_type": "I",
+      "denoising_strength": 0.8,
+      "remove_background_images_ref": 0,
+      "alt_prompt": "",
+      "multi_prompts_gen_type": "PG",
+      "postprocess_audio": "",
+      "replace_voice_method": "",
+      "replace_voice_sample": null,
+      "replace_voice_sample2": null,
+      "image_prompt_type": "",
+      "model_type": "lynx"
+    }
+  }
+}

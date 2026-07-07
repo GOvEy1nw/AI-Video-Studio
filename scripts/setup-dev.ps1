@@ -52,11 +52,13 @@ if ($LASTEXITCODE -ne 0) {
 }
 Ok "uv sync complete"
 
-& (Join-Path $ScriptDir "ensure-wan2gp.ps1") -InstallPythonDeps -PythonExe $BackendPython
+Write-Host ""
+Write-Host "Installing WanGP GPU stack (auto-detects your NVIDIA GPU)..."
+& (Join-Path $ScriptDir "install-wangp-stack.ps1")
 if ($LASTEXITCODE -ne 0) {
-    Fail "Wan2GP dependency install failed"
+    Fail "WanGP stack install failed"
 }
-Ok "Wan2GP Python dependencies installed"
+Ok "WanGP GPU stack installed"
 
 Write-Host ""
 Write-Host "Verifying PyTorch CUDA support..."

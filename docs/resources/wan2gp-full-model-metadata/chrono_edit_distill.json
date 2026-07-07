@@ -1,0 +1,522 @@
+{
+  "chrono_edit_distill": {
+    "model_type": "chrono_edit_distill",
+    "name": "Wan2.1 Chrono Edit Distill 14B",
+    "model_def": {
+      "i2v_class": true,
+      "t2v_class": false,
+      "multitalk_class": false,
+      "standin_class": false,
+      "lynx_class": false,
+      "alpha_class": false,
+      "wan_5B_class": false,
+      "vace_class": false,
+      "bernini_class": false,
+      "scail2": false,
+      "color_correction": true,
+      "svi2pro": false,
+      "i2v_2_2": false,
+      "text_encoder_URLs": [
+        "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/umt5-xxl/models_t5_umt5-xxl-enc-bf16.safetensors",
+        "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/umt5-xxl/models_t5_umt5-xxl-enc-quanto_int8.safetensors"
+      ],
+      "text_encoder_folder": "umt5-xxl",
+      "vae_upsampler": [
+        1,
+        2
+      ],
+      "vae_block_size": 16,
+      "profiles_dir": [
+        ""
+      ],
+      "group": "wan",
+      "fps": 16,
+      "frames_minimum": 5,
+      "frames_steps": 4,
+      "sliding_window": true,
+      "multiple_submodels": false,
+      "guidance_max_phases": 3,
+      "perturbation": true,
+      "flow_shift": true,
+      "cfg_zero": true,
+      "cfg_star": true,
+      "adaptive_projected_guidance": true,
+      "tea_cache": true,
+      "mag_cache": true,
+      "keep_frames_video_guide_not_supported": false,
+      "sample_solvers": [
+        [
+          "unipc",
+          "unipc"
+        ],
+        [
+          "euler",
+          "euler"
+        ],
+        [
+          "dpm++",
+          "dpm++"
+        ],
+        [
+          "flowmatch causvid",
+          "causvid"
+        ],
+        [
+          "lcm + ltx",
+          "lcm"
+        ]
+      ],
+      "sub_parallel_windows": false,
+      "self_refiner": true,
+      "motion_amplitude": true,
+      "model_modes": {
+        "choices": [
+          [
+            "Fast Image Transformation",
+            0
+          ],
+          [
+            "Long Image Transformation",
+            1
+          ],
+          [
+            "Temporal Reasoning Video",
+            2
+          ]
+        ],
+        "default": 0,
+        "label": "Chrono Edit Process"
+      },
+      "custom_video_length": true,
+      "image_prompt_enhancer_instructions": "You are a professional edit instruction rewriter and prompt engineer. Your task is to generate a precise, concise, and visually achievable chain-of-thought reasoning based on the user-provided instruction and the image to be edited.\n\nYou have the following information:\n1. The user provides instructions to edit an image\n2. The user provides a description of the image to edit\n\nYour task is NOT to output the final answer or the edited image. Instead, you must:\n- Generate a \"thinking\" or chain-of-thought process that explains how you reason about the editing task.\n- First identify the task type, then provide reasoning/analysis that leads to how the image should be edited.\n- Always describe pose and appearance in detail.\n- Match the original visual style or genre (anime, CG art, cinematic, poster). If not explicit, choose a stylistically appropriate one based on the image.\n- Incorporate motion and camera direction when relevant (e.g., walking, turning, dolly in/out, pan), implying natural human/character motion and interactions.\n- Maintain quoted phrases or titles exactly (e.g., character names, series names). Do not translate or alter the original language of text.\n\n## Task Type Handling Rules:\n\n**1. Standard Editing Tasks (e.g., Add, Delete, Replace, Action Change):**\n- For replacement tasks, specify what to replace and key visual features of the new element.\n- For text editing tasks, specify text position, color, and layout concisely.\n- If the user wants to \"extract\" something, this means they want to remove the background and only keep the specified object isolated. We should add \"while removing the background\" to the reasoning.\n- Explicitly note what must stay unchanged: appearances (hairstyle, clothing, expression, skin tone/race, age), posture, pose, visual style/genre, spatial layout, and shot composition (e.g., medium shot, close-up, side view).\n\n**2. Character Consistency Editing Tasks (e.g., Scenario Change):**\n- For tasks that place an object/character (e.g., human, robot, animal) in a completely new scenario, preserve the object's core identity (appearance, materials, key features) but adapt its pose, interaction, and context to fit naturally in the new environment.\n- Reason about how the object should interact with the new scenario (e.g., pose changes, hand positions, orientation, facial direction).\n- The background and context should transform completely to match the new scenario while maintaining visual coherence.\n- Describe both what stays the same (core appearance) and what must change (pose, interaction, setting) to make the scene look realistic and natural.\n\nThe length of outputs should be **around 80 - 100 words** to fully describe the transformation. Always start with \"The user wants to ...\"\n\nExample Output 1 (Standard Editing Task):\nThe user wants to make the knight kneel on his right knee while keeping the rest of the pose intact. \nThe knight should lower his stance so his right leg bends to the ground in a kneeling position, with the left leg bent upright to support balance. \nThe shield with the NVIDIA logo should still be held up firmly in his left hand, angled forward in a defensive posture, while the right hand continues gripping the weapon. \nThe armor reflections, proportions, and medieval style should remain consistent, emphasizing a powerful and respectful kneeling stance.\n\nExample Output 2 (Character Consistency Editing Task):\nThe user wants to change the image by modifying the scene so that the woman is drinking coffee in a cozy coffee shop. \nThe elegant anime-style woman keeps her same graceful expression, long flowing dark hair adorned with golden ornaments, and detailed traditional outfit with red and gold floral patterns. \nShe is now seated at a wooden café table, holding a steaming cup of coffee near her lips with one hand, while soft sunlight filters through the window, highlighting her refined features. \nThe background transforms into a warmly lit café interior with subtle reflections, bookshelves, and gentle ambience, maintaining the delicate, painterly aesthetic.",
+      "video_prompt_enhancer_instructions": "You are a professional edit instruction rewriter and prompt engineer. Your task is to generate a precise, concise, and visually achievable chain-of-thought reasoning based on the user-provided instruction and the image to be edited.\n\nYou have the following information:\n1. The user provides instructions to edit an image\n2. The user provides a description of the image to edit\n\nYour task is NOT to output the final answer or the edited image. Instead, you must:\n- Generate a \"thinking\" or chain-of-thought process that explains how you reason about the editing task.\n- First identify the task type, then provide reasoning/analysis that leads to how the image should be edited.\n- Always describe pose and appearance in detail.\n- Match the original visual style or genre (anime, CG art, cinematic, poster). If not explicit, choose a stylistically appropriate one based on the image.\n- Incorporate motion and camera direction when relevant (e.g., walking, turning, dolly in/out, pan), implying natural human/character motion and interactions.\n- Maintain quoted phrases or titles exactly (e.g., character names, series names). Do not translate or alter the original language of text.\n\n## Task Type Handling Rules:\n\n**1. Standard Editing Tasks (e.g., Add, Delete, Replace, Action Change):**\n- For replacement tasks, specify what to replace and key visual features of the new element.\n- For text editing tasks, specify text position, color, and layout concisely.\n- If the user wants to \"extract\" something, this means they want to remove the background and only keep the specified object isolated. We should add \"while removing the background\" to the reasoning.\n- Explicitly note what must stay unchanged: appearances (hairstyle, clothing, expression, skin tone/race, age), posture, pose, visual style/genre, spatial layout, and shot composition (e.g., medium shot, close-up, side view).\n\n**2. Character Consistency Editing Tasks (e.g., Scenario Change):**\n- For tasks that place an object/character (e.g., human, robot, animal) in a completely new scenario, preserve the object's core identity (appearance, materials, key features) but adapt its pose, interaction, and context to fit naturally in the new environment.\n- Reason about how the object should interact with the new scenario (e.g., pose changes, hand positions, orientation, facial direction).\n- The background and context should transform completely to match the new scenario while maintaining visual coherence.\n- Describe both what stays the same (core appearance) and what must change (pose, interaction, setting) to make the scene look realistic and natural.\n\nThe length of outputs should be **around 80 - 100 words** to fully describe the transformation. Always start with \"The user wants to ...\"\n\nExample Output 1 (Standard Editing Task):\nThe user wants to make the knight kneel on his right knee while keeping the rest of the pose intact. \nThe knight should lower his stance so his right leg bends to the ground in a kneeling position, with the left leg bent upright to support balance. \nThe shield with the NVIDIA logo should still be held up firmly in his left hand, angled forward in a defensive posture, while the right hand continues gripping the weapon. \nThe armor reflections, proportions, and medieval style should remain consistent, emphasizing a powerful and respectful kneeling stance.\n\nExample Output 2 (Character Consistency Editing Task):\nThe user wants to change the image by modifying the scene so that the woman is drinking coffee in a cozy coffee shop. \nThe elegant anime-style woman keeps her same graceful expression, long flowing dark hair adorned with golden ornaments, and detailed traditional outfit with red and gold floral patterns. \nShe is now seated at a wooden café table, holding a steaming cup of coffee near her lips with one hand, while soft sunlight filters through the window, highlighting her refined features. \nThe background transforms into a warmly lit café interior with subtle reflections, bookshelves, and gentle ambience, maintaining the delicate, painterly aesthetic.",
+      "image_outputs": true,
+      "prompt_enhancer_choices_allowed": [
+        "TI"
+      ],
+      "image_prompt_types_allowed": "SEVL",
+      "NAG": true,
+      "sliding_window_defaults": {
+        "overlap_min": 1,
+        "overlap_max": 1,
+        "overlap_step": 0,
+        "overlap_default": 1
+      },
+      "name": "Wan2.1 Chrono Edit Distill 14B",
+      "architecture": "chrono_edit",
+      "description": "This model in an Image Editor that will follow your instructions. It generates internally a video to produce the desired effect on the original image (the result being the End Image). It expects a very specific prompt format. It is why you must absolutely use the Prompt Enhancer that has been tuned for this model. This version is accelerated using the Chrono Distill",
+      "URLs": "chrono_edit",
+      "loras": [
+        "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/loras_accelerators/chronoedit_distill_lora.safetensors"
+      ],
+      "loras_multipliers": [
+        1
+      ],
+      "path": "defaults\\chrono_edit_distill.json",
+      "_profile_roots": [
+        "profiles"
+      ],
+      "metadata": {
+        "model_type": "chrono_edit_distill",
+        "family": "wan",
+        "family_label": "Wan2.1",
+        "base_model_type": "chrono_edit",
+        "finetune": false,
+        "main_output": [
+          "image"
+        ],
+        "outputs": [
+          "image"
+        ],
+        "inputs": [
+          "text",
+          "image",
+          "video"
+        ],
+        "media_inputs": {
+          "image": {
+            "start": true,
+            "end": true,
+            "reference": false,
+            "single_reference": false,
+            "multiple_references": false,
+            "background": false,
+            "injected_frames": false,
+            "control": false,
+            "mask": false
+          },
+          "video": {
+            "continue": true,
+            "last": true,
+            "control": false,
+            "mask": false
+          },
+          "audio": {
+            "prompt": false,
+            "output": false
+          }
+        },
+        "capabilities": {
+          "text_to_video": false,
+          "image_to_video": false,
+          "video_to_video": false,
+          "text_to_image": true,
+          "image_to_image": true,
+          "text_to_audio": false,
+          "audio_to_audio": false,
+          "audio_to_video": false,
+          "audio_output": false,
+          "inpainting": false,
+          "outpainting": false,
+          "reference_images": false,
+          "background_image": false,
+          "injected_frames": false,
+          "control_image": false,
+          "control_video": false,
+          "video_continuation": true,
+          "sliding_window": true,
+          "lora": true
+        },
+        "setting_values": {
+          "image_prompt_type": {
+            "allowed": "SEVL",
+            "choices": [
+              {
+                "label": "Text/new generation",
+                "value": ""
+              },
+              {
+                "label": "Start image",
+                "value": "S"
+              },
+              {
+                "label": "End image",
+                "value": "E"
+              },
+              {
+                "label": "Continue from source video",
+                "value": "V"
+              },
+              {
+                "label": "Continue from last generated video",
+                "value": "L"
+              }
+            ]
+          },
+          "video_prompt_type": {
+            "guide_preprocessing": null,
+            "mask_preprocessing": null,
+            "guide_custom_choices": null,
+            "image_ref_choices": null,
+            "custom_video_selection": null,
+            "forced": ""
+          },
+          "audio_prompt_type": {
+            "sources": null,
+            "custom_option": null
+          },
+          "model_mode": {
+            "default": 0,
+            "label": "Chrono Edit Process",
+            "choices": [
+              {
+                "label": "Fast Image Transformation",
+                "value": ""
+              },
+              {
+                "label": "Long Image Transformation",
+                "value": "1"
+              },
+              {
+                "label": "Temporal Reasoning Video",
+                "value": "2"
+              }
+            ]
+          },
+          "sample_solver": {
+            "choices": [
+              {
+                "label": "unipc",
+                "value": "unipc"
+              },
+              {
+                "label": "euler",
+                "value": "euler"
+              },
+              {
+                "label": "dpm++",
+                "value": "dpm++"
+              },
+              {
+                "label": "flowmatch causvid",
+                "value": "causvid"
+              },
+              {
+                "label": "lcm + ltx",
+                "value": "lcm"
+              }
+            ]
+          },
+          "prompt_enhancer": null
+        }
+      },
+      "settings": {
+        "prompt": "Rotate the pose of the woman so that she is facing the right",
+        "num_inference_steps": 8,
+        "flow_shift": 2,
+        "guidance_phases": 1,
+        "guidance_scale": 1
+      },
+      "model_type": "chrono_edit_distill"
+    },
+    "metadata": {
+      "model_type": "chrono_edit_distill",
+      "family": "wan",
+      "family_label": "Wan2.1",
+      "base_model_type": "chrono_edit",
+      "finetune": false,
+      "main_output": [
+        "image"
+      ],
+      "outputs": [
+        "image"
+      ],
+      "inputs": [
+        "text",
+        "image",
+        "video"
+      ],
+      "media_inputs": {
+        "image": {
+          "start": true,
+          "end": true,
+          "reference": false,
+          "single_reference": false,
+          "multiple_references": false,
+          "background": false,
+          "injected_frames": false,
+          "control": false,
+          "mask": false
+        },
+        "video": {
+          "continue": true,
+          "last": true,
+          "control": false,
+          "mask": false
+        },
+        "audio": {
+          "prompt": false,
+          "output": false
+        }
+      },
+      "capabilities": {
+        "text_to_video": false,
+        "image_to_video": false,
+        "video_to_video": false,
+        "text_to_image": true,
+        "image_to_image": true,
+        "text_to_audio": false,
+        "audio_to_audio": false,
+        "audio_to_video": false,
+        "audio_output": false,
+        "inpainting": false,
+        "outpainting": false,
+        "reference_images": false,
+        "background_image": false,
+        "injected_frames": false,
+        "control_image": false,
+        "control_video": false,
+        "video_continuation": true,
+        "sliding_window": true,
+        "lora": true
+      },
+      "setting_values": {
+        "image_prompt_type": {
+          "allowed": "SEVL",
+          "choices": [
+            {
+              "label": "Text/new generation",
+              "value": ""
+            },
+            {
+              "label": "Start image",
+              "value": "S"
+            },
+            {
+              "label": "End image",
+              "value": "E"
+            },
+            {
+              "label": "Continue from source video",
+              "value": "V"
+            },
+            {
+              "label": "Continue from last generated video",
+              "value": "L"
+            }
+          ]
+        },
+        "video_prompt_type": {
+          "guide_preprocessing": null,
+          "mask_preprocessing": null,
+          "guide_custom_choices": null,
+          "image_ref_choices": null,
+          "custom_video_selection": null,
+          "forced": ""
+        },
+        "audio_prompt_type": {
+          "sources": null,
+          "custom_option": null
+        },
+        "model_mode": {
+          "default": 0,
+          "label": "Chrono Edit Process",
+          "choices": [
+            {
+              "label": "Fast Image Transformation",
+              "value": ""
+            },
+            {
+              "label": "Long Image Transformation",
+              "value": "1"
+            },
+            {
+              "label": "Temporal Reasoning Video",
+              "value": "2"
+            }
+          ]
+        },
+        "sample_solver": {
+          "choices": [
+            {
+              "label": "unipc",
+              "value": "unipc"
+            },
+            {
+              "label": "euler",
+              "value": "euler"
+            },
+            {
+              "label": "dpm++",
+              "value": "dpm++"
+            },
+            {
+              "label": "flowmatch causvid",
+              "value": "causvid"
+            },
+            {
+              "label": "lcm + ltx",
+              "value": "lcm"
+            }
+          ]
+        },
+        "prompt_enhancer": null
+      }
+    },
+    "setting_values": {
+      "image_prompt_type": {
+        "allowed": "SEVL",
+        "choices": [
+          {
+            "label": "Text/new generation",
+            "value": ""
+          },
+          {
+            "label": "Start image",
+            "value": "S"
+          },
+          {
+            "label": "End image",
+            "value": "E"
+          },
+          {
+            "label": "Continue from source video",
+            "value": "V"
+          },
+          {
+            "label": "Continue from last generated video",
+            "value": "L"
+          }
+        ]
+      },
+      "video_prompt_type": {
+        "guide_preprocessing": null,
+        "mask_preprocessing": null,
+        "guide_custom_choices": null,
+        "image_ref_choices": null,
+        "custom_video_selection": null,
+        "forced": ""
+      },
+      "audio_prompt_type": {
+        "sources": null,
+        "custom_option": null
+      },
+      "model_mode": {
+        "default": 0,
+        "label": "Chrono Edit Process",
+        "choices": [
+          {
+            "label": "Fast Image Transformation",
+            "value": ""
+          },
+          {
+            "label": "Long Image Transformation",
+            "value": "1"
+          },
+          {
+            "label": "Temporal Reasoning Video",
+            "value": "2"
+          }
+        ]
+      },
+      "sample_solver": {
+        "choices": [
+          {
+            "label": "unipc",
+            "value": "unipc"
+          },
+          {
+            "label": "euler",
+            "value": "euler"
+          },
+          {
+            "label": "dpm++",
+            "value": "dpm++"
+          },
+          {
+            "label": "flowmatch causvid",
+            "value": "causvid"
+          },
+          {
+            "label": "lcm + ltx",
+            "value": "lcm"
+          }
+        ]
+      },
+      "prompt_enhancer": null
+    },
+    "default_settings": {
+      "settings_version": 2.66,
+      "prompt": "Rotate the pose of the woman so that she is facing the right",
+      "resolution": "832x480",
+      "flow_shift": 2,
+      "sample_solver": "unipc",
+      "image_prompt_type": "S",
+      "image_mode": 1,
+      "prompt_enhancer": "TI",
+      "sliding_window_overlap": 1,
+      "sliding_window_color_correction_strength": 0,
+      "num_inference_steps": 8,
+      "guidance_phases": 1,
+      "guidance_scale": 1,
+      "alt_prompt": "",
+      "multi_prompts_gen_type": "PG",
+      "postprocess_audio": "",
+      "replace_voice_method": "",
+      "replace_voice_sample": null,
+      "replace_voice_sample2": null,
+      "video_prompt_type": "",
+      "model_type": "chrono_edit_distill"
+    }
+  }
+}

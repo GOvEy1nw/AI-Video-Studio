@@ -1,4 +1,4 @@
-"""Bridge LTX Desktop requests to WanGP's in-process session API."""
+"""Bridge AiVS requests to WanGP's in-process session API."""
 
 from __future__ import annotations
 
@@ -147,13 +147,16 @@ class WanGPBridge:
         audio_path: str | None,
         on_progress: ProgressCallback,
         is_cancelled: CancelledCallback,
+        model_type: str | None = None,
+        default_settings: dict[str, object] | None = None,
     ) -> str:
+        active_model_type = model_type if model_type is not None else self._video_model_type
         resolution = self._map_video_resolution(resolution_label, aspect_ratio)
         merged_prompt = prompt + self._camera_motion_prompts.get(camera_motion, "")
         video_length = self.compute_num_frames(duration_seconds, fps)
 
         settings: dict[str, object] = {
-            "model_type": self._video_model_type,
+            "model_type": active_model_type,
             "prompt": merged_prompt,
             "resolution": resolution,
             "num_inference_steps": max(1, steps),
@@ -161,7 +164,10 @@ class WanGPBridge:
             "duration_seconds": duration_seconds,
             "force_fps": fps,
         }
-        if self._video_model_type.startswith("ltx2_"):
+        if default_settings:
+            for key, value in default_settings.items():
+                settings.setdefault(key, value)
+        if active_model_type.startswith("ltx2_"):
             settings["sliding_window_size"] = video_length
         if negative_prompt.strip():
             settings["negative_prompt"] = negative_prompt.strip()
@@ -195,17 +201,27 @@ class WanGPBridge:
         seed: int | None,
         on_progress: ProgressCallback,
         is_cancelled: CancelledCallback,
+        model_type: str | None = None,
+        default_settings: dict[str, object] | None = None,
     ) -> list[str]:
-        mapped_width, mapped_height = self._map_image_resolution(width, height)
-        normalized_steps = self._normalize_image_steps(num_steps)
+        active_model_type = model_type if model_type is not None else self._image_model_type
+        mapped_width, mapped_height = self._map_image_resolution(width, height, active_model_type)
+        normalized_steps = self._normalize_image_steps(num_steps, active_model_type)
         settings: dict[str, object] = {
-            "model_type": self._image_model_type,
+            "model_type": active_model_type,
             "prompt": prompt,
             "resolution": f"{mapped_width}x{mapped_height}",
             "num_inference_steps": normalized_steps,
             "batch_size": max(1, num_images),
-            "image_mode": 1,
         }
+        # Merge model-default settings first (e.g. Krea's image_mode=1,
+        # guidance_scale=0), then apply AiVS's own image_mode default only
+        # when the profile hasn't already supplied one — so a curated
+        # profile's defaults can never be silently overwritten.
+        if default_settings:
+            for key, value in default_settings.items():
+                settings.setdefault(key, value)
+        settings.setdefault("image_mode", 1)
         if seed is not None:
             settings["seed"] = seed
 
@@ -232,8 +248,9 @@ class WanGPBridge:
             raise RuntimeError(f"Unsupported WanGP aspect ratio: {aspect_ratio}")
         return mapped
 
-    def _map_image_resolution(self, width: int, height: int) -> tuple[int, int]:
-        if "qwen_image" not in self._image_model_type:
+    def _map_image_resolution(self, width: int, height: int, model_type: str | None = None) -> tuple[int, int]:
+        active_model_type = model_type if model_type is not None else self._image_model_type
+        if "qwen_image" not in active_model_type:
             return width, height
 
         requested_ratio = width / max(height, 1)
@@ -255,16 +272,17 @@ class WanGPBridge:
             )
         return mapped
 
-    def _normalize_image_steps(self, num_steps: int) -> int:
+    def _normalize_image_steps(self, num_steps: int, model_type: str | None = None) -> int:
+        active_model_type = model_type if model_type is not None else self._image_model_type
         normalized_steps = max(1, num_steps)
-        if not self._image_model_type.startswith("z_image"):
+        if not active_model_type.startswith("z_image"):
             return normalized_steps
 
         adjusted_steps = max(8, normalized_steps)
         if adjusted_steps != normalized_steps:
             logger.info(
                 "Adjusted %s inference steps from %s to %s",
-                self._image_model_type,
+                active_model_type,
                 normalized_steps,
                 adjusted_steps,
             )
@@ -277,7 +295,10 @@ class WanGPBridge:
         if root_str not in sys.path:
             sys.path.insert(0, root_str)
         module = importlib.import_module("shared.api")
-        module_path = Path(module.__file__).resolve()
+        module_file = module.__file__
+        if module_file is None:
+            raise RuntimeError("shared.api module has no __file__ path")
+        module_path = Path(module_file).resolve()
         expected_path = (self._root / "shared" / "api.py").resolve()
         if module_path != expected_path:
             raise RuntimeError(f"shared.api resolved to {module_path}, expected {expected_path}")
@@ -317,7 +338,7 @@ class WanGPBridge:
         job = session.submit_manifest(manifest)
         error_lines: deque[str] = deque(maxlen=40)
         cancel_requested = False
-        console_progress = {"phase": "", "progress": -1, "logged_at": 0.0}
+        console_progress: dict[str, object] = {"phase": "", "progress": -1, "logged_at": 0.0}
 
         while True:
             if is_cancelled() and not cancel_requested:
@@ -548,8 +569,10 @@ class WanGPBridge:
         now = time.monotonic()
         progress = max(0, min(100, int(progress)))
         last_phase = str(tracker.get("phase", ""))
-        last_progress = int(tracker.get("progress", -1))
-        last_logged_at = float(tracker.get("logged_at", 0.0))
+        raw_progress = tracker.get("progress", -1)
+        last_progress = int(raw_progress) if isinstance(raw_progress, (int, float)) else -1
+        raw_logged_at = tracker.get("logged_at", 0.0)
+        last_logged_at = float(raw_logged_at) if isinstance(raw_logged_at, (int, float)) else 0.0
         if not force and phase == last_phase and progress == last_progress and now - last_logged_at < 1.0:
             return
 

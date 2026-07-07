@@ -237,6 +237,78 @@ class ErrorResponse(BaseModel):
     message: str | None = None
 
 
+class ModelProfileCapabilities(BaseModel):
+    textToImage: bool
+    textToVideo: bool
+    imageToVideo: bool
+    videoToVideo: bool
+    audioToVideo: bool
+    audioOutput: bool
+    startImage: bool
+    endImage: bool
+    controlVideo: bool
+    videoContinuation: bool
+    slidingWindow: bool
+    referenceImages: bool
+    controlImage: bool
+    inpainting: bool
+    lora: str
+
+
+class ModelProfileInputMediaRole(BaseModel):
+    role: str
+    label: str
+    description: str
+    kind: str
+
+
+class ModelProfileInputMedia(BaseModel):
+    supportsImageInputs: bool
+    tooltipLabel: str
+    maxImages: int
+    defaultRole: str | None
+    roles: list[ModelProfileInputMediaRole]
+
+
+class ModelProfileUi(BaseModel):
+    defaultAspectRatio: str
+    defaultResolutionTier: str
+    allowedAspectRatios: list[str]
+    allowedResolutionTiers: list[str]
+
+
+class ModelProfileWanGPMetadata(BaseModel):
+    modelType: str
+    family: str
+    familyLabel: str
+    baseModelType: str
+    finetune: bool
+    mainOutput: list[str]
+    outputs: list[str]
+    inputs: list[str]
+    mediaInputs: dict[str, dict[str, bool]]
+    capabilities: dict[str, bool]
+    settingValues: JsonObject
+
+
+class ModelProfileResponse(BaseModel):
+    id: str
+    displayName: str
+    mediaType: str
+    visible: bool
+    status: str
+    wangpModelType: str
+    wangpMetadata: ModelProfileWanGPMetadata
+    capabilities: ModelProfileCapabilities
+    ui: ModelProfileUi
+    inputMedia: ModelProfileInputMedia
+    availability: str = "available"
+
+
+class ModelProfileListResponse(BaseModel):
+    profiles: list[ModelProfileResponse]
+
+
 # ============================================================
 # Request Models
 # ============================================================
@@ -244,8 +316,9 @@ class ErrorResponse(BaseModel):
 
 class GenerateVideoRequest(BaseModel):
     prompt: NonEmptyPrompt
-    resolution: str = "512p"
+    resolution: str = "540p"
     model: str = "fast"
+    modelProfileId: str | None = None
     cameraMotion: VideoCameraMotion = "none"
     negativePrompt: str = ""
     duration: str = "2"
@@ -256,12 +329,39 @@ class GenerateVideoRequest(BaseModel):
     aspectRatio: Literal["16:9", "9:16"] = "16:9"
 
 
+class GenerateImageInputMedia(BaseModel):
+    id: str | None = None
+    type: Literal["image"] = "image"
+    path: str
+    role: Literal[
+        "reference_subject",
+        "reference_people_objects",
+        "control_image",
+        "control_pose",
+        "control_depth",
+        "control_canny",
+    ]
+
+
+def _default_image_input_media() -> list[GenerateImageInputMedia]:
+    return []
+
+
 class GenerateImageRequest(BaseModel):
     prompt: NonEmptyPrompt
     width: int = 1024
     height: int = 1024
     numSteps: int = 4
     numImages: int = 1
+    # Phase 4 curated profile path. When set, the backend resolves the
+    # profile, validates the tier/aspect, and overrides width/height with
+    # the curated exact WxH. Raw width/height still accepted for
+    # backwards compatibility but arbitrary frontend model_type values
+    # cannot bypass the curated profile layer.
+    modelProfileId: str | None = None
+    aspectRatio: Literal["1:1", "16:9", "9:16"] | None = None
+    resolutionTier: Literal["540p", "720p", "1080p", "1440p", "2160p"] | None = None
+    inputMedia: list[GenerateImageInputMedia] = Field(default_factory=_default_image_input_media)
 
 
 class ModelDownloadRequest(BaseModel):

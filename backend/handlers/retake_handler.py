@@ -18,7 +18,6 @@ from runtime_config.runtime_config import RuntimeConfig
 from services.ltx_api_client.ltx_api_client import LTXAPIClientError
 from services.interfaces import LTXAPIClient
 from state.app_state_types import AppState
-from state.app_settings import should_video_generate_with_ltx_api
 
 
 class RetakeHandler(StateHandlerBase):
@@ -42,40 +41,7 @@ class RetakeHandler(StateHandlerBase):
         self._outputs_dir = outputs_dir
 
     def run(self, req: RetakeRequest) -> RetakeResponse:
-        video_path = req.video_path
-        start_time = req.start_time
-        duration = req.duration
-        prompt = req.prompt
-        mode = req.mode
-
-        if not video_path:
-            raise HTTPError(400, "Missing video_path parameter")
-        if duration < 2:
-            raise HTTPError(400, "duration must be at least 2 seconds")
-
-        video_file = Path(video_path)
-        if not video_file.exists():
-            raise HTTPError(400, f"Video file not found: {video_path}")
-
-        if should_video_generate_with_ltx_api(
-            force_api_generations=self._config.force_api_generations,
-            settings=self.state.app_settings,
-        ):
-            return self._run_api_retake(
-                video_file=video_file,
-                start_time=start_time,
-                duration=duration,
-                prompt=prompt,
-                mode=mode,
-            )
-
-        return self._run_local_retake(
-            video_file=video_file,
-            start_time=start_time,
-            duration=duration,
-            prompt=prompt,
-            mode=mode,
-        )
+        raise HTTPError(503, "WANGP_REQUIRED: Retake is only available via WanGP. Retake features are not yet implemented in the WanGP bridge.")
 
     def _run_api_retake(
         self,

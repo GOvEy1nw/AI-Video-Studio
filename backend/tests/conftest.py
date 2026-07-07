@@ -10,8 +10,9 @@ import pytest
 from state.app_settings import AppSettings
 from app_factory import create_app
 from state import RuntimeConfig, build_initial_state, set_state_service_for_tests
-from app_handler import ServiceBundle
+from app_handler import AppHandler, ServiceBundle
 from runtime_config.model_download_specs import DEFAULT_MODEL_DOWNLOAD_SPECS, DEFAULT_REQUIRED_MODEL_TYPES
+from tests.fakes.fake_wangp_bridge import build_fake_wangp_bridge
 from tests.fakes.services import FakeServices
 
 CAMERA_MOTION_PROMPTS = {
@@ -67,7 +68,7 @@ def test_state(tmp_path: Path, fake_services: FakeServices):
         wangp_root=None,
         wangp_python=None,
         wangp_config_dir=app_data / "wangp_bridge",
-        wangp_video_model_type="ltx2_22B_distilled",
+        wangp_video_model_type="ltx2_22B_distilled_1_1",
         wangp_image_model_type="z_image",
         wangp_extra_args=(),
     )
@@ -95,6 +96,13 @@ def test_state(tmp_path: Path, fake_services: FakeServices):
         DEFAULT_APP_SETTINGS.model_copy(deep=True),
         service_bundle=bundle,
     )
+    fake_wangp_bridge = build_fake_wangp_bridge(output_dir=outputs_dir)
+    handler.wangp_bridge = fake_wangp_bridge
+    handler.video_generation._wangp_bridge = fake_wangp_bridge  # type: ignore[attr-defined]
+    handler.image_generation._wangp_bridge = fake_wangp_bridge  # type: ignore[attr-defined]
+    handler.health._wangp_bridge = fake_wangp_bridge  # type: ignore[attr-defined]
+    handler.models._wangp_bridge = fake_wangp_bridge  # type: ignore[attr-defined]
+    handler.model_profiles._wangp_bridge = fake_wangp_bridge  # type: ignore[attr-defined]
     set_state_service_for_tests(handler)
     yield handler
 
@@ -106,6 +114,36 @@ def client(test_state):
     app = create_app(handler=test_state)
     with TestClient(app) as test_client:
         yield test_client
+
+
+@pytest.fixture
+def wangp_bridge(test_state) -> "FakeWanGPBridge":
+    """Expose the fake WanGP bridge wired into the test handler."""
+    from tests.fakes.fake_wangp_bridge import FakeWanGPBridge
+
+    bridge = test_state.wangp_bridge
+    assert isinstance(bridge, FakeWanGPBridge)
+    return bridge
+
+
+@pytest.fixture
+def enable_wangp(test_state, wangp_bridge):
+    """Flip the runtime config to WanGP-enabled for the duration of one test.
+
+    Tests that exercise the live generation path (video/image) need this so
+    the handlers route through ``wangp_bridge`` instead of raising 503.
+    Other tests (health/models/startup) keep the default WanGP-disabled
+    config they were written against.
+    """
+    test_state.config.wangp_enabled = True
+    wangp_bridge.enabled = True
+    wangp_bridge.available = True
+    wangp_bridge.video_calls.clear()
+    wangp_bridge.image_calls.clear()
+    wangp_bridge.raise_on_video = None
+    wangp_bridge.raise_on_images = None
+    yield wangp_bridge
+    test_state.config.wangp_enabled = False
 
 
 @pytest.fixture

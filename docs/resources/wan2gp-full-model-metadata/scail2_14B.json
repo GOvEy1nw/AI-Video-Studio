@@ -1,0 +1,829 @@
+{
+  "scail2_14B": {
+    "model_type": "scail2_14B",
+    "name": "SCAIL-2 14B",
+    "model_def": {
+      "i2v_class": true,
+      "t2v_class": false,
+      "multitalk_class": false,
+      "standin_class": false,
+      "lynx_class": false,
+      "alpha_class": false,
+      "wan_5B_class": false,
+      "vace_class": false,
+      "bernini_class": false,
+      "scail2": true,
+      "color_correction": true,
+      "svi2pro": false,
+      "i2v_2_2": false,
+      "text_encoder_URLs": [
+        "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/umt5-xxl/models_t5_umt5-xxl-enc-bf16.safetensors",
+        "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/umt5-xxl/models_t5_umt5-xxl-enc-quanto_int8.safetensors"
+      ],
+      "text_encoder_folder": "umt5-xxl",
+      "vae_block_size": 32,
+      "profiles_dir": [
+        "wan_i2v"
+      ],
+      "group": "wan",
+      "fps": 16,
+      "frames_minimum": 5,
+      "frames_steps": 4,
+      "sliding_window": true,
+      "multiple_submodels": false,
+      "guidance_max_phases": 3,
+      "perturbation": true,
+      "flow_shift": true,
+      "cfg_zero": true,
+      "cfg_star": true,
+      "adaptive_projected_guidance": true,
+      "tea_cache": true,
+      "mag_cache": true,
+      "keep_frames_video_guide_not_supported": true,
+      "sample_solvers": [
+        [
+          "unipc",
+          "unipc"
+        ],
+        [
+          "euler",
+          "euler"
+        ],
+        [
+          "dpm++",
+          "dpm++"
+        ],
+        [
+          "flowmatch causvid",
+          "causvid"
+        ],
+        [
+          "lcm + ltx",
+          "lcm"
+        ]
+      ],
+      "sub_parallel_windows": true,
+      "self_refiner": true,
+      "motion_amplitude": true,
+      "guide_custom_choices": {
+        "choices": [
+          [
+            "Animate One Person",
+            "V1"
+          ],
+          [
+            "Animate Two Persons",
+            "V2"
+          ],
+          [
+            "Animate Three Persons",
+            "V3"
+          ],
+          [
+            "Animate Four Persons",
+            "V4"
+          ],
+          [
+            "Animate Five Persons",
+            "V5"
+          ],
+          [
+            "Replace One Person",
+            "V01"
+          ],
+          [
+            "Replace Two Persons",
+            "V02"
+          ],
+          [
+            "Replace Three Persons",
+            "V03"
+          ],
+          [
+            "Replace Four Persons",
+            "V04"
+          ],
+          [
+            "Replace Five Persons",
+            "V05"
+          ]
+        ],
+        "default": "V1",
+        "letters_filter": "V012345",
+        "label": "Type of Process",
+        "scale": 3,
+        "show_label": true
+      },
+      "fake_start_image": true,
+      "fit_into_canvas_image_refs": 0,
+      "preprocess_all": "<function preprocess_all_scail2 at 0x00000110BD7B0720>",
+      "custom_preprocessor": "Preparing Scail2 Inputs",
+      "forced_guide_mask_inputs": true,
+      "mask_preprocessing": {
+        "selection": [
+          "",
+          "A",
+          "NA"
+        ],
+        "visible": true,
+        "label": "Persons Locations"
+      },
+      "control_video_trim": true,
+      "extract_guide_from_window_start": true,
+      "return_image_refs_tensor": true,
+      "infos": "\n# SCAIL-2 Workflows\n\nSCAIL-2 replaces or animates people from a reference image while following a control video and a colored person mask.\n\n## Animate Mode\n\nUse Animate when you want a character to move like the person in the Control Video.\n\nRequired inputs:\n\n- Location: use `Start Image` or `Video to Continue`.\n- Control Video: the motion or scene you want to follow.\n- Video Mask: a colored mask video showing the people to animate.\n- Reference Image: optional. If you do not provide one, WanGP builds the reference from the Start Image or the current Continue Video frame.\n\nAnimate preprocessing:\n\n- `Use Raw Control Video Content`: default. The model sees the resized Control Video itself. This preserves more scene detail and motion context, but the original people or clothing in the control video can influence the result more.\n- `Extract 3D Pose information`: WanGP extracts body pose from the Control Video first. This reduces appearance leakage from the control video, but it can lose details such as props, hands, loose clothing, or subtle scene motion.\n\n## Replacement Mode\n\nUse Replacement when you want to keep the Control Video as the source scene and replace masked people with the reference character.\n\nRequired inputs:\n\n- Location: Text Prompt.\n- Reference Image: required.\n- Control Video: required.\n- Persons Locations: Masked Area.\n- Video Mask: required.\n\nReplacement uses the Control Video as the source frames. The mask says which people are replaced.\n\n## Experimental Subwindows\n\nSCAIL-2 can use experimental subwindow sampling inside each sliding-window generation. When `Sub Parallel Window Size` is nonzero, WanGP denoises several overlapping temporal subwindows sequentially at every denoising step, blends their noise predictions over `Sub Parallel Window Overlap`, then applies one scheduler step to the full latent window. This can reduce peak VRAM for long SCAIL-2 windows, but it may introduce motion or identity discontinuities at subwindow boundaries. Keep it disabled unless you are testing longer windows or need the VRAM reduction.\n\n## Colored Masks\n\nSCAIL-2 relies on mask colors. Each person should keep one stable color for the whole video. For multiple people, use one color per person. Do not use a single gray/white mask when you need to distinguish several characters.\n\nThe default person colors are blue, red, green, magenta, cyan, and yellow. Background should stay uncolored. In Replacement mode, WanGP converts the background to the model's expected replacement background color.\n\n## Building Masks With Magic Mask\n\nUse the Magic Mask tool on the Video Mask input:\n\n- Enter a keyword such as `person`, `woman`, `man`, or a clothing description.\n- Generate the mask, then check the preview.\n- For multiple people, make sure each person gets a separate color and keeps it across frames.\n- If the wrong object is selected, adjust the keyword or edit the mask before generating.\n\n## Troubleshooting\n\n### Image Reference Mask Extraction Fails\n\nIf WanGP shows `SCAIL-2 could not extract the image reference mask. Check Image Ref Keyword content.`, fill `Image Ref Keyword content` with a keyword that describes what is visible in the reference frame, usually `person`, `woman`, or `man`. SCAIL-2 uses this keyword to guide SAM 3 reference mask extraction.\n\n## Tips\n\n- Review the Image References preview before generation. SCAIL-2 shows the prepared reference image and the reference mask there.\n- For best results, use a Reference Image or a Start Image that is closely aligned to the first frame of the control video. You can use an Image Model generator for this.\n- Extra Reference Images are experimental. The first image stays the primary reference; later images are fit into the output canvas and auto-masked with the same Image Ref Keyword content.\n- If Animate looks too close to the original control video person, try `Extract 3D Pose information`.\n- If pose mode loses important visual details, switch back to `Use Raw Control Video Content`.\n- Keep the number of selected people in `Type of Process` aligned with the number of colored people in the mask.\n- Use clean masks with stable colors. Flickering colors or missing mask frames usually produce unstable identity or motion.\n",
+      "custom_image_ref_postprocessor": "<function custom_image_ref_postprocessor_scail2 at 0x00000110BD7B0FE0>",
+      "custom_settings": [
+        {
+          "id": "scail2_animate_preprocessing",
+          "name": "Animate preprocessing",
+          "label": "Animate Preprocessing",
+          "type": "dropdown",
+          "default": "raw",
+          "choices": [
+            [
+              "Use Raw Control Video Content",
+              "raw"
+            ],
+            [
+              "Extract 3D Pose information",
+              "pose"
+            ]
+          ],
+          "video_prompt_type": "V",
+          "video_prompt_type_not": "0"
+        },
+        {
+          "id": "image_ref_keyword_content",
+          "name": "Image Ref Keyword content",
+          "label": "Image Ref Keyword content",
+          "type": "text",
+          "default": "human character",
+          "video_prompt_type": "I"
+        }
+      ],
+      "image_ref_choices": {
+        "choices": [
+          [
+            "None",
+            ""
+          ],
+          [
+            "Reference Images",
+            "I"
+          ]
+        ],
+        "default": "",
+        "label": "Reference Images",
+        "letters_filter": "KI",
+        "visible": true
+      },
+      "no_background_removal": true,
+      "magic_mask_object_colors": [
+        [
+          0,
+          0,
+          255
+        ],
+        [
+          255,
+          0,
+          0
+        ],
+        [
+          0,
+          255,
+          0
+        ],
+        [
+          255,
+          0,
+          255
+        ],
+        [
+          0,
+          255,
+          255
+        ],
+        [
+          255,
+          255,
+          0
+        ]
+      ],
+      "video_mask_label": "Video Mask, each Colored Mask corresponds to a person to Animate",
+      "custom_preprocessor_raw_inputs": true,
+      "video_mask_replace_background_color": [
+        255,
+        255,
+        255
+      ],
+      "background_removal_color": [
+        255,
+        255,
+        255
+      ],
+      "ref_matte_background_color": [
+        0,
+        0,
+        0
+      ],
+      "image_prompt_types_allowed": "TSV",
+      "NAG": true,
+      "name": "SCAIL-2 14B",
+      "architecture": "scail2_14B",
+      "description": "SCAIL-2: Wan 2.1 character animation with end-to-end reference, pose, and mask conditioning.",
+      "URLs": [
+        "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/scail2_14B_mbf16.safetensors",
+        "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/scail2_14B_quanto_mbf16_int8.safetensors",
+        "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/scail2_14B_quanto_mfp16_int8.safetensors"
+      ],
+      "path": "defaults\\scail2_14B.json",
+      "_profile_roots": [
+        "profiles"
+      ],
+      "metadata": {
+        "model_type": "scail2_14B",
+        "family": "wan",
+        "family_label": "Wan2.1",
+        "base_model_type": "scail2_14B",
+        "finetune": false,
+        "main_output": [
+          "video"
+        ],
+        "outputs": [
+          "video"
+        ],
+        "inputs": [
+          "text",
+          "image",
+          "video"
+        ],
+        "media_inputs": {
+          "image": {
+            "start": true,
+            "end": false,
+            "reference": true,
+            "single_reference": false,
+            "multiple_references": true,
+            "background": false,
+            "injected_frames": false,
+            "control": false,
+            "mask": false
+          },
+          "video": {
+            "continue": true,
+            "last": false,
+            "control": true,
+            "mask": true
+          },
+          "audio": {
+            "prompt": false,
+            "output": false
+          }
+        },
+        "capabilities": {
+          "text_to_video": true,
+          "image_to_video": true,
+          "video_to_video": true,
+          "text_to_image": false,
+          "image_to_image": false,
+          "text_to_audio": false,
+          "audio_to_audio": false,
+          "audio_to_video": false,
+          "audio_output": false,
+          "inpainting": true,
+          "outpainting": false,
+          "reference_images": true,
+          "background_image": false,
+          "injected_frames": false,
+          "control_image": false,
+          "control_video": true,
+          "video_continuation": true,
+          "sliding_window": true,
+          "lora": true
+        },
+        "setting_values": {
+          "image_prompt_type": {
+            "allowed": "TSV",
+            "choices": [
+              {
+                "label": "Text/new generation",
+                "value": ""
+              },
+              {
+                "label": "Start image",
+                "value": "S"
+              },
+              {
+                "label": "Continue from source video",
+                "value": "V"
+              }
+            ]
+          },
+          "video_prompt_type": {
+            "guide_preprocessing": null,
+            "mask_preprocessing": {
+              "label": "Persons Locations",
+              "visible": true,
+              "choices": [
+                {
+                  "label": "None",
+                  "value": ""
+                },
+                {
+                  "label": "A",
+                  "value": "A"
+                },
+                {
+                  "label": "NA",
+                  "value": "NA"
+                }
+              ]
+            },
+            "guide_custom_choices": {
+              "default": "V1",
+              "label": "Type of Process",
+              "letters_filter": "V012345",
+              "show_label": true,
+              "scale": 3,
+              "choices": [
+                {
+                  "label": "Animate One Person",
+                  "value": "V1"
+                },
+                {
+                  "label": "Animate Two Persons",
+                  "value": "V2"
+                },
+                {
+                  "label": "Animate Three Persons",
+                  "value": "V3"
+                },
+                {
+                  "label": "Animate Four Persons",
+                  "value": "V4"
+                },
+                {
+                  "label": "Animate Five Persons",
+                  "value": "V5"
+                },
+                {
+                  "label": "Replace One Person",
+                  "value": "V01"
+                },
+                {
+                  "label": "Replace Two Persons",
+                  "value": "V02"
+                },
+                {
+                  "label": "Replace Three Persons",
+                  "value": "V03"
+                },
+                {
+                  "label": "Replace Four Persons",
+                  "value": "V04"
+                },
+                {
+                  "label": "Replace Five Persons",
+                  "value": "V05"
+                }
+              ]
+            },
+            "image_ref_choices": {
+              "default": "",
+              "label": "Reference Images",
+              "letters_filter": "KI",
+              "visible": true,
+              "choices": [
+                {
+                  "label": "None",
+                  "value": ""
+                },
+                {
+                  "label": "Reference Images",
+                  "value": "I"
+                }
+              ]
+            },
+            "custom_video_selection": null,
+            "forced": ""
+          },
+          "audio_prompt_type": {
+            "sources": null,
+            "custom_option": null
+          },
+          "model_mode": null,
+          "sample_solver": {
+            "choices": [
+              {
+                "label": "unipc",
+                "value": "unipc"
+              },
+              {
+                "label": "euler",
+                "value": "euler"
+              },
+              {
+                "label": "dpm++",
+                "value": "dpm++"
+              },
+              {
+                "label": "flowmatch causvid",
+                "value": "causvid"
+              },
+              {
+                "label": "lcm + ltx",
+                "value": "lcm"
+              }
+            ]
+          },
+          "prompt_enhancer": null
+        }
+      },
+      "settings": {
+        "prompt": "The character is dancing naturally with expressive body movement.",
+        "negative_prompt": "",
+        "video_length": 81,
+        "resolution": "832x480",
+        "num_inference_steps": 40,
+        "flow_shift": 3,
+        "guidance_scale": 5.0,
+        "custom_settings": {
+          "scail2_animate_preprocessing": "raw",
+          "image_ref_keyword_content": "human character"
+        },
+        "sliding_window_size": 81,
+        "sliding_window_overlap": 5,
+        "sliding_window_color_correction_strength": 0
+      },
+      "model_type": "scail2_14B"
+    },
+    "metadata": {
+      "model_type": "scail2_14B",
+      "family": "wan",
+      "family_label": "Wan2.1",
+      "base_model_type": "scail2_14B",
+      "finetune": false,
+      "main_output": [
+        "video"
+      ],
+      "outputs": [
+        "video"
+      ],
+      "inputs": [
+        "text",
+        "image",
+        "video"
+      ],
+      "media_inputs": {
+        "image": {
+          "start": true,
+          "end": false,
+          "reference": true,
+          "single_reference": false,
+          "multiple_references": true,
+          "background": false,
+          "injected_frames": false,
+          "control": false,
+          "mask": false
+        },
+        "video": {
+          "continue": true,
+          "last": false,
+          "control": true,
+          "mask": true
+        },
+        "audio": {
+          "prompt": false,
+          "output": false
+        }
+      },
+      "capabilities": {
+        "text_to_video": true,
+        "image_to_video": true,
+        "video_to_video": true,
+        "text_to_image": false,
+        "image_to_image": false,
+        "text_to_audio": false,
+        "audio_to_audio": false,
+        "audio_to_video": false,
+        "audio_output": false,
+        "inpainting": true,
+        "outpainting": false,
+        "reference_images": true,
+        "background_image": false,
+        "injected_frames": false,
+        "control_image": false,
+        "control_video": true,
+        "video_continuation": true,
+        "sliding_window": true,
+        "lora": true
+      },
+      "setting_values": {
+        "image_prompt_type": {
+          "allowed": "TSV",
+          "choices": [
+            {
+              "label": "Text/new generation",
+              "value": ""
+            },
+            {
+              "label": "Start image",
+              "value": "S"
+            },
+            {
+              "label": "Continue from source video",
+              "value": "V"
+            }
+          ]
+        },
+        "video_prompt_type": {
+          "guide_preprocessing": null,
+          "mask_preprocessing": {
+            "label": "Persons Locations",
+            "visible": true,
+            "choices": [
+              {
+                "label": "None",
+                "value": ""
+              },
+              {
+                "label": "A",
+                "value": "A"
+              },
+              {
+                "label": "NA",
+                "value": "NA"
+              }
+            ]
+          },
+          "guide_custom_choices": {
+            "default": "V1",
+            "label": "Type of Process",
+            "letters_filter": "V012345",
+            "show_label": true,
+            "scale": 3,
+            "choices": [
+              {
+                "label": "Animate One Person",
+                "value": "V1"
+              },
+              {
+                "label": "Animate Two Persons",
+                "value": "V2"
+              },
+              {
+                "label": "Animate Three Persons",
+                "value": "V3"
+              },
+              {
+                "label": "Animate Four Persons",
+                "value": "V4"
+              },
+              {
+                "label": "Animate Five Persons",
+                "value": "V5"
+              },
+              {
+                "label": "Replace One Person",
+                "value": "V01"
+              },
+              {
+                "label": "Replace Two Persons",
+                "value": "V02"
+              },
+              {
+                "label": "Replace Three Persons",
+                "value": "V03"
+              },
+              {
+                "label": "Replace Four Persons",
+                "value": "V04"
+              },
+              {
+                "label": "Replace Five Persons",
+                "value": "V05"
+              }
+            ]
+          },
+          "image_ref_choices": {
+            "default": "",
+            "label": "Reference Images",
+            "letters_filter": "KI",
+            "visible": true,
+            "choices": [
+              {
+                "label": "None",
+                "value": ""
+              },
+              {
+                "label": "Reference Images",
+                "value": "I"
+              }
+            ]
+          },
+          "custom_video_selection": null,
+          "forced": ""
+        },
+        "audio_prompt_type": {
+          "sources": null,
+          "custom_option": null
+        },
+        "model_mode": null,
+        "sample_solver": {
+          "choices": [
+            {
+              "label": "unipc",
+              "value": "unipc"
+            },
+            {
+              "label": "euler",
+              "value": "euler"
+            },
+            {
+              "label": "dpm++",
+              "value": "dpm++"
+            },
+            {
+              "label": "flowmatch causvid",
+              "value": "causvid"
+            },
+            {
+              "label": "lcm + ltx",
+              "value": "lcm"
+            }
+          ]
+        },
+        "prompt_enhancer": null
+      }
+    },
+    "setting_values": {
+      "image_prompt_type": {
+        "allowed": "TSV",
+        "choices": [
+          {
+            "label": "Text/new generation",
+            "value": ""
+          },
+          {
+            "label": "Start image",
+            "value": "S"
+          },
+          {
+            "label": "Continue from source video",
+            "value": "V"
+          }
+        ]
+      },
+      "video_prompt_type": {
+        "guide_preprocessing": null,
+        "mask_preprocessing": {
+          "label": "Persons Locations",
+          "visible": true,
+          "choices": [
+            {
+              "label": "None",
+              "value": ""
+            },
+            {
+              "label": "A",
+              "value": "A"
+            },
+            {
+              "label": "NA",
+              "value": "NA"
+            }
+          ]
+        },
+        "guide_custom_choices": {
+          "default": "V1",
+          "label": "Type of Process",
+          "letters_filter": "V012345",
+          "show_label": true,
+          "scale": 3,
+          "choices": [
+            {
+              "label": "Animate One Person",
+              "value": "V1"
+            },
+            {
+              "label": "Animate Two Persons",
+              "value": "V2"
+            },
+            {
+              "label": "Animate Three Persons",
+              "value": "V3"
+            },
+            {
+              "label": "Animate Four Persons",
+              "value": "V4"
+            },
+            {
+              "label": "Animate Five Persons",
+              "value": "V5"
+            },
+            {
+              "label": "Replace One Person",
+              "value": "V01"
+            },
+            {
+              "label": "Replace Two Persons",
+              "value": "V02"
+            },
+            {
+              "label": "Replace Three Persons",
+              "value": "V03"
+            },
+            {
+              "label": "Replace Four Persons",
+              "value": "V04"
+            },
+            {
+              "label": "Replace Five Persons",
+              "value": "V05"
+            }
+          ]
+        },
+        "image_ref_choices": {
+          "default": "",
+          "label": "Reference Images",
+          "letters_filter": "KI",
+          "visible": true,
+          "choices": [
+            {
+              "label": "None",
+              "value": ""
+            },
+            {
+              "label": "Reference Images",
+              "value": "I"
+            }
+          ]
+        },
+        "custom_video_selection": null,
+        "forced": ""
+      },
+      "audio_prompt_type": {
+        "sources": null,
+        "custom_option": null
+      },
+      "model_mode": null,
+      "sample_solver": {
+        "choices": [
+          {
+            "label": "unipc",
+            "value": "unipc"
+          },
+          {
+            "label": "euler",
+            "value": "euler"
+          },
+          {
+            "label": "dpm++",
+            "value": "dpm++"
+          },
+          {
+            "label": "flowmatch causvid",
+            "value": "causvid"
+          },
+          {
+            "label": "lcm + ltx",
+            "value": "lcm"
+          }
+        ]
+      },
+      "prompt_enhancer": null
+    },
+    "default_settings": {
+      "settings_version": 2.66,
+      "prompt": "The character is dancing naturally with expressive body movement.",
+      "resolution": "832x480",
+      "flow_shift": 3,
+      "sample_solver": "unipc",
+      "image_prompt_type": "S",
+      "video_prompt_type": "V1",
+      "audio_prompt_type": "",
+      "force_fps": "control",
+      "sliding_window_overlap": 5,
+      "sliding_window_size": 81,
+      "num_inference_steps": 40,
+      "guidance_scale": 5.0,
+      "remove_background_images_ref": 0,
+      "custom_settings": {
+        "scail2_animate_preprocessing": "raw",
+        "image_ref_keyword_content": "human character"
+      },
+      "negative_prompt": "",
+      "video_length": 81,
+      "sliding_window_color_correction_strength": 0,
+      "alt_prompt": "",
+      "multi_prompts_gen_type": "PG",
+      "postprocess_audio": "control",
+      "replace_voice_method": "",
+      "replace_voice_sample": null,
+      "replace_voice_sample2": null,
+      "model_type": "scail2_14B"
+    }
+  }
+}

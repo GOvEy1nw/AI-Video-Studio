@@ -1,0 +1,285 @@
+{
+  "heartmula_rl_oss_3b_20260123": {
+    "model_type": "heartmula_rl_oss_3b_20260123",
+    "name": "Music HeartMuLa RL OSS (20260123) 3B",
+    "model_def": {
+      "group": "music",
+      "audio_only": true,
+      "image_outputs": false,
+      "sliding_window": false,
+      "guidance_max_phases": 1,
+      "no_negative_prompt": true,
+      "inference_steps": false,
+      "temperature": true,
+      "image_prompt_types_allowed": "",
+      "supports_early_stop": true,
+      "profiles_dir": [
+        "heartmula_oss_3b"
+      ],
+      "alt_prompt": {
+        "label": "Keywords / Tags",
+        "placeholder": "piano,happy,wedding",
+        "lines": 2
+      },
+      "lm_engines": [
+        "cg"
+      ],
+      "text_prompt_enhancer_instructions": "You are a lyric-writing assistant. Generate a clean song lyric prompt for a text-to-song model. Output only the lyric text with section headers in square brackets. Supported headers include [Intro], [Verse], [Pre-Chorus], [Chorus], [Bridge], and [Outro]. Include [Intro] and/or [Outro] when they fit the request. Keep intro and outro sections short (1-4 lines each). Do not include explanations, bullet lists, tags, or markdown fences. Keep a consistent theme, POV, and singable rhythm. Use short lines that are easy to sing.\n\nExample:\n[Intro]\nStreetlights fade while the dawn turns gold\nI hear your name in the morning cold\n[Verse]\nMorning light through the window pane\nI hum a tune to chase the rain\nSteady steps on a quiet street\nHeart and rhythm, gentle beat\n[Chorus]\nStay with me through every mile\nHold this fire, hold this smile\n[Outro]\nLet it ring, let it fall\nYour echo is the last call\n",
+      "prompt_enhancer_button_label": "Compose Lyrics",
+      "duration_slider": {
+        "label": "Duration of the Song (in seconds)",
+        "min": 30,
+        "max": 240,
+        "increment": 0.1,
+        "default": 120
+      },
+      "top_k_slider": true,
+      "heartmula_cfg_scale": 1.5,
+      "heartmula_topk": 50,
+      "heartmula_max_audio_length_ms": 120000,
+      "heartmula_codec_guidance_scale": 1.25,
+      "heartmula_codec_steps": 10,
+      "heartmula_codec_version": "20260123",
+      "compile": false,
+      "name": "Music HeartMuLa RL OSS (20260123) 3B",
+      "architecture": "heartmula_oss_3b",
+      "description": "HeartMuLa RL OSS 3B checkpoint (20260123) with updated codec support. This version should be better at following instructions thanks to a reinforced learning training.",
+      "URLs": [
+        "https://huggingface.co/DeepBeepMeep/TTS/resolve/main/heartmula_rl_oss_3b_20260123_bf16.safetensors",
+        "https://huggingface.co/DeepBeepMeep/TTS/resolve/main/heartmula_rl_oss_3b_20260123_quanto_bf16_int8.safetensors"
+      ],
+      "path": "defaults\\heartmula_rl_oss_3b_20260123.json",
+      "_profile_roots": [
+        "profiles"
+      ],
+      "metadata": {
+        "model_type": "heartmula_rl_oss_3b_20260123",
+        "family": "music",
+        "family_label": "Music",
+        "base_model_type": "heartmula_oss_3b",
+        "finetune": false,
+        "main_output": [
+          "audio"
+        ],
+        "outputs": [
+          "audio"
+        ],
+        "inputs": [
+          "text"
+        ],
+        "media_inputs": {
+          "image": {
+            "start": false,
+            "end": false,
+            "reference": false,
+            "single_reference": false,
+            "multiple_references": false,
+            "background": false,
+            "injected_frames": false,
+            "control": false,
+            "mask": false
+          },
+          "video": {
+            "continue": false,
+            "last": false,
+            "control": false,
+            "mask": false
+          },
+          "audio": {
+            "prompt": false,
+            "output": true
+          }
+        },
+        "capabilities": {
+          "text_to_video": false,
+          "image_to_video": false,
+          "video_to_video": false,
+          "text_to_image": false,
+          "image_to_image": false,
+          "text_to_audio": true,
+          "audio_to_audio": false,
+          "audio_to_video": false,
+          "audio_output": true,
+          "inpainting": false,
+          "outpainting": false,
+          "reference_images": false,
+          "background_image": false,
+          "injected_frames": false,
+          "control_image": false,
+          "control_video": false,
+          "video_continuation": false,
+          "sliding_window": false,
+          "lora": true
+        },
+        "setting_values": {
+          "image_prompt_type": {
+            "allowed": "",
+            "choices": [
+              {
+                "label": "Text/new generation",
+                "value": ""
+              }
+            ]
+          },
+          "video_prompt_type": {
+            "guide_preprocessing": null,
+            "mask_preprocessing": null,
+            "guide_custom_choices": null,
+            "image_ref_choices": null,
+            "custom_video_selection": null,
+            "forced": ""
+          },
+          "audio_prompt_type": {
+            "sources": null,
+            "custom_option": null
+          },
+          "model_mode": null,
+          "sample_solver": null,
+          "prompt_enhancer": null
+        }
+      },
+      "settings": {
+        "prompt": "[Verse]\nMorning light through the window pane\nI hum a tune to chase the rain\nSteady steps on a quiet street\nHeart and rhythm, gentle beat",
+        "alt_prompt": "piano,happy,wedding",
+        "temperature": 1.0
+      },
+      "model_type": "heartmula_rl_oss_3b_20260123"
+    },
+    "metadata": {
+      "model_type": "heartmula_rl_oss_3b_20260123",
+      "family": "music",
+      "family_label": "Music",
+      "base_model_type": "heartmula_oss_3b",
+      "finetune": false,
+      "main_output": [
+        "audio"
+      ],
+      "outputs": [
+        "audio"
+      ],
+      "inputs": [
+        "text"
+      ],
+      "media_inputs": {
+        "image": {
+          "start": false,
+          "end": false,
+          "reference": false,
+          "single_reference": false,
+          "multiple_references": false,
+          "background": false,
+          "injected_frames": false,
+          "control": false,
+          "mask": false
+        },
+        "video": {
+          "continue": false,
+          "last": false,
+          "control": false,
+          "mask": false
+        },
+        "audio": {
+          "prompt": false,
+          "output": true
+        }
+      },
+      "capabilities": {
+        "text_to_video": false,
+        "image_to_video": false,
+        "video_to_video": false,
+        "text_to_image": false,
+        "image_to_image": false,
+        "text_to_audio": true,
+        "audio_to_audio": false,
+        "audio_to_video": false,
+        "audio_output": true,
+        "inpainting": false,
+        "outpainting": false,
+        "reference_images": false,
+        "background_image": false,
+        "injected_frames": false,
+        "control_image": false,
+        "control_video": false,
+        "video_continuation": false,
+        "sliding_window": false,
+        "lora": true
+      },
+      "setting_values": {
+        "image_prompt_type": {
+          "allowed": "",
+          "choices": [
+            {
+              "label": "Text/new generation",
+              "value": ""
+            }
+          ]
+        },
+        "video_prompt_type": {
+          "guide_preprocessing": null,
+          "mask_preprocessing": null,
+          "guide_custom_choices": null,
+          "image_ref_choices": null,
+          "custom_video_selection": null,
+          "forced": ""
+        },
+        "audio_prompt_type": {
+          "sources": null,
+          "custom_option": null
+        },
+        "model_mode": null,
+        "sample_solver": null,
+        "prompt_enhancer": null
+      }
+    },
+    "setting_values": {
+      "image_prompt_type": {
+        "allowed": "",
+        "choices": [
+          {
+            "label": "Text/new generation",
+            "value": ""
+          }
+        ]
+      },
+      "video_prompt_type": {
+        "guide_preprocessing": null,
+        "mask_preprocessing": null,
+        "guide_custom_choices": null,
+        "image_ref_choices": null,
+        "custom_video_selection": null,
+        "forced": ""
+      },
+      "audio_prompt_type": {
+        "sources": null,
+        "custom_option": null
+      },
+      "model_mode": null,
+      "sample_solver": null,
+      "prompt_enhancer": null
+    },
+    "default_settings": {
+      "settings_version": 2.66,
+      "prompt": "[Verse]\nMorning light through the window pane\nI hum a tune to chase the rain\nSteady steps on a quiet street\nHeart and rhythm, gentle beat",
+      "resolution": "832x480",
+      "flow_shift": 5.0,
+      "audio_prompt_type": "",
+      "alt_prompt": "piano,happy,wedding",
+      "repeat_generation": 1,
+      "duration_seconds": 120,
+      "video_length": 0,
+      "num_inference_steps": 0,
+      "negative_prompt": "",
+      "temperature": 1.0,
+      "guidance_scale": 1.5,
+      "top_k": 50,
+      "multi_prompts_gen_type": "FG",
+      "postprocess_audio": "",
+      "replace_voice_method": "",
+      "replace_voice_sample": null,
+      "replace_voice_sample2": null,
+      "video_prompt_type": "",
+      "image_prompt_type": "",
+      "model_type": "heartmula_rl_oss_3b_20260123"
+    }
+  }
+}

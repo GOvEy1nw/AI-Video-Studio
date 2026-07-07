@@ -1,0 +1,878 @@
+{
+  "ltx2_22B_distilled": {
+    "model_type": "ltx2_22B_distilled",
+    "name": "LTX-2 2.3 Distilled 1.0 22B",
+    "model_def": {
+      "ltx2_22B_class": true,
+      "ltx2_edit_anything": false,
+      "infos": "\n# LTX2 Workflows\n\n## What The Model Can Do\n\n- Text to video with soundtrack: write a cinematic prompt and LTX2 generates both the video and an audio track.\n- Image or video continuation: provide a Start Image, End Image, or Video to Continue to keep identity, framing, or motion continuity.\n- Control Video / Frames Injection: guide the new video with motion, structure, raw frames, HDR conversion, outpainting, or injected reference frames.\n- Inpainting: 22B can regenerate masked regions of a Control Video while preserving the unmasked video context.\n- Ingredients Reference Sheet: 22B can use one composite reference-sheet image with the Ingredients IC-LoRA to keep characters, props, and location consistent.\n- EditAnything variants: provide a source/control video plus one reference image to add or edit a subject in the video.\n\n## Text To Image Mode\n\nLTX2 image generation is implemented by generating a short video internally and keeping only the first frame.\n\nImage quality, reference identity, and control-image adherence can often be improved from the Quality tab with `Generate more frames to preserve Reference Image Identity / Control Image Information or improve`.\n\nSome IC-LoRAs, such as the union-control LoRA used by pose, depth, and canny control, need at least 9 frames so the model has more than one temporal latent. If image mode uses these controls and only one latent was requested, WanGP automatically expands the internal generation to 9 frames and still returns only the first frame.\n\n## Control Video Processes\n\n- `No Video Process`: the Control Video is not used as a visual guide.\n- `Transfer Human Motion`: extracts body pose/motion from the Control Video.\n- `Transfer Human Motion With Pose Alignment`: extracts pose and aligns it to your Start Image, Video to Continue, or background reference.\n- `Transfer Depth`: follows the depth and scene layout of the Control Video.\n- `Transfer Canny Edges`: follows strong edges and outlines from the Control Video.\n- `LTX2 Raw Format / Control Video for Ic Lora`: uses the Control Video frames directly. Use this for IC-LoRA style control, to provide the video to be outpainted, and for `Generate Audio based on Control Video`.\n- `Inpaint Masked Area`: 22B only. Uses the Control Video plus a Video Mask to regenerate the masked area. This mode requires `Control Video Strength` set to `1` and `Unmasked Area Strength` set to `0`; the unmasked area is preserved by the inpainting workflow.\n- `Ingredients Reference Sheet`: 22B only. Duplicates one uploaded reference-sheet image as the IC-LoRA guide video; use a clean composite sheet on a white background, with black separator lines between individual pieces and without text.\n- `Convert SDR to HDR (IC-LoRA)`: 22B only. Converts an SDR Control Video toward HDR output.\n- `Inject Frames`: places selected Reference Images at exact frame positions. In `Positions of Injected Frames`, `1` means the first frame and `L` means the last frame of a sliding-window segment.\n\n## Audio Options\n\n- `Generate Video & Soundtrack based on Text Prompt`: no audio file is needed. The prompt drives both the visuals and the generated soundtrack.\n- `Generate Video based on Soundtrack and Text Prompt`: upload an Audio Prompt to guide timing, rhythm, speech, or sound events. If you leave it blank, WanGP uses null audio so the model is not driven by a real soundtrack. When the audio covers the generated window, it is normally reused as the final output audio.\n- `Generate Video based on Control Video + its Audio Track and Text Prompt`: the audio track is extracted from the Control Video and used like the soundtrack prompt. This requires a Control Video with an audio track. When that track covers the generated window, it is normally reused as the final output audio.\n- `Generate Audio based on Control Video and Text Prompt`: generates audio from a raw Control Video plus the text prompt. It requires `LTX2 Raw Format / Control Video for Ic Lora` and is not compatible with pose/depth/canny/HDR/outpainting/mask/injected-frame modes.\n- `Generate Video based on Reference Voice (ID-LoRA) and Text Prompt`: available when the ID-LoRA option is listed. Provide a reference voice/audio sample and describe the on-camera speaker and speech in the prompt.\n- `Prompt Audio Strength`: controls how strongly the uploaded soundtrack/audio prompt affects the generated result.\n- `Ignore Background Music`: removes or reduces background music/noise from the audio prompt before using it for conditioning.\n- `Postprocess Remux Audio`: after generation, you can replace or reuse the final soundtrack with a Custom Soundtrack, MMAudio, or the Control Video audio track.\n\n## New Content Generation\n\nIf the Control Video or Control Audio has a shorter duration than the number of frames to generate, LTX2 will complete with new video and audio content.\n\n## Control Video & Audio Timing With Video Continuation\n\nWhen you use an Audio Prompt or the Control Video audio track, WanGP slices the audio per sliding window so each window receives the matching part of the soundtrack.\n\nSliding Window overlap frames are used for continuity and then removed from the final stitched video. Their matching audio is also used only to help the next window start smoothly.\n\nIf you continue from a Video to Continue, the alignment dropdown decides where Control Video, Control Audio, and Positioned Frames start on the timeline:\n\n- `Aligned to the beginning of the Source Video`: frame/time 0 means the first frame of the source video you are continuing. Use this when your Control Video, audio prompt, or positioned frame numbers include the original source video at the beginning.\n- `Aligned to the beginning of the First Window of the new Video Sample`: frame/time 0 means the first newly generated part after the source video. Use this when your Control Video, soundtrack, or positioned frame numbers are only meant for the continuation.\n\nExample: if you continue a 4 second source video and your soundtrack starts with the new action, choose `Aligned to the beginning of the First Window of the new Video Sample`. If your soundtrack starts with those same 4 source seconds before the new action, keep `Aligned to the beginning of the Source Video`.\n\n# Advanced\n\n## Changing System LoRA \n\nLTX2 automatically adds some system LoRAs when a feature needs them. Each system LoRA comes with predefined LoRA Multipliers that may adjust to the context. \nYou can change the LoRA used for a system process and the LoRA multipliers that will used for this LoRA.\nA selected LoRA will be automatically used instead of a system LoRA if it contains in its name a text sequence signature.\n\nRecognized system LoRA signatures:\n- `distilled-lora`: distilled stage LoRA used by dev models for two-phase, Distilled 8 Steps, HQ/res2s, and some ID-LoRA cases.\n- `union-control`: IC-LoRA used by Pose, Pose Alignment, Depth, and Canny control.\n- `ic-lora-hdr`: HDR IC-LoRA used by 22B HDR output.\n- `ic-lora-outpaint`: outpainting IC-LoRA used by 22B legacy spatial outpainting.\n- `in-outpainting`: inpainting/outpainting IC-LoRA used by 22B mask-based inpainting and new outpainting.\n- `ic-lora-ingredients`: Ingredients IC-LoRA used by the 22B Ingredients Reference Sheet process.\n- `id-lora-celebvhq`: ID-LoRA used by the reference voice workflow.\n\nTo change one of these, manually select a LoRA whose filename contains the same recognized signature, then set its multipliers in the LoRAs tab. Because your selected LoRA has the recognized signature, WanGP skips the automatic default and uses your selected one instead.\n\nUse a single number for one weight, such as `0.7`. Use `phase1;phase2` for two-phase generation, such as `0;1`, `1;0`, or `0.25;0.5`.\n\n\nExamples:\n\n```text\nSelect: custom-distilled-lora-v2.safetensors\nMultiplier: 0.3;0.7\nFilename rule: it contains \"distilled-lora\"\nResult: the dev model uses your custom distilled LoRA instead of the default distilled LoRA and and it will apply your choices of LoRA multipliers.\n```\n\n```text\nSelect: ltx-2.3-22b-ic-lora-union-control-ref0.5.safetensors\nMultiplier: 0.6;0.2\nResult: Pose/Depth/Canny control uses your manual phase weights instead of the automatic union-control weight.\n```\n\n```text\nSelect: my-ic-lora-outpaint-experiment.safetensors\nMultiplier: 0.8\nFilename rule: it contains \"ic-lora-outpaint\"\nResult: 22B outpainting uses your outpaint LoRA instead of the built-in one.\n```\n\n\n```text\nSelect: my-id-lora-celebvhq-voice.safetensors\nMultiplier: 1;0\nFilename rule: it contains \"id-lora-celebvhq\"\nResult: the reference voice workflow uses your ID-LoRA file and weight.\n```\n",
+      "text_encoder_folder": "gemma-3-12b-it-qat-q4_0-unquantized",
+      "text_encoder_URLs": [
+        "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/gemma-3-12b-it-qat-q4_0-unquantized/gemma-3-12b-it-qat-q4_0-unquantized.safetensors",
+        "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/gemma-3-12b-it-qat-q4_0-unquantized/gemma-3-12b-it-qat-q4_0-unquantized_quanto_bf16_int8.safetensors"
+      ],
+      "dtype": "bf16",
+      "fps": 24,
+      "frames_minimum": 17,
+      "frames_steps": 8,
+      "sliding_window": true,
+      "returns_audio": true,
+      "prompt_enhancer_button_label": "Write",
+      "auto_null_audio": true,
+      "multimedia_generation": true,
+      "profiles_dir": [
+        "ltx2"
+      ],
+      "ltx2_spatial_upscaler_file": "ltx-2.3-spatial-upscaler-x2-1.1.safetensors",
+      "ltx2_hdr_lora_file": "ltx-2.3-22b-ic-lora-hdr-0.9.safetensors",
+      "ltx2_hdr_scene_embeddings_file": "ltx-2.3-22b-ic-lora-hdr-scene-emb.safetensors",
+      "self_refiner": true,
+      "self_refiner_max_plans": 2,
+      "vae_block_size": 64,
+      "keep_frames_video_guide_not_supported": true,
+      "ltx2_lora_distilled": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-distilled-lora-384.safetensors",
+      "ltx2_lora_distilled_1_1": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-distilled-lora-384-1.1.safetensors",
+      "ltx2_lora_union_control": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-ic-lora-union-control-ref0.5.safetensors",
+      "ltx2_lora_id": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/id-lora-celebvhq-ltx2.3.safetensors",
+      "ltx2_lora_outpaint": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-ic-lora-outpaint.safetensors",
+      "ltx2_lora_inpaint": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-ic-lora-in-outpainting-0.9.safetensors",
+      "ltx2_lora_ingredients": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-ic-lora-ingredients-0.9.safetensors",
+      "ltx2_lora_hdr": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-ic-lora-hdr-0.9.safetensors",
+      "ltx2_pipeline": "distilled",
+      "video_guide_outpainting": [
+        0,
+        1
+      ],
+      "video_guide_outpainting_label": "Enable Spatial Outpainting on Control Video using LTX2 Outpainting IC-LoRA",
+      "guide_inpaint_color": "<function ltx2_guide_inpaint_color at 0x00000110BEE0CD60>",
+      "background_removal_color": "<function ltx2_background_removal_color at 0x00000110BEE0CE00>",
+      "preset_profiles_dir": [
+        "ltx2_distilled_presets"
+      ],
+      "extra_control_frames": 1,
+      "dont_cat_preguide": true,
+      "input_video_strength": {
+        "label": "Start Image / Source Strength (lower values may create more motion)",
+        "name": "Start Image / Source Strength"
+      },
+      "image_prompt_types_allowed": "TSEVL",
+      "end_frames_always_enabled": true,
+      "any_audio_prompt": true,
+      "audio_prompt_choices": true,
+      "one_speaker_only": true,
+      "audio_guide_label": "Audio Prompt (Soundtrack, leave blank to to use a Null Audio)",
+      "audio_scale_name": "Prompt Audio Strength",
+      "audio_prompt_type_sources": {
+        "selection": [
+          "",
+          "A",
+          "K",
+          "2",
+          "A1OF"
+        ],
+        "labels": {
+          "": "Generate Video & Soundtrack based on Text Prompt",
+          "A": "Generate Video based on Soundtrack and Text Prompt",
+          "K": "Generate Video based on Control Video + its Audio Track and Text Prompt",
+          "2": "Generate Audio based on Control Video and Text Prompt",
+          "A1OF": "Generate Video based on Reference Voice (ID-LoRA) and Text Prompt"
+        },
+        "custom_flags": {
+          "1": "Reference Voice (ID-LoRA)",
+          "2": "Generate Audio based on Control Video and Text Prompt"
+        },
+        "letters_filter": "A1OFK2",
+        "show_label": false,
+        "default": ""
+      },
+      "prompt_infos": "\n# LTX2 Prompt Guidelines\n\n## Standard Prompts\n\n- Describe the subject, setting, action, camera, lighting, mood, and visual style in concrete cinematic language.\n- Keep identity, wardrobe, location, and chronology stable unless you intentionally want a transition.\n- Write the visible action in temporal order. LTX2 usually behaves better when it can follow a clear sequence instead of a pile of disconnected tags.\n- Put spoken words in double quotes and include who says them, when they are said, and the visible mouth or body action that supports them.\n- For better clarity, use multiline prompts in **How to Process each Line of the Text Prompt**. Use one line per shot, beat, character action, or generated item depending on the selected line-processing mode.\n\n## Relayed Prompts\n\nPrompt Relay lets you keep one global prompt for the whole clip and then apply timed subprompts to specific parts of the video. The first text before any valid `[]` range is the global prompt.\n\nAccepted range syntax:\n\n- `[0%:25%]` percentage of the full clip.\n- `[25%:]` percentage start, open end, meaning the rest of the clip.\n- `[1:5]` 1-based frame numbers, from frame 1 through frame 5.\n- `[0s:4s]` or `[0sec:4sec]` seconds.\n- `[0:05:0:10]` timecode-style seconds, from 0:05 to 0:10.\n\nUse the same unit for the start and end of a range. Cover the clip without gaps when the intended story is continuous. Short overlap at boundaries is handled softly, so adjacent segments should describe compatible motion.\n\nFor sliding windows and video continuation, frame 1 and `0%` refer to the first non-overlap frame that will remain in the final output for that window. Earlier overlap frames are only used for continuity and are discarded.\n\nPrompt Relay syntax does not change **How to Process each Line of the Text Prompt**. It is recommended to enable \"Each new Paragraph separated by an Empty Line\" to avoid auto splitting of your prompt in multiple independent prompts.\n\nExample:\n\n```text\nEpic cinematic fantasy battle, a lone armored knight faces a massive black dragon in a ruined mountain keep at dusk, smoke, sparks, torn banners, dramatic firelight, coherent action continuity, grounded physical motion.\n[0%:25%] The knight raises a dented shield as the dragon lands among broken stones, wings throwing dust across the courtyard while embers swirl between them.\n[25%:50%] The dragon lunges and breathes fire across the ground while the knight rolls under the flame, rises beside a shattered pillar, and shouts \"By oath and steel, I will not yield.\"\n[50%:75%] The knight charges through smoke, climbs onto fallen masonry, and drives the glowing sword toward the dragon's exposed chest as the beast rears back for one last attack.\n[75%:] The blade strikes true, the dragon collapses in a wave of sparks and ash, and the exhausted knight lowers the sword and whispers \"Rest now, ancient terror.\"\n```\n",
+      "prompt_enhancer_def": {
+        "selection": [
+          "T",
+          "TI",
+          "T1",
+          "TI1"
+        ],
+        "labels": {
+          "T": "An Enhanced Prompt using existing Text Prompt",
+          "TIV": "An Enhanced Prompt using existing Text Prompt and Start Image",
+          "T1V": "An Enhanced Relayed Prompt using existing Text Prompt",
+          "TI1V": "An Enhanced Relayed Prompt using existing Text Prompt and Start Image"
+        },
+        "default": ""
+      },
+      "text_prompt_enhancer_instructions1": "You are an expert cinematic prompt writer for LTX-2 Prompt Relay in WanGP. Rewrite the user prompt into one enhanced relayed video prompt.\n\nPrompt Relay syntax:\n- Start with one unbracketed global prompt that applies to the full video. Use it for the stable subject, setting, style, lighting, camera language, and continuity.\n- Then write 4 to 8 timed segment prompts. Each segment must start with a bracket range like [0%:25%], [25%:50%], [50%:75%], [75%:].\n- The text after each bracket applies only to that segment. Describe visible action, scene progression, camera motion, expression, pose, timing, and audio-relevant events for that segment.\n- Ranges may use percentages. Cover the whole clip from beginning to end without gaps. Use the final open-ended range when useful.\n\nOutput rules:\n- Output only the final Prompt Relay prompt. Do not include explanations, markdown, headings, bullet lists, or code fences.\n- Keep the global prompt concise but specific. Keep each segment one dense sentence or two short sentences.\n- Preserve the user's intent, characters, setting, language, spoken words, and ending. Do not invent a different story.\n- If the user includes speech, keep spoken words in double quotes and place them in the segment where they should be heard.\n- Make transitions continuous. Do not create unrelated shots unless the user asks for cuts or a montage.\n- Avoid generic filler. Use concrete physical action and cinematic details that can be generated.\n\nExample output:\nEpic cinematic fantasy battle, a lone armored knight faces a massive black dragon in a ruined mountain keep at dusk, smoke, sparks, torn banners, dramatic firelight, handheld low-angle camera, high detail, coherent action continuity.\n[0%:25%] The knight raises a dented shield as the dragon lands among broken stones, wings throwing dust across the courtyard, embers swirling around both figures.\n[25%:50%] The dragon lunges and breathes fire across the ground while the knight rolls under the flame, rises beside a shattered pillar, and shouts \"By oath and steel, I will not yield.\"\n[50%:75%] The knight charges through smoke, climbs onto fallen masonry, and drives the glowing sword toward the dragon's exposed chest as the beast rears back.\n[75%:] The blade strikes true, the dragon collapses in a wave of sparks and ash, and the exhausted knight lowers the sword and whispers \"Rest now, ancient terror.\"",
+      "video_prompt_enhancer_instructions1": "You are an expert cinematic prompt writer for LTX-2 Prompt Relay in WanGP. Rewrite the user prompt and image caption into one enhanced relayed video prompt.\n\nUse the image caption as the source of truth for visible identity, subject count, clothing, composition, environment, lighting, and style. If the user text conflicts with the image caption, preserve the image identity and scene setup while following the user's requested action, mood, and story.\n\nPrompt Relay syntax:\n- Start with one unbracketed global prompt that applies to the full video. Use it for the stable subject, setting, style, lighting, camera language, and continuity from the image.\n- Then write 4 to 8 timed segment prompts. Each segment must start with a bracket range like [0%:25%], [25%:50%], [50%:75%], [75%:].\n- The text after each bracket applies only to that segment. Describe visible action, scene progression, camera motion, expression, pose, timing, and audio-relevant events for that segment.\n- Ranges may use percentages. Cover the whole clip from beginning to end without gaps. Use the final open-ended range when useful.\n\nOutput rules:\n- Output only the final Prompt Relay prompt. Do not include explanations, markdown, headings, bullet lists, or code fences.\n- Keep the global prompt concise but specific. Keep each segment one dense sentence or two short sentences.\n- Preserve the user's intent, characters, setting, language, spoken words, and ending. Do not invent a different story.\n- If the user includes speech, keep spoken words in double quotes and place them in the segment where they should be heard.\n- Make transitions continuous from the start image. Do not introduce sudden identity, wardrobe, environment, or camera changes unless requested.\n- Avoid generic filler. Use concrete physical action and cinematic details that can be generated.\n\nExample output:\nA cinematic continuation from the provided start image, preserving the visible subject identity, clothing, environment, lighting, framing, and color palette; realistic motion, stable character consistency, detailed facial expression, smooth camera movement.\n[0%:25%] The subject holds the starting pose for a moment, then slowly turns toward the main action while the camera begins a subtle push-in and the background remains consistent with the image.\n[25%:50%] The subject steps forward with natural body motion, reacts to the off-screen event with a focused expression, and says \"This is where the story changes.\"\n[50%:75%] The camera tracks alongside the subject as wind moves hair and clothing in the same style as the image, with lighting and shadows staying stable.\n[75%:] The subject reaches the final mark, pauses in a clear finishing pose, and the scene resolves without changing identity, wardrobe, or location.",
+      "text_prompt_enhancer_max_tokens1": 1024,
+      "video_prompt_enhancer_max_tokens1": 1024,
+      "audio_guide_window_slicing": true,
+      "video_length_not_limited_by_audio": true,
+      "output_audio_is_input_audio": true,
+      "multiple_images_as_text_prompts": true,
+      "custom_denoising_strength": true,
+      "NAG": true,
+      "v2i_switch_supported": true,
+      "image_batch_size_max": 1,
+      "denoising_strength": {
+        "label": "Control Video Strength (higher = closer to the Control Video)",
+        "name": "Control Video Strength"
+      },
+      "masking_strength": {
+        "label": "Unmasked Area Strength (higher = unmasked area closer to control video)",
+        "name": "Unmasked Area Strength"
+      },
+      "guide_custom_choices": {
+        "choices": [
+          [
+            "No Video Process",
+            ""
+          ],
+          [
+            "Transfer Human Motion",
+            "PVG"
+          ],
+          [
+            "Transfer Human Motion With Pose Alignment",
+            "OVG"
+          ],
+          [
+            "Transfer Depth",
+            "DVG"
+          ],
+          [
+            "Transfer Canny Edges",
+            "EVG"
+          ],
+          [
+            "LTX2 Raw Format / Control Video for Ic Lora",
+            "VG"
+          ],
+          [
+            "Inpaint Masked Area",
+            "MVG"
+          ],
+          [
+            "Ingredients Reference Sheet",
+            "I"
+          ],
+          [
+            "Convert SDR to HDR (IC-LoRA)",
+            "V&G"
+          ],
+          [
+            "Inject Frames",
+            "KFI"
+          ]
+        ],
+        "letters_filter": "OPDEMVG&KFI",
+        "default": "",
+        "label": "Control Video / Frames Injection",
+        "visible": true
+      },
+      "guide_custom_choices_image": {
+        "choices": [
+          [
+            "No Video Process",
+            ""
+          ],
+          [
+            "Transfer Human Motion",
+            "PVG"
+          ],
+          [
+            "Transfer Depth",
+            "DVG"
+          ],
+          [
+            "Transfer Canny Edges",
+            "EVG"
+          ],
+          [
+            "LTX2 Raw Format / Control Video for Ic Lora",
+            "VG"
+          ]
+        ],
+        "letters_filter": "OPDEMVG&KFI",
+        "default": "",
+        "label": "Control Image",
+        "visible": true
+      },
+      "custom_frames_injection": true,
+      "one_image_ref_only": true,
+      "mask_preprocessing": {
+        "selection": [
+          "",
+          "A",
+          "NA",
+          "XA",
+          "XNA"
+        ]
+      },
+      "sliding_window_defaults": {
+        "overlap_min": 1,
+        "overlap_max": 97,
+        "overlap_step": 8,
+        "overlap_default": 9,
+        "window_min": 5,
+        "window_max": 501,
+        "window_step": 4,
+        "window_default": 241
+      },
+      "lock_inference_steps": true,
+      "guidance_max_phases": 2,
+      "visible_phases": 0,
+      "name": "LTX-2 2.3 Distilled 1.0 22B",
+      "architecture": "ltx2_22B",
+      "description": "LTX-2.3 distilled 1.0 checkpoint (22B) with faster generation. Please note Ic Loras Union (for Pose/Depth/Edges) and Outpainting are automatically added when needed. You can override their lora multipliers per phase by adding manually the corresponding lora.",
+      "URLs": [
+        "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-distilled_diffusion_model.safetensors",
+        "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-distilled_diffusion_model_quanto_int8.safetensors"
+      ],
+      "preload_URLs": "ltx2_22B",
+      "path": "defaults\\ltx2_22B_distilled.json",
+      "_profile_roots": [
+        "profiles"
+      ],
+      "metadata": {
+        "model_type": "ltx2_22B_distilled",
+        "family": "ltx2",
+        "family_label": "LTX-2",
+        "base_model_type": "ltx2_22B",
+        "finetune": false,
+        "main_output": [
+          "image",
+          "video"
+        ],
+        "outputs": [
+          "image",
+          "video",
+          "audio"
+        ],
+        "inputs": [
+          "text",
+          "audio",
+          "image",
+          "video"
+        ],
+        "media_inputs": {
+          "image": {
+            "start": true,
+            "end": true,
+            "reference": true,
+            "single_reference": true,
+            "multiple_references": false,
+            "background": true,
+            "injected_frames": true,
+            "control": false,
+            "mask": false
+          },
+          "video": {
+            "continue": true,
+            "last": true,
+            "control": true,
+            "mask": true
+          },
+          "audio": {
+            "prompt": true,
+            "output": true
+          }
+        },
+        "capabilities": {
+          "text_to_video": true,
+          "image_to_video": true,
+          "video_to_video": true,
+          "text_to_image": true,
+          "image_to_image": true,
+          "text_to_audio": false,
+          "audio_to_audio": false,
+          "audio_to_video": true,
+          "audio_output": true,
+          "inpainting": true,
+          "outpainting": true,
+          "reference_images": true,
+          "background_image": true,
+          "injected_frames": true,
+          "control_image": false,
+          "control_video": true,
+          "video_continuation": true,
+          "sliding_window": true,
+          "lora": true
+        },
+        "setting_values": {
+          "image_prompt_type": {
+            "allowed": "TSEVL",
+            "choices": [
+              {
+                "label": "Text/new generation",
+                "value": ""
+              },
+              {
+                "label": "Start image",
+                "value": "S"
+              },
+              {
+                "label": "End image",
+                "value": "E"
+              },
+              {
+                "label": "Continue from source video",
+                "value": "V"
+              },
+              {
+                "label": "Continue from last generated video",
+                "value": "L"
+              }
+            ]
+          },
+          "video_prompt_type": {
+            "guide_preprocessing": null,
+            "mask_preprocessing": {
+              "choices": [
+                {
+                  "label": "None",
+                  "value": ""
+                },
+                {
+                  "label": "A",
+                  "value": "A"
+                },
+                {
+                  "label": "NA",
+                  "value": "NA"
+                },
+                {
+                  "label": "XA",
+                  "value": "XA"
+                },
+                {
+                  "label": "XNA",
+                  "value": "XNA"
+                }
+              ]
+            },
+            "guide_custom_choices": {
+              "default": "",
+              "label": "Control Video / Frames Injection",
+              "letters_filter": "OPDEMVG&KFI",
+              "visible": true,
+              "choices": [
+                {
+                  "label": "No Video Process",
+                  "value": ""
+                },
+                {
+                  "label": "Transfer Human Motion",
+                  "value": "PVG"
+                },
+                {
+                  "label": "Transfer Human Motion With Pose Alignment",
+                  "value": "OVG"
+                },
+                {
+                  "label": "Transfer Depth",
+                  "value": "DVG"
+                },
+                {
+                  "label": "Transfer Canny Edges",
+                  "value": "EVG"
+                },
+                {
+                  "label": "LTX2 Raw Format / Control Video for Ic Lora",
+                  "value": "VG"
+                },
+                {
+                  "label": "Inpaint Masked Area",
+                  "value": "MVG"
+                },
+                {
+                  "label": "Ingredients Reference Sheet",
+                  "value": "I"
+                },
+                {
+                  "label": "Convert SDR to HDR (IC-LoRA)",
+                  "value": "V&G"
+                },
+                {
+                  "label": "Inject Frames",
+                  "value": "KFI"
+                }
+              ]
+            },
+            "image_ref_choices": null,
+            "custom_video_selection": null,
+            "forced": ""
+          },
+          "audio_prompt_type": {
+            "sources": {
+              "default": "",
+              "letters_filter": "A1OFK2",
+              "show_label": false,
+              "choices": [
+                {
+                  "label": "Generate Video & Soundtrack based on Text Prompt",
+                  "value": ""
+                },
+                {
+                  "label": "Generate Video based on Soundtrack and Text Prompt",
+                  "value": "A"
+                },
+                {
+                  "label": "Generate Video based on Control Video + its Audio Track and Text Prompt",
+                  "value": "K"
+                },
+                {
+                  "label": "Generate Audio based on Control Video and Text Prompt",
+                  "value": "2"
+                },
+                {
+                  "label": "Generate Video based on Reference Voice (ID-LoRA) and Text Prompt",
+                  "value": "A1OF"
+                }
+              ]
+            },
+            "custom_option": null
+          },
+          "model_mode": null,
+          "sample_solver": null,
+          "prompt_enhancer": {
+            "default": "",
+            "choices": [
+              {
+                "label": "An Enhanced Prompt using existing Text Prompt",
+                "value": "T"
+              },
+              {
+                "label": "An Enhanced Prompt using existing Text Prompt and Start Image",
+                "value": "TI"
+              },
+              {
+                "label": "An Enhanced Relayed Prompt using existing Text Prompt",
+                "value": "T1"
+              },
+              {
+                "label": "An Enhanced Relayed Prompt using existing Text Prompt and Start Image",
+                "value": "TI1"
+              }
+            ]
+          }
+        }
+      },
+      "settings": {
+        "prompt": "A warm sunny backyard. The camera starts in a tight cinematic close-up of a woman and a man in their 30s, facing each other with serious expressions. The woman, emotional and dramatic, says softly, \"That's it... Dad's lost it. And we've lost Dad.\"The man exhales, slightly annoyed: \"Stop being so dramatic, Jess.\"A beat. He glances aside, then mutters defensively, \"He's just having fun.\"The camera slowly pans right, revealing the grandfather in the garden wearing enormous butterfly wings, waving his arms in the air like he's trying to take off.He shouts, \"Wheeeew!\" as he flaps his wings with full commitment.The woman covers her face, on the verge of tears. The tone is deadpan, absurd, and quietly tragic.",
+        "num_inference_steps": 8,
+        "video_length": 241,
+        "resolution": "1280x720"
+      },
+      "model_type": "ltx2_22B_distilled"
+    },
+    "metadata": {
+      "model_type": "ltx2_22B_distilled",
+      "family": "ltx2",
+      "family_label": "LTX-2",
+      "base_model_type": "ltx2_22B",
+      "finetune": false,
+      "main_output": [
+        "image",
+        "video"
+      ],
+      "outputs": [
+        "image",
+        "video",
+        "audio"
+      ],
+      "inputs": [
+        "text",
+        "audio",
+        "image",
+        "video"
+      ],
+      "media_inputs": {
+        "image": {
+          "start": true,
+          "end": true,
+          "reference": true,
+          "single_reference": true,
+          "multiple_references": false,
+          "background": true,
+          "injected_frames": true,
+          "control": false,
+          "mask": false
+        },
+        "video": {
+          "continue": true,
+          "last": true,
+          "control": true,
+          "mask": true
+        },
+        "audio": {
+          "prompt": true,
+          "output": true
+        }
+      },
+      "capabilities": {
+        "text_to_video": true,
+        "image_to_video": true,
+        "video_to_video": true,
+        "text_to_image": true,
+        "image_to_image": true,
+        "text_to_audio": false,
+        "audio_to_audio": false,
+        "audio_to_video": true,
+        "audio_output": true,
+        "inpainting": true,
+        "outpainting": true,
+        "reference_images": true,
+        "background_image": true,
+        "injected_frames": true,
+        "control_image": false,
+        "control_video": true,
+        "video_continuation": true,
+        "sliding_window": true,
+        "lora": true
+      },
+      "setting_values": {
+        "image_prompt_type": {
+          "allowed": "TSEVL",
+          "choices": [
+            {
+              "label": "Text/new generation",
+              "value": ""
+            },
+            {
+              "label": "Start image",
+              "value": "S"
+            },
+            {
+              "label": "End image",
+              "value": "E"
+            },
+            {
+              "label": "Continue from source video",
+              "value": "V"
+            },
+            {
+              "label": "Continue from last generated video",
+              "value": "L"
+            }
+          ]
+        },
+        "video_prompt_type": {
+          "guide_preprocessing": null,
+          "mask_preprocessing": {
+            "choices": [
+              {
+                "label": "None",
+                "value": ""
+              },
+              {
+                "label": "A",
+                "value": "A"
+              },
+              {
+                "label": "NA",
+                "value": "NA"
+              },
+              {
+                "label": "XA",
+                "value": "XA"
+              },
+              {
+                "label": "XNA",
+                "value": "XNA"
+              }
+            ]
+          },
+          "guide_custom_choices": {
+            "default": "",
+            "label": "Control Video / Frames Injection",
+            "letters_filter": "OPDEMVG&KFI",
+            "visible": true,
+            "choices": [
+              {
+                "label": "No Video Process",
+                "value": ""
+              },
+              {
+                "label": "Transfer Human Motion",
+                "value": "PVG"
+              },
+              {
+                "label": "Transfer Human Motion With Pose Alignment",
+                "value": "OVG"
+              },
+              {
+                "label": "Transfer Depth",
+                "value": "DVG"
+              },
+              {
+                "label": "Transfer Canny Edges",
+                "value": "EVG"
+              },
+              {
+                "label": "LTX2 Raw Format / Control Video for Ic Lora",
+                "value": "VG"
+              },
+              {
+                "label": "Inpaint Masked Area",
+                "value": "MVG"
+              },
+              {
+                "label": "Ingredients Reference Sheet",
+                "value": "I"
+              },
+              {
+                "label": "Convert SDR to HDR (IC-LoRA)",
+                "value": "V&G"
+              },
+              {
+                "label": "Inject Frames",
+                "value": "KFI"
+              }
+            ]
+          },
+          "image_ref_choices": null,
+          "custom_video_selection": null,
+          "forced": ""
+        },
+        "audio_prompt_type": {
+          "sources": {
+            "default": "",
+            "letters_filter": "A1OFK2",
+            "show_label": false,
+            "choices": [
+              {
+                "label": "Generate Video & Soundtrack based on Text Prompt",
+                "value": ""
+              },
+              {
+                "label": "Generate Video based on Soundtrack and Text Prompt",
+                "value": "A"
+              },
+              {
+                "label": "Generate Video based on Control Video + its Audio Track and Text Prompt",
+                "value": "K"
+              },
+              {
+                "label": "Generate Audio based on Control Video and Text Prompt",
+                "value": "2"
+              },
+              {
+                "label": "Generate Video based on Reference Voice (ID-LoRA) and Text Prompt",
+                "value": "A1OF"
+              }
+            ]
+          },
+          "custom_option": null
+        },
+        "model_mode": null,
+        "sample_solver": null,
+        "prompt_enhancer": {
+          "default": "",
+          "choices": [
+            {
+              "label": "An Enhanced Prompt using existing Text Prompt",
+              "value": "T"
+            },
+            {
+              "label": "An Enhanced Prompt using existing Text Prompt and Start Image",
+              "value": "TI"
+            },
+            {
+              "label": "An Enhanced Relayed Prompt using existing Text Prompt",
+              "value": "T1"
+            },
+            {
+              "label": "An Enhanced Relayed Prompt using existing Text Prompt and Start Image",
+              "value": "TI1"
+            }
+          ]
+        }
+      }
+    },
+    "setting_values": {
+      "image_prompt_type": {
+        "allowed": "TSEVL",
+        "choices": [
+          {
+            "label": "Text/new generation",
+            "value": ""
+          },
+          {
+            "label": "Start image",
+            "value": "S"
+          },
+          {
+            "label": "End image",
+            "value": "E"
+          },
+          {
+            "label": "Continue from source video",
+            "value": "V"
+          },
+          {
+            "label": "Continue from last generated video",
+            "value": "L"
+          }
+        ]
+      },
+      "video_prompt_type": {
+        "guide_preprocessing": null,
+        "mask_preprocessing": {
+          "choices": [
+            {
+              "label": "None",
+              "value": ""
+            },
+            {
+              "label": "A",
+              "value": "A"
+            },
+            {
+              "label": "NA",
+              "value": "NA"
+            },
+            {
+              "label": "XA",
+              "value": "XA"
+            },
+            {
+              "label": "XNA",
+              "value": "XNA"
+            }
+          ]
+        },
+        "guide_custom_choices": {
+          "default": "",
+          "label": "Control Video / Frames Injection",
+          "letters_filter": "OPDEMVG&KFI",
+          "visible": true,
+          "choices": [
+            {
+              "label": "No Video Process",
+              "value": ""
+            },
+            {
+              "label": "Transfer Human Motion",
+              "value": "PVG"
+            },
+            {
+              "label": "Transfer Human Motion With Pose Alignment",
+              "value": "OVG"
+            },
+            {
+              "label": "Transfer Depth",
+              "value": "DVG"
+            },
+            {
+              "label": "Transfer Canny Edges",
+              "value": "EVG"
+            },
+            {
+              "label": "LTX2 Raw Format / Control Video for Ic Lora",
+              "value": "VG"
+            },
+            {
+              "label": "Inpaint Masked Area",
+              "value": "MVG"
+            },
+            {
+              "label": "Ingredients Reference Sheet",
+              "value": "I"
+            },
+            {
+              "label": "Convert SDR to HDR (IC-LoRA)",
+              "value": "V&G"
+            },
+            {
+              "label": "Inject Frames",
+              "value": "KFI"
+            }
+          ]
+        },
+        "image_ref_choices": null,
+        "custom_video_selection": null,
+        "forced": ""
+      },
+      "audio_prompt_type": {
+        "sources": {
+          "default": "",
+          "letters_filter": "A1OFK2",
+          "show_label": false,
+          "choices": [
+            {
+              "label": "Generate Video & Soundtrack based on Text Prompt",
+              "value": ""
+            },
+            {
+              "label": "Generate Video based on Soundtrack and Text Prompt",
+              "value": "A"
+            },
+            {
+              "label": "Generate Video based on Control Video + its Audio Track and Text Prompt",
+              "value": "K"
+            },
+            {
+              "label": "Generate Audio based on Control Video and Text Prompt",
+              "value": "2"
+            },
+            {
+              "label": "Generate Video based on Reference Voice (ID-LoRA) and Text Prompt",
+              "value": "A1OF"
+            }
+          ]
+        },
+        "custom_option": null
+      },
+      "model_mode": null,
+      "sample_solver": null,
+      "prompt_enhancer": {
+        "default": "",
+        "choices": [
+          {
+            "label": "An Enhanced Prompt using existing Text Prompt",
+            "value": "T"
+          },
+          {
+            "label": "An Enhanced Prompt using existing Text Prompt and Start Image",
+            "value": "TI"
+          },
+          {
+            "label": "An Enhanced Relayed Prompt using existing Text Prompt",
+            "value": "T1"
+          },
+          {
+            "label": "An Enhanced Relayed Prompt using existing Text Prompt and Start Image",
+            "value": "TI1"
+          }
+        ]
+      }
+    },
+    "default_settings": {
+      "settings_version": 2.66,
+      "prompt": "A warm sunny backyard. The camera starts in a tight cinematic close-up of a woman and a man in their 30s, facing each other with serious expressions. The woman, emotional and dramatic, says softly, \"That's it... Dad's lost it. And we've lost Dad.\"The man exhales, slightly annoyed: \"Stop being so dramatic, Jess.\"A beat. He glances aside, then mutters defensively, \"He's just having fun.\"The camera slowly pans right, revealing the grandfather in the garden wearing enormous butterfly wings, waving his arms in the air like he's trying to take off.He shouts, \"Wheeeew!\" as he flaps his wings with full commitment.The woman covers her face, on the verge of tears. The tone is deadpan, absurd, and quietly tragic.",
+      "resolution": "1280x720",
+      "flow_shift": 5.0,
+      "sliding_window_size": 481,
+      "sliding_window_overlap": 17,
+      "denoising_strength": 1.0,
+      "masking_strength": 0,
+      "audio_prompt_type": "",
+      "perturbation_layers": [
+        28
+      ],
+      "guidance_phases": 2,
+      "audio_scale": 1.0,
+      "num_inference_steps": 8,
+      "video_length": 241,
+      "alt_prompt": "",
+      "multi_prompts_gen_type": "PG",
+      "postprocess_audio": "",
+      "replace_voice_method": "",
+      "replace_voice_sample": null,
+      "replace_voice_sample2": null,
+      "video_prompt_type": "",
+      "image_prompt_type": "",
+      "model_type": "ltx2_22B_distilled"
+    }
+  }
+}

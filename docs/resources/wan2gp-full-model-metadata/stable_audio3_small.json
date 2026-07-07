@@ -1,0 +1,469 @@
+{
+  "stable_audio3_small": {
+    "model_type": "stable_audio3_small",
+    "name": "Music Stable Audio 3 Small Music",
+    "model_def": {
+      "group": "music",
+      "audio_only": true,
+      "image_outputs": false,
+      "sliding_window": false,
+      "guidance_max_phases": 1,
+      "image_prompt_types_allowed": "",
+      "supports_early_stop": true,
+      "profiles_dir": [
+        "stable_audio3_small"
+      ],
+      "text_encoder_URLs": [
+        "https://huggingface.co/DeepBeepMeep/TTS/resolve/main/t5gemma-b-b-ul2/t5gemma-b-b-ul2_bf16.safetensors"
+      ],
+      "text_encoder_folder": "t5gemma-b-b-ul2",
+      "text_prompt_enhancer_instructions": "You are a prompt engineer for a music generation model focused on instrumental tracks, loops, grooves, and song-like ideas up to 120 seconds.\n\nRewrite the user's idea as one dense natural-language audio prompt optimized for music. Emphasize genre or style, tempo or BPM feel, core instruments, rhythm section, bass, harmony or melody, production texture, mood, and a simple musical structure when useful. Favor playable musical details over cinematic sound effects. Avoid one-shot sound design, foley catalogs, ambience-only scenes, and generic quality words unless the user asks for them.\n\nOutput only the rewritten prompt. Do not include explanations, lists, markdown, quotes, labels, or negative prompts. Preserve any explicit duration, BPM, genre, instrument, location, perspective, or source-audio instruction from the user. If the user asks to edit, inpaint, or continue source audio, describe the desired target sound and transformation while preserving any requested source identity. Do not add vocals, lyrics, speech, or dialogue unless the user explicitly asks for them.",
+      "text_prompt_enhancer_max_tokens": 512,
+      "prompt_enhancer_button_label": "Write Music Prompt",
+      "prompt_enhancer_choices_allowed": [
+        "T"
+      ],
+      "inference_steps": true,
+      "sample_solvers": [
+        [
+          "PingPong",
+          "pingpong"
+        ],
+        [
+          "Euler",
+          "euler"
+        ],
+        [
+          "DPM++",
+          "dpmpp"
+        ],
+        [
+          "RK4",
+          "rk4"
+        ]
+      ],
+      "temperature": false,
+      "any_audio_prompt": true,
+      "audio_prompt_choices": true,
+      "enabled_audio_lora": true,
+      "audio_guide_label": "Source audio",
+      "audio_scale_name": "Edit Noise Level",
+      "audio_prompt_type_sources": {
+        "selection": [
+          "",
+          "AE",
+          "AI",
+          "AC"
+        ],
+        "labels": {
+          "": "Text to audio",
+          "AE": "Audio to audio edit",
+          "AI": "Inpaint source audio",
+          "AC": "Continue source audio"
+        },
+        "default": "",
+        "label": "Source Audio",
+        "letters_filter": "AEIC"
+      },
+      "duration_slider": {
+        "label": "Duration (seconds)",
+        "min": 1,
+        "max": 120,
+        "increment": 1,
+        "default": 30
+      },
+      "custom_settings": [
+        {
+          "id": "inpaint_start_seconds",
+          "label": "Inpaint Start Seconds",
+          "name": "Inpaint Start Seconds",
+          "type": "float",
+          "default": 0.0,
+          "min": 0.0,
+          "inc": 0.1,
+          "max": 120.0
+        },
+        {
+          "id": "inpaint_end_seconds",
+          "label": "Inpaint End Seconds",
+          "name": "Inpaint End Seconds",
+          "type": "float",
+          "default": 10.0,
+          "min": 0.0,
+          "inc": 0.1,
+          "max": 120.0
+        }
+      ],
+      "compile": false,
+      "name": "Music Stable Audio 3 Small Music",
+      "architecture": "stable_audio3_small",
+      "description": "Lightweight music-focused model for instrumentals, loops, grooves, and song-like ideas up to 120 seconds. Best when the prompt describes genre, tempo, instruments, mood, and musical structure.",
+      "URLs": [
+        "https://huggingface.co/DeepBeepMeep/TTS/resolve/main/stable_audio3_small_music_bf16.safetensors"
+      ],
+      "stable_audio3_model_id": "small-music",
+      "path": "defaults\\stable_audio3_small.json",
+      "_profile_roots": [
+        "profiles"
+      ],
+      "metadata": {
+        "model_type": "stable_audio3_small",
+        "family": "music",
+        "family_label": "Music",
+        "base_model_type": "stable_audio3_small",
+        "finetune": false,
+        "main_output": [
+          "audio"
+        ],
+        "outputs": [
+          "audio"
+        ],
+        "inputs": [
+          "text",
+          "audio"
+        ],
+        "media_inputs": {
+          "image": {
+            "start": false,
+            "end": false,
+            "reference": false,
+            "single_reference": false,
+            "multiple_references": false,
+            "background": false,
+            "injected_frames": false,
+            "control": false,
+            "mask": false
+          },
+          "video": {
+            "continue": false,
+            "last": false,
+            "control": false,
+            "mask": false
+          },
+          "audio": {
+            "prompt": true,
+            "output": true
+          }
+        },
+        "capabilities": {
+          "text_to_video": false,
+          "image_to_video": false,
+          "video_to_video": false,
+          "text_to_image": false,
+          "image_to_image": false,
+          "text_to_audio": true,
+          "audio_to_audio": true,
+          "audio_to_video": false,
+          "audio_output": true,
+          "inpainting": false,
+          "outpainting": false,
+          "reference_images": false,
+          "background_image": false,
+          "injected_frames": false,
+          "control_image": false,
+          "control_video": false,
+          "video_continuation": false,
+          "sliding_window": false,
+          "lora": true
+        },
+        "setting_values": {
+          "image_prompt_type": {
+            "allowed": "",
+            "choices": [
+              {
+                "label": "Text/new generation",
+                "value": ""
+              }
+            ]
+          },
+          "video_prompt_type": {
+            "guide_preprocessing": null,
+            "mask_preprocessing": null,
+            "guide_custom_choices": null,
+            "image_ref_choices": null,
+            "custom_video_selection": null,
+            "forced": ""
+          },
+          "audio_prompt_type": {
+            "sources": {
+              "default": "",
+              "label": "Source Audio",
+              "letters_filter": "AEIC",
+              "choices": [
+                {
+                  "label": "Text to audio",
+                  "value": ""
+                },
+                {
+                  "label": "Audio to audio edit",
+                  "value": "AE"
+                },
+                {
+                  "label": "Inpaint source audio",
+                  "value": "AI"
+                },
+                {
+                  "label": "Continue source audio",
+                  "value": "AC"
+                }
+              ]
+            },
+            "custom_option": null
+          },
+          "model_mode": null,
+          "sample_solver": {
+            "choices": [
+              {
+                "label": "PingPong",
+                "value": "pingpong"
+              },
+              {
+                "label": "Euler",
+                "value": "euler"
+              },
+              {
+                "label": "DPM++",
+                "value": "dpmpp"
+              },
+              {
+                "label": "RK4",
+                "value": "rk4"
+              }
+            ]
+          },
+          "prompt_enhancer": null
+        }
+      },
+      "settings": {
+        "prompt": "Lo-fi house loop with warm tape saturation, mellow bass, soft vinyl crackle, and a relaxed 120 BPM groove.",
+        "audio_prompt_type": "",
+        "duration_seconds": 30,
+        "num_inference_steps": 8,
+        "guidance_scale": 1.0,
+        "audio_scale": 0.9,
+        "negative_prompt": "poor quality, distorted, noisy",
+        "sample_solver": "pingpong"
+      },
+      "model_type": "stable_audio3_small"
+    },
+    "metadata": {
+      "model_type": "stable_audio3_small",
+      "family": "music",
+      "family_label": "Music",
+      "base_model_type": "stable_audio3_small",
+      "finetune": false,
+      "main_output": [
+        "audio"
+      ],
+      "outputs": [
+        "audio"
+      ],
+      "inputs": [
+        "text",
+        "audio"
+      ],
+      "media_inputs": {
+        "image": {
+          "start": false,
+          "end": false,
+          "reference": false,
+          "single_reference": false,
+          "multiple_references": false,
+          "background": false,
+          "injected_frames": false,
+          "control": false,
+          "mask": false
+        },
+        "video": {
+          "continue": false,
+          "last": false,
+          "control": false,
+          "mask": false
+        },
+        "audio": {
+          "prompt": true,
+          "output": true
+        }
+      },
+      "capabilities": {
+        "text_to_video": false,
+        "image_to_video": false,
+        "video_to_video": false,
+        "text_to_image": false,
+        "image_to_image": false,
+        "text_to_audio": true,
+        "audio_to_audio": true,
+        "audio_to_video": false,
+        "audio_output": true,
+        "inpainting": false,
+        "outpainting": false,
+        "reference_images": false,
+        "background_image": false,
+        "injected_frames": false,
+        "control_image": false,
+        "control_video": false,
+        "video_continuation": false,
+        "sliding_window": false,
+        "lora": true
+      },
+      "setting_values": {
+        "image_prompt_type": {
+          "allowed": "",
+          "choices": [
+            {
+              "label": "Text/new generation",
+              "value": ""
+            }
+          ]
+        },
+        "video_prompt_type": {
+          "guide_preprocessing": null,
+          "mask_preprocessing": null,
+          "guide_custom_choices": null,
+          "image_ref_choices": null,
+          "custom_video_selection": null,
+          "forced": ""
+        },
+        "audio_prompt_type": {
+          "sources": {
+            "default": "",
+            "label": "Source Audio",
+            "letters_filter": "AEIC",
+            "choices": [
+              {
+                "label": "Text to audio",
+                "value": ""
+              },
+              {
+                "label": "Audio to audio edit",
+                "value": "AE"
+              },
+              {
+                "label": "Inpaint source audio",
+                "value": "AI"
+              },
+              {
+                "label": "Continue source audio",
+                "value": "AC"
+              }
+            ]
+          },
+          "custom_option": null
+        },
+        "model_mode": null,
+        "sample_solver": {
+          "choices": [
+            {
+              "label": "PingPong",
+              "value": "pingpong"
+            },
+            {
+              "label": "Euler",
+              "value": "euler"
+            },
+            {
+              "label": "DPM++",
+              "value": "dpmpp"
+            },
+            {
+              "label": "RK4",
+              "value": "rk4"
+            }
+          ]
+        },
+        "prompt_enhancer": null
+      }
+    },
+    "setting_values": {
+      "image_prompt_type": {
+        "allowed": "",
+        "choices": [
+          {
+            "label": "Text/new generation",
+            "value": ""
+          }
+        ]
+      },
+      "video_prompt_type": {
+        "guide_preprocessing": null,
+        "mask_preprocessing": null,
+        "guide_custom_choices": null,
+        "image_ref_choices": null,
+        "custom_video_selection": null,
+        "forced": ""
+      },
+      "audio_prompt_type": {
+        "sources": {
+          "default": "",
+          "label": "Source Audio",
+          "letters_filter": "AEIC",
+          "choices": [
+            {
+              "label": "Text to audio",
+              "value": ""
+            },
+            {
+              "label": "Audio to audio edit",
+              "value": "AE"
+            },
+            {
+              "label": "Inpaint source audio",
+              "value": "AI"
+            },
+            {
+              "label": "Continue source audio",
+              "value": "AC"
+            }
+          ]
+        },
+        "custom_option": null
+      },
+      "model_mode": null,
+      "sample_solver": {
+        "choices": [
+          {
+            "label": "PingPong",
+            "value": "pingpong"
+          },
+          {
+            "label": "Euler",
+            "value": "euler"
+          },
+          {
+            "label": "DPM++",
+            "value": "dpmpp"
+          },
+          {
+            "label": "RK4",
+            "value": "rk4"
+          }
+        ]
+      },
+      "prompt_enhancer": null
+    },
+    "default_settings": {
+      "settings_version": 2.66,
+      "prompt": "Lo-fi house loop with warm tape saturation, mellow bass, soft vinyl crackle, and a relaxed 120 BPM groove.",
+      "resolution": "832x480",
+      "flow_shift": 5.0,
+      "audio_prompt_type": "",
+      "duration_seconds": 30,
+      "repeat_generation": 1,
+      "video_length": 0,
+      "num_inference_steps": 8,
+      "guidance_scale": 1.0,
+      "negative_prompt": "poor quality, distorted, noisy",
+      "sample_solver": "pingpong",
+      "audio_scale": 0.9,
+      "multi_prompts_gen_type": "FG",
+      "alt_prompt": "",
+      "postprocess_audio": "",
+      "replace_voice_method": "",
+      "replace_voice_sample": null,
+      "replace_voice_sample2": null,
+      "video_prompt_type": "",
+      "image_prompt_type": "",
+      "model_type": "stable_audio3_small"
+    }
+  }
+}

@@ -1,11 +1,5 @@
 import { Select } from './ui/select'
 import type { GenerationMode } from './ModeTabs'
-import {
-  FORCED_API_VIDEO_FPS,
-  FORCED_API_VIDEO_RESOLUTIONS,
-  getAllowedForcedApiDurations,
-  sanitizeForcedApiVideoSettings,
-} from '../lib/api-video-options'
 
 export interface GenerationSettings {
   model: 'fast' | 'pro'
@@ -15,11 +9,18 @@ export interface GenerationSettings {
   audio: boolean
   cameraMotion: string
   aspectRatio?: string
+  videoProfileId?: string
   // Image-specific settings
   imageResolution: string
   imageAspectRatio: string
   imageSteps: number
   variations?: number  // Number of image variations to generate
+  imageInputRole?: string
+  // Phase 4 curated profile id. When set, the backend resolves the
+  // profile, validates tier/aspect, and overrides width/height with the
+  // curated exact WxH. Raw width/height still accepted for backwards
+  // compatibility.
+  imageProfileId?: string
 }
 
 interface SettingsPanelProps {
@@ -27,7 +28,6 @@ interface SettingsPanelProps {
   onSettingsChange: (settings: GenerationSettings) => void
   disabled?: boolean
   mode?: GenerationMode
-  forceApiGenerations?: boolean
   hasAudio?: boolean
 }
 
@@ -36,7 +36,6 @@ export function SettingsPanel({
   onSettingsChange,
   disabled,
   mode = 'text-to-video',
-  forceApiGenerations = false,
   hasAudio = false,
 }: SettingsPanelProps) {
   const isImageMode = mode === 'text-to-image'
@@ -44,13 +43,9 @@ export function SettingsPanel({
 
   const handleChange = (key: keyof GenerationSettings, value: string | number | boolean) => {
     const nextSettings = { ...settings, [key]: value } as GenerationSettings
-    if (forceApiGenerations && !isImageMode) {
-      onSettingsChange(sanitizeForcedApiVideoSettings(nextSettings, { hasAudio }))
-      return
-    }
 
     // Clamp duration when resolution changes for local generation
-    if (key === 'videoResolution' && !forceApiGenerations) {
+    if (key === 'videoResolution') {
       const maxDur = LOCAL_MAX_DURATION[value as string] ?? 20
       if (nextSettings.duration > maxDur) {
         nextSettings.duration = maxDur
@@ -61,13 +56,9 @@ export function SettingsPanel({
   }
 
   const localMaxDuration = LOCAL_MAX_DURATION[settings.videoResolution] ?? 20
-  const durationOptions = forceApiGenerations
-    ? [...getAllowedForcedApiDurations(settings.model, settings.videoResolution, settings.fps)]
-    : [5, 6, 8, 10, 20].filter(d => d <= localMaxDuration)
-  const resolutionOptions = forceApiGenerations
-    ? (hasAudio ? ['1080p'] : [...FORCED_API_VIDEO_RESOLUTIONS])
-    : ['1080p', '720p', '540p']
-  const fpsOptions = forceApiGenerations ? [...FORCED_API_VIDEO_FPS] : [24, 25, 50]
+  const durationOptions = [5, 6, 8, 10, 20].filter(d => d <= localMaxDuration)
+  const resolutionOptions = ['1080p', '720p', '540p']
+  const fpsOptions = [24, 25, 50]
 
   // Image mode settings
   if (isImageMode) {
@@ -108,26 +99,14 @@ export function SettingsPanel({
   return (
     <div className="space-y-4">
       {/* Model Selection */}
-      {!forceApiGenerations ? (
-        <Select
-          label="Model"
-          value={settings.model}
-          onChange={(e) => handleChange('model', e.target.value)}
-          disabled={disabled}
-        >
-          <option value="fast">LTX 2.3 Fast</option>
-        </Select>
-      ) : (
-        <Select
-          label="Model"
-          value={settings.model}
-          onChange={(e) => handleChange('model', e.target.value)}
-          disabled={disabled}
-        >
-          <option value="fast" disabled={hasAudio}>LTX-2.3 Fast (API)</option>
-          <option value="pro">LTX-2.3 Pro (API)</option>
-        </Select>
-      )}
+      <Select
+        label="Model"
+        value={settings.model}
+        onChange={(e) => handleChange('model', e.target.value)}
+        disabled={disabled}
+      >
+        <option value="fast">LTX 2.3 Fast</option>
+      </Select>
 
       {/* Duration, Resolution, FPS Row */}
       <div className="grid grid-cols-3 gap-3">

@@ -1,0 +1,410 @@
+{
+  "magi_human_distill": {
+    "model_type": "magi_human_distill",
+    "name": "Magi Human Distill 15B",
+    "model_def": {
+      "returns_audio": true,
+      "any_audio_prompt": true,
+      "audio_prompt_choices": true,
+      "audio_guide_label": "Driving Audio",
+      "audio_guide_window_slicing": true,
+      "audio_prompt_type_sources": {
+        "selection": [
+          "",
+          "A"
+        ],
+        "labels": {
+          "": "Generate Video & Soundtrack based on Text Prompt",
+          "A": "Generate Video based on Soundtrack and Text Prompt"
+        },
+        "show_label": false
+      },
+      "multimedia_generation": true,
+      "sample_solvers": [
+        [
+          "UniPC",
+          "unipc"
+        ]
+      ],
+      "audio_guidance": false,
+      "guidance_max_phases": 1,
+      "lock_inference_steps": true,
+      "no_negative_prompt": true,
+      "profiles_dir": [
+        "magi_human_distill"
+      ],
+      "group": "magi_human",
+      "fps": 25,
+      "frames_minimum": 26,
+      "latent_size": 4,
+      "frames_steps": 4,
+      "sliding_window": true,
+      "sliding_window_defaults": {
+        "overlap_min": 1,
+        "overlap_max": 1,
+        "overlap_step": 1,
+        "overlap_default": 1,
+        "window_min": 25,
+        "window_max": 251,
+        "window_step": 4,
+        "window_default": 101
+      },
+      "image_prompt_types_allowed": "SVL",
+      "multiple_images_as_text_prompts": true,
+      "multiple_submodels": false,
+      "text_encoder_folder": "t5gemma-9b-9b-ul2",
+      "text_encoder_URLs": [
+        "https://huggingface.co/DeepBeepMeep/MagiHuman/resolve/main/t5gemma-9b-9b-ul2/t5gemma-9b-9b-ul2_bf16.safetensors",
+        "https://huggingface.co/DeepBeepMeep/MagiHuman/resolve/main/t5gemma-9b-9b-ul2/t5gemma-9b-9b-ul2_quanto_bf16_int8.safetensors"
+      ],
+      "text_prompt_enhancer_instructions": "You rewrite user prompts for Magi Human, a talking-head avatar video model guided by a first-frame image. Output only one enhanced prompt, with no explanations or markdown fences. Keep the character consistent with the image, keep the torso and global position stationary, keep the camera static, and keep the environment mostly rigid. Downscale large actions into facial, head, shoulder, and upper-body micro-movements. Prioritize expression detail, lip sync, and clear vocal delivery.\n\nWrite the first paragraph in English, 150-200 words, as a chronological audiovisual description. Include the character's appearance, framing, lighting, expression, head or shoulder micro-movements, speech timing, and any non-verbal sounds. Put spoken words in double quotes at the moment they occur. If the user supplied dialogue, preserve its wording and language exactly. If dialogue is clearly implied but not written, invent one short line under 20 words that fits the scene.\n\nIf dialogue exists, add a second paragraph in exactly this syntax:\nDialogue:\n<five-word character description, language>: \"dialogue\"\nUse the celebrity's name instead of the description when applicable. If there are multiple lines, put each on a new line under Dialogue using the same syntax.\n\nAlways end with exactly:\nBackground Sound:\n<description>\nIf no background sound is requested, write:\nBackground Sound:\n<No prominent background sound>\n\nDo not mention camera moves, scene cuts, large limb motion, or moving background elements. If hands are not visible in the first frame, do not invent hand actions. Keep the style clinical, concrete, and non-metaphorical.",
+      "video_prompt_enhancer_instructions": "You rewrite user prompts for Magi Human, a talking-head avatar video model guided by a first-frame image. Output only one enhanced prompt, with no explanations or markdown fences. Keep the character consistent with the image, keep the torso and global position stationary, keep the camera static, and keep the environment mostly rigid. Downscale large actions into facial, head, shoulder, and upper-body micro-movements. Prioritize expression detail, lip sync, and clear vocal delivery.\n\nWrite the first paragraph in English, 150-200 words, as a chronological audiovisual description. Include the character's appearance, framing, lighting, expression, head or shoulder micro-movements, speech timing, and any non-verbal sounds. Put spoken words in double quotes at the moment they occur. If the user supplied dialogue, preserve its wording and language exactly. If dialogue is clearly implied but not written, invent one short line under 20 words that fits the scene.\n\nIf dialogue exists, add a second paragraph in exactly this syntax:\nDialogue:\n<five-word character description, language>: \"dialogue\"\nUse the celebrity's name instead of the description when applicable. If there are multiple lines, put each on a new line under Dialogue using the same syntax.\n\nAlways end with exactly:\nBackground Sound:\n<description>\nIf no background sound is requested, write:\nBackground Sound:\n<No prominent background sound>\n\nDo not mention camera moves, scene cuts, large limb motion, or moving background elements. If hands are not visible in the first frame, do not invent hand actions. Keep the style clinical, concrete, and non-metaphorical.",
+      "config_file": "models/magi_human/configs/magi_human_distill.json",
+      "vae_block_size": 32,
+      "visible_phases": 0,
+      "name": "Magi Human Distill 15B",
+      "architecture": "magi_human_distill",
+      "description": "A fast audio-video talking head model that takes a start image and generates synchronized speech and motion. Optionally use a driving audio clip instead of generating audio from the prompt. Best results will be obtained at 256p. For higher res you must use an Upsampler.",
+      "URLs": [
+        "https://huggingface.co/DeepBeepMeep/MagiHuman/resolve/main/magi_human_distill_bf16.safetensors",
+        "https://huggingface.co/DeepBeepMeep/MagiHuman/resolve/main/magi_human_distill_quanto_bf16_int8.safetensors"
+      ],
+      "path": "defaults\\magi_human_distill.json",
+      "_profile_roots": [
+        "profiles"
+      ],
+      "metadata": {
+        "model_type": "magi_human_distill",
+        "family": "magi_human",
+        "family_label": "Magi Human",
+        "base_model_type": "magi_human_distill",
+        "finetune": false,
+        "main_output": [
+          "video"
+        ],
+        "outputs": [
+          "video",
+          "audio"
+        ],
+        "inputs": [
+          "text",
+          "audio",
+          "image",
+          "video"
+        ],
+        "media_inputs": {
+          "image": {
+            "start": true,
+            "end": false,
+            "reference": false,
+            "single_reference": false,
+            "multiple_references": false,
+            "background": false,
+            "injected_frames": false,
+            "control": false,
+            "mask": false
+          },
+          "video": {
+            "continue": true,
+            "last": true,
+            "control": false,
+            "mask": false
+          },
+          "audio": {
+            "prompt": true,
+            "output": true
+          }
+        },
+        "capabilities": {
+          "text_to_video": true,
+          "image_to_video": true,
+          "video_to_video": true,
+          "text_to_image": false,
+          "image_to_image": false,
+          "text_to_audio": false,
+          "audio_to_audio": false,
+          "audio_to_video": true,
+          "audio_output": true,
+          "inpainting": false,
+          "outpainting": false,
+          "reference_images": false,
+          "background_image": false,
+          "injected_frames": false,
+          "control_image": false,
+          "control_video": false,
+          "video_continuation": true,
+          "sliding_window": true,
+          "lora": true
+        },
+        "setting_values": {
+          "image_prompt_type": {
+            "allowed": "SVL",
+            "choices": [
+              {
+                "label": "Text/new generation",
+                "value": ""
+              },
+              {
+                "label": "Start image",
+                "value": "S"
+              },
+              {
+                "label": "Continue from source video",
+                "value": "V"
+              },
+              {
+                "label": "Continue from last generated video",
+                "value": "L"
+              }
+            ]
+          },
+          "video_prompt_type": {
+            "guide_preprocessing": null,
+            "mask_preprocessing": null,
+            "guide_custom_choices": null,
+            "image_ref_choices": null,
+            "custom_video_selection": null,
+            "forced": ""
+          },
+          "audio_prompt_type": {
+            "sources": {
+              "show_label": false,
+              "choices": [
+                {
+                  "label": "Generate Video & Soundtrack based on Text Prompt",
+                  "value": ""
+                },
+                {
+                  "label": "Generate Video based on Soundtrack and Text Prompt",
+                  "value": "A"
+                }
+              ]
+            },
+            "custom_option": null
+          },
+          "model_mode": null,
+          "sample_solver": {
+            "choices": [
+              {
+                "label": "UniPC",
+                "value": "unipc"
+              }
+            ]
+          },
+          "prompt_enhancer": null
+        }
+      },
+      "settings": {
+        "num_inference_steps": 8,
+        "guidance_scale": 1.0,
+        "video_length": 101,
+        "resolution": "448x256",
+        "image_prompt_type": "S",
+        "prompt": "A calm woman with short dark hair looks into the camera and speaks clearly in English about how small daily habits can improve confidence. Her expression stays warm and natural, with subtle head movement, realistic blinking, and clean lip sync. Background Sound: <No prominent background sound>"
+      },
+      "model_type": "magi_human_distill"
+    },
+    "metadata": {
+      "model_type": "magi_human_distill",
+      "family": "magi_human",
+      "family_label": "Magi Human",
+      "base_model_type": "magi_human_distill",
+      "finetune": false,
+      "main_output": [
+        "video"
+      ],
+      "outputs": [
+        "video",
+        "audio"
+      ],
+      "inputs": [
+        "text",
+        "audio",
+        "image",
+        "video"
+      ],
+      "media_inputs": {
+        "image": {
+          "start": true,
+          "end": false,
+          "reference": false,
+          "single_reference": false,
+          "multiple_references": false,
+          "background": false,
+          "injected_frames": false,
+          "control": false,
+          "mask": false
+        },
+        "video": {
+          "continue": true,
+          "last": true,
+          "control": false,
+          "mask": false
+        },
+        "audio": {
+          "prompt": true,
+          "output": true
+        }
+      },
+      "capabilities": {
+        "text_to_video": true,
+        "image_to_video": true,
+        "video_to_video": true,
+        "text_to_image": false,
+        "image_to_image": false,
+        "text_to_audio": false,
+        "audio_to_audio": false,
+        "audio_to_video": true,
+        "audio_output": true,
+        "inpainting": false,
+        "outpainting": false,
+        "reference_images": false,
+        "background_image": false,
+        "injected_frames": false,
+        "control_image": false,
+        "control_video": false,
+        "video_continuation": true,
+        "sliding_window": true,
+        "lora": true
+      },
+      "setting_values": {
+        "image_prompt_type": {
+          "allowed": "SVL",
+          "choices": [
+            {
+              "label": "Text/new generation",
+              "value": ""
+            },
+            {
+              "label": "Start image",
+              "value": "S"
+            },
+            {
+              "label": "Continue from source video",
+              "value": "V"
+            },
+            {
+              "label": "Continue from last generated video",
+              "value": "L"
+            }
+          ]
+        },
+        "video_prompt_type": {
+          "guide_preprocessing": null,
+          "mask_preprocessing": null,
+          "guide_custom_choices": null,
+          "image_ref_choices": null,
+          "custom_video_selection": null,
+          "forced": ""
+        },
+        "audio_prompt_type": {
+          "sources": {
+            "show_label": false,
+            "choices": [
+              {
+                "label": "Generate Video & Soundtrack based on Text Prompt",
+                "value": ""
+              },
+              {
+                "label": "Generate Video based on Soundtrack and Text Prompt",
+                "value": "A"
+              }
+            ]
+          },
+          "custom_option": null
+        },
+        "model_mode": null,
+        "sample_solver": {
+          "choices": [
+            {
+              "label": "UniPC",
+              "value": "unipc"
+            }
+          ]
+        },
+        "prompt_enhancer": null
+      }
+    },
+    "setting_values": {
+      "image_prompt_type": {
+        "allowed": "SVL",
+        "choices": [
+          {
+            "label": "Text/new generation",
+            "value": ""
+          },
+          {
+            "label": "Start image",
+            "value": "S"
+          },
+          {
+            "label": "Continue from source video",
+            "value": "V"
+          },
+          {
+            "label": "Continue from last generated video",
+            "value": "L"
+          }
+        ]
+      },
+      "video_prompt_type": {
+        "guide_preprocessing": null,
+        "mask_preprocessing": null,
+        "guide_custom_choices": null,
+        "image_ref_choices": null,
+        "custom_video_selection": null,
+        "forced": ""
+      },
+      "audio_prompt_type": {
+        "sources": {
+          "show_label": false,
+          "choices": [
+            {
+              "label": "Generate Video & Soundtrack based on Text Prompt",
+              "value": ""
+            },
+            {
+              "label": "Generate Video based on Soundtrack and Text Prompt",
+              "value": "A"
+            }
+          ]
+        },
+        "custom_option": null
+      },
+      "model_mode": null,
+      "sample_solver": {
+        "choices": [
+          {
+            "label": "UniPC",
+            "value": "unipc"
+          }
+        ]
+      },
+      "prompt_enhancer": null
+    },
+    "default_settings": {
+      "settings_version": 2.66,
+      "prompt": "A calm woman with short dark hair looks into the camera and speaks clearly in English about how small daily habits can improve confidence. Her expression stays warm and natural, with subtle head movement, realistic blinking, and clean lip sync. Background Sound: <No prominent background sound>",
+      "resolution": "448x256",
+      "flow_shift": 5.0,
+      "sample_solver": "unipc",
+      "multi_prompts_gen_type": "FG",
+      "image_prompt_type": "S",
+      "audio_prompt_type": "",
+      "video_length": 101,
+      "sliding_window_size": 101,
+      "sliding_window_overlap": 1,
+      "sliding_window_discard_last_frames": 0,
+      "guidance_scale": 1.0,
+      "audio_guidance_scale": 1.0,
+      "num_inference_steps": 8,
+      "alt_prompt": "",
+      "postprocess_audio": "",
+      "replace_voice_method": "",
+      "replace_voice_sample": null,
+      "replace_voice_sample2": null,
+      "video_prompt_type": "",
+      "model_type": "magi_human_distill"
+    }
+  }
+}

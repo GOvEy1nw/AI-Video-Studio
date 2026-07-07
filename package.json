@@ -1,10 +1,10 @@
 {
-  "name": "ltx-desktop",
-  "version": "1.0.1",
-  "description": "LTX-2 Video Generation - Desktop App",
+  "name": "aivs",
+  "version": "0.1.0",
+  "description": "AiVS — AI Video Studio. Local-first creative studio powered by WanGP.",
   "type": "module",
   "main": "dist-electron/main.js",
-  "author": "Lightricks",
+  "author": "AI Video Studio",
   "license": "Apache-2.0",
   "private": true,
   "packageManager": "pnpm@10.30.3",
@@ -27,8 +27,8 @@
     "prepare:python:mac": "bash scripts/prepare-python.sh",
     "prepare:python:win": "powershell -ExecutionPolicy Bypass -File scripts/prepare-python.ps1",
     "build:frontend": "vite build",
-    "start:unpacked:mac": "open release/mac-arm64/LTX\\ Desktop.app",
-    "start:unpacked:win": "powershell -Command \"& '.\\release\\win-unpacked\\LTX Desktop.exe'\""
+    "start:unpacked:mac": "open release/mac-arm64/AiVS.app",
+    "start:unpacked:win": "powershell -Command \"& '.\\release\\win-unpacked\\AiVS.exe'\""
   },
   "dependencies": {
     "class-variance-authority": "^0.7.0",

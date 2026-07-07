@@ -143,9 +143,9 @@ function k(key: string, mods?: { ctrl?: boolean; shift?: boolean; alt?: boolean;
 }
 
 // ═══════════════════════════════════════════
-// ── PRESET: LTX Default ──
+// ── PRESET: AiVS Default ──
 // ═══════════════════════════════════════════
-export const LTX_DEFAULT_LAYOUT: KeyboardLayout = {
+export const AIVS_DEFAULT_LAYOUT: KeyboardLayout = {
   // Tools
   'tool.select':       [k('v')],
   'tool.blade':        [k('b')],
@@ -361,10 +361,10 @@ export const AVID_LAYOUT: KeyboardLayout = {
 // ── All Built-in Presets ──
 export const BUILT_IN_PRESETS: KeyboardPreset[] = [
   {
-    id: 'ltx-default',
-    name: 'LTX Default',
-    description: 'Default keyboard layout for LTX Desktop',
-    layout: LTX_DEFAULT_LAYOUT,
+    id: 'aivs-default',
+    name: 'AiVS Default',
+    description: 'Default keyboard layout for AiVS',
+    layout: AIVS_DEFAULT_LAYOUT,
     builtIn: true,
   },
   {

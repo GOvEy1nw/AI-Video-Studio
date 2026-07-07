@@ -1,0 +1,480 @@
+{
+  "kiwi_edit_instruct_only": {
+    "model_type": "kiwi_edit_instruct_only",
+    "name": "Kiwi Edit Instruct-Only 5B",
+    "model_def": {
+      "i2v_class": false,
+      "t2v_class": false,
+      "multitalk_class": false,
+      "standin_class": false,
+      "lynx_class": false,
+      "alpha_class": false,
+      "wan_5B_class": true,
+      "vace_class": false,
+      "bernini_class": false,
+      "scail2": false,
+      "color_correction": true,
+      "svi2pro": false,
+      "i2v_2_2": false,
+      "any_kiwi_source": true,
+      "any_kiwi_ref": false,
+      "kiwi_ref_embedder": false,
+      "kiwi_ref_pad_first": false,
+      "kiwi_mllm_repo_id": "DeepBeepMeep/Wan2.2",
+      "kiwi_mllm_folder": "kiwi_mllm_encoder_instruct_only",
+      "kiwi_text_encoder_file": "instruct_only_mllm_encoder_bf16.safetensors",
+      "kiwi_source_embedder_file": "wan2.2_kiwi_edit_5B_instruct_only_source_embedder.safetensors",
+      "kiwi_ref_embedder_file": null,
+      "config_file": "models/wan/configs/kiwi_edit_instruct_only.json",
+      "kiwi_variant": "instruct_only",
+      "kiwi_text_encoder_folder": "kiwi_mllm_encoder_instruct_only",
+      "kiwi_text_encoder_quanto_file": "instruct_only_mllm_encoder_quanto_bf16_int8.safetensors",
+      "kiwi_source_embedder_download_path": "kiwi_embedders\\wan2.2_kiwi_edit_5B_instruct_only_source_embedder\\kiwi_mllm_encoder_instruct_only\\source_embedder\\diffusion_pytorch_model.safetensors",
+      "text_encoder_URLs": [
+        "https://huggingface.co/DeepBeepMeep/Wan2.2/resolve/main/kiwi_mllm_encoder_instruct_only/instruct_only_mllm_encoder_bf16.safetensors",
+        "https://huggingface.co/DeepBeepMeep/Wan2.2/resolve/main/kiwi_mllm_encoder_instruct_only/instruct_only_mllm_encoder_quanto_bf16_int8.safetensors"
+      ],
+      "text_encoder_folder": "kiwi_mllm_encoder_instruct_only",
+      "vae_block_size": 32,
+      "profiles_dir": [
+        "wan_2_2_5B"
+      ],
+      "group": "wan2_2",
+      "fps": 24,
+      "frames_minimum": 5,
+      "frames_steps": 4,
+      "sliding_window": true,
+      "multiple_submodels": false,
+      "guidance_max_phases": 0,
+      "perturbation": true,
+      "flow_shift": true,
+      "cfg_zero": true,
+      "cfg_star": true,
+      "adaptive_projected_guidance": true,
+      "tea_cache": false,
+      "mag_cache": true,
+      "keep_frames_video_guide_not_supported": true,
+      "sample_solvers": [
+        [
+          "unipc",
+          "unipc"
+        ],
+        [
+          "euler",
+          "euler"
+        ],
+        [
+          "dpm++",
+          "dpm++"
+        ],
+        [
+          "flowmatch causvid",
+          "causvid"
+        ],
+        [
+          "lcm + ltx",
+          "lcm"
+        ]
+      ],
+      "sub_parallel_windows": false,
+      "self_refiner": true,
+      "guide_custom_choices": {
+        "choices": [
+          [
+            "Control",
+            "UV"
+          ]
+        ],
+        "default": "UV",
+        "letters_filter": "UVI",
+        "label": "Type of Process",
+        "scale": 3,
+        "visible": false,
+        "show_label": false
+      },
+      "no_background_removal": true,
+      "fit_into_canvas_image_refs": 0,
+      "image_prompt_types_allowed": "TVL",
+      "NAG": false,
+      "sliding_window_defaults": {
+        "overlap_min": 1,
+        "overlap_max": 1,
+        "overlap_step": 0,
+        "overlap_default": 1
+      },
+      "name": "Kiwi Edit Instruct-Only 5B",
+      "architecture": "kiwi_edit",
+      "description": "Kiwi-Edit expects Prompt instructionss to Edit an existing video (for instance adding or removing objects or persons).",
+      "URLs": [
+        "https://huggingface.co/DeepBeepMeep/Wan2.2/resolve/main/wan2.2_kiwi_edit_5B_instruct_only_mbf16.safetensors",
+        "https://huggingface.co/DeepBeepMeep/Wan2.2/resolve/main/wan2.2_kiwi_edit_5B_instruct_only_quanto_mbf16_int8.safetensors"
+      ],
+      "path": "defaults\\kiwi_edit_instruct_only.json",
+      "_profile_roots": [
+        "profiles"
+      ],
+      "metadata": {
+        "model_type": "kiwi_edit_instruct_only",
+        "family": "wan2_2",
+        "family_label": "Wan2.2",
+        "base_model_type": "kiwi_edit",
+        "finetune": false,
+        "main_output": [
+          "video"
+        ],
+        "outputs": [
+          "video"
+        ],
+        "inputs": [
+          "text",
+          "video"
+        ],
+        "media_inputs": {
+          "image": {
+            "start": false,
+            "end": false,
+            "reference": false,
+            "single_reference": false,
+            "multiple_references": false,
+            "background": false,
+            "injected_frames": false,
+            "control": false,
+            "mask": false
+          },
+          "video": {
+            "continue": true,
+            "last": true,
+            "control": true,
+            "mask": false
+          },
+          "audio": {
+            "prompt": false,
+            "output": false
+          }
+        },
+        "capabilities": {
+          "text_to_video": true,
+          "image_to_video": false,
+          "video_to_video": true,
+          "text_to_image": false,
+          "image_to_image": false,
+          "text_to_audio": false,
+          "audio_to_audio": false,
+          "audio_to_video": false,
+          "audio_output": false,
+          "inpainting": false,
+          "outpainting": false,
+          "reference_images": false,
+          "background_image": false,
+          "injected_frames": false,
+          "control_image": false,
+          "control_video": true,
+          "video_continuation": true,
+          "sliding_window": true,
+          "lora": true
+        },
+        "setting_values": {
+          "image_prompt_type": {
+            "allowed": "TVL",
+            "choices": [
+              {
+                "label": "Text/new generation",
+                "value": ""
+              },
+              {
+                "label": "Continue from source video",
+                "value": "V"
+              },
+              {
+                "label": "Continue from last generated video",
+                "value": "L"
+              }
+            ]
+          },
+          "video_prompt_type": {
+            "guide_preprocessing": null,
+            "mask_preprocessing": null,
+            "guide_custom_choices": {
+              "default": "UV",
+              "label": "Type of Process",
+              "letters_filter": "UVI",
+              "visible": false,
+              "show_label": false,
+              "scale": 3,
+              "choices": [
+                {
+                  "label": "Control",
+                  "value": "UV"
+                }
+              ]
+            },
+            "image_ref_choices": null,
+            "custom_video_selection": null,
+            "forced": ""
+          },
+          "audio_prompt_type": {
+            "sources": null,
+            "custom_option": null
+          },
+          "model_mode": null,
+          "sample_solver": {
+            "choices": [
+              {
+                "label": "unipc",
+                "value": "unipc"
+              },
+              {
+                "label": "euler",
+                "value": "euler"
+              },
+              {
+                "label": "dpm++",
+                "value": "dpm++"
+              },
+              {
+                "label": "flowmatch causvid",
+                "value": "causvid"
+              },
+              {
+                "label": "lcm + ltx",
+                "value": "lcm"
+              }
+            ]
+          },
+          "prompt_enhancer": null
+        }
+      },
+      "settings": {
+        "prompt": "Remove the monkey.",
+        "video_length": 81,
+        "flow_shift": 5,
+        "num_inference_steps": 30
+      },
+      "model_type": "kiwi_edit_instruct_only"
+    },
+    "metadata": {
+      "model_type": "kiwi_edit_instruct_only",
+      "family": "wan2_2",
+      "family_label": "Wan2.2",
+      "base_model_type": "kiwi_edit",
+      "finetune": false,
+      "main_output": [
+        "video"
+      ],
+      "outputs": [
+        "video"
+      ],
+      "inputs": [
+        "text",
+        "video"
+      ],
+      "media_inputs": {
+        "image": {
+          "start": false,
+          "end": false,
+          "reference": false,
+          "single_reference": false,
+          "multiple_references": false,
+          "background": false,
+          "injected_frames": false,
+          "control": false,
+          "mask": false
+        },
+        "video": {
+          "continue": true,
+          "last": true,
+          "control": true,
+          "mask": false
+        },
+        "audio": {
+          "prompt": false,
+          "output": false
+        }
+      },
+      "capabilities": {
+        "text_to_video": true,
+        "image_to_video": false,
+        "video_to_video": true,
+        "text_to_image": false,
+        "image_to_image": false,
+        "text_to_audio": false,
+        "audio_to_audio": false,
+        "audio_to_video": false,
+        "audio_output": false,
+        "inpainting": false,
+        "outpainting": false,
+        "reference_images": false,
+        "background_image": false,
+        "injected_frames": false,
+        "control_image": false,
+        "control_video": true,
+        "video_continuation": true,
+        "sliding_window": true,
+        "lora": true
+      },
+      "setting_values": {
+        "image_prompt_type": {
+          "allowed": "TVL",
+          "choices": [
+            {
+              "label": "Text/new generation",
+              "value": ""
+            },
+            {
+              "label": "Continue from source video",
+              "value": "V"
+            },
+            {
+              "label": "Continue from last generated video",
+              "value": "L"
+            }
+          ]
+        },
+        "video_prompt_type": {
+          "guide_preprocessing": null,
+          "mask_preprocessing": null,
+          "guide_custom_choices": {
+            "default": "UV",
+            "label": "Type of Process",
+            "letters_filter": "UVI",
+            "visible": false,
+            "show_label": false,
+            "scale": 3,
+            "choices": [
+              {
+                "label": "Control",
+                "value": "UV"
+              }
+            ]
+          },
+          "image_ref_choices": null,
+          "custom_video_selection": null,
+          "forced": ""
+        },
+        "audio_prompt_type": {
+          "sources": null,
+          "custom_option": null
+        },
+        "model_mode": null,
+        "sample_solver": {
+          "choices": [
+            {
+              "label": "unipc",
+              "value": "unipc"
+            },
+            {
+              "label": "euler",
+              "value": "euler"
+            },
+            {
+              "label": "dpm++",
+              "value": "dpm++"
+            },
+            {
+              "label": "flowmatch causvid",
+              "value": "causvid"
+            },
+            {
+              "label": "lcm + ltx",
+              "value": "lcm"
+            }
+          ]
+        },
+        "prompt_enhancer": null
+      }
+    },
+    "setting_values": {
+      "image_prompt_type": {
+        "allowed": "TVL",
+        "choices": [
+          {
+            "label": "Text/new generation",
+            "value": ""
+          },
+          {
+            "label": "Continue from source video",
+            "value": "V"
+          },
+          {
+            "label": "Continue from last generated video",
+            "value": "L"
+          }
+        ]
+      },
+      "video_prompt_type": {
+        "guide_preprocessing": null,
+        "mask_preprocessing": null,
+        "guide_custom_choices": {
+          "default": "UV",
+          "label": "Type of Process",
+          "letters_filter": "UVI",
+          "visible": false,
+          "show_label": false,
+          "scale": 3,
+          "choices": [
+            {
+              "label": "Control",
+              "value": "UV"
+            }
+          ]
+        },
+        "image_ref_choices": null,
+        "custom_video_selection": null,
+        "forced": ""
+      },
+      "audio_prompt_type": {
+        "sources": null,
+        "custom_option": null
+      },
+      "model_mode": null,
+      "sample_solver": {
+        "choices": [
+          {
+            "label": "unipc",
+            "value": "unipc"
+          },
+          {
+            "label": "euler",
+            "value": "euler"
+          },
+          {
+            "label": "dpm++",
+            "value": "dpm++"
+          },
+          {
+            "label": "flowmatch causvid",
+            "value": "causvid"
+          },
+          {
+            "label": "lcm + ltx",
+            "value": "lcm"
+          }
+        ]
+      },
+      "prompt_enhancer": null
+    },
+    "default_settings": {
+      "settings_version": 2.66,
+      "prompt": "Remove the monkey.",
+      "resolution": "832x480",
+      "flow_shift": 5,
+      "sample_solver": "unipc",
+      "image_prompt_type": "T",
+      "remove_background_images_ref": 0,
+      "guidance_scale": 1,
+      "video_prompt_type": "UV",
+      "sliding_window_size": 121,
+      "sliding_window_overlap": 1,
+      "sliding_window_color_correction_strength": 0,
+      "video_length": 81,
+      "num_inference_steps": 30,
+      "alt_prompt": "",
+      "multi_prompts_gen_type": "PG",
+      "postprocess_audio": "",
+      "replace_voice_method": "",
+      "replace_voice_sample": null,
+      "replace_voice_sample2": null,
+      "model_type": "kiwi_edit_instruct_only"
+    }
+  }
+}

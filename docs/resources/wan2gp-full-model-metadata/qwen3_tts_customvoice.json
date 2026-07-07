@@ -1,0 +1,492 @@
+{
+  "qwen3_tts_customvoice": {
+    "model_type": "qwen3_tts_customvoice",
+    "name": "TTS Qwen3 Custom Voice (12Hz) 1.7B",
+    "model_def": {
+      "audio_only": true,
+      "image_outputs": false,
+      "sliding_window": false,
+      "guidance_max_phases": 0,
+      "no_negative_prompt": true,
+      "inference_steps": false,
+      "temperature": true,
+      "image_prompt_types_allowed": "",
+      "supports_early_stop": true,
+      "profiles_dir": [
+        "qwen3_tts_customvoice"
+      ],
+      "duration_slider": {
+        "label": "Max duration (seconds)",
+        "min": 1,
+        "max": 600,
+        "increment": 1,
+        "default": 20
+      },
+      "top_k_slider": true,
+      "text_prompt_enhancer_instructions": "You are a speechwriting assistant. Generate a single-speaker monologue for a text-to-speech model based on the user prompt. Output only the monologue text. Do not include explanations, bullet lists, or stage directions. Keep a consistent tone and point of view. Use natural, spoken sentences with clear punctuation for pauses. Aim for a short monologue (4-8 sentences) unless the prompt asks for a different length.\n\nExample:\nI never thought a small town would teach me so much about patience. Every morning the same faces pass the bakery window, and I know their stories without a word. The bell over the door rings, the coffee steams, and time slows down just enough to breathe. Some days I miss the noise of the city, but most days I am grateful for the quiet. It lets me hear myself think, and that has become its own kind of music.",
+      "text_prompt_enhancer_max_tokens": 512,
+      "prompt_enhancer_button_label": "Write",
+      "compile": false,
+      "parent_model_type": "qwen3_tts_base",
+      "lm_engines": [
+        "cg"
+      ],
+      "prompt_enhancer_def": {
+        "selection": [
+          "T"
+        ],
+        "labels": {
+          "T": "A Speech based on current Prompt",
+          "T1": "A Dialogue between two People based on current Prompt"
+        },
+        "default": "T"
+      },
+      "model_modes": {
+        "choices": [
+          [
+            "Aiden (Sunny American male voice with a clear midrange; English)",
+            "aiden"
+          ],
+          [
+            "Dylan (Youthful Beijing male voice with a clear, natural timbre; Chinese (Beijing Dialect))",
+            "dylan"
+          ],
+          [
+            "Eric (Lively Chengdu male voice with a slightly husky brightness; Chinese (Sichuan Dialect))",
+            "eric"
+          ],
+          [
+            "Ono Anna (Playful Japanese female voice with a light, nimble timbre; Japanese)",
+            "ono_anna"
+          ],
+          [
+            "Ryan (Dynamic male voice with strong rhythmic drive; English)",
+            "ryan"
+          ],
+          [
+            "Serena (Warm, gentle young female voice; Chinese)",
+            "serena"
+          ],
+          [
+            "Sohee (Warm Korean female voice with rich emotion; Korean)",
+            "sohee"
+          ],
+          [
+            "Uncle Fu (Seasoned male voice with a low, mellow timbre; Chinese)",
+            "uncle_fu"
+          ],
+          [
+            "Vivian (Bright, slightly edgy young female voice; Chinese)",
+            "vivian"
+          ]
+        ],
+        "default": "aiden",
+        "label": "Speaker"
+      },
+      "alt_prompt": {
+        "label": "Instruction (optional)",
+        "placeholder": "calm, friendly, slightly husky",
+        "lines": 2
+      },
+      "name": "TTS Qwen3 Custom Voice (12Hz) 1.7B",
+      "architecture": "qwen3_tts_customvoice",
+      "description": "Qwen3 Custom Voice with fixed speaker presets and optional instruction control.  Use Manual Split (one empty line) or Auto Split to accelerate generation for very long speeches.",
+      "URLs": [
+        "https://huggingface.co/DeepBeepMeep/TTS/resolve/main/qwen3_tts_12hz_1b7_customvoice_bf16.safetensors",
+        "https://huggingface.co/DeepBeepMeep/TTS/resolve/main/qwen3_tts_12hz_1b7_customvoice_quanto_bf16_int8.safetensors"
+      ],
+      "path": "defaults\\qwen3_tts_customvoice.json",
+      "_profile_roots": [
+        "profiles"
+      ],
+      "metadata": {
+        "model_type": "qwen3_tts_customvoice",
+        "family": "tts",
+        "family_label": "TTS",
+        "base_model_type": "qwen3_tts_customvoice",
+        "finetune": false,
+        "main_output": [
+          "audio"
+        ],
+        "outputs": [
+          "audio"
+        ],
+        "inputs": [
+          "text"
+        ],
+        "media_inputs": {
+          "image": {
+            "start": false,
+            "end": false,
+            "reference": false,
+            "single_reference": false,
+            "multiple_references": false,
+            "background": false,
+            "injected_frames": false,
+            "control": false,
+            "mask": false
+          },
+          "video": {
+            "continue": false,
+            "last": false,
+            "control": false,
+            "mask": false
+          },
+          "audio": {
+            "prompt": false,
+            "output": true
+          }
+        },
+        "capabilities": {
+          "text_to_video": false,
+          "image_to_video": false,
+          "video_to_video": false,
+          "text_to_image": false,
+          "image_to_image": false,
+          "text_to_audio": true,
+          "audio_to_audio": false,
+          "audio_to_video": false,
+          "audio_output": true,
+          "inpainting": false,
+          "outpainting": false,
+          "reference_images": false,
+          "background_image": false,
+          "injected_frames": false,
+          "control_image": false,
+          "control_video": false,
+          "video_continuation": false,
+          "sliding_window": false,
+          "lora": true
+        },
+        "setting_values": {
+          "image_prompt_type": {
+            "allowed": "",
+            "choices": [
+              {
+                "label": "Text/new generation",
+                "value": ""
+              }
+            ]
+          },
+          "video_prompt_type": {
+            "guide_preprocessing": null,
+            "mask_preprocessing": null,
+            "guide_custom_choices": null,
+            "image_ref_choices": null,
+            "custom_video_selection": null,
+            "forced": ""
+          },
+          "audio_prompt_type": {
+            "sources": null,
+            "custom_option": null
+          },
+          "model_mode": {
+            "default": "aiden",
+            "label": "Speaker",
+            "choices": [
+              {
+                "label": "Aiden (Sunny American male voice with a clear midrange; English)",
+                "value": "aiden"
+              },
+              {
+                "label": "Dylan (Youthful Beijing male voice with a clear, natural timbre; Chinese (Beijing Dialect))",
+                "value": "dylan"
+              },
+              {
+                "label": "Eric (Lively Chengdu male voice with a slightly husky brightness; Chinese (Sichuan Dialect))",
+                "value": "eric"
+              },
+              {
+                "label": "Ono Anna (Playful Japanese female voice with a light, nimble timbre; Japanese)",
+                "value": "ono_anna"
+              },
+              {
+                "label": "Ryan (Dynamic male voice with strong rhythmic drive; English)",
+                "value": "ryan"
+              },
+              {
+                "label": "Serena (Warm, gentle young female voice; Chinese)",
+                "value": "serena"
+              },
+              {
+                "label": "Sohee (Warm Korean female voice with rich emotion; Korean)",
+                "value": "sohee"
+              },
+              {
+                "label": "Uncle Fu (Seasoned male voice with a low, mellow timbre; Chinese)",
+                "value": "uncle_fu"
+              },
+              {
+                "label": "Vivian (Bright, slightly edgy young female voice; Chinese)",
+                "value": "vivian"
+              }
+            ]
+          },
+          "sample_solver": null,
+          "prompt_enhancer": {
+            "default": "T",
+            "choices": [
+              {
+                "label": "A Speech based on current Prompt",
+                "value": "T"
+              },
+              {
+                "label": "A Dialogue between two People based on current Prompt",
+                "value": "T1"
+              }
+            ]
+          }
+        }
+      },
+      "settings": {
+        "prompt": "The lights are already on, so we can start whenever you are ready.",
+        "alt_prompt": "calm, friendly, slightly husky",
+        "model_mode": "serena",
+        "duration_seconds": 30
+      },
+      "model_type": "qwen3_tts_customvoice"
+    },
+    "metadata": {
+      "model_type": "qwen3_tts_customvoice",
+      "family": "tts",
+      "family_label": "TTS",
+      "base_model_type": "qwen3_tts_customvoice",
+      "finetune": false,
+      "main_output": [
+        "audio"
+      ],
+      "outputs": [
+        "audio"
+      ],
+      "inputs": [
+        "text"
+      ],
+      "media_inputs": {
+        "image": {
+          "start": false,
+          "end": false,
+          "reference": false,
+          "single_reference": false,
+          "multiple_references": false,
+          "background": false,
+          "injected_frames": false,
+          "control": false,
+          "mask": false
+        },
+        "video": {
+          "continue": false,
+          "last": false,
+          "control": false,
+          "mask": false
+        },
+        "audio": {
+          "prompt": false,
+          "output": true
+        }
+      },
+      "capabilities": {
+        "text_to_video": false,
+        "image_to_video": false,
+        "video_to_video": false,
+        "text_to_image": false,
+        "image_to_image": false,
+        "text_to_audio": true,
+        "audio_to_audio": false,
+        "audio_to_video": false,
+        "audio_output": true,
+        "inpainting": false,
+        "outpainting": false,
+        "reference_images": false,
+        "background_image": false,
+        "injected_frames": false,
+        "control_image": false,
+        "control_video": false,
+        "video_continuation": false,
+        "sliding_window": false,
+        "lora": true
+      },
+      "setting_values": {
+        "image_prompt_type": {
+          "allowed": "",
+          "choices": [
+            {
+              "label": "Text/new generation",
+              "value": ""
+            }
+          ]
+        },
+        "video_prompt_type": {
+          "guide_preprocessing": null,
+          "mask_preprocessing": null,
+          "guide_custom_choices": null,
+          "image_ref_choices": null,
+          "custom_video_selection": null,
+          "forced": ""
+        },
+        "audio_prompt_type": {
+          "sources": null,
+          "custom_option": null
+        },
+        "model_mode": {
+          "default": "aiden",
+          "label": "Speaker",
+          "choices": [
+            {
+              "label": "Aiden (Sunny American male voice with a clear midrange; English)",
+              "value": "aiden"
+            },
+            {
+              "label": "Dylan (Youthful Beijing male voice with a clear, natural timbre; Chinese (Beijing Dialect))",
+              "value": "dylan"
+            },
+            {
+              "label": "Eric (Lively Chengdu male voice with a slightly husky brightness; Chinese (Sichuan Dialect))",
+              "value": "eric"
+            },
+            {
+              "label": "Ono Anna (Playful Japanese female voice with a light, nimble timbre; Japanese)",
+              "value": "ono_anna"
+            },
+            {
+              "label": "Ryan (Dynamic male voice with strong rhythmic drive; English)",
+              "value": "ryan"
+            },
+            {
+              "label": "Serena (Warm, gentle young female voice; Chinese)",
+              "value": "serena"
+            },
+            {
+              "label": "Sohee (Warm Korean female voice with rich emotion; Korean)",
+              "value": "sohee"
+            },
+            {
+              "label": "Uncle Fu (Seasoned male voice with a low, mellow timbre; Chinese)",
+              "value": "uncle_fu"
+            },
+            {
+              "label": "Vivian (Bright, slightly edgy young female voice; Chinese)",
+              "value": "vivian"
+            }
+          ]
+        },
+        "sample_solver": null,
+        "prompt_enhancer": {
+          "default": "T",
+          "choices": [
+            {
+              "label": "A Speech based on current Prompt",
+              "value": "T"
+            },
+            {
+              "label": "A Dialogue between two People based on current Prompt",
+              "value": "T1"
+            }
+          ]
+        }
+      }
+    },
+    "setting_values": {
+      "image_prompt_type": {
+        "allowed": "",
+        "choices": [
+          {
+            "label": "Text/new generation",
+            "value": ""
+          }
+        ]
+      },
+      "video_prompt_type": {
+        "guide_preprocessing": null,
+        "mask_preprocessing": null,
+        "guide_custom_choices": null,
+        "image_ref_choices": null,
+        "custom_video_selection": null,
+        "forced": ""
+      },
+      "audio_prompt_type": {
+        "sources": null,
+        "custom_option": null
+      },
+      "model_mode": {
+        "default": "aiden",
+        "label": "Speaker",
+        "choices": [
+          {
+            "label": "Aiden (Sunny American male voice with a clear midrange; English)",
+            "value": "aiden"
+          },
+          {
+            "label": "Dylan (Youthful Beijing male voice with a clear, natural timbre; Chinese (Beijing Dialect))",
+            "value": "dylan"
+          },
+          {
+            "label": "Eric (Lively Chengdu male voice with a slightly husky brightness; Chinese (Sichuan Dialect))",
+            "value": "eric"
+          },
+          {
+            "label": "Ono Anna (Playful Japanese female voice with a light, nimble timbre; Japanese)",
+            "value": "ono_anna"
+          },
+          {
+            "label": "Ryan (Dynamic male voice with strong rhythmic drive; English)",
+            "value": "ryan"
+          },
+          {
+            "label": "Serena (Warm, gentle young female voice; Chinese)",
+            "value": "serena"
+          },
+          {
+            "label": "Sohee (Warm Korean female voice with rich emotion; Korean)",
+            "value": "sohee"
+          },
+          {
+            "label": "Uncle Fu (Seasoned male voice with a low, mellow timbre; Chinese)",
+            "value": "uncle_fu"
+          },
+          {
+            "label": "Vivian (Bright, slightly edgy young female voice; Chinese)",
+            "value": "vivian"
+          }
+        ]
+      },
+      "sample_solver": null,
+      "prompt_enhancer": {
+        "default": "T",
+        "choices": [
+          {
+            "label": "A Speech based on current Prompt",
+            "value": "T"
+          },
+          {
+            "label": "A Dialogue between two People based on current Prompt",
+            "value": "T1"
+          }
+        ]
+      }
+    },
+    "default_settings": {
+      "settings_version": 2.66,
+      "prompt": "The lights are already on, so we can start whenever you are ready.",
+      "resolution": "832x480",
+      "flow_shift": 5.0,
+      "audio_prompt_type": "",
+      "model_mode": "serena",
+      "alt_prompt": "calm, friendly, slightly husky",
+      "duration_seconds": 30,
+      "repeat_generation": 1,
+      "video_length": 0,
+      "num_inference_steps": 0,
+      "negative_prompt": "",
+      "temperature": 0.9,
+      "top_k": 50,
+      "multi_prompts_gen_type": "FG",
+      "postprocess_audio": "",
+      "replace_voice_method": "",
+      "replace_voice_sample": null,
+      "replace_voice_sample2": null,
+      "video_prompt_type": "",
+      "image_prompt_type": "",
+      "model_type": "qwen3_tts_customvoice"
+    }
+  }
+}

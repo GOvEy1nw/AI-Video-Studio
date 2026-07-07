@@ -24,8 +24,6 @@ interface Window {
     completeSetup: () => Promise<boolean>
     fetchLicenseText: () => Promise<string>
     getNoticesText: () => Promise<string>
-    openLtxApiKeyPage: () => Promise<boolean>
-    openFalApiKeyPage: () => Promise<boolean>
     openParentFolderOfFile: (filePath: string) => Promise<void>
     showItemInFolder: (filePath: string) => Promise<void>
     getLogs: () => Promise<LogsResponse>
@@ -59,9 +57,6 @@ interface Window {
     onBackendHealthStatus: (cb: (data: BackendHealthStatus) => void) => (() => void)
     extractVideoFrame: (videoUrl: string, seekTime: number, width?: number, quality?: number) => Promise<{ path: string; url: string }>
     writeLog: (level: string, message: string) => Promise<void>
-    getAnalyticsState: () => Promise<{ analyticsEnabled: boolean; installationId: string }>
-    setAnalyticsEnabled: (enabled: boolean) => Promise<void>
-    sendAnalyticsEvent: (eventName: string, extraDetails?: Record<string, unknown> | null) => Promise<void>
     platform: string
   }
 }
