@@ -53,6 +53,8 @@ class TestCuratedProfiles:
         assert profile.wangp_model_type == "flux2_klein_4b"
         assert profile.text_to_image is True
         assert profile.reference_images is False
+        assert profile.wangp_metadata.capabilities["reference_images"] is True
+        assert profile.wangp_metadata.media_inputs["image"]["multiple_references"] is True
         assert "1440p" in profile.allowed_resolution_tiers
 
     def test_hidream_o1_dev_is_experimental(self) -> None:
@@ -161,6 +163,10 @@ class TestModelProfilesEndpoint:
         assert krea["mediaType"] == "image"
         assert krea["status"] == "experimental"
         assert krea["wangpModelType"] == "krea2_turbo"
+        assert krea["wangpMetadata"]["family"] == "krea2"
+        assert krea["wangpMetadata"]["inputs"] == ["text", "image"]
+        assert krea["wangpMetadata"]["mediaInputs"]["image"]["mask"] is True
+        assert krea["wangpMetadata"]["capabilities"]["inpainting"] is True
         assert krea["capabilities"]["textToImage"] is True
         assert krea["capabilities"]["referenceImages"] is False
         assert krea["capabilities"]["lora"] == "future"
@@ -168,6 +174,18 @@ class TestModelProfilesEndpoint:
         assert krea["ui"]["defaultResolutionTier"] == "720p"
         assert set(krea["ui"]["allowedAspectRatios"]) == {"1:1", "16:9", "9:16"}
         assert "1440p" in krea["ui"]["allowedResolutionTiers"]
+
+    def test_profile_shape_includes_wangp_setting_choices(self, client) -> None:
+        r = client.get("/api/model-profiles")
+        data = r.json()
+        flux = next(p for p in data["profiles"] if p["id"] == "flux2_klein_4b")
+        video_prompt_type = flux["wangpMetadata"]["settingValues"]["video_prompt_type"]
+        image_ref_choices = video_prompt_type["image_ref_choices"]["choices"]
+        assert flux["wangpMetadata"]["familyLabel"] == "Flux 2"
+        assert flux["wangpMetadata"]["mediaInputs"]["image"]["reference"] is True
+        assert flux["wangpMetadata"]["mediaInputs"]["image"]["multiple_references"] is True
+        assert flux["wangpMetadata"]["capabilities"]["outpainting"] is True
+        assert {choice["value"] for choice in image_ref_choices} == {"", "KI", "I"}
 
     def test_availability_reflects_wangp_bridge(
         self, client, test_state, wangp_bridge

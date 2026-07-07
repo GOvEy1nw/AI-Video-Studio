@@ -252,6 +252,20 @@ class ModelProfileUi(BaseModel):
     allowedResolutionTiers: list[str]
 
 
+class ModelProfileWanGPMetadata(BaseModel):
+    modelType: str
+    family: str
+    familyLabel: str
+    baseModelType: str
+    finetune: bool
+    mainOutput: list[str]
+    outputs: list[str]
+    inputs: list[str]
+    mediaInputs: dict[str, dict[str, bool]]
+    capabilities: dict[str, bool]
+    settingValues: JsonObject
+
+
 class ModelProfileResponse(BaseModel):
     id: str
     displayName: str
@@ -259,6 +273,7 @@ class ModelProfileResponse(BaseModel):
     visible: bool
     status: str
     wangpModelType: str
+    wangpMetadata: ModelProfileWanGPMetadata
     capabilities: ModelProfileCapabilities
     ui: ModelProfileUi
     availability: str = "available"

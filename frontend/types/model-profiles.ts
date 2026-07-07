@@ -31,6 +31,28 @@ export interface ModelProfileUi {
   allowedResolutionTiers: string[]
 }
 
+export type ModelProfileJsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | ModelProfileJsonValue[]
+  | { [key: string]: ModelProfileJsonValue }
+
+export interface ModelProfileWanGPMetadata {
+  modelType: string
+  family: string
+  familyLabel: string
+  baseModelType: string
+  finetune: boolean
+  mainOutput: string[]
+  outputs: string[]
+  inputs: string[]
+  mediaInputs: Record<string, Record<string, boolean>>
+  capabilities: Record<string, boolean>
+  settingValues: Record<string, ModelProfileJsonValue>
+}
+
 export interface ModelProfile {
   id: string
   displayName: string
@@ -38,6 +60,7 @@ export interface ModelProfile {
   visible: boolean
   status: ModelProfileStatus
   wangpModelType: string
+  wangpMetadata: ModelProfileWanGPMetadata
   capabilities: ModelProfileCapabilities
   ui: ModelProfileUi
   availability: ModelProfileAvailability

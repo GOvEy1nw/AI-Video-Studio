@@ -16,6 +16,7 @@ from api_types import (
     ModelProfileListResponse,
     ModelProfileResponse,
     ModelProfileUi,
+    ModelProfileWanGPMetadata,
 )
 from handlers.base import StateHandlerBase
 from model_profiles import get_visible_image_profiles
@@ -44,6 +45,7 @@ class ModelProfilesHandler(StateHandlerBase):
         responses: list[ModelProfileResponse] = []
         for profile in get_visible_image_profiles():
             availability = self._derive_availability(profile, bridge_available)
+            metadata = profile.wangp_metadata
             responses.append(
                 ModelProfileResponse(
                     id=profile.id,
@@ -52,6 +54,19 @@ class ModelProfilesHandler(StateHandlerBase):
                     visible=profile.visible,
                     status=profile.status,
                     wangpModelType=profile.wangp_model_type,
+                    wangpMetadata=ModelProfileWanGPMetadata(
+                        modelType=profile.wangp_model_type,
+                        family=metadata.family,
+                        familyLabel=metadata.family_label,
+                        baseModelType=metadata.base_model_type,
+                        finetune=metadata.finetune,
+                        mainOutput=list(metadata.main_output),
+                        outputs=list(metadata.outputs),
+                        inputs=list(metadata.inputs),
+                        mediaInputs=metadata.media_inputs,
+                        capabilities=metadata.capabilities,
+                        settingValues=metadata.setting_values,
+                    ),
                     capabilities=ModelProfileCapabilities(
                         textToImage=profile.text_to_image,
                         referenceImages=profile.reference_images,

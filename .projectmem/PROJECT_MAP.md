@@ -1,6 +1,6 @@
 # Project Map — AI Video Studio
 
-Status: Populated by AI session on 2026-07-03 from AGENTS_PRD.md + codebase analysis.
+Status: Populated by AI session on 2026-07-03 from AGENTS_PRD.md + codebase analysis. Updated 2026-07-07 with model profile metadata schema notes.
 
 ## Project purpose
 
@@ -165,9 +165,20 @@ Key reusable UI components organized by domain: `AssetActionsButton`, `AssetDele
 - `app_factory.py` — FastAPI app factory (routers, DI, exception handling, CORS)
 - `app_handler.py` — `AppHandler` composition root + `ServiceBundle` + `build_initial_state()`
 - `api_types.py` — Pydantic request/response models
+- `model_profiles/profiles.py` — Backend-owned curated AiVS model profiles. Holds local UI decisions plus `WanGPModelMetadata` raw metadata from extracted Wan2GP JSON.
+- `model_profiles/resolution_resolver.py` — Curated `(profile_id, tier, aspect)` to exact WanGP `WxH` resolver.
+- `handlers/model_profiles_handler.py` — Exposes `GET /api/model-profiles`, including availability and `wangpMetadata`.
 - `architecture.md` — Backend architecture documentation
 - `WANGP_BACKEND.md` — WanGP bridge configuration guide
 - `runtime_config/runtime_config.py` — `RuntimeConfig` dataclass (paths, device, WanGP settings, model types)
+
+### Model profile metadata contract
+
+- AiVS-curated profile fields remain source of truth for UI: display name, visibility, status, allowed aspect ratios, allowed resolution tiers, defaults, and top-level `capabilities`.
+- Raw WanGP-discovered metadata is exposed separately as `wangpMetadata` so future features can unlock refs, masks, controls, audio/video modes, mode choices, and solver choices without scraping WanGP at runtime.
+- Common WanGP metadata keys found across 200 extracted JSON files: `family`, `family_label`, `base_model_type`, `finetune`, `main_output`, `outputs`, `inputs`, `media_inputs`, `capabilities`, `setting_values`.
+- `media_inputs` is organized by `image`, `video`, `audio`; `setting_values` commonly includes `image_prompt_type`, `video_prompt_type`, `audio_prompt_type`, `model_mode`, `sample_solver`, `prompt_enhancer`.
+- Frontend mirror lives in `frontend/types/model-profiles.ts`. `settingValues` uses recursive JSON typing because WanGP choice payloads vary per model.
 
 ### Tests (`tests/`)
 Integration-style tests with Starlette `TestClient`, mock-free (service fakes only):
