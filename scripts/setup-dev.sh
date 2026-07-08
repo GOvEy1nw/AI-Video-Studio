@@ -36,7 +36,7 @@ ok "pnpm install complete"
 echo ""
 echo "Setting up Python backend venv..."
 cd "$PROJECT_DIR/backend"
-uv sync --extra dev
+uv sync --inexact --extra dev --extra test
 ok "uv sync complete"
 
 echo ""

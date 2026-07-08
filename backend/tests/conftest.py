@@ -100,6 +100,7 @@ def test_state(tmp_path: Path, fake_services: FakeServices):
     handler.wangp_bridge = fake_wangp_bridge
     handler.video_generation._wangp_bridge = fake_wangp_bridge  # type: ignore[attr-defined]
     handler.image_generation._wangp_bridge = fake_wangp_bridge  # type: ignore[attr-defined]
+    handler.prompt_enhancement._wangp_bridge = fake_wangp_bridge  # type: ignore[attr-defined]
     handler.health._wangp_bridge = fake_wangp_bridge  # type: ignore[attr-defined]
     handler.models._wangp_bridge = fake_wangp_bridge  # type: ignore[attr-defined]
     handler.model_profiles._wangp_bridge = fake_wangp_bridge  # type: ignore[attr-defined]

@@ -3,7 +3,8 @@ import {
   Trash2, Download, Image, Video, X,
   Heart, Film, Volume2, VolumeX, Sparkles,
   Clock, Monitor, ChevronUp, Scissors, Music,
-  ChevronLeft, ChevronRight, Copy, Check, AlertCircle, Pencil
+  ChevronLeft, ChevronRight, Copy, Check, AlertCircle, Pencil,
+  LoaderCircle, Plus
 } from 'lucide-react'
 import { useProjects } from '../contexts/ProjectContext'
 import type { GenSpaceRetakeSource } from '../contexts/ProjectContext'
@@ -14,6 +15,7 @@ import type { Asset } from '../types/project'
 import type { ModelProfile } from '../types/model-profiles'
 import { GenerationErrorDialog } from '../components/GenerationErrorDialog'
 import { copyToAssetFolder } from '../lib/asset-copy'
+import { backendFetch } from '../lib/backend'
 import { fileUrlToPath } from '../lib/url-to-path'
 import { logger } from '../lib/logger'
 import { RetakePanel } from '../components/RetakePanel'
@@ -22,6 +24,36 @@ type ImageInputItem = {
   id: string
   url: string
   role: string
+  type?: 'image' | 'video' | 'audio'
+}
+
+type MultiShotRow = {
+  id: string
+  seconds: number
+  prompt: string
+}
+
+const MAX_MULTI_SHOT_SECONDS = 20
+const MULTI_SHOT_SECONDS = Array.from({ length: MAX_MULTI_SHOT_SECONDS }, (_, index) => index + 1)
+
+function createMultiShotRow(seconds = 4): MultiShotRow {
+  return {
+    id: crypto.randomUUID(),
+    seconds,
+    prompt: '',
+  }
+}
+
+function formatMultiShotPrompt(globalPrompt: string, rows: MultiShotRow[]): string {
+  let cursor = 0
+  const relayedPrompts = rows
+    .map((row) => {
+      const start = cursor
+      cursor += row.seconds
+      return `[${start}s:${cursor}s] ${row.prompt.trim()}`
+    })
+
+  return [globalPrompt.trim(), ...relayedPrompts].filter(Boolean).join('\n')
 }
 
 // Asset card with hover overlays
@@ -434,7 +466,9 @@ function PromptBar({
   prompt,
   onPromptChange,
   onGenerate,
+  onEnhancePrompt,
   isGenerating,
+  isEnhancingPrompt,
   inputImage,
   onInputImageChange,
   imageInputs,
@@ -448,13 +482,21 @@ function PromptBar({
   buttonIcon,
   imageProfiles,
   videoProfiles,
+  useAudioTrack,
+  onUseAudioTrackChange,
+  multiShotEnabled,
+  onMultiShotEnabledChange,
+  multiShotRows,
+  onMultiShotRowsChange,
 }: {
   mode: 'image' | 'video' | 'retake'
   onModeChange: (mode: 'image' | 'video' | 'retake') => void
   prompt: string
   onPromptChange: (prompt: string) => void
   onGenerate: () => void
+  onEnhancePrompt: () => void
   isGenerating: boolean
+  isEnhancingPrompt: boolean
   canGenerate: boolean
   buttonLabel: string
   buttonIcon: React.ReactNode
@@ -481,8 +523,15 @@ function PromptBar({
   onSettingsChange: (settings: any) => void
   imageProfiles: ModelProfile[]
   videoProfiles: ModelProfile[]
+  useAudioTrack: boolean
+  onUseAudioTrackChange: (v: boolean) => void
+  multiShotEnabled: boolean
+  onMultiShotEnabledChange: (enabled: boolean) => void
+  multiShotRows: MultiShotRow[]
+  onMultiShotRowsChange: (rows: MultiShotRow[]) => void
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const videoInputRef = useRef<HTMLInputElement>(null)
   const audioInputRef = useRef<HTMLInputElement>(null)
   const [isDragOver, setIsDragOver] = useState(false)
   const [isAudioDragOver, setIsAudioDragOver] = useState(false)
@@ -499,6 +548,7 @@ function PromptBar({
   const imageMaxInputs = imageInputPolicy?.maxImages ?? 0
   const canAddImageInput = supportsImageInput && imageInputs.length < imageMaxInputs
   const defaultImageInputRole = imageInputPolicy?.defaultRole || imageInputPolicy?.roles[0]?.role || 'reference_subject'
+  const multiShotTotalSeconds = multiShotRows.reduce((total, row) => total + row.seconds, 0)
 
   useEffect(() => {
     if (mode !== 'video' || !selectedVideoProfile) return
@@ -521,6 +571,46 @@ function PromptBar({
       onSettingsChange(next)
     }
   }, [mode, selectedVideoProfile, settings, onSettingsChange])
+
+  // Normalization for video mode slots
+  useEffect(() => {
+    if (mode !== 'video') return
+    if (!selectedVideoProfile?.inputMedia?.supportsImageInputs) {
+      if (imageInputs.length > 0) {
+        onImageInputsChange([])
+      }
+      setActiveImageInputId(null)
+      return
+    }
+
+    const supportedRoles = new Set(['start_image', 'end_image', 'human_motion', 'human_motion_pose', 'depth', 'canny_edges', 'sdr_to_hdr', 'continue_video', 'audio_to_video', 'reference_voice'])
+    const seen = new Set<string>()
+    const normalized: ImageInputItem[] = []
+    let hasGuide = false
+    for (const item of imageInputs) {
+      if (supportedRoles.has(item.role)) {
+        if (item.role === 'start_image' || item.role === 'end_image') {
+          if (!seen.has(item.role)) {
+            seen.add(item.role)
+            normalized.push(item)
+          }
+        } else {
+          if (!hasGuide) {
+            hasGuide = true
+            normalized.push(item)
+          }
+        }
+      }
+    }
+
+    const changed = normalized.length !== imageInputs.length
+    if (changed) {
+      onImageInputsChange(normalized)
+    }
+    if (activeImageInputId && activeImageInputId !== 'guide_slot' && activeImageInputId !== 'empty_guide_slot' && !normalized.some((item) => item.role === activeImageInputId)) {
+      setActiveImageInputId(null)
+    }
+  }, [mode, selectedVideoProfile, imageInputs, activeImageInputId, onImageInputsChange])
 
   useEffect(() => {
     if (mode !== 'image') return
@@ -546,6 +636,23 @@ function PromptBar({
     }
   }, [mode, imageInputPolicy, imageInputs, activeImageInputId, defaultImageInputRole, onImageInputsChange])
 
+  const setSlotMedia = (url: string, role: string, type: 'image' | 'video' | 'audio') => {
+    const isGuideRole = ['human_motion', 'human_motion_pose', 'depth', 'canny_edges', 'sdr_to_hdr', 'continue_video', 'audio_to_video', 'reference_voice', 'control_video', 'audio_guide'].includes(role)
+    const filtered = imageInputs.filter((item) => {
+      if (isGuideRole) {
+        return !['human_motion', 'human_motion_pose', 'depth', 'canny_edges', 'sdr_to_hdr', 'continue_video', 'audio_to_video', 'reference_voice', 'control_video', 'audio_guide'].includes(item.role)
+      }
+      return item.role !== role
+    })
+    const newItem = {
+      id: crypto.randomUUID(),
+      url,
+      role,
+      type,
+    }
+    onImageInputsChange([...filtered, newItem])
+  }
+
   const resetImageFileInput = () => {
     if (inputRef.current) {
       inputRef.current.value = ''
@@ -565,8 +672,28 @@ function PromptBar({
       resetImageFileInput()
       return
     }
+
+    if (mode === 'video' && selectedVideoProfile?.inputMedia?.supportsImageInputs) {
+      const hasStart = imageInputs.some((item) => item.role === 'start_image')
+      if (!hasStart) {
+        setSlotMedia(url, 'start_image', 'image')
+      } else {
+        setSlotMedia(url, 'end_image', 'image')
+      }
+      resetImageFileInput()
+      return
+    }
+
     onInputImageChange(url)
     resetImageFileInput()
+  }
+
+  const addVideoInput = (url: string) => {
+    setSlotMedia(url, 'human_motion', 'video')
+  }
+
+  const addAudioInput = (url: string) => {
+    setSlotMedia(url, 'audio_to_video', 'audio')
   }
 
   const updateImageInputRole = (id: string, role: string) => {
@@ -592,18 +719,46 @@ function PromptBar({
       if (asset.type === 'image') {
         addImageInput(asset.url)
         return
+      } else if (asset.type === 'video') {
+        if (mode === 'video' && selectedVideoProfile?.inputMedia?.supportsImageInputs) {
+          addVideoInput(asset.url)
+          return
+        }
+      } else if (asset.type === 'audio') {
+        if (mode === 'video' && selectedVideoProfile?.inputMedia?.supportsImageInputs) {
+          addAudioInput(asset.url)
+          return
+        }
       }
     }
 
     const file = e.dataTransfer.files?.[0]
-    if (file && file.type.startsWith('image/')) {
+    if (file) {
+      const isImage = file.type.startsWith('image/')
+      const isVideo = file.type.startsWith('video/')
+      const isAudio = file.type.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'aac', 'flac', 'm4a'].includes(file.name.split('.').pop()?.toLowerCase() || '')
+
       const filePath = (file as any).path as string | undefined
+      let fileUrl = ''
       if (filePath) {
         const normalized = filePath.replace(/\\/g, '/')
-        const fileUrl = normalized.startsWith('/') ? `file://${normalized}` : `file:///${normalized}`
-        addImageInput(fileUrl)
+        fileUrl = normalized.startsWith('/') ? `file://${normalized}` : `file:///${normalized}`
       } else {
-        addImageInput(URL.createObjectURL(file))
+        fileUrl = URL.createObjectURL(file)
+      }
+
+      if (mode === 'video' && selectedVideoProfile?.inputMedia?.supportsImageInputs) {
+        if (isImage) {
+          addImageInput(fileUrl)
+        } else if (isVideo) {
+          addVideoInput(fileUrl)
+        } else if (isAudio) {
+          addAudioInput(fileUrl)
+        }
+      } else {
+        if (isImage) {
+          addImageInput(fileUrl)
+        }
       }
     }
   }
@@ -616,7 +771,11 @@ function PromptBar({
     if (assetData) {
       const asset = JSON.parse(assetData) as Asset
       if (asset.type === 'audio') {
-        onInputAudioChange(asset.url)
+        if (mode === 'video' && selectedVideoProfile?.inputMedia?.supportsImageInputs) {
+          addAudioInput(asset.url)
+        } else {
+          onInputAudioChange(asset.url)
+        }
       }
     }
 
@@ -629,7 +788,11 @@ function PromptBar({
         if (filePath) {
           const normalized = filePath.replace(/\\/g, '/')
           const fileUrl = normalized.startsWith('/') ? `file://${normalized}` : `file:///${normalized}`
-          onInputAudioChange(fileUrl)
+          if (mode === 'video' && selectedVideoProfile?.inputMedia?.supportsImageInputs) {
+            addAudioInput(fileUrl)
+          } else {
+            onInputAudioChange(fileUrl)
+          }
         }
       }
     }
@@ -642,23 +805,57 @@ function PromptBar({
       if (filePath) {
         const normalized = filePath.replace(/\\/g, '/')
         const fileUrl = normalized.startsWith('/') ? `file://${normalized}` : `file:///${normalized}`
-        onInputAudioChange(fileUrl)
+        if (mode === 'video' && selectedVideoProfile?.inputMedia?.supportsImageInputs) {
+          addAudioInput(fileUrl)
+        } else {
+          onInputAudioChange(fileUrl)
+        }
+      }
+    }
+  }
+
+  const handleVideoFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const filePath = (file as any).path as string | undefined
+      if (filePath) {
+        const normalized = filePath.replace(/\\/g, '/')
+        const fileUrl = normalized.startsWith('/') ? `file://${normalized}` : `file:///${normalized}`
+        addVideoInput(fileUrl)
+      } else {
+        addVideoInput(URL.createObjectURL(file))
       }
     }
   }
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file && file.type.startsWith('image/')) {
-      // In Electron, File objects have a .path property with the full filesystem path
+    if (file) {
+      const isImage = file.type.startsWith('image/')
+      const isVideo = file.type.startsWith('video/')
+      const isAudio = file.type.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'aac', 'flac', 'm4a'].includes(file.name.split('.').pop()?.toLowerCase() || '')
+
       const filePath = (file as any).path as string | undefined
+      let fileUrl = ''
       if (filePath) {
         const normalized = filePath.replace(/\\/g, '/')
-        const fileUrl = normalized.startsWith('/') ? `file://${normalized}` : `file:///${normalized}`
-        addImageInput(fileUrl)
+        fileUrl = normalized.startsWith('/') ? `file://${normalized}` : `file:///${normalized}`
       } else {
-        const url = URL.createObjectURL(file)
-        addImageInput(url)
+        fileUrl = URL.createObjectURL(file)
+      }
+
+      if (mode === 'video' && selectedVideoProfile?.inputMedia?.supportsImageInputs) {
+        if (isImage) {
+          addImageInput(fileUrl)
+        } else if (isVideo) {
+          addVideoInput(fileUrl)
+        } else if (isAudio) {
+          addAudioInput(fileUrl)
+        }
+      } else {
+        if (isImage) {
+          addImageInput(fileUrl)
+        }
       }
     }
   }
@@ -668,6 +865,21 @@ function PromptBar({
       e.preventDefault()
       onGenerate()
     }
+  }
+
+  const updateMultiShotRow = (id: string, patch: Partial<MultiShotRow>) => {
+    onMultiShotRowsChange(multiShotRows.map((row) => row.id === id ? { ...row, ...patch } : row))
+  }
+
+  const removeMultiShotRow = (id: string) => {
+    if (multiShotRows.length <= 2) return
+    onMultiShotRowsChange(multiShotRows.filter((row) => row.id !== id))
+  }
+
+  const addMultiShotRow = () => {
+    const remaining = MAX_MULTI_SHOT_SECONDS - multiShotTotalSeconds
+    if (remaining <= 0) return
+    onMultiShotRowsChange([...multiShotRows, createMultiShotRow(Math.min(4, remaining))])
   }
 
   const videoModelOptions = videoProfiles.map((profile) => ({
@@ -683,70 +895,337 @@ function PromptBar({
   }))
   const selectedVideoIsExperimental = selectedVideoProfile?.availability === 'experimental'
 
-  return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-visible">
-      {supportsImageInput && (
-        <div className="relative flex items-center gap-2 overflow-visible px-2 pt-2 pb-1">
-          {imageInputs.map((item) => {
-            const role = imageInputPolicy?.roles.find((candidate) => candidate.role === item.role)
-            const isActive = activeImageInputId === item.id
-            return (
-              <div key={item.id} className="relative">
-                {isActive && imageInputPolicy && (
-                  <div className="absolute bottom-full left-0 mb-2 w-56 rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl z-[10000]">
-                    <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">Image input</div>
-                    <div className="space-y-1">
-                      {imageInputPolicy.roles.map((option) => (
-                        <button
-                          key={option.role}
-                          onClick={() => updateImageInputRole(item.id, option.role)}
-                          className={`w-full flex items-center gap-2 px-2 py-2 rounded-md text-left transition-colors ${
-                            item.role === option.role ? 'bg-white/20 text-white' : 'text-zinc-400 hover:bg-zinc-700'
-                          }`}
-                          title={option.description}
-                        >
-                          <Image className="h-3.5 w-3.5 flex-shrink-0" />
-                          <span className="text-xs">{option.label}</span>
-                        </button>
-                      ))}
-                      <div className="h-px bg-zinc-700 my-1" />
+  const renderVideoSlot = (
+    roleName: string,
+    label: string,
+    mediaType: 'image' | 'video' | 'audio',
+    inputRefEl: React.RefObject<HTMLInputElement>
+  ) => {
+    const item = imageInputs.find((x) => x.role === roleName)
+    const isActive = activeImageInputId === roleName
+    const slotPolicy = selectedVideoProfile?.inputMedia
+    const roleDef = slotPolicy?.roles.find((candidate) => candidate.role === roleName)
+
+    if (item) {
+      return (
+        <div key={roleName} className="relative">
+          {isActive && (
+            <div className="absolute bottom-full left-0 mb-2 w-56 rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl z-[10000]">
+              <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">{label}</div>
+              <div className="space-y-1">
+                {mediaType === 'image' && slotPolicy && (
+                  <>
+                    {slotPolicy.roles.filter(r => r.role === 'start_image' || r.role === 'end_image').map((option) => (
                       <button
-                        onClick={() => removeImageInput(item.id)}
-                        className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-left text-red-300 hover:bg-red-500/15 transition-colors"
+                        key={option.role}
+                        onClick={() => updateImageInputRole(item.id, option.role)}
+                        className={`w-full flex items-center gap-2 px-2 py-2 rounded-md text-left transition-colors ${
+                          item.role === option.role ? 'bg-white/20 text-white' : 'text-zinc-400 hover:bg-zinc-700'
+                        }`}
+                        title={option.description}
                       >
-                        <Trash2 className="h-3.5 w-3.5 flex-shrink-0" />
-                        <span className="text-xs">Remove</span>
+                        <Image className="h-3.5 w-3.5 flex-shrink-0" />
+                        <span className="text-xs">{option.label}</span>
                       </button>
-                    </div>
-                  </div>
+                    ))}
+                    <div className="h-px bg-zinc-700 my-1" />
+                  </>
                 )}
                 <button
-                  type="button"
-                  onClick={() => setActiveImageInputId(isActive ? null : item.id)}
-                  className="group relative h-14 w-14 overflow-hidden rounded-lg border border-zinc-700 bg-zinc-800"
-                  title={role?.label || imageInputPolicy?.tooltipLabel}
+                  onClick={() => removeImageInput(item.id)}
+                  className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-left text-red-300 hover:bg-red-500/15 transition-colors"
                 >
-                  <img src={item.url} alt="" className="h-full w-full object-cover" />
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
-                    <Pencil className="h-4 w-4 text-white" />
-                  </div>
+                  <Trash2 className="h-3.5 w-3.5 flex-shrink-0" />
+                  <span className="text-xs">Remove</span>
                 </button>
               </div>
-            )
-          })}
-          {canAddImageInput && (
-            <div
-              className={`relative h-14 w-14 rounded-lg border-2 border-dashed transition-colors flex items-center justify-center flex-shrink-0 cursor-pointer ${
-                isDragOver ? 'border-blue-500 bg-blue-500/10' : 'border-zinc-700 hover:border-zinc-500'
-              }`}
-              onDragOver={(e) => { e.preventDefault(); setIsDragOver(true) }}
-              onDragLeave={() => setIsDragOver(false)}
-              onDrop={handleDrop}
-              onClick={() => inputRef.current?.click()}
-              title={imageInputPolicy?.tooltipLabel}
-            >
-              <Image className="h-4 w-4 text-zinc-500" />
             </div>
+          )}
+          <button
+            type="button"
+            onClick={() => setActiveImageInputId(isActive ? null : roleName)}
+            className="group relative h-14 w-14 overflow-hidden rounded-lg border border-zinc-700 bg-zinc-800 flex items-center justify-center flex-shrink-0"
+            title={`${roleDef?.label || label} - Click for actions`}
+          >
+            <img src={item.url} alt="" className="h-full w-full object-cover" />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+              <Pencil className="h-4 w-4 text-white" />
+            </div>
+            <div className="absolute bottom-1 right-1 p-0.5 rounded bg-black/70 text-[9px] text-zinc-400 scale-90">
+              {roleName === 'start_image' ? 'Start' : 'End'}
+            </div>
+          </button>
+        </div>
+      )
+    }
+
+    return (
+      <div
+        key={roleName}
+        className={`relative h-14 w-14 rounded-lg border-2 border-dashed transition-colors flex flex-col items-center justify-center flex-shrink-0 cursor-pointer hover:border-zinc-500 border-zinc-700`}
+        onDragOver={(e) => { e.preventDefault() }}
+        onDrop={(e) => {
+          e.preventDefault()
+          const file = e.dataTransfer.files?.[0]
+          if (file) {
+            const filePath = (file as any).path as string | undefined
+            const fileUrl = filePath 
+              ? (filePath.replace(/\\/g, '/').startsWith('/') ? `file://${filePath.replace(/\\/g, '/')}` : `file:///${filePath.replace(/\\/g, '/')}`)
+              : URL.createObjectURL(file)
+            setSlotMedia(fileUrl, roleName, mediaType)
+          }
+        }}
+        onClick={() => inputRefEl.current?.click()}
+        title={`Click to add ${label}`}
+      >
+        <Image className="h-4 w-4 text-zinc-500" />
+        <span className="text-[8px] text-zinc-500 mt-1 uppercase scale-90 select-none">
+          {roleName === 'start_image' ? 'Start' : 'End'}
+        </span>
+      </div>
+    )
+  }
+
+  const renderCombinedGuideSlot = () => {
+    const guideItem = imageInputs.find((x) =>
+      ['human_motion', 'human_motion_pose', 'depth', 'canny_edges', 'sdr_to_hdr', 'continue_video', 'audio_to_video', 'reference_voice'].includes(x.role)
+    )
+    
+    if (guideItem) {
+      const isActive = activeImageInputId === 'guide_slot'
+      const mediaType = guideItem.type
+      
+      const videoRoles = [
+        { role: 'human_motion', label: 'Human Motion', description: 'Transfer human motion guidance.' },
+        { role: 'human_motion_pose', label: 'Human Motion (Pose Aligned)', description: 'Transfer human motion with pose alignment.' },
+        { role: 'depth', label: 'Depth', description: 'Guide generation using depth map.' },
+        { role: 'canny_edges', label: 'Canny Edges', description: 'Guide generation using Canny edge maps.' },
+        { role: 'sdr_to_hdr', label: 'Convert SDR to HDR', description: 'Convert SDR video to HDR using IC-LoRA.' },
+        { role: 'continue_video', label: 'Continue Video', description: 'Continue video generation from the end of this video.' }
+      ]
+
+      const audioRoles = [
+        { role: 'audio_to_video', label: 'Audio To Video', description: 'Generate video based on soundtrack and text.' },
+        { role: 'reference_voice', label: 'Reference Voice', description: 'Generate video using reference voice (ID-LoRA).' }
+      ]
+
+      const currentRoles = mediaType === 'video' ? videoRoles : audioRoles
+      const currentRoleDef = currentRoles.find(r => r.role === guideItem.role)
+
+      return (
+        <div key="guide_slot" className="relative">
+          {isActive && (
+            <div className="absolute bottom-full left-0 mb-2 w-64 rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl z-[10000]">
+              <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">
+                {mediaType === 'video' ? 'Video Guide Role' : 'Audio Track Role'}
+              </div>
+              <div className="space-y-1">
+                {currentRoles.map((option) => (
+                  <button
+                    key={option.role}
+                    onClick={() => updateImageInputRole(guideItem.id, option.role)}
+                    className={`w-full flex flex-col px-2 py-1.5 rounded-md text-left transition-colors ${
+                      guideItem.role === option.role ? 'bg-white/20 text-white' : 'text-zinc-400 hover:bg-zinc-700'
+                    }`}
+                    title={option.description}
+                  >
+                    <span className="text-xs font-medium">{option.label}</span>
+                    <span className="text-[9px] text-zinc-500 mt-0.5">{option.description}</span>
+                  </button>
+                ))}
+                
+                {mediaType === 'video' && guideItem.role !== 'continue_video' && (
+                  <>
+                    <div className="h-px bg-zinc-700 my-1" />
+                    <label className="flex items-center justify-between gap-2 px-2 py-2 hover:bg-zinc-700/50 rounded-md cursor-pointer select-none">
+                      <span className="text-xs text-zinc-300">Use Audio Track</span>
+                      <input
+                        type="checkbox"
+                        checked={useAudioTrack}
+                        onChange={(e) => onUseAudioTrackChange(e.target.checked)}
+                        className="rounded bg-zinc-900 border-zinc-700 text-blue-500 focus:ring-blue-500 h-3.5 w-3.5"
+                      />
+                    </label>
+                    <div className="text-[9px] text-zinc-500 px-2 leading-tight">
+                      {useAudioTrack 
+                        ? 'Generates video with soundtrack from the guide video.' 
+                        : 'Generates soundtrack matching the video.'
+                      }
+                    </div>
+                  </>
+                )}
+
+                <div className="h-px bg-zinc-700 my-1" />
+                <button
+                  onClick={() => removeImageInput(guideItem.id)}
+                  className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-left text-red-300 hover:bg-red-500/15 transition-colors"
+                >
+                  <Trash2 className="h-3.5 w-3.5 flex-shrink-0" />
+                  <span className="text-xs">Remove</span>
+                </button>
+              </div>
+            </div>
+          )}
+          
+          <button
+            type="button"
+            onClick={() => setActiveImageInputId(isActive ? null : 'guide_slot')}
+            className="group relative h-14 w-14 overflow-hidden rounded-lg border border-zinc-700 bg-zinc-800 flex items-center justify-center flex-shrink-0"
+            title={`${currentRoleDef?.label || 'Video/Audio Guide'} - Click for actions`}
+          >
+            {mediaType === 'video' ? (
+              <video src={guideItem.url} className="h-full w-full object-cover pointer-events-none" muted playsInline />
+            ) : (
+              <Music className="h-6 w-6 text-emerald-400" />
+            )}
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+              <Pencil className="h-4 w-4 text-white" />
+            </div>
+            <div className="absolute bottom-1 right-1 p-0.5 rounded bg-black/70 text-[9px] text-zinc-400 scale-90 max-w-[48px] truncate">
+              {mediaType === 'video' ? (guideItem.role === 'continue_video' ? 'Continue' : 'Video') : 'Audio'}
+            </div>
+          </button>
+        </div>
+      )
+    }
+
+    // Empty slot
+    const isActiveEmpty = activeImageInputId === 'empty_guide_slot'
+    return (
+      <div key="empty_guide_slot" className="relative">
+        {isActiveEmpty && (
+          <div className="absolute bottom-full left-0 mb-2 w-48 rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl z-[10000] space-y-1">
+            <button
+              onClick={() => {
+                videoInputRef.current?.click()
+                setActiveImageInputId(null)
+              }}
+              className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-left text-zinc-300 hover:bg-zinc-700 transition-colors"
+            >
+              <Video className="h-3.5 w-3.5" />
+              <span className="text-xs">Add Video Guide</span>
+            </button>
+            <button
+              onClick={() => {
+                audioInputRef.current?.click()
+                setActiveImageInputId(null)
+              }}
+              className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-left text-zinc-300 hover:bg-zinc-700 transition-colors"
+            >
+              <Music className="h-3.5 w-3.5" />
+              <span className="text-xs">Add Audio Track</span>
+            </button>
+          </div>
+        )}
+        <div
+          className={`relative h-14 w-14 rounded-lg border-2 border-dashed transition-colors flex flex-col items-center justify-center flex-shrink-0 cursor-pointer hover:border-zinc-500 border-zinc-700`}
+          onDragOver={(e) => { e.preventDefault() }}
+          onDrop={(e) => {
+            e.preventDefault()
+            const file = e.dataTransfer.files?.[0]
+            if (file) {
+              const isVideo = file.type.startsWith('video/')
+              const isAudio = file.type.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'aac', 'flac', 'm4a'].includes(file.name.split('.').pop()?.toLowerCase() || '')
+              const filePath = (file as any).path as string | undefined
+              const fileUrl = filePath 
+                ? (filePath.replace(/\\/g, '/').startsWith('/') ? `file://${filePath.replace(/\\/g, '/')}` : `file:///${filePath.replace(/\\/g, '/')}`)
+                : URL.createObjectURL(file)
+              
+              if (isVideo) {
+                setSlotMedia(fileUrl, 'human_motion', 'video')
+              } else if (isAudio) {
+                setSlotMedia(fileUrl, 'audio_to_video', 'audio')
+              }
+            }
+          }}
+          onClick={() => setActiveImageInputId(isActiveEmpty ? null : 'empty_guide_slot')}
+          title="Click to add Video or Audio"
+        >
+          <Video className="h-4 w-4 text-zinc-500" />
+          <span className="text-[8px] text-zinc-500 mt-1 uppercase scale-90 select-none">
+            Vid/Aud
+          </span>
+        </div>
+      </div>
+    )
+  }
+
+  const supportsInputStrip = ((mode === 'image' && supportsImageInput) || (mode === 'video' && selectedVideoProfile?.inputMedia?.supportsImageInputs))
+
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-visible">
+      {supportsInputStrip && (
+        <div className="relative flex items-center gap-2 overflow-visible px-2 pt-2 pb-1">
+          {mode === 'image' ? (
+            <>
+              {imageInputs.map((item) => {
+                const role = imageInputPolicy?.roles.find((candidate) => candidate.role === item.role)
+                const isActive = activeImageInputId === item.id
+                return (
+                  <div key={item.id} className="relative">
+                    {isActive && imageInputPolicy && (
+                      <div className="absolute bottom-full left-0 mb-2 w-56 rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl z-[10000]">
+                        <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">Image input</div>
+                        <div className="space-y-1">
+                          {imageInputPolicy.roles.map((option) => (
+                            <button
+                              key={option.role}
+                              onClick={() => updateImageInputRole(item.id, option.role)}
+                              className={`w-full flex items-center gap-2 px-2 py-2 rounded-md text-left transition-colors ${
+                                item.role === option.role ? 'bg-white/20 text-white' : 'text-zinc-400 hover:bg-zinc-700'
+                              }`}
+                              title={option.description}
+                            >
+                              <Image className="h-3.5 w-3.5 flex-shrink-0" />
+                              <span className="text-xs">{option.label}</span>
+                            </button>
+                          ))}
+                          <div className="h-px bg-zinc-700 my-1" />
+                          <button
+                            onClick={() => removeImageInput(item.id)}
+                            className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-left text-red-300 hover:bg-red-500/15 transition-colors"
+                          >
+                            <Trash2 className="h-3.5 w-3.5 flex-shrink-0" />
+                            <span className="text-xs">Remove</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setActiveImageInputId(isActive ? null : item.id)}
+                      className="group relative h-14 w-14 overflow-hidden rounded-lg border border-zinc-700 bg-zinc-800 flex items-center justify-center flex-shrink-0"
+                      title={role?.label || imageInputPolicy?.tooltipLabel}
+                    >
+                      <img src={item.url} alt="" className="h-full w-full object-cover" />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                        <Pencil className="h-4 w-4 text-white" />
+                      </div>
+                    </button>
+                  </div>
+                )
+              })}
+              {canAddImageInput && (
+                <div
+                  className={`relative h-14 w-14 rounded-lg border-2 border-dashed transition-colors flex items-center justify-center flex-shrink-0 cursor-pointer ${
+                    isDragOver ? 'border-blue-500 bg-blue-500/10' : 'border-zinc-700 hover:border-zinc-500'
+                  }`}
+                  onDragOver={(e) => { e.preventDefault(); setIsDragOver(true) }}
+                  onDragLeave={() => setIsDragOver(false)}
+                  onDrop={handleDrop}
+                  onClick={() => inputRef.current?.click()}
+                  title={imageInputPolicy?.tooltipLabel}
+                >
+                  <Image className="h-4 w-4 text-zinc-500" />
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              {renderVideoSlot('start_image', 'Image 1 (Start)', 'image', inputRef)}
+              {imageInputs.some(x => x.role === 'start_image') && renderVideoSlot('end_image', 'Image 2 (End)', 'image', inputRef)}
+              {renderCombinedGuideSlot()}
+            </>
           )}
           <input
             ref={inputRef}
@@ -755,13 +1234,27 @@ function PromptBar({
             onChange={handleFileSelect}
             className="hidden"
           />
+          <input
+            ref={videoInputRef}
+            type="file"
+            accept="video/*"
+            onChange={handleVideoFileSelect}
+            className="hidden"
+          />
+          <input
+            ref={audioInputRef}
+            type="file"
+            accept=".mp3,.wav,.ogg,.aac,.flac,.m4a"
+            onChange={handleAudioFileSelect}
+            className="hidden"
+          />
         </div>
       )}
 
       {/* Top row: media inputs | Prompt */}
       <div className="flex items-start">
         {/* Input image drop zone — video mode only (I2V) */}
-        {mode === 'video' && !isRetake && (
+        {mode === 'video' && !isRetake && !selectedVideoProfile?.inputMedia?.supportsImageInputs && (
           <div
             className={`relative w-10 h-10 mx-2 mt-2 rounded-lg border-2 border-dashed transition-colors flex items-center justify-center flex-shrink-0 cursor-pointer ${
               isDragOver ? 'border-blue-500 bg-blue-500/10' : 'border-zinc-700 hover:border-zinc-500'
@@ -796,7 +1289,7 @@ function PromptBar({
         )}
 
         {/* Audio drop zone — only in video mode */}
-        {mode === 'video' && !isRetake && (
+        {mode === 'video' && !isRetake && !selectedVideoProfile?.inputMedia?.supportsImageInputs && (
           <div
             className={`relative w-10 h-10 mt-2 rounded-lg border-2 border-dashed transition-colors flex items-center justify-center flex-shrink-0 cursor-pointer ${
               isAudioDragOver ? 'border-emerald-500 bg-emerald-500/10' : inputAudio ? 'border-emerald-600' : 'border-zinc-700 hover:border-zinc-500'
@@ -831,22 +1324,122 @@ function PromptBar({
         )}
 
         {/* Prompt input - fills remaining width */}
-        <div className="flex-1 min-w-0 py-1">
-          <textarea
-            value={prompt}
-            onChange={(e) => onPromptChange(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={mode === 'retake'
-              ? "Describe what should happen in the selected section..."
-              : mode === 'image'
-                ? "A close-up of a woman talking on the phone..."
-                : "The woman sips from a cup of coffee..."
-            }
-            className="w-full bg-transparent text-white text-sm placeholder:text-zinc-500 focus:outline-none px-2 py-2 resize-none overflow-y-auto h-[70px] leading-5"
-          />
+        <div className={`relative flex-1 min-w-0 py-1 ${mode === 'video' && multiShotEnabled ? 'h-10' : ''}`}>
+          {mode === 'video' && multiShotEnabled ? null : (
+            <textarea
+              value={prompt}
+              onChange={(e) => onPromptChange(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={mode === 'retake'
+                ? "Describe what should happen in the selected section..."
+                : mode === 'image'
+                  ? "A close-up of a woman talking on the phone..."
+                  : "The woman sips from a cup of coffee..."
+              }
+              className="w-full bg-transparent text-white text-sm placeholder:text-zinc-500 focus:outline-none pl-2 pr-10 py-2 resize-none overflow-y-auto h-[70px] leading-5"
+            />
+          )}
+          {mode === 'video' && !isRetake && (
+            <button
+              type="button"
+              onClick={() => onMultiShotEnabledChange(!multiShotEnabled)}
+              disabled={isGenerating}
+              className={`absolute bottom-2 left-2 flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] font-medium transition-colors ${
+                multiShotEnabled
+                  ? 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30'
+                  : 'bg-zinc-800/80 text-zinc-400 hover:bg-zinc-700 hover:text-white'
+              } disabled:opacity-40`}
+              title="Multi-shot"
+            >
+              <Film className="h-3 w-3" />
+              Multi-shot
+            </button>
+          )}
+          {!isRetake && (
+            <button
+              type="button"
+              onClick={onEnhancePrompt}
+              disabled={isGenerating || isEnhancingPrompt || !prompt.trim()}
+              className="absolute bottom-2 right-2 p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-zinc-400 transition-colors"
+              title="Enhance prompt"
+            >
+              {isEnhancingPrompt ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4" />
+              )}
+            </button>
+          )}
         </div>
 
       </div>
+
+      {mode === 'video' && !isRetake && multiShotEnabled && (
+        <div className="max-h-72 overflow-y-auto border-t border-zinc-800/60 bg-zinc-950/30">
+          <div className="flex items-center gap-2 border-b border-zinc-800/60 px-2 py-2">
+            <div className="flex h-8 w-[82px] shrink-0 items-center justify-center rounded-md bg-zinc-800/80 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+              Global
+            </div>
+            <input
+              value={prompt}
+              onChange={(e) => onPromptChange(e.target.value)}
+              placeholder="Global prompt for the whole video"
+              className="min-w-0 flex-1 bg-transparent text-sm text-white placeholder:text-zinc-600 focus:outline-none"
+            />
+          </div>
+          {multiShotRows.map((row, index) => {
+            const secondsUsedByOtherRows = multiShotTotalSeconds - row.seconds
+            const maxForRow = Math.max(1, MAX_MULTI_SHOT_SECONDS - secondsUsedByOtherRows)
+            const durationOptions = MULTI_SHOT_SECONDS.filter((value) => value <= maxForRow)
+
+            return (
+              <div key={row.id} className="flex items-center gap-2 border-b border-zinc-800/60 px-2 py-2">
+                <label className="flex h-8 w-[92px] shrink-0 items-center gap-1.5 rounded-md bg-zinc-800 px-2 text-zinc-300">
+                  <Video className="h-3.5 w-3.5" />
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">{index + 1}</span>
+                  <select
+                    value={row.seconds}
+                    onChange={(e) => updateMultiShotRow(row.id, { seconds: parseInt(e.target.value, 10) })}
+                    className="w-11 bg-transparent text-[10px] font-semibold tracking-wider text-zinc-400 focus:outline-none"
+                    title={`Shot ${index + 1} length`}
+                  >
+                    {durationOptions.map((value) => (
+                      <option key={value} value={value} className="bg-zinc-800 text-white">
+                        {String(value).padStart(2, '0')}s
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <input
+                  value={row.prompt}
+                  onChange={(e) => updateMultiShotRow(row.id, { prompt: e.target.value })}
+                  placeholder={`Shot ${index + 1}`}
+                  className="min-w-0 flex-1 bg-transparent text-sm text-white placeholder:text-zinc-600 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeMultiShotRow(row.id)}
+                  disabled={multiShotRows.length <= 2}
+                  className="p-1 rounded-md text-zinc-600 hover:text-white hover:bg-zinc-800 disabled:opacity-0 disabled:pointer-events-none"
+                  title="Remove shot"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )
+          })}
+          <button
+            type="button"
+            onClick={addMultiShotRow}
+            disabled={multiShotTotalSeconds >= MAX_MULTI_SHOT_SECONDS}
+            className="flex w-full items-center justify-center gap-1.5 px-2 py-2 text-xs text-zinc-400 hover:bg-zinc-800/60 hover:text-white disabled:cursor-not-allowed disabled:text-zinc-700 disabled:hover:bg-transparent"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add shot
+            <span className="text-zinc-600">{multiShotTotalSeconds}/{MAX_MULTI_SHOT_SECONDS}s</span>
+          </button>
+        </div>
+      )}
       
       {/* Bottom row: Mode selector + Settings */}
       <div className="flex items-center gap-0.5 px-1.5 py-1.5 border-t border-zinc-800/60 text-xs text-zinc-400">
@@ -906,19 +1499,31 @@ function PromptBar({
 
             <div className="w-px h-4 bg-zinc-700 mx-0.5" />
             
-            {/* Duration dropdown */}
-            <SettingsDropdown
-              title="DURATION"
-              value={String(settings.duration)}
-              onChange={(v) => onSettingsChange({ ...settings, duration: parseFloat(v) })}
-              options={videoDurationOptions.map((value) => ({ value: String(value), label: `${value} Sec` }))}
-              trigger={
-                <>
-                  <Clock className="h-3.5 w-3.5" />
-                  <span>{settings.duration}s</span>
-                </>
-              }
-            />
+            {multiShotEnabled ? (
+              <button
+                type="button"
+                disabled
+                className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-zinc-800/40 text-zinc-500 cursor-not-allowed"
+                title="Video duration is controlled by multi-shot rows"
+              >
+                <Clock className="h-3.5 w-3.5" />
+                <span>auto</span>
+                <span className="text-zinc-600">{multiShotTotalSeconds}s</span>
+              </button>
+            ) : (
+              <SettingsDropdown
+                title="DURATION"
+                value={String(settings.duration)}
+                onChange={(v) => onSettingsChange({ ...settings, duration: parseFloat(v) })}
+                options={videoDurationOptions.map((value) => ({ value: String(value), label: `${value} Sec` }))}
+                trigger={
+                  <>
+                    <Clock className="h-3.5 w-3.5" />
+                    <span>{settings.duration}s</span>
+                  </>
+                }
+              />
+            )}
             
             {/* Resolution dropdown */}
             <SettingsDropdown
@@ -1058,7 +1663,14 @@ export function GenSpace() {
   const [inputImage, setInputImage] = useState<string | null>(null)
   const [imageInputs, setImageInputs] = useState<ImageInputItem[]>([])
   const [inputAudio, setInputAudio] = useState<string | null>(null)
+  const [useAudioTrack, setUseAudioTrack] = useState(true)
   const [localError, setLocalError] = useState<string | null>(null)
+  const [isEnhancingPrompt, setIsEnhancingPrompt] = useState(false)
+  const [multiShotEnabled, setMultiShotEnabled] = useState(false)
+  const [multiShotRows, setMultiShotRows] = useState<MultiShotRow[]>(() => [
+    createMultiShotRow(4),
+    createMultiShotRow(4),
+  ])
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
   const [copiedPrompt, setCopiedPrompt] = useState(false)
   const [showFavorites, setShowFavorites] = useState(false)
@@ -1176,6 +1788,10 @@ export function GenSpace() {
     const genMode = inputAudio
       ? 'audio-to-video'
       : inputImage ? 'image-to-video' : 'text-to-video'
+    const startImageItem = imageInputs.find((x) => x.role === 'start_image')
+    const audioItem = imageInputs.find((x) => ['audio_guide', 'audio_to_video', 'reference_voice'].includes(x.role))
+    const inputImageUrl = startImageItem?.url || inputImage || undefined
+    const inputAudioUrl = audioItem?.url || inputAudio || undefined
     const savedVideoSettings = settings
 
     ;(async () => {
@@ -1202,8 +1818,9 @@ export function GenSpace() {
             cameraMotion: 'none',
             imageAspectRatio: savedVideoSettings.aspectRatio,
             imageSteps: savedVideoSettings.imageSteps,
-            inputImageUrl: inputImage || undefined,
-            inputAudioUrl: inputAudio || undefined,
+            inputImageUrl,
+            inputAudioUrl,
+            imageInputMedia: imageInputs.map((item) => ({ url: item.url, role: item.role })),
           },
           takes: [{
             url: finalUrl,
@@ -1218,7 +1835,7 @@ export function GenSpace() {
         logger.error(`Failed to persist generated video asset: ${err}`)
       }
     })()
-  }, [videoUrl, videoPath, currentProjectId, isGenerating, settings, inputImage, inputAudio, lastPrompt, addAsset, reset])
+  }, [videoUrl, videoPath, currentProjectId, isGenerating, settings, inputImage, inputAudio, lastPrompt, addAsset, reset, imageInputs])
 
   // When retake completes, add as take or new asset
   useEffect(() => {
@@ -1367,10 +1984,19 @@ export function GenSpace() {
       return
     }
 
-    if (!prompt.trim()) return
+    const shouldUseMultiShot = mode === 'video' && multiShotEnabled
+    if (!shouldUseMultiShot && !prompt.trim()) return
+    if (shouldUseMultiShot && multiShotRows.some((row) => !row.prompt.trim())) return
+    const multiShotDuration = multiShotRows.reduce((total, row) => total + row.seconds, 0)
+    const generationPrompt = shouldUseMultiShot
+      ? formatMultiShotPrompt(prompt, multiShotRows)
+      : prompt
+    const shotPrompts = shouldUseMultiShot
+      ? multiShotRows.map((row) => ({ seconds: row.seconds, prompt: row.prompt.trim() }))
+      : undefined
 
     // Save the prompt before generation starts
-    setLastPrompt(prompt)
+    setLastPrompt(generationPrompt)
 
     if (mode === 'image') {
       const inputMedia = imageInputs
@@ -1380,7 +2006,7 @@ export function GenSpace() {
         })
         .filter((item): item is { path: string; role: string } => item !== null)
       generateImage(
-        prompt,
+        generationPrompt,
         {
           model: 'fast' as 'fast' | 'pro',
           duration: 5,
@@ -1400,10 +2026,27 @@ export function GenSpace() {
     } else {
       // Generate video (t2v if no image/audio, i2v if image, a2v if audio)
       // Extract filesystem path from the file:// URL for the backend
-      const imagePath = inputImage ? fileUrlToPath(inputImage) : null
-      const audioPath = inputAudio ? fileUrlToPath(inputAudio) : null
+      const startImageItem = imageInputs.find((x) => x.role === 'start_image')
+      const audioItem = imageInputs.find((x) => ['audio_guide', 'audio_to_video', 'reference_voice'].includes(x.role))
+      const videoGuideItem = imageInputs.find((x) =>
+        ['control_video', 'human_motion', 'human_motion_pose', 'depth', 'canny_edges', 'sdr_to_hdr'].includes(x.role)
+      )
+
+      const imagePath = startImageItem ? fileUrlToPath(startImageItem.url) : (inputImage ? fileUrlToPath(inputImage) : null)
+      const audioPath = audioItem 
+        ? fileUrlToPath(audioItem.url) 
+        : (videoGuideItem && useAudioTrack ? fileUrlToPath(videoGuideItem.url) : (inputAudio ? fileUrlToPath(inputAudio) : null))
       const videoSettings = { ...settings }
+      if (shouldUseMultiShot) videoSettings.duration = multiShotDuration
       if (audioPath) videoSettings.model = 'pro'
+      if (shouldUseMultiShot) setSettings(videoSettings)
+
+      const inputMedia = imageInputs
+        .map((item) => {
+          const path = fileUrlToPath(item.url)
+          return path ? { path, role: item.role } : null
+        })
+        .filter((item): item is { path: string; role: string } => item !== null)
 
       generate(
         prompt,
@@ -1422,7 +2065,47 @@ export function GenSpace() {
           imageSteps: videoSettings.imageSteps,
         },
         audioPath,
+        inputMedia,
+        useAudioTrack,
+        shotPrompts,
       )
+    }
+  }
+
+  const handleEnhancePrompt = async () => {
+    const trimmedPrompt = prompt.trim()
+    if (!trimmedPrompt || mode === 'retake' || promptGenerating || isEnhancingPrompt) return
+
+    const inputImageUrl = mode === 'image'
+      ? imageInputs[0]?.url
+      : imageInputs.find((item) => item.role === 'start_image')?.url || inputImage
+    const inputImagePath = inputImageUrl ? fileUrlToPath(inputImageUrl) : null
+
+    setIsEnhancingPrompt(true)
+    setLocalError(null)
+    try {
+      const response = await backendFetch('/api/enhance-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: trimmedPrompt,
+          mode,
+          modelProfileId: mode === 'image' ? settings.imageProfileId : settings.videoProfileId,
+          inputImagePath,
+        }),
+      })
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(errorText || 'Prompt enhancement failed')
+      }
+      const data = await response.json()
+      if (typeof data.prompt === 'string' && data.prompt.trim()) {
+        setPrompt(data.prompt)
+      }
+    } catch (err) {
+      setLocalError(err instanceof Error ? err.message : 'Prompt enhancement failed')
+    } finally {
+      setIsEnhancingPrompt(false)
     }
   }
   
@@ -1459,7 +2142,9 @@ export function GenSpace() {
   const isRetakeMode = mode === 'retake'
   const canSubmit = isRetakeMode
     ? retakeInput.ready && !!retakeInput.videoPath && !isRetaking
-    : !!prompt.trim()
+    : mode === 'video' && multiShotEnabled
+      ? multiShotRows.every((row) => row.prompt.trim())
+      : !!prompt.trim()
   const promptButtonLabel = isRetakeMode ? 'Retake' : 'Generate'
   const promptButtonIcon = isRetakeMode
     ? <Scissors className="h-3.5 w-3.5" />
@@ -1665,7 +2350,9 @@ export function GenSpace() {
           prompt={prompt}
           onPromptChange={setPrompt}
           onGenerate={handleGenerate}
+          onEnhancePrompt={handleEnhancePrompt}
           isGenerating={promptGenerating}
+          isEnhancingPrompt={isEnhancingPrompt}
           canGenerate={canSubmit}
           buttonLabel={promptButtonLabel}
           buttonIcon={promptButtonIcon}
@@ -1677,9 +2364,15 @@ export function GenSpace() {
           onInputAudioChange={setInputAudio}
           settings={settings}
           onSettingsChange={setSettings}
-              imageProfiles={imageProfiles}
-              videoProfiles={videoProfiles}
-            />
+          imageProfiles={imageProfiles}
+          videoProfiles={videoProfiles}
+          useAudioTrack={useAudioTrack}
+          onUseAudioTrackChange={setUseAudioTrack}
+          multiShotEnabled={multiShotEnabled}
+          onMultiShotEnabledChange={setMultiShotEnabled}
+          multiShotRows={multiShotRows}
+          onMultiShotRowsChange={setMultiShotRows}
+        />
       </div>
       
       {/* Asset preview modal */}

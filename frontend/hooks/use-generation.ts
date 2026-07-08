@@ -24,7 +24,7 @@ interface GenerationProgress {
 }
 
 interface UseGenerationReturn extends GenerationState {
-  generate: (prompt: string, imagePath: string | null, settings: GenerationSettings, audioPath?: string | null) => Promise<void>
+  generate: (prompt: string, imagePath: string | null, settings: GenerationSettings, audioPath?: string | null, inputMedia?: { path: string; role: string }[], useAudioTrack?: boolean, shotPrompts?: { seconds: number; prompt: string }[]) => Promise<void>
   generateImage: (prompt: string, settings: GenerationSettings, inputMedia?: { path: string; role: string }[]) => Promise<void>
   cancel: () => void
   reset: () => void
@@ -121,6 +121,9 @@ export function useGeneration(): UseGenerationReturn {
     imagePath: string | null,
     settings: GenerationSettings,
     audioPath?: string | null,
+    inputMedia?: { path: string; role: string }[],
+    useAudioTrack?: boolean,
+    shotPrompts?: { seconds: number; prompt: string }[],
   ) => {
     const statusMsg = settings.model === 'pro'
       ? 'Loading Pro model & generating...'
@@ -155,12 +158,31 @@ export function useGeneration(): UseGenerationReturn {
         audio: String(settings.audio),
         cameraMotion: settings.cameraMotion,
         aspectRatio: settings.aspectRatio || '16:9',
+        useAudioTrack: useAudioTrack !== undefined ? useAudioTrack : true,
       }
       if (imagePath) {
         body.imagePath = imagePath
       }
       if (audioPath) {
         body.audioPath = audioPath
+      }
+      if (inputMedia && inputMedia.length > 0) {
+        body.inputMedia = inputMedia.map((item) => {
+          let type = 'image'
+          if (['control_video', 'human_motion', 'human_motion_pose', 'depth', 'canny_edges', 'sdr_to_hdr', 'continue_video'].includes(item.role)) {
+            type = 'video'
+          } else if (['audio_guide', 'audio_to_video', 'reference_voice'].includes(item.role)) {
+            type = 'audio'
+          }
+          return {
+            type,
+            path: item.path,
+            role: item.role,
+          }
+        })
+      }
+      if (shotPrompts && shotPrompts.length > 0) {
+        body.shotPrompts = shotPrompts
       }
 
       // Poll for real progress from backend with time-based interpolation

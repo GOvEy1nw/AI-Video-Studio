@@ -1,6 +1,6 @@
 # Project Map - AI Video Studio
 
-Status: Updated 2026-07-07 after image/video profile alignment and README rewrite.
+Status: Updated 2026-07-08 after phase 4.41 prompt enhancement, phase 4.42 multi-shot video prompts, and venv preservation fixes.
 
 ## Purpose
 
@@ -66,7 +66,9 @@ Files, dialogs, ffmpeg, backend process management
 - Image and video modes use profile-driven model dropdowns.
 - Image mode shows media input strip above prompt only when selected profile supports inputs.
 - Supported image profiles expose role selector per input thumbnail.
-- Video mode is profile-driven but currently exposes only existing simple controls.
+- Video mode is profile-driven and exposes simple controls plus optional multi-shot prompt rows.
+- Multi-shot mode replaces the prompt textarea with an optional global prompt row and timed shot rows capped at 20 total seconds.
+- Prompt enhancement is available in image/video prompt areas and routes through WanGP.
 - Gallery persistence guards avoid repeated save loops after generation completion.
 
 ## Backend map
@@ -79,6 +81,7 @@ Files, dialogs, ffmpeg, backend process management
 - `backend/api_types.py` - Pydantic request/response models.
 - `backend/handlers/image_generation_handler.py` - WanGP image generation routing and profile validation.
 - `backend/handlers/video_generation_handler.py` - WanGP video generation routing and profile validation.
+- `backend/handlers/prompt_enhancement_handler.py` - WanGP prompt enhancement routing.
 - `backend/handlers/model_profiles_handler.py` - `GET /api/model-profiles`.
 - `backend/services/wangp_bridge.py` - WanGP API bridge for image/video manifest execution.
 - `backend/model_profiles/profiles.py` - curated image/video model profiles plus raw WanGP metadata.
@@ -129,6 +132,8 @@ Profile response includes:
 - Backend validates profile id and UI choices before WanGP.
 - Image generation sends `modelProfileId`, `aspectRatio`, and `resolutionTier`; backend resolves exact `WxH`.
 - Video generation sends `modelProfileId`; legacy `model: fast` maps to the curated LTX2 video profile.
+- Multi-shot video requests send `shotPrompts`; backend combines the optional global prompt and timed rows into WanGP relayed prompt syntax.
+- WanGP manifests use `multi_prompts_gen_type: "FG"` so all lines are treated as one prompt unless relayed ranges are present.
 - Raw WanGP metadata is retained separately from AiVS-curated UI capability fields.
 
 ## Runtime map
@@ -137,6 +142,7 @@ Profile response includes:
 - `backend/pyproject.toml` pins torch stack versions aligned with installer.
 - `scripts/wangp-stacks.json` is the curated GPU stack source.
 - `scripts/install-wangp-stack.ps1` detects GPU generation and installs compatible torch/performance wheels.
+- Setup scripts and backend tests use `uv sync --inexact` to avoid pruning WanGP requirements/performance wheels from `backend/.venv`.
 - `WANGP_VIDEO_MODEL_TYPE` default: `ltx2_22B_distilled_1_1`.
 - `WANGP_IMAGE_MODEL_TYPE` default: `z_image`.
 - App data folder: AiVS.
@@ -159,17 +165,17 @@ Current verified checks:
 
 ## Development commands
 
-| Command | Purpose |
-| --- | --- |
-| `pnpm dev` | Start Vite/Electron/backend dev app |
-| `pnpm dev:debug` | Dev app with Electron inspector and Python debugpy |
-| `pnpm typecheck` | TypeScript + Python type checks |
-| `pnpm typecheck:ts` | TypeScript only |
-| `pnpm typecheck:py` | Pyright only |
-| `pnpm backend:test` | Backend pytest |
-| `pnpm build:frontend` | Renderer/Electron build |
-| `pnpm setup:dev:win` | Windows setup |
-| `scripts/install-wangp-stack.ps1` | Install/refresh WanGP GPU stack |
+| Command                           | Purpose                                            |
+| --------------------------------- | -------------------------------------------------- |
+| `pnpm dev`                        | Start Vite/Electron/backend dev app                |
+| `pnpm dev:debug`                  | Dev app with Electron inspector and Python debugpy |
+| `pnpm typecheck`                  | TypeScript + Python type checks                    |
+| `pnpm typecheck:ts`               | TypeScript only                                    |
+| `pnpm typecheck:py`               | Pyright only                                       |
+| `pnpm backend:test`               | Backend pytest                                     |
+| `pnpm build:frontend`             | Renderer/Electron build                            |
+| `pnpm setup:dev:win`              | Windows setup                                      |
+| `scripts/install-wangp-stack.ps1` | Install/refresh WanGP GPU stack                    |
 
 ## Known tooling caveat
 
@@ -183,23 +189,27 @@ Then run scripts through the same direct pnpm entry if needed.
 
 ## Roadmap
 
-| Phase | Goal | Status |
-| --- | --- | --- |
-| Phase 0 | Fork audit + preservation map | Complete |
-| Phase 1 | Local-only product shell | Complete |
-| Phase 2 | WanGP-only generation enforcement | Complete |
-| Phase 3 | QuickGen image baseline | Complete |
-| Phase 4 | Curated image model expansion | Complete |
-| Phase 4.1 | Image input media roles + multi-image support | Complete |
-| Phase 4.2 | Video model profile alignment | Complete |
-| Phase 5 | LoRA MVP | Pending |
-| Phase 6 | QuickGen image polish | Pending |
-| Phase 7 | Video input capabilities (start/end/control/source video) | Pending |
-| Phase 8 | QuickGen audio/TTS | Pending |
-| Phase 9 | Production planning | Pending |
+| Phase     | Goal                                                                                                                      | Status      |
+| --------- | ------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| Phase 0   | Fork audit + preservation map                                                                                             | Complete    |
+| Phase 1   | Local-only product shell                                                                                                  | Complete    |
+| Phase 2   | WanGP-only generation enforcement                                                                                         | Complete    |
+| Phase 3   | QuickGen image baseline                                                                                                   | Complete    |
+| Phase 4   | Curated image model expansion                                                                                             | Complete    |
+| Phase 4.1 | Image input media roles + multi-image support                                                                             | Complete    |
+| Phase 4.2 | Video model profile alignment                                                                                             | Complete    |
+| Phase 4.3 | Update input media slots for better feature support & run backend/WanGP connection in the background to avoid delays loading UI | Complete |
+| Phase 4.41 | WanGP prompt enhancement for image/video modes                                                                            | Complete    |
+| Phase 4.42 | Video multi-shot prompt rows with relayed WanGP prompt formatting                                                         | Complete    |
+| Phase 5   | LoRA MVP                                                                                                                  | Pending     |
+| Phase 6   | QuickGen image polish                                                                                                     | Pending     |
+| Phase 7   | Video input capabilities (start/end/control/source video)                                                                 | Pending     |
+| Phase 8   | QuickGen audio/TTS                                                                                                        | Pending     |
+| Phase 9   | Production planning                                                                                                       | Pending     |
 
 ## Next work
 
+- Test and polish multi-shot video prompt behavior against real WanGP output.
 - Add video start frame / end frame / source video / control video UI and backend mapping from existing LTX2 raw metadata.
 - Add LoRA folder detection, selection, strength, and metadata.
 - Improve model availability/missing-model UX.

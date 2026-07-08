@@ -570,3 +570,13 @@ export function stopPythonBackend(): void {
     latestBackendHealthStatus = null
   }
 }
+
+export async function restartPythonBackend(): Promise<void> {
+  logger.info('Restarting Python backend...')
+  stopPythonBackend()
+  // Wait 1 second to release ports
+  await new Promise(resolve => setTimeout(resolve, 1000))
+  startPromise = null
+  isIntentionalShutdown = false
+  await startPythonBackend()
+}

@@ -91,6 +91,55 @@ class TestGenerate:
         assert call.aspect_ratio == "9:16"
         assert call.steps == 8
 
+    def test_multi_shot_prompt_formats_relay_ranges(
+        self, client, enable_wangp: FakeWanGPBridge
+    ):
+        r = client.post(
+            "/api/generate",
+            json={
+                "prompt": "Global cinematic style",
+                "resolution": "540p",
+                "modelProfileId": "ltx2_22b_distilled",
+                "duration": "5",
+                "fps": "24",
+                "shotPrompts": [
+                    {"seconds": 4, "prompt": "The knight raises a shield."},
+                    {"seconds": 5, "prompt": "The dragon breathes fire."},
+                ],
+            },
+        )
+
+        assert r.status_code == 200
+        call = enable_wangp.video_calls[0]
+        assert call.duration_seconds == 9
+        assert call.prompt == (
+            "Global cinematic style\n"
+            "[0s:4s] The knight raises a shield.\n"
+            "[4s:9s] The dragon breathes fire."
+        )
+
+    def test_multi_shot_allows_empty_global_prompt(
+        self, client, enable_wangp: FakeWanGPBridge
+    ):
+        r = client.post(
+            "/api/generate",
+            json={
+                "prompt": "",
+                "resolution": "540p",
+                "modelProfileId": "ltx2_22b_distilled",
+                "duration": "5",
+                "fps": "24",
+                "shotPrompts": [
+                    {"seconds": 2, "prompt": "Shot-only prompt."},
+                ],
+            },
+        )
+
+        assert r.status_code == 200
+        call = enable_wangp.video_calls[0]
+        assert call.duration_seconds == 2
+        assert call.prompt == "[0s:2s] Shot-only prompt."
+
     def test_unknown_video_profile_rejected(
         self, client, enable_wangp: FakeWanGPBridge
     ):
@@ -140,6 +189,56 @@ class TestGenerate:
         )
         assert r.status_code == 400
         assert "Invalid image file" in r.json()["error"]
+
+    def test_video_multi_input_happy_path(
+        self, client, enable_wangp: FakeWanGPBridge, tmp_path: Path
+    ):
+        from PIL import Image
+
+        # Create valid test files
+        img = Image.new("RGB", (1, 1), color="red")
+        start_img = tmp_path / "start.png"
+        img.save(start_img)
+
+        end_img = tmp_path / "end.png"
+        img.save(end_img)
+
+        audio = tmp_path / "audio.wav"
+        audio.write_bytes(b"RIFF\x0c\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00")
+
+        video = tmp_path / "video.mp4"
+        video.write_bytes(b"fake-video")
+
+        r = client.post(
+            "/api/generate",
+            json={
+                "prompt": "A beautiful sunset",
+                "resolution": "540p",
+                "modelProfileId": "ltx2_22b_distilled",
+                "duration": "2",
+                "fps": "24",
+                "cameraMotion": "none",
+                "videoPromptType": "VG",
+                "inputMedia": [
+                    {"role": "start_image", "path": str(start_img), "type": "image"},
+                    {"role": "end_image", "path": str(end_img), "type": "image"},
+                    {"role": "control_video", "path": str(video), "type": "video"},
+                    {"role": "audio_guide", "path": str(audio), "type": "audio"},
+                ]
+            },
+        )
+
+        assert r.status_code == 200
+        data = r.json()
+        assert data["status"] == "complete"
+
+        assert len(enable_wangp.video_calls) == 1
+        call = enable_wangp.video_calls[0]
+        assert call.start_image_path == str(start_img)
+        assert call.end_image_path == str(end_img)
+        assert call.control_video_path == str(video)
+        assert call.audio_path == str(audio)
+        assert call.video_prompt_type == "VG"
 
     def test_resolution_mapping_540p(self, client, enable_wangp: FakeWanGPBridge):
         r = client.post("/api/generate", json=_T2V_JSON)

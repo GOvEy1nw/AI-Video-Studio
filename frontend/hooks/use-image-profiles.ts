@@ -20,7 +20,8 @@ function useProfilesByMediaType(mediaType: 'image' | 'video') {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (): Promise<boolean> => {
+    setLoading(true)
     try {
       const res = await backendFetch('/api/model-profiles')
       if (!res.ok) {
@@ -29,17 +30,36 @@ function useProfilesByMediaType(mediaType: 'image' | 'video') {
       const data: ModelProfileListResponse = await res.json()
       setProfiles(data.profiles.filter((p) => p.mediaType === mediaType))
       setError(null)
+      return true
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error'
       setError(message)
       logger.error(`useProfilesByMediaType(${mediaType}): ${message}`)
+      return false
     } finally {
       setLoading(false)
     }
   }, [mediaType])
 
   useEffect(() => {
-    refresh()
+    let cancelled = false
+    let retryTimer: number | null = null
+
+    const load = async () => {
+      const loaded = await refresh()
+      if (!cancelled && !loaded) {
+        retryTimer = window.setTimeout(load, 1500)
+      }
+    }
+
+    void load()
+
+    return () => {
+      cancelled = true
+      if (retryTimer !== null) {
+        window.clearTimeout(retryTimer)
+      }
+    }
   }, [refresh])
 
   return { profiles, loading, error, refresh }

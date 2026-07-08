@@ -17,7 +17,7 @@
     "typecheck": "concurrently \"pnpm run typecheck:ts\" \"pnpm run typecheck:py\"",
     "typecheck:ts": "tsc --noEmit",
     "typecheck:py": "cd backend && uv run pyright",
-    "backend:test": "cd backend && uv sync --frozen --extra test --extra dev && uv run pytest -v --tb=short",
+    "backend:test": "cd backend && uv sync --inexact --frozen --extra test --extra dev && uv run pytest -v --tb=short",
     "build:mac": "bash scripts/local-build.sh --platform mac",
     "build:win": "powershell -ExecutionPolicy Bypass -File scripts/local-build.ps1",
     "build:mac:skip-python": "bash scripts/local-build.sh --platform mac --skip-python",

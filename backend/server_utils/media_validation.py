@@ -133,3 +133,24 @@ def validate_audio_file(path: str) -> Path:
         raise HTTPError(400, f"Invalid audio file: {path}")
 
     return file_path
+
+
+_MAX_VIDEO_BYTES = 250 * 1024 * 1024
+
+
+def validate_video_file(path: str) -> Path:
+    """Validate that `path` points to a supported video file on disk."""
+
+    try:
+        file_path = Path(path)
+    except Exception:
+        raise HTTPError(400, f"Video file not found: {path}") from None
+
+    _assert_is_file(file_path, kind="Video", raw_path=path)
+    _assert_max_bytes(file_path, limit_bytes=_MAX_VIDEO_BYTES, error_detail=f"Video file too large: {path}")
+
+    ext = file_path.suffix.lower()
+    if ext not in {".mp4", ".mov", ".mkv", ".avi", ".webm"}:
+        raise HTTPError(400, f"Invalid video file extension: {path}")
+
+    return file_path

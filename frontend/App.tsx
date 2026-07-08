@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Loader2, AlertCircle, Settings, FileText } from 'lucide-react'
+import { Loader2, AlertCircle, Settings, FileText, RefreshCw } from 'lucide-react'
 import { ProjectProvider, useProjects } from './contexts/ProjectContext'
 import { KeyboardShortcutsProvider } from './contexts/KeyboardShortcutsContext'
 import { AppSettingsProvider } from './contexts/AppSettingsContext'
@@ -13,18 +13,37 @@ import { PythonSetup } from './components/PythonSetup'
 import { SettingsModal, type SettingsTabId } from './components/SettingsModal'
 import { LogViewer } from './components/LogViewer'
 import { Button } from './components/ui/button'
+import { ConnectionIndicator } from './components/ModelStatusDropdown'
 
 function AppContent() {
   const { currentView } = useProjects()
-  const { status, processStatus, isLoading: backendLoading, error: backendError } = useBackend()
+  const { processStatus, checkHealth } = useBackend()
 
   const [pythonReady, setPythonReady] = useState<boolean | null>(null)
   const [backendStarted, setBackendStarted] = useState(false)
   const [firstRunResolved, setFirstRunResolved] = useState(false)
+  const [isReconnecting, setIsReconnecting] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [settingsInitialTab, setSettingsInitialTab] = useState<SettingsTabId | undefined>(undefined)
   const [isLogViewerOpen, setIsLogViewerOpen] = useState(false)
   const firstRunCompletionInFlightRef = useRef<Promise<void> | null>(null)
+
+  const handleReconnect = async () => {
+    setIsReconnecting(true)
+    try {
+      await window.electronAPI.restartPythonBackend()
+      // Attempt health checks in a loop to establish connection quickly
+      for (let i = 0; i < 15; i++) {
+        const healthy = await checkHealth()
+        if (healthy) break
+        await new Promise(r => setTimeout(r, 1000))
+      }
+    } catch (e) {
+      logger.error(`Failed to restart/reconnect backend: ${e}`)
+    } finally {
+      setIsReconnecting(false)
+    }
+  }
 
   const isBackendRestarting = processStatus === 'restarting'
   const isBackendDead = processStatus === 'dead'
@@ -98,8 +117,7 @@ function AppContent() {
 
   const waitingForBackend =
     pythonReady === null ||
-    backendLoading ||
-    !status.connected
+    !firstRunResolved
 
   const restartingOverlay = isBackendRestarting ? (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm">
@@ -145,35 +163,20 @@ function AppContent() {
     )
   }
 
-  if (waitingForBackend || !firstRunResolved) {
+  if (waitingForBackend) {
     return (
       <div className="relative h-screen w-screen">
         <div className="h-screen bg-background flex items-center justify-center">
           <div className="text-center">
             <Loader2 className="h-12 w-12 text-primary animate-spin mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-foreground mb-2">Starting AiVS...</h2>
-            <p className="text-muted-foreground">Connecting to WanGP backend</p>
+            <p className="text-muted-foreground">Initializing environment</p>
           </div>
         </div>
         {restartingOverlay}
       </div>
     )
   }
-
-  if (backendError && !status.connected) {
-    return (
-      <div className="h-screen bg-background flex items-center justify-center">
-        <div className="text-center max-w-md">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-foreground mb-2">Connection Failed</h2>
-          <p className="text-muted-foreground mb-4">{backendError}</p>
-          <Button onClick={() => window.location.reload()}>Retry</Button>
-        </div>
-      </div>
-    )
-  }
-
-  const showGlobalControls = currentView !== 'home' && status.connected
 
   const renderView = () => {
     switch (currentView) {
@@ -192,24 +195,31 @@ function AppContent() {
     <div className="relative h-screen w-screen">
       {renderView()}
 
-      {showGlobalControls && (
-        <div className="fixed top-[18px] right-3 z-50 flex items-center gap-1">
-          <button
-            onClick={() => setIsLogViewerOpen(true)}
-            className="h-8 w-8 flex items-center justify-center rounded-md text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
-            title="View Backend Logs"
-          >
-            <FileText className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => setIsSettingsOpen(true)}
-            className="h-8 w-8 flex items-center justify-center rounded-md text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
-            title="Settings"
-          >
-            <Settings className="h-4 w-4" />
-          </button>
-        </div>
-      )}
+      <div className="fixed top-[18px] right-3 z-50 flex items-center gap-1.5">
+        <ConnectionIndicator reconnecting={isReconnecting} />
+        <button
+          onClick={handleReconnect}
+          disabled={isReconnecting}
+          className="h-8 w-8 flex items-center justify-center rounded-md text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:hover:bg-transparent transition-colors disabled:opacity-50"
+          title="Restart WanGP Backend"
+        >
+          <RefreshCw className={`h-4 w-4 ${isReconnecting ? 'animate-spin' : ''}`} />
+        </button>
+        <button
+          onClick={() => setIsLogViewerOpen(true)}
+          className="h-8 w-8 flex items-center justify-center rounded-md text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+          title="View Backend Logs"
+        >
+          <FileText className="h-4 w-4" />
+        </button>
+        <button
+          onClick={() => setIsSettingsOpen(true)}
+          className="h-8 w-8 flex items-center justify-center rounded-md text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+          title="Settings"
+        >
+          <Settings className="h-4 w-4" />
+        </button>
+      </div>
 
       <LogViewer isOpen={isLogViewerOpen} onClose={() => setIsLogViewerOpen(false)} />
       <SettingsModal

@@ -96,7 +96,7 @@ export function useBackend(): UseBackendReturn {
 
       if (response.ok) {
         const data = await response.json()
-        setModels(data.models)
+        setModels(Array.isArray(data) ? data : data.models ?? [])
       }
     } catch (err) {
       logger.error(`Failed to fetch models: ${err}`)
@@ -191,6 +191,18 @@ export function useBackend(): UseBackendReturn {
       unsubscribe()
     }
   }, [handleBackendStatus])
+
+  useEffect(() => {
+    if (!status.connected || status.modelsLoaded) {
+      return
+    }
+
+    const interval = window.setInterval(() => {
+      void checkHealth()
+    }, 1500)
+
+    return () => window.clearInterval(interval)
+  }, [checkHealth, status.connected, status.modelsLoaded])
 
   return {
     status,

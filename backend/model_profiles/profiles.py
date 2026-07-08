@@ -28,6 +28,18 @@ ImageInputRole = Literal[
     "control_pose",
     "control_depth",
     "control_canny",
+    "start_image",
+    "end_image",
+    "control_video",
+    "audio_guide",
+    "human_motion",
+    "human_motion_pose",
+    "depth",
+    "canny_edges",
+    "sdr_to_hdr",
+    "continue_video",
+    "audio_to_video",
+    "reference_voice",
 ]
 ImageInputKind = Literal["reference", "control", "inpaint"]
 AvailabilityState = Literal[
@@ -156,6 +168,78 @@ CONTROL_CANNY_ROLE = InputMediaRole(
     role="control_canny",
     label="Transfer Canny Edges",
     description="Extract and transfer edge guidance from the image.",
+    kind="control",
+)
+START_IMAGE_ROLE = InputMediaRole(
+    role="start_image",
+    label="Start Image",
+    description="The video will start from this image.",
+    kind="reference",
+)
+END_IMAGE_ROLE = InputMediaRole(
+    role="end_image",
+    label="End Image",
+    description="The video will end at this image (optional).",
+    kind="reference",
+)
+CONTROL_VIDEO_ROLE = InputMediaRole(
+    role="control_video",
+    label="Control Video",
+    description="Guide the generation with a control video.",
+    kind="control",
+)
+AUDIO_GUIDE_ROLE = InputMediaRole(
+    role="audio_guide",
+    label="Audio Track",
+    description="Add a synchronized soundtrack/audio file.",
+    kind="control",
+)
+HUMAN_MOTION_ROLE = InputMediaRole(
+    role="human_motion",
+    label="Human Motion",
+    description="Transfer human motion guidance from the video.",
+    kind="control",
+)
+HUMAN_MOTION_POSE_ROLE = InputMediaRole(
+    role="human_motion_pose",
+    label="Human Motion (Pose Aligned)",
+    description="Transfer human motion with pose alignment.",
+    kind="control",
+)
+DEPTH_ROLE = InputMediaRole(
+    role="depth",
+    label="Depth",
+    description="Guide generation using depth map of the video.",
+    kind="control",
+)
+CANNY_EDGES_ROLE = InputMediaRole(
+    role="canny_edges",
+    label="Canny Edges",
+    description="Guide generation using Canny edge maps of the video.",
+    kind="control",
+)
+SDR_TO_HDR_ROLE = InputMediaRole(
+    role="sdr_to_hdr",
+    label="Convert SDR to HDR",
+    description="Convert SDR input video to HDR format using IC-LoRA.",
+    kind="control",
+)
+CONTINUE_VIDEO_ROLE = InputMediaRole(
+    role="continue_video",
+    label="Continue Video",
+    description="Continue video generation from the ending of a source video.",
+    kind="reference",
+)
+AUDIO_TO_VIDEO_ROLE = InputMediaRole(
+    role="audio_to_video",
+    label="Audio To Video",
+    description="Generate video based on soundtrack and text prompt.",
+    kind="control",
+)
+REFERENCE_VOICE_ROLE = InputMediaRole(
+    role="reference_voice",
+    label="Reference Voice",
+    description="Generate video using reference voice (ID-LoRA).",
     kind="control",
 )
 
@@ -826,6 +910,24 @@ VIDEO_PROFILES: tuple[ModelProfile, ...] = (
         reference_images=True,
         inpainting=True,
         lora="future",
+        input_media=InputMediaPolicy(
+            supports_image_inputs=True,
+            tooltip_label="Add Start/End Image, Control Video, or Audio Track",
+            max_images=4,
+            default_role="start_image",
+            roles=(
+                START_IMAGE_ROLE,
+                END_IMAGE_ROLE,
+                HUMAN_MOTION_ROLE,
+                HUMAN_MOTION_POSE_ROLE,
+                DEPTH_ROLE,
+                CANNY_EDGES_ROLE,
+                SDR_TO_HDR_ROLE,
+                CONTINUE_VIDEO_ROLE,
+                AUDIO_TO_VIDEO_ROLE,
+                REFERENCE_VOICE_ROLE,
+            ),
+        ),
         default_aspect_ratio="16:9",
         default_resolution_tier="540p",
         allowed_aspect_ratios=("16:9", "9:16"),

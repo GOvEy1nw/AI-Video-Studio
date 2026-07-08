@@ -15,6 +15,7 @@ from handlers import (
     ModelProfilesHandler,
     ModelsHandler,
     PipelinesHandler,
+    PromptEnhancementHandler,
     RetakeHandler,
     RuntimePolicyHandler,
     SettingsHandler,
@@ -174,6 +175,14 @@ class AppHandler:
             config=config,
             camera_motion_prompts=config.camera_motion_prompts,
             default_negative_prompt=config.default_negative_prompt,
+            wangp_bridge=self.wangp_bridge,
+        )
+
+        self.prompt_enhancement = PromptEnhancementHandler(
+            state=self.state,
+            lock=self._lock,
+            generation_handler=self.generation,
+            config=config,
             wangp_bridge=self.wangp_bridge,
         )
 

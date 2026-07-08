@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 from services.wangp_bridge import WanGPBridge
@@ -115,3 +116,66 @@ def test_bridge_falls_back_to_bridge_config_when_root_config_missing(tmp_path: P
     )
 
     assert bridge._resolve_session_config_path() == config_dir / "wgp_config.json"
+
+
+def test_preload_session_ensures_runtime_without_direct_model_load(tmp_path: Path) -> None:
+    root = tmp_path / "wangp-root"
+    shared = root / "shared"
+    output_dir = tmp_path / "outputs"
+    shared.mkdir(parents=True)
+    (shared / "__init__.py").write_text("", encoding="utf-8")
+    (root / "wgp.py").write_text(
+        """
+from pathlib import Path
+
+def load_models(*args, **kwargs):
+    Path(__file__).with_name("load_models_called").write_text("called", encoding="utf-8")
+""",
+        encoding="utf-8",
+    )
+    (shared / "api.py").write_text(
+        """
+import importlib
+from pathlib import Path
+
+class WanGPSession:
+    def __init__(self, *, root, config_path, output_dir, cli_args):
+        self.output_dir = Path(output_dir)
+        importlib.import_module("wgp")
+
+    def ensure_ready(self):
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        (self.output_dir / "ensure_ready_called").write_text("called", encoding="utf-8")
+""",
+        encoding="utf-8",
+    )
+
+    saved_path = list(sys.path)
+    saved_modules = {name: sys.modules.get(name) for name in ("shared", "shared.api", "wgp")}
+    for name in saved_modules:
+        sys.modules.pop(name, None)
+
+    try:
+        bridge = WanGPBridge(
+            enabled=True,
+            root=root,
+            python_executable=None,
+            config_dir=tmp_path / "wangp_bridge",
+            output_dir=output_dir,
+            video_model_type="ltx2_22B_distilled_1_1",
+            image_model_type="z_image",
+            camera_motion_prompts={},
+            extra_args=(),
+        )
+
+        bridge.preload_session()
+
+        assert (output_dir / "ensure_ready_called").exists()
+        assert not (root / "load_models_called").exists()
+    finally:
+        sys.path[:] = saved_path
+        for name, module in saved_modules.items():
+            if module is None:
+                sys.modules.pop(name, None)
+            else:
+                sys.modules[name] = module
