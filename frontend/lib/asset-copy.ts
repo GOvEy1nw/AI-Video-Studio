@@ -1,8 +1,8 @@
 import { logger } from './logger'
 
 /**
- * Copy a generated file to the global project assets folder via a single IPC call.
- * Electron handles path validation, directory creation, and file copy.
+ * Move a generated file into the project's generated/ assets subfolder via IPC.
+ * Backend writes to AppData/outputs first; this moves (not copies) into the project folder.
  * Returns the new { path, url } if successful, or null on failure — callers handle fallback.
  */
 export async function copyToAssetFolder(

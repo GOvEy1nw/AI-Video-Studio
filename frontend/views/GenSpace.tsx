@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   Trash2,
   Download,
@@ -24,6 +24,8 @@ import {
   Pencil,
   LoaderCircle,
   Plus,
+  ListFilter,
+  List,
 } from "lucide-react";
 import { useProjects } from "../contexts/ProjectContext";
 import type { GenSpaceRetakeSource } from "../contexts/ProjectContext";
@@ -36,7 +38,25 @@ import {
 import type { Asset } from "../types/project";
 import type { ModelProfile } from "../types/model-profiles";
 import { GenerationErrorDialog } from "../components/GenerationErrorDialog";
+import { DuplicateFilenameDialog } from "../components/DuplicateFilenameDialog";
+import { GalleryFilters } from "../components/GalleryFilters";
 import { copyToAssetFolder } from "../lib/asset-copy";
+import {
+  collectAssetFilePaths,
+  deleteProjectAssetFilesFromDisk,
+  waitForMediaFileHandlesReleased,
+} from "../lib/asset-delete";
+import { importGalleryFile, ensureGalleryAssetForInputFile } from "../lib/media-import";
+import type { DuplicateFilenameChoice } from "../lib/media-import";
+import {
+  DEFAULT_GALLERY_FILTER,
+  filterGalleryAssets,
+  isGalleryFilterActive,
+  getAssetDisplayFileName,
+  inferAssetSource,
+  GALLERY_SOURCE_OPTIONS,
+  type GalleryFilterState,
+} from "../lib/gallery-filters";
 import { backendFetch } from "../lib/backend";
 import { fileUrlToPath } from "../lib/url-to-path";
 import { logger } from "../lib/logger";
@@ -102,10 +122,12 @@ function AssetCard({
   onToggleFavorite?: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [isMuted, setIsMuted] = useState(true);
   const isFavorite = asset.favorite || false;
+  const displayFileName = getAssetDisplayFileName(asset);
 
   useEffect(() => {
     if (asset.type === "video" && videoRef.current) {
@@ -115,6 +137,17 @@ function AssetCard({
         videoRef.current.pause();
         videoRef.current.currentTime = 0;
         setCurrentTime(0);
+      }
+    }
+  }, [isHovered, asset.type]);
+
+  useEffect(() => {
+    if (asset.type === "audio" && audioRef.current) {
+      if (isHovered) {
+        audioRef.current.play().catch(() => {});
+      } else {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
       }
     }
   }, [isHovered, asset.type]);
@@ -139,146 +172,335 @@ function AssetCard({
     a.click();
   };
 
+  const isDraggable =
+    asset.type === "image" ||
+    asset.type === "video" ||
+    asset.type === "audio";
+
   return (
     <div
       className="relative group cursor-pointer rounded-xl overflow-hidden bg-zinc-900"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={onPlay}
-      draggable={asset.type === "image"}
-      onDragStart={(e) => asset.type === "image" && onDragStart(e, asset)}
+      draggable={isDraggable}
+      onDragStart={(e) => {
+        if (!isDraggable) return;
+        onDragStart(e, asset);
+      }}
     >
-      {asset.type === "video" ? (
-        <video
-          ref={videoRef}
-          src={asset.url}
-          className="w-full aspect-video object-contain"
-          muted={isMuted}
-          loop
-          onTimeUpdate={handleTimeUpdate}
-        />
-      ) : (
-        <img
-          src={asset.url}
-          alt=""
-          className="w-full aspect-video object-contain"
-        />
-      )}
-
-      {/* Favorite heart - always visible when favorited */}
-      {isFavorite && !isHovered && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleFavorite?.();
-          }}
-          className="absolute top-2 left-2 p-1.5 rounded-lg bg-black/40 backdrop-blur-md text-white transition-colors z-10"
-        >
-          <Heart className="h-3.5 w-3.5 fill-current" />
-        </button>
-      )}
-
-      {/* Hover overlay */}
-      <div
-        className={`absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 transition-opacity duration-200 ${
-          isHovered ? "opacity-100" : "opacity-0"
-        }`}
-      >
-        {/* Top buttons */}
-        <div className="absolute top-2 left-2 right-2 flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleFavorite?.();
-              }}
-              className={`p-1.5 rounded-lg backdrop-blur-md transition-colors ${
-                isFavorite
-                  ? "bg-white/20 text-white"
-                  : "bg-black/40 text-white hover:bg-black/60"
+      <div className="relative aspect-video bg-zinc-900">
+        {asset.type === "video" ? (
+          <video
+            key={asset.url}
+            ref={videoRef}
+            src={asset.url}
+            preload="metadata"
+            className="h-full w-full object-contain"
+            muted={isMuted}
+            loop
+            onTimeUpdate={handleTimeUpdate}
+          />
+        ) : asset.type === "audio" ? (
+          <>
+            <audio
+              key={asset.url}
+              ref={audioRef}
+              src={asset.url}
+              preload="metadata"
+              loop
+              className="hidden"
+            />
+            <div
+              className={`flex h-full w-full items-center justify-center bg-zinc-800 transition-colors ${
+                isHovered ? "bg-emerald-950/40" : ""
               }`}
             >
-              <Heart
-                className={`h-3.5 w-3.5 ${isFavorite ? "fill-current" : ""}`}
+              <Music
+                className={`h-10 w-10 transition-colors ${
+                  isHovered ? "text-emerald-300" : "text-emerald-400"
+                }`}
               />
-            </button>
-
-            {asset.type === "image" && (
-              <>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onCreateVideo?.(asset);
-                  }}
-                  className="px-2.5 py-1.5 rounded-lg bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-colors flex items-center gap-1.5 text-xs font-medium whitespace-nowrap"
-                >
-                  <Film className="h-3 w-3" />
-                  Create video
-                </button>
-              </>
-            )}
-            {asset.type === "video" && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRetake?.(asset);
-                }}
-                className="px-2.5 py-1.5 rounded-lg bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-colors flex items-center gap-1.5 text-xs font-medium whitespace-nowrap"
-              >
-                <Scissors className="h-3 w-3" />
-                Retake
-              </button>
-            )}
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={handleDownload}
-              className="p-1.5 rounded-lg bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-colors"
-            >
-              <Download className="h-3.5 w-3.5" />
-            </button>
-            {/* Tools button hidden for now */}
-          </div>
-        </div>
-
-        {/* Bottom controls for video */}
-        {asset.type === "video" && (
-          <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <div className="px-2 py-1 rounded-lg bg-black/50 backdrop-blur-md text-white text-xs font-mono">
-                {formatTime(currentTime)}
-              </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsMuted(!isMuted);
-                }}
-                className="p-1.5 rounded-lg bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-colors"
-              >
-                {isMuted ? (
-                  <VolumeX className="h-3.5 w-3.5" />
-                ) : (
-                  <Volume2 className="h-3.5 w-3.5" />
-                )}
-              </button>
             </div>
-          </div>
+          </>
+        ) : (
+          <img
+            key={asset.url}
+            src={asset.url}
+            alt=""
+            className="h-full w-full object-contain"
+          />
         )}
 
-        {/* Delete button (subtle, bottom right) */}
-        {
+        {/* Favorite heart - always visible when favorited */}
+        {isFavorite && !isHovered && (
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onDelete();
+              onToggleFavorite?.();
             }}
-            className="absolute bottom-2 right-2 p-1.5 rounded-lg bg-black/40 backdrop-blur-md text-white/70 hover:bg-red-500/80 hover:text-white transition-colors opacity-0 group-hover:opacity-100"
+            className="absolute top-2 left-2 p-1.5 rounded-lg bg-black/40 backdrop-blur-md text-white transition-colors z-10"
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <Heart className="h-3.5 w-3.5 fill-current" />
           </button>
-        }
+        )}
+
+        {/* Hover overlay */}
+        <div
+          className={`absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 transition-opacity duration-200 ${
+            isHovered ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          {/* Top buttons */}
+          <div className="absolute top-2 left-2 right-2 flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleFavorite?.();
+                }}
+                className={`p-1.5 rounded-lg backdrop-blur-md transition-colors ${
+                  isFavorite
+                    ? "bg-white/20 text-white"
+                    : "bg-black/40 text-white hover:bg-black/60"
+                }`}
+              >
+                <Heart
+                  className={`h-3.5 w-3.5 ${isFavorite ? "fill-current" : ""}`}
+                />
+              </button>
+
+              {asset.type === "image" && (
+                <>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onCreateVideo?.(asset);
+                    }}
+                    className="px-2.5 py-1.5 rounded-lg bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-colors flex items-center gap-1.5 text-xs font-medium whitespace-nowrap"
+                  >
+                    <Film className="h-3 w-3" />
+                    Create video
+                  </button>
+                </>
+              )}
+              {asset.type === "video" && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRetake?.(asset);
+                  }}
+                  className="px-2.5 py-1.5 rounded-lg bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-colors flex items-center gap-1.5 text-xs font-medium whitespace-nowrap"
+                >
+                  <Scissors className="h-3 w-3" />
+                  Retake
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={handleDownload}
+                className="p-1.5 rounded-lg bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-colors"
+              >
+                <Download className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
+                className="p-1.5 rounded-lg bg-black/40 backdrop-blur-md text-white/70 hover:bg-red-500/80 hover:text-white transition-colors"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Bottom controls for video */}
+          {asset.type === "video" && (
+            <div className="absolute bottom-9 left-2 right-2 flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <div className="px-2 py-1 rounded-lg bg-black/50 backdrop-blur-md text-white text-xs font-mono">
+                  {formatTime(currentTime)}
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsMuted(!isMuted);
+                  }}
+                  className="p-1.5 rounded-lg bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-colors"
+                >
+                  {isMuted ? (
+                    <VolumeX className="h-3.5 w-3.5" />
+                  ) : (
+                    <Volume2 className="h-3.5 w-3.5" />
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Filename overlay — hover only */}
+        <div
+          className={`pointer-events-none absolute inset-x-0 bottom-0 z-20 bg-black/60 px-2.5 py-1.5 transition-opacity duration-200 ${
+            isHovered ? "opacity-100" : "opacity-0"
+          }`}
+          title={displayFileName}
+        >
+          <p className="truncate text-xs text-zinc-100">{displayFileName}</p>
+        </div>
       </div>
+    </div>
+  );
+}
+
+function AssetListRow({
+  asset,
+  onDelete,
+  onPlay,
+  onDragStart,
+  onToggleFavorite,
+}: {
+  asset: Asset;
+  onDelete: () => void;
+  onPlay: () => void;
+  onDragStart: (e: React.DragEvent, asset: Asset) => void;
+  onToggleFavorite?: () => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [isHovered, setIsHovered] = useState(false);
+  const isFavorite = asset.favorite || false;
+  const displayFileName = getAssetDisplayFileName(asset);
+  const sourceLabel =
+    GALLERY_SOURCE_OPTIONS.find(
+      (option) => option.value === inferAssetSource(asset),
+    )?.label ?? "Unknown";
+  const typeLabel =
+    asset.type.charAt(0).toUpperCase() + asset.type.slice(1);
+
+  useEffect(() => {
+    if (asset.type === "video" && videoRef.current) {
+      if (isHovered) {
+        videoRef.current.play().catch(() => {});
+      } else {
+        videoRef.current.pause();
+        videoRef.current.currentTime = 0;
+      }
+    }
+  }, [isHovered, asset.type]);
+
+  useEffect(() => {
+    if (asset.type === "audio" && audioRef.current) {
+      if (isHovered) {
+        audioRef.current.play().catch(() => {});
+      } else {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+    }
+  }, [isHovered, asset.type]);
+
+  const isDraggable =
+    asset.type === "image" ||
+    asset.type === "video" ||
+    asset.type === "audio";
+
+  return (
+    <div
+      className="group flex cursor-pointer items-center gap-4 rounded-lg px-3 py-2 transition-colors hover:bg-zinc-800/60"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onClick={onPlay}
+      draggable={isDraggable}
+      onDragStart={(e) => {
+        if (!isDraggable) return;
+        onDragStart(e, asset);
+      }}
+    >
+      <div className="relative h-12 w-20 flex-shrink-0 overflow-hidden rounded-md bg-zinc-800">
+        {asset.type === "video" ? (
+          <video
+            key={asset.url}
+            ref={videoRef}
+            src={asset.url}
+            preload="metadata"
+            className="h-full w-full object-cover"
+            muted
+            loop
+          />
+        ) : asset.type === "audio" ? (
+          <>
+            <audio
+              key={asset.url}
+              ref={audioRef}
+              src={asset.url}
+              preload="metadata"
+              loop
+              className="hidden"
+            />
+            <div
+              className={`flex h-full w-full items-center justify-center transition-colors ${
+                isHovered ? "bg-emerald-950/40" : "bg-zinc-800"
+              }`}
+            >
+              <Music
+                className={`h-5 w-5 transition-colors ${
+                  isHovered ? "text-emerald-300" : "text-emerald-400"
+                }`}
+              />
+            </div>
+          </>
+        ) : (
+          <img
+            key={asset.url}
+            src={asset.url}
+            alt=""
+            className="h-full w-full object-cover"
+          />
+        )}
+      </div>
+
+      <p
+        className="min-w-0 flex-1 truncate text-sm text-zinc-200"
+        title={displayFileName}
+      >
+        {displayFileName}
+      </p>
+
+      <span className="w-16 flex-shrink-0 text-sm text-zinc-400">{typeLabel}</span>
+
+      <span className="w-24 flex-shrink-0 text-sm text-zinc-400">
+        {sourceLabel}
+      </span>
+
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleFavorite?.();
+        }}
+        className={`flex-shrink-0 rounded-md p-2 transition-colors ${
+          isFavorite
+            ? "text-red-400 hover:text-red-300"
+            : "text-zinc-500 hover:bg-zinc-700 hover:text-zinc-300"
+        }`}
+        aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+      >
+        <Heart className={`h-4 w-4 ${isFavorite ? "fill-current" : ""}`} />
+      </button>
+
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete();
+        }}
+        className="flex-shrink-0 rounded-md p-2 text-zinc-500 transition-colors hover:bg-red-500/20 hover:text-red-400"
+        aria-label="Remove asset"
+      >
+        <Trash2 className="h-4 w-4" />
+      </button>
     </div>
   );
 }
@@ -603,6 +825,7 @@ function PromptBar({
   onMultiShotEnabledChange,
   multiShotRows,
   onMultiShotRowsChange,
+  syncInputFileToGallery,
 }: {
   mode: "image" | "video" | "retake";
   onModeChange: (mode: "image" | "video" | "retake") => void;
@@ -644,12 +867,14 @@ function PromptBar({
   onMultiShotEnabledChange: (enabled: boolean) => void;
   multiShotRows: MultiShotRow[];
   onMultiShotRowsChange: (rows: MultiShotRow[]) => void;
+  syncInputFileToGallery?: (file: File) => Promise<string | null>;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const videoInputRef = useRef<HTMLInputElement>(null);
+  const guideInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isAudioDragOver, setIsAudioDragOver] = useState(false);
+  const [isGuideDragOver, setIsGuideDragOver] = useState(false);
   const [mediaInputsExpanded, setMediaInputsExpanded] = useState(false);
   const [activeImageInputId, setActiveImageInputId] = useState<string | null>(
     null,
@@ -758,7 +983,6 @@ function PromptBar({
     if (
       activeImageInputId &&
       activeImageInputId !== "guide_slot" &&
-      activeImageInputId !== "empty_guide_slot" &&
       !normalized.some((item) => item.role === activeImageInputId)
     ) {
       setActiveImageInputId(null);
@@ -900,6 +1124,89 @@ function PromptBar({
     setSlotMedia(url, "audio_to_video", "audio");
   };
 
+  const readGalleryAssetFromDrop = (
+    e: React.DragEvent,
+  ): Asset | null => {
+    const assetData = e.dataTransfer.getData("asset");
+    if (!assetData) return null;
+    try {
+      return JSON.parse(assetData) as Asset;
+    } catch {
+      return null;
+    }
+  };
+
+  const applyGalleryAsset = (asset: Asset): boolean => {
+    if (asset.type === "image") {
+      addImageInput(asset.url);
+      return true;
+    }
+    if (
+      mode !== "video" ||
+      !selectedVideoProfile?.inputMedia?.supportsImageInputs
+    ) {
+      return false;
+    }
+    if (asset.type === "video") {
+      addVideoInput(asset.url);
+      return true;
+    }
+    if (asset.type === "audio") {
+      addAudioInput(asset.url);
+      return true;
+    }
+    return false;
+  };
+
+  const resolveInputFileUrl = async (file: File): Promise<string | null> => {
+    if (syncInputFileToGallery) {
+      return syncInputFileToGallery(file);
+    }
+    const filePath = (file as File & { path?: string }).path;
+    if (filePath) {
+      const normalized = filePath.replace(/\\/g, "/");
+      return normalized.startsWith("/")
+        ? `file://${normalized}`
+        : `file:///${normalized}`;
+    }
+    return URL.createObjectURL(file);
+  };
+
+  const applyGuideMediaFromFile = async (file: File) => {
+    const isVideo = file.type.startsWith("video/");
+    const isAudio =
+      file.type.startsWith("audio/") ||
+      ["mp3", "wav", "ogg", "aac", "flac", "m4a"].includes(
+        file.name.split(".").pop()?.toLowerCase() || "",
+      );
+    const fileUrl = await resolveInputFileUrl(file);
+    if (!fileUrl) return;
+
+    if (isVideo) {
+      setSlotMedia(fileUrl, "human_motion", "video");
+    } else if (isAudio) {
+      setSlotMedia(fileUrl, "audio_to_video", "audio");
+    }
+  };
+
+  const handleGuideSlotDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsGuideDragOver(false);
+
+    const asset = readGalleryAssetFromDrop(e);
+    if (asset?.type === "video" || asset?.type === "audio") {
+      applyGalleryAsset(asset);
+      setActiveImageInputId(null);
+      return;
+    }
+
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      await applyGuideMediaFromFile(file);
+      setActiveImageInputId(null);
+    }
+  };
+
   const updateImageInputRole = (id: string, role: string) => {
     onImageInputsChange(
       imageInputs.map((item) => (item.id === id ? { ...item, role } : item)),
@@ -915,33 +1222,13 @@ function PromptBar({
     resetImageFileInput();
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
 
-    const assetData = e.dataTransfer.getData("asset");
-    if (assetData) {
-      const asset = JSON.parse(assetData) as Asset;
-      if (asset.type === "image") {
-        addImageInput(asset.url);
-        return;
-      } else if (asset.type === "video") {
-        if (
-          mode === "video" &&
-          selectedVideoProfile?.inputMedia?.supportsImageInputs
-        ) {
-          addVideoInput(asset.url);
-          return;
-        }
-      } else if (asset.type === "audio") {
-        if (
-          mode === "video" &&
-          selectedVideoProfile?.inputMedia?.supportsImageInputs
-        ) {
-          addAudioInput(asset.url);
-          return;
-        }
-      }
+    const asset = readGalleryAssetFromDrop(e);
+    if (asset && applyGalleryAsset(asset)) {
+      return;
     }
 
     const file = e.dataTransfer.files?.[0];
@@ -954,16 +1241,8 @@ function PromptBar({
           file.name.split(".").pop()?.toLowerCase() || "",
         );
 
-      const filePath = (file as any).path as string | undefined;
-      let fileUrl = "";
-      if (filePath) {
-        const normalized = filePath.replace(/\\/g, "/");
-        fileUrl = normalized.startsWith("/")
-          ? `file://${normalized}`
-          : `file:///${normalized}`;
-      } else {
-        fileUrl = URL.createObjectURL(file);
-      }
+      const fileUrl = await resolveInputFileUrl(file);
+      if (!fileUrl) return;
 
       if (
         mode === "video" &&
@@ -976,15 +1255,13 @@ function PromptBar({
         } else if (isAudio) {
           addAudioInput(fileUrl);
         }
-      } else {
-        if (isImage) {
-          addImageInput(fileUrl);
-        }
+      } else if (isImage) {
+        addImageInput(fileUrl);
       }
     }
   };
 
-  const handleAudioDrop = (e: React.DragEvent) => {
+  const handleAudioDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsAudioDragOver(false);
 
@@ -1008,34 +1285,8 @@ function PromptBar({
     if (file) {
       const ext = file.name.split(".").pop()?.toLowerCase();
       if (["mp3", "wav", "ogg", "aac", "flac", "m4a"].includes(ext || "")) {
-        const filePath = (file as any).path as string | undefined;
-        if (filePath) {
-          const normalized = filePath.replace(/\\/g, "/");
-          const fileUrl = normalized.startsWith("/")
-            ? `file://${normalized}`
-            : `file:///${normalized}`;
-          if (
-            mode === "video" &&
-            selectedVideoProfile?.inputMedia?.supportsImageInputs
-          ) {
-            addAudioInput(fileUrl);
-          } else {
-            onInputAudioChange(fileUrl);
-          }
-        }
-      }
-    }
-  };
-
-  const handleAudioFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const filePath = (file as any).path as string | undefined;
-      if (filePath) {
-        const normalized = filePath.replace(/\\/g, "/");
-        const fileUrl = normalized.startsWith("/")
-          ? `file://${normalized}`
-          : `file:///${normalized}`;
+        const fileUrl = await resolveInputFileUrl(file);
+        if (!fileUrl) return;
         if (
           mode === "video" &&
           selectedVideoProfile?.inputMedia?.supportsImageInputs
@@ -1048,23 +1299,37 @@ function PromptBar({
     }
   };
 
-  const handleVideoFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAudioFileSelect = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = e.target.files?.[0];
     if (file) {
-      const filePath = (file as any).path as string | undefined;
-      if (filePath) {
-        const normalized = filePath.replace(/\\/g, "/");
-        const fileUrl = normalized.startsWith("/")
-          ? `file://${normalized}`
-          : `file:///${normalized}`;
-        addVideoInput(fileUrl);
+      const fileUrl = await resolveInputFileUrl(file);
+      if (!fileUrl) return;
+      if (
+        mode === "video" &&
+        selectedVideoProfile?.inputMedia?.supportsImageInputs
+      ) {
+        addAudioInput(fileUrl);
       } else {
-        addVideoInput(URL.createObjectURL(file));
+        onInputAudioChange(fileUrl);
       }
     }
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleGuideFileSelect = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      await applyGuideMediaFromFile(file);
+    }
+    if (guideInputRef.current) {
+      guideInputRef.current.value = "";
+    }
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const isImage = file.type.startsWith("image/");
@@ -1075,16 +1340,8 @@ function PromptBar({
           file.name.split(".").pop()?.toLowerCase() || "",
         );
 
-      const filePath = (file as any).path as string | undefined;
-      let fileUrl = "";
-      if (filePath) {
-        const normalized = filePath.replace(/\\/g, "/");
-        fileUrl = normalized.startsWith("/")
-          ? `file://${normalized}`
-          : `file:///${normalized}`;
-      } else {
-        fileUrl = URL.createObjectURL(file);
-      }
+      const fileUrl = await resolveInputFileUrl(file);
+      if (!fileUrl) return;
 
       if (
         mode === "video" &&
@@ -1097,10 +1354,8 @@ function PromptBar({
         } else if (isAudio) {
           addAudioInput(fileUrl);
         }
-      } else {
-        if (isImage) {
-          addImageInput(fileUrl);
-        }
+      } else if (isImage) {
+        addImageInput(fileUrl);
       }
     }
   };
@@ -1328,7 +1583,17 @@ function PromptBar({
       );
 
       return (
-        <div key="guide_slot" className="relative">
+        <div
+          key="guide_slot"
+          className="relative"
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "copy";
+            setIsGuideDragOver(true);
+          }}
+          onDragLeave={() => setIsGuideDragOver(false)}
+          onDrop={handleGuideSlotDrop}
+        >
           {isActive && (
             <div className="absolute bottom-full left-0 mb-2 w-64 rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl z-[10000]">
               <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">
@@ -1399,7 +1664,11 @@ function PromptBar({
             onClick={() =>
               setActiveImageInputId(isActive ? null : "guide_slot")
             }
-            className="group relative h-14 w-14 overflow-hidden rounded-lg border border-zinc-700 bg-zinc-800 flex items-center justify-center flex-shrink-0"
+            className={`group relative h-14 w-14 overflow-hidden rounded-lg border bg-zinc-800 flex items-center justify-center flex-shrink-0 ${
+              isGuideDragOver
+                ? "border-blue-500 ring-1 ring-blue-500/40"
+                : "border-zinc-700"
+            }`}
             title={`${currentRoleDef?.label || "Video/Audio Guide"} - Click for actions`}
           >
             {mediaType === "video" ? (
@@ -1428,72 +1697,28 @@ function PromptBar({
     }
 
     // Empty slot
-    const isActiveEmpty = activeImageInputId === "empty_guide_slot";
     return (
-      <div key="empty_guide_slot" className="relative">
-        {isActiveEmpty && (
-          <div className="absolute bottom-full left-0 mb-2 w-48 rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl z-[10000] space-y-1">
-            <button
-              onClick={() => {
-                videoInputRef.current?.click();
-                setActiveImageInputId(null);
-              }}
-              className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-left text-zinc-300 hover:bg-zinc-700 transition-colors"
-            >
-              <Video className="h-3.5 w-3.5" />
-              <span className="text-xs">Add Video Guide</span>
-            </button>
-            <button
-              onClick={() => {
-                audioInputRef.current?.click();
-                setActiveImageInputId(null);
-              }}
-              className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-left text-zinc-300 hover:bg-zinc-700 transition-colors"
-            >
-              <Music className="h-3.5 w-3.5" />
-              <span className="text-xs">Add Audio Track</span>
-            </button>
-          </div>
-        )}
-        <div
-          className={`relative h-14 w-14 rounded-lg border-2 border-dashed transition-colors flex flex-col items-center justify-center flex-shrink-0 cursor-pointer hover:border-zinc-500 border-zinc-700`}
-          onDragOver={(e) => {
-            e.preventDefault();
-          }}
-          onDrop={(e) => {
-            e.preventDefault();
-            const file = e.dataTransfer.files?.[0];
-            if (file) {
-              const isVideo = file.type.startsWith("video/");
-              const isAudio =
-                file.type.startsWith("audio/") ||
-                ["mp3", "wav", "ogg", "aac", "flac", "m4a"].includes(
-                  file.name.split(".").pop()?.toLowerCase() || "",
-                );
-              const filePath = (file as any).path as string | undefined;
-              const fileUrl = filePath
-                ? filePath.replace(/\\/g, "/").startsWith("/")
-                  ? `file://${filePath.replace(/\\/g, "/")}`
-                  : `file:///${filePath.replace(/\\/g, "/")}`
-                : URL.createObjectURL(file);
-
-              if (isVideo) {
-                setSlotMedia(fileUrl, "human_motion", "video");
-              } else if (isAudio) {
-                setSlotMedia(fileUrl, "audio_to_video", "audio");
-              }
-            }
-          }}
-          onClick={() =>
-            setActiveImageInputId(isActiveEmpty ? null : "empty_guide_slot")
-          }
-          title="Click to add Video or Audio"
-        >
-          <Video className="h-4 w-4 text-zinc-500" />
-          <span className="text-[8px] text-zinc-500 mt-1 uppercase scale-90 select-none">
-            Vid/Aud
-          </span>
-        </div>
+      <div
+        key="empty_guide_slot"
+        className={`relative h-14 w-14 rounded-lg border-2 border-dashed transition-colors flex flex-col items-center justify-center flex-shrink-0 cursor-pointer hover:border-zinc-500 ${
+          isGuideDragOver
+            ? "border-blue-500 bg-blue-500/10"
+            : "border-zinc-700"
+        }`}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "copy";
+          setIsGuideDragOver(true);
+        }}
+        onDragLeave={() => setIsGuideDragOver(false)}
+        onDrop={handleGuideSlotDrop}
+        onClick={() => guideInputRef.current?.click()}
+        title="Click or drop video/audio from gallery"
+      >
+        <Video className="h-4 w-4 text-zinc-500" />
+        <span className="text-[8px] text-zinc-500 mt-1 uppercase scale-90 select-none">
+          Vid/Aud
+        </span>
       </div>
     );
   };
@@ -1645,16 +1870,16 @@ function PromptBar({
             className="hidden"
           />
           <input
-            ref={videoInputRef}
+            ref={guideInputRef}
             type="file"
-            accept="video/*"
-            onChange={handleVideoFileSelect}
+            accept="video/*,audio/*,.mp3,.wav,.ogg,.aac,.flac,.m4a"
+            onChange={handleGuideFileSelect}
             className="hidden"
           />
           <input
             ref={audioInputRef}
             type="file"
-            accept=".mp3,.wav,.ogg,.aac,.flac,.m4a"
+            accept=".mp3,.wav,.ogg,.aac,.flac,.m4a,audio/*"
             onChange={handleAudioFileSelect}
             className="hidden"
           />
@@ -2148,9 +2373,9 @@ function GridLargeIcon({ className }: { className?: string }) {
   );
 }
 
-type GallerySize = "small" | "medium" | "large";
+type GallerySize = "small" | "medium" | "large" | "list";
 
-const gallerySizeClasses: Record<GallerySize, string> = {
+const gallerySizeClasses: Record<Exclude<GallerySize, "list">, string> = {
   small:
     "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7",
   medium:
@@ -2210,8 +2435,17 @@ export function GenSpace() {
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
+  const [galleryFilter, setGalleryFilter] =
+    useState<GalleryFilterState>(DEFAULT_GALLERY_FILTER);
   const [gallerySize, setGallerySize] = useState<GallerySize>("medium");
   const [showSizeMenu, setShowSizeMenu] = useState(false);
+  const [isGalleryDragOver, setIsGalleryDragOver] = useState(false);
+  const [isGalleryImporting, setIsGalleryImporting] = useState(false);
+  const [galleryToast, setGalleryToast] = useState<string | null>(null);
+  const [duplicateFilenameChoice, setDuplicateFilenameChoice] = useState<{
+    fileName: string;
+    resolve: (choice: DuplicateFilenameChoice) => void;
+  } | null>(null);
   const sizeMenuRef = useRef<HTMLDivElement>(null);
   const persistedVideoKeyRef = useRef<string | null>(null);
   const persistedImageKeyRef = useRef<string | null>(null);
@@ -2312,9 +2546,10 @@ export function GenSpace() {
     }
   }, [retakeError]);
 
-  // Only show assets that were generated (have generationParams), not imported files
+  // Gallery shows all image/video/audio assets (generated + uploaded)
   const assets = (currentProject?.assets || []).filter(
-    (a) => a.generationParams,
+    (a) =>
+      a.type === "image" || a.type === "video" || a.type === "audio",
   );
   const [lastPrompt, setLastPrompt] = useState("");
 
@@ -2351,6 +2586,7 @@ export function GenSpace() {
           prompt: lastPrompt,
           resolution: savedVideoSettings.videoResolution,
           duration: savedVideoSettings.duration,
+          source: "generated",
           generationParams: {
             mode: genMode as
               | "text-to-video"
@@ -2445,6 +2681,7 @@ export function GenSpace() {
           prompt: usedPrompt,
           resolution: "",
           duration: usedInput.duration,
+          source: "generated",
           generationParams: {
             mode: "retake",
             prompt: usedPrompt,
@@ -2512,6 +2749,7 @@ export function GenSpace() {
               url: finalUrl,
               prompt: lastPrompt,
               resolution: savedSettings.imageResolution,
+              source: "generated",
               generationParams: {
                 mode: genMode,
                 prompt: lastPrompt,
@@ -2750,9 +2988,20 @@ export function GenSpace() {
     }
   };
 
-  const handleDelete = (assetId: string) => {
-    if (currentProjectId) {
-      deleteAsset(currentProjectId, assetId);
+  const handleDelete = async (assetId: string) => {
+    if (!currentProjectId) return;
+
+    const asset = assets.find((entry) => entry.id === assetId);
+    const pathsToTrash = asset ? collectAssetFilePaths(asset) : [];
+
+    if (selectedAsset?.id === assetId) {
+      setSelectedAsset(null);
+    }
+    deleteAsset(currentProjectId, assetId);
+
+    if (pathsToTrash.length > 0) {
+      await waitForMediaFileHandlesReleased();
+      await deleteProjectAssetFilesFromDisk(currentProjectId, pathsToTrash);
     }
   };
 
@@ -2760,6 +3009,129 @@ export function GenSpace() {
     e.dataTransfer.setData("asset", JSON.stringify(asset));
     e.dataTransfer.setData("assetId", asset.id);
     e.dataTransfer.effectAllowed = "copy";
+  };
+
+  const showGalleryToast = useCallback((message: string) => {
+    setGalleryToast(message);
+  }, []);
+
+  const requestDuplicateFilenameChoice = useCallback(
+    (fileName: string): Promise<DuplicateFilenameChoice> =>
+      new Promise((resolve) => {
+        setDuplicateFilenameChoice({ fileName, resolve });
+      }),
+    [],
+  );
+
+  const handleDuplicateFilenameChoice = useCallback(
+    (choice: DuplicateFilenameChoice) => {
+      duplicateFilenameChoice?.resolve(choice);
+      setDuplicateFilenameChoice(null);
+    },
+    [duplicateFilenameChoice],
+  );
+
+  const syncInputFileToGallery = useCallback(
+    (file: File) => {
+      if (!currentProjectId) {
+        return Promise.resolve(null);
+      }
+      return ensureGalleryAssetForInputFile(
+        currentProjectId,
+        file,
+        currentProject?.assets ?? [],
+        addAsset,
+        requestDuplicateFilenameChoice,
+      );
+    },
+    [
+      currentProjectId,
+      currentProject?.assets,
+      addAsset,
+      requestDuplicateFilenameChoice,
+    ],
+  );
+
+  useEffect(() => {
+    if (!galleryToast) return;
+    const timer = window.setTimeout(() => setGalleryToast(null), 4000);
+    return () => window.clearTimeout(timer);
+  }, [galleryToast]);
+
+  const handleGalleryDragEnter = (e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes("asset")) return;
+    if (e.dataTransfer.types.includes("Files")) {
+      e.preventDefault();
+      setIsGalleryDragOver(true);
+    }
+  };
+
+  const handleGalleryDragOver = (e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes("asset")) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    setIsGalleryDragOver(true);
+  };
+
+  const handleGalleryDragLeave = (e: React.DragEvent) => {
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    setIsGalleryDragOver(false);
+  };
+
+  const handleGalleryDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsGalleryDragOver(false);
+    if (e.dataTransfer.types.includes("asset")) return;
+    if (!currentProjectId) return;
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length === 0) return;
+
+    setIsGalleryImporting(true);
+    const knownPaths = new Set(
+      (currentProject?.assets || []).map((asset) => asset.path),
+    );
+    let imported = 0;
+    let rejected = 0;
+
+    try {
+      for (const file of files) {
+        const outcome = await importGalleryFile(
+          currentProjectId,
+          file,
+          requestDuplicateFilenameChoice,
+        );
+        if (!outcome.ok) {
+          if (outcome.reason !== "cancelled") {
+            rejected += 1;
+          }
+          continue;
+        }
+        if (knownPaths.has(outcome.asset.path)) {
+          continue;
+        }
+        addAsset(currentProjectId, outcome.asset);
+        knownPaths.add(outcome.asset.path);
+        imported += 1;
+      }
+    } finally {
+      setIsGalleryImporting(false);
+    }
+
+    if (imported > 0) {
+      showGalleryToast(
+        imported === 1
+          ? "Added 1 file to gallery"
+          : `Added ${imported} files to gallery`,
+      );
+    }
+    if (rejected > 0) {
+      showGalleryToast(
+        rejected === 1
+          ? "Unsupported file — use image, video, or audio"
+          : `${rejected} files skipped — use image, video, or audio only`,
+      );
+    }
   };
 
   const handleCreateVideo = (imageAsset: Asset) => {
@@ -2812,10 +3184,15 @@ export function GenSpace() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showSizeMenu]);
 
-  const filteredAssets = showFavorites
-    ? assets.filter((a) => a.favorite)
-    : assets;
+  const filteredAssets = useMemo(() => {
+    let list = filterGalleryAssets(assets, galleryFilter);
+    if (showFavorites) {
+      list = list.filter((asset) => asset.favorite);
+    }
+    return list;
+  }, [assets, galleryFilter, showFavorites]);
   const favoriteCount = assets.filter((a) => a.favorite).length;
+  const galleryFilterActive = isGalleryFilterActive(galleryFilter);
 
   // Navigation for the asset preview modal
   const selectedIndex = selectedAsset
@@ -2850,7 +3227,25 @@ export function GenSpace() {
   }, [selectedAsset, goToPrev, goToNext]);
 
   return (
-    <div className="h-full relative bg-zinc-950">
+    <div
+      className="h-full relative bg-zinc-950"
+      onDragEnter={mode !== "retake" ? handleGalleryDragEnter : undefined}
+      onDragOver={mode !== "retake" ? handleGalleryDragOver : undefined}
+      onDragLeave={mode !== "retake" ? handleGalleryDragLeave : undefined}
+      onDrop={mode !== "retake" ? handleGalleryDrop : undefined}
+    >
+      {mode !== "retake" && galleryToast && (
+        <div className="absolute top-6 left-1/2 z-30 -translate-x-1/2 rounded-lg border border-zinc-700 bg-zinc-900/95 px-4 py-2 text-sm text-zinc-200 shadow-xl">
+          {galleryToast}
+        </div>
+      )}
+      {mode !== "retake" && isGalleryDragOver && (
+        <div className="pointer-events-none absolute inset-4 z-20 flex items-center justify-center rounded-xl border-2 border-dashed border-violet-400/70 bg-violet-500/10">
+          <p className="text-sm font-medium text-violet-200">
+            Drop image, video, or audio files to add to gallery
+          </p>
+        </div>
+      )}
       {/* Empty state */}
       {mode !== "retake" && assets.length === 0 && !isGenerating && (
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
@@ -2861,8 +3256,8 @@ export function GenSpace() {
             Start Creating
           </h3>
           <p className="text-zinc-500 max-w-md">
-            Use the prompt bar below to generate images and videos. Drag assets
-            into the input box to use them as references.
+            Use the prompt bar below to generate images and videos, or drop
+            image, video, and audio files here to add them to your gallery.
           </p>
         </div>
       )}
@@ -2879,6 +3274,24 @@ export function GenSpace() {
             </h3>
             <p className="text-zinc-500 text-sm">
               Click the heart icon on any asset to add it to your favorites.
+            </p>
+          </div>
+        )}
+
+      {/* No filter matches empty state */}
+      {mode !== "retake" &&
+        !showFavorites &&
+        galleryFilterActive &&
+        filteredAssets.length === 0 &&
+        assets.length > 0 &&
+        !isGenerating && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+            <ListFilter className="h-12 w-12 text-zinc-700 mb-4" />
+            <h3 className="text-lg font-semibold text-white mb-2">
+              No matching assets
+            </h3>
+            <p className="text-zinc-500 text-sm">
+              Try adjusting the type or source filters.
             </p>
           </div>
         )}
@@ -2913,6 +3326,8 @@ export function GenSpace() {
               )}
             </button>
 
+            <GalleryFilters filter={galleryFilter} onChange={setGalleryFilter} />
+
             <div ref={sizeMenuRef} className="relative">
               <button
                 onClick={() => setShowSizeMenu(!showSizeMenu)}
@@ -2922,7 +3337,9 @@ export function GenSpace() {
                     : "text-zinc-400 hover:text-white hover:bg-zinc-800"
                 }`}
               >
-                {gallerySize === "small" ? (
+                {gallerySize === "list" ? (
+                  <List className="h-4 w-4" />
+                ) : gallerySize === "small" ? (
                   <GridSmallIcon className="h-4 w-4" />
                 ) : gallerySize === "medium" ? (
                   <GridMediumIcon className="h-4 w-4" />
@@ -2948,6 +3365,11 @@ export function GenSpace() {
                       value: "large" as GallerySize,
                       label: "Large",
                       icon: GridLargeIcon,
+                    },
+                    {
+                      value: "list" as GallerySize,
+                      label: "List",
+                      icon: List,
                     },
                   ].map((option) => (
                     <button
@@ -2995,46 +3417,96 @@ export function GenSpace() {
             className="overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable] flex-1"
             style={{ paddingBottom: GALLERY_BOTTOM_FADE_HEIGHT_PX }}
           >
-            <div className={`grid ${gallerySizeClasses[gallerySize]} gap-4`}>
-              {isGenerating && (
-                <div className="relative rounded-xl overflow-hidden bg-zinc-800 aspect-video">
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <div className="relative w-16 h-16 mb-3">
-                      <div className="absolute inset-0 rounded-full border-2 border-violet-500/30" />
-                      <div className="absolute inset-0 rounded-full border-2 border-violet-500 border-t-transparent animate-spin" />
-                      <div className="absolute inset-2 rounded-full bg-zinc-800 flex items-center justify-center">
-                        <Sparkles className="h-6 w-6 text-violet-400" />
+            <div
+              className={
+                gallerySize === "list"
+                  ? "flex flex-col gap-0.5"
+                  : `grid ${gallerySizeClasses[gallerySize]} gap-4`
+              }
+            >
+              {isGenerating &&
+                (gallerySize === "list" ? (
+                  <div className="flex items-center gap-4 rounded-lg px-3 py-3">
+                    <div className="relative h-12 w-20 flex-shrink-0 overflow-hidden rounded-md bg-zinc-800">
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <LoaderCircle className="h-5 w-5 animate-spin text-violet-400" />
                       </div>
                     </div>
                     <p className="text-sm text-zinc-400">
                       {statusMessage || "Generating..."}
                     </p>
-                    {progress > 0 && (
-                      <div className="w-32 h-1 bg-zinc-800 rounded-full mt-2 overflow-hidden">
-                        <div
-                          className="h-full bg-violet-500 transition-all"
-                          style={{ width: `${progress}%` }}
-                        />
-                      </div>
-                    )}
                   </div>
-                </div>
+                ) : (
+                  <div className="relative rounded-xl overflow-hidden bg-zinc-800 aspect-video">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <div className="relative w-16 h-16 mb-3">
+                        <div className="absolute inset-0 rounded-full border-2 border-violet-500/30" />
+                        <div className="absolute inset-0 rounded-full border-2 border-violet-500 border-t-transparent animate-spin" />
+                        <div className="absolute inset-2 rounded-full bg-zinc-800 flex items-center justify-center">
+                          <Sparkles className="h-6 w-6 text-violet-400" />
+                        </div>
+                      </div>
+                      <p className="text-sm text-zinc-400">
+                        {statusMessage || "Generating..."}
+                      </p>
+                      {progress > 0 && (
+                        <div className="w-32 h-1 bg-zinc-800 rounded-full mt-2 overflow-hidden">
+                          <div
+                            className="h-full bg-violet-500 transition-all"
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              {isGalleryImporting &&
+                (gallerySize === "list" ? (
+                  <div className="flex items-center gap-4 rounded-lg px-3 py-3">
+                    <div className="relative h-12 w-20 flex-shrink-0 overflow-hidden rounded-md bg-zinc-800">
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <LoaderCircle className="h-5 w-5 animate-spin text-violet-400" />
+                      </div>
+                    </div>
+                    <p className="text-sm text-zinc-400">Importing...</p>
+                  </div>
+                ) : (
+                  <div className="relative rounded-xl overflow-hidden bg-zinc-800 aspect-video">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <LoaderCircle className="h-8 w-8 animate-spin text-violet-400 mb-2" />
+                      <p className="text-sm text-zinc-400">Importing...</p>
+                    </div>
+                  </div>
+                ))}
+              {filteredAssets.map((asset) =>
+                gallerySize === "list" ? (
+                  <AssetListRow
+                    key={asset.id}
+                    asset={asset}
+                    onDelete={() => handleDelete(asset.id)}
+                    onPlay={() => setSelectedAsset(asset)}
+                    onDragStart={handleDragStart}
+                    onToggleFavorite={() =>
+                      currentProjectId &&
+                      toggleFavorite(currentProjectId, asset.id)
+                    }
+                  />
+                ) : (
+                  <AssetCard
+                    key={asset.id}
+                    asset={asset}
+                    onDelete={() => handleDelete(asset.id)}
+                    onPlay={() => setSelectedAsset(asset)}
+                    onDragStart={handleDragStart}
+                    onCreateVideo={handleCreateVideo}
+                    onRetake={handleRetake}
+                    onToggleFavorite={() =>
+                      currentProjectId &&
+                      toggleFavorite(currentProjectId, asset.id)
+                    }
+                  />
+                ),
               )}
-              {filteredAssets.map((asset) => (
-                <AssetCard
-                  key={asset.id}
-                  asset={asset}
-                  onDelete={() => handleDelete(asset.id)}
-                  onPlay={() => setSelectedAsset(asset)}
-                  onDragStart={handleDragStart}
-                  onCreateVideo={handleCreateVideo}
-                  onRetake={handleRetake}
-                  onToggleFavorite={() =>
-                    currentProjectId &&
-                    toggleFavorite(currentProjectId, asset.id)
-                  }
-                />
-              ))}
             </div>
           </div>
           <div
@@ -3091,6 +3563,7 @@ export function GenSpace() {
           onMultiShotEnabledChange={setMultiShotEnabled}
           multiShotRows={multiShotRows}
           onMultiShotRowsChange={setMultiShotRows}
+          syncInputFileToGallery={syncInputFileToGallery}
         />
       </div>
 
@@ -3158,6 +3631,17 @@ export function GenSpace() {
                 autoPlay
                 className="w-full rounded-xl object-contain max-h-[75vh]"
               />
+            ) : selectedAsset.type === "audio" ? (
+              <div className="flex flex-col items-center justify-center rounded-xl bg-zinc-900 py-16 px-8">
+                <Music className="mb-6 h-16 w-16 text-emerald-400" />
+                <audio
+                  key={selectedAsset.id}
+                  src={selectedAsset.url}
+                  controls
+                  autoPlay
+                  className="w-full max-w-md"
+                />
+              </div>
             ) : (
               <img
                 key={selectedAsset.id}
@@ -3188,14 +3672,24 @@ export function GenSpace() {
                 )}
               </div>
               <p className="text-zinc-500 text-sm mt-1">
-                {selectedAsset.resolution} •{" "}
-                {selectedAsset.duration
-                  ? `${selectedAsset.duration}s`
-                  : "Image"}
+                {selectedAsset.type === "audio"
+                  ? getAssetDisplayFileName(selectedAsset)
+                  : `${selectedAsset.resolution} • ${
+                      selectedAsset.duration
+                        ? `${selectedAsset.duration}s`
+                        : "Image"
+                    }`}
               </p>
             </div>
           </div>
         </div>
+      )}
+
+      {duplicateFilenameChoice && (
+        <DuplicateFilenameDialog
+          fileName={duplicateFilenameChoice.fileName}
+          onChoose={handleDuplicateFilenameChoice}
+        />
       )}
 
       {(error || localError) && (

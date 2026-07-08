@@ -44,6 +44,7 @@ export interface Asset {
   thumbnail?: string
   favorite?: boolean
   bin?: string // Bin/folder name for organization (undefined = no bin)
+  source?: 'generated' | 'uploaded' // explicit; infer from generationParams if missing
   // Regeneration support
   generationParams?: GenerationParams
   takes?: AssetTake[] // All takes (index 0 = original). If undefined, the asset itself is the only take.

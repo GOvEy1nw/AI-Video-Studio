@@ -22,7 +22,8 @@ Make adding, reusing, and organizing media in QuickGen as frictionless as possib
 - GenSpace gallery filter: **`generationParams` required** — uploads hidden.
 - Source inference: generated ≈ has `generationParams`; uploaded ≈ no `generationParams` (no explicit field yet).
 - Input attach: uses `file://` / blob URLs; **does not** add to gallery (except generation completion effects).
-- Electron `copy-to-project-assets`: copies by basename; **overwrites** on name collision.
+- Electron `copy-to-project-assets`: **moves** into `{projectId}/generated/` (from backend staging `outputs/`).
+- Electron `import-to-project-assets`: **copies** into `{projectId}/uploads/` with suffix dedup.
 - Bins: implemented in **video editor** `LeftPanel`; not in GenSpace.
 - Waveform: `frontend/components/AudioWaveform.tsx` exports `computeWaveform`, `ClipWaveform`, global `waveformCache`.
 
@@ -66,6 +67,16 @@ defaultGuideRoleForType(type): string  // video → human_motion, audio → audi
 | Video editor `handleImportFile` | `reference-in-place` | **Unchanged behavior** |
 | Mini picker (if ever built) | `copy-into-project` | Deferred |
 
+### On-disk project layout
+
+```
+{AiVS Assets}/{projectId}/
+  generated/   ← WanGP outputs moved here after generation completes
+  uploads/     ← user-dropped / imported files (copy)
+```
+
+App-level `AppData/Local/AiVS/outputs/` remains the **backend staging dir** (WanGP write target + in-flight preview URLs). Persisted gallery assets are moved out of it into `generated/` — not duplicated.
+
 ### Electron IPC extensions
 
 Extend `copy-to-project-assets` (or add `import-to-project-assets`):
@@ -103,7 +114,7 @@ GenSpace gallery: show **all** image/video/audio assets (stop filtering to `gene
 
 ### Phase A — Input friction killers (no gallery model changes)
 
-**A1. Gallery → Vid/Aud drag**
+**A1. Gallery → Vid/Aud drag** ✅ (2026-07-08)
 
 - Enable `draggable` on video (and audio when shown) in `AssetCard`.
 - Wire guide slot `onDrop` to parse `asset` JSON (same as `handleDrop`).
@@ -111,7 +122,7 @@ GenSpace gallery: show **all** image/video/audio assets (stop filtering to `gene
 
 **Verify:** Drag generated video from gallery onto Vid/Aud slot; role defaults apply.
 
-**A2. Simplify Vid/Aud empty slot**
+**A2. Simplify Vid/Aud empty slot** ✅ (2026-07-08)
 
 - Remove Video/Audio popup on empty guide slot.
 - Single click → one file input `accept="video/*,audio/*,.mp3,.wav,…"`.
@@ -128,30 +139,31 @@ GenSpace gallery: show **all** image/video/audio assets (stop filtering to `gene
 
 ### Phase B — Gallery foundation
 
-**B1. Shared `media-import.ts` + Electron dedup**
+**B1. Shared `media-import.ts` + Electron dedup** ✅ (2026-07-08)
 
-- Implement `importMediaAsset` with `copy-into-project`.
-- IPC: suffix copy (`name (2).ext`), reuse path, or prompt hook.
-- Unit/integration: duplicate basename behavior.
+- `frontend/lib/media-import.ts` — `importMediaAsset`, type detection, copy vs reference policies.
+- `electron/lib/project-asset-import.ts` — suffix/reuse/overwrite/prompt strategies.
+- IPC `import-to-project-assets`; `copy-to-project-assets` delegates with `overwrite`.
+- Test: `pnpm test:media-import` (`scripts/test-project-asset-import.mjs`).
 
-**B2. Drop files onto GenSpace gallery**
+**B2. Drop files onto GenSpace gallery** ✅ (2026-07-08)
 
-- Gallery container accepts drag/drop (OS files).
-- Validate image/video/audio only; reject others with toast.
-- Import via `importMediaAsset`; `source: 'uploaded'`, no `generationParams`.
-- Remove GenSpace `assets.filter(a => a.generationParams)`.
+- Gallery (and empty state) accepts OS file drag/drop; image/video/audio only.
+- Imports via `importGalleryFile` → `importMediaAsset` with `source: 'uploaded'`.
+- Removed `generationParams`-only gallery filter; shows all image/video/audio assets.
+- Toast feedback for success/rejection; `Asset.source` field added.
 
-**B3. Input attach → also add to gallery**
+**B3. Input attach → also add to gallery** ✅ (2026-07-08)
 
-- When user adds media via file pick/drop to any input slot:
-  - If from gallery drag → reuse asset (no duplicate).
-  - If from filesystem → `importMediaAsset` + `addAsset` if not already in project.
-- Input slots store `assetId` reference where possible (optional v1: keep url/path but dedupe by path).
+- File pick/drop on any input slot calls `ensureGalleryAssetForInputFile` → import + `addAsset` when not already in project.
+- Gallery drag to input reuses existing asset URL (no duplicate).
+- Dedup by `asset.path` before adding to gallery.
 
-**B4. Duplicate filename dialog**
+**B4. Duplicate filename dialog** ✅ (2026-07-08)
 
-- On import collision: modal — **Use existing asset** | **Add as new copy** (auto suffix).
-- Compare by basename in project assets folder + existing `Asset.path`.
+- On basename collision in `uploads/`: modal — **Use existing asset** | **Add as new copy** | Cancel.
+- Wired for gallery drop and input file attach via `requestDuplicateFilenameChoice`.
+- Reuse skips copy + duplicate gallery row; suffix creates `name (2).ext`.
 
 **Verify:** Upload same file twice → dialog; reuse skips second copy; suffix creates `(2)` file + new asset.
 
@@ -163,20 +175,20 @@ GenSpace gallery: show **all** image/video/audio assets (stop filtering to `gene
 
 ### Phase C — Gallery filters
 
-**C1. Filter dropdown**
+**C1. Filter dropdown** ✅ (2026-07-08)
 
-- Next to Favorites / grid size: filter popover.
-- **Type:** checkboxes Image, Video, Audio (multi-select, default all).
-- **Source:** checkboxes Generated, Uploaded (multi-select, default all).
-- Filter logic uses `asset.type` + `source` (or `generationParams` fallback).
+- `GalleryFilters` popover next to Favorites / grid size.
+- **Type:** Image, Video, Audio (multi-select, default all).
+- **Source:** Generated, Uploaded via `asset.source` with `generationParams` fallback.
+- Combines with Favorites filter; empty state when no matches.
 
-**C2. Audio gallery tiles**
+**C2. Audio gallery tiles** ✅ (2026-07-08)
 
-- Extend `AssetCard` for `type === 'audio'`.
-- Use `ClipWaveform` (~200 buckets) in tile; loading skeleton → placeholder wave on failure.
-- Lazy decode: only when card mounts / enters viewport (optional `IntersectionObserver` if perf issue).
+- Filename footer on all gallery cards (`getAssetDisplayFileName` from path basename).
+- Audio cards play on hover (loop, reset on leave) — same pattern as video preview.
+- Music icon tile retained; no waveform in v1.
 
-**Verify:** Upload MP3 appears in gallery with waveform; filter to Uploaded + Audio only.
+**Verify:** Upload MP3 → filename visible; hover plays audio; filter Uploaded + Audio works.
 
 **Estimated effort:** ~1–2 days.
 
