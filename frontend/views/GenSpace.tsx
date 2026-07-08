@@ -26,6 +26,7 @@ import {
   Plus,
   ListFilter,
   List,
+  Folder,
 } from "lucide-react";
 import { useProjects } from "../contexts/ProjectContext";
 import type { GenSpaceRetakeSource } from "../contexts/ProjectContext";
@@ -40,6 +41,12 @@ import type { ModelProfile } from "../types/model-profiles";
 import { GenerationErrorDialog } from "../components/GenerationErrorDialog";
 import { DuplicateFilenameDialog } from "../components/DuplicateFilenameDialog";
 import { GalleryFilters } from "../components/GalleryFilters";
+import { GalleryBinBar } from "../components/GalleryBinBar";
+import type { GalleryBinContextMenuState } from "../components/GalleryBinBar";
+import {
+  GalleryAssetContextMenu,
+  type GalleryAssetContextMenuState,
+} from "../components/GalleryAssetContextMenu";
 import { copyToAssetFolder } from "../lib/asset-copy";
 import {
   collectAssetFilePaths,
@@ -55,6 +62,8 @@ import {
   getAssetDisplayFileName,
   inferAssetSource,
   GALLERY_SOURCE_OPTIONS,
+  collectGalleryBins,
+  filterGalleryAssetsByBin,
   type GalleryFilterState,
 } from "../lib/gallery-filters";
 import { backendFetch } from "../lib/backend";
@@ -112,6 +121,7 @@ function AssetCard({
   onCreateVideo,
   onRetake,
   onToggleFavorite,
+  onContextMenu,
 }: {
   asset: Asset;
   onDelete: () => void;
@@ -120,6 +130,7 @@ function AssetCard({
   onCreateVideo?: (asset: Asset) => void;
   onRetake?: (asset: Asset) => void;
   onToggleFavorite?: () => void;
+  onContextMenu?: (e: React.MouseEvent, asset: Asset) => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -183,6 +194,10 @@ function AssetCard({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={onPlay}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onContextMenu?.(e, asset);
+      }}
       draggable={isDraggable}
       onDragStart={(e) => {
         if (!isDraggable) return;
@@ -362,12 +377,14 @@ function AssetListRow({
   onPlay,
   onDragStart,
   onToggleFavorite,
+  onContextMenu,
 }: {
   asset: Asset;
   onDelete: () => void;
   onPlay: () => void;
   onDragStart: (e: React.DragEvent, asset: Asset) => void;
   onToggleFavorite?: () => void;
+  onContextMenu?: (e: React.MouseEvent, asset: Asset) => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -414,6 +431,10 @@ function AssetListRow({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={onPlay}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onContextMenu?.(e, asset);
+      }}
       draggable={isDraggable}
       onDragStart={(e) => {
         if (!isDraggable) return;
@@ -2409,6 +2430,7 @@ export function GenSpace() {
     addAsset,
     addTakeToAsset,
     deleteAsset,
+    updateAsset,
     toggleFavorite,
     genSpaceEditImageUrl,
     setGenSpaceEditImageUrl,
@@ -2439,6 +2461,14 @@ export function GenSpace() {
     useState<GalleryFilterState>(DEFAULT_GALLERY_FILTER);
   const [gallerySize, setGallerySize] = useState<GallerySize>("medium");
   const [showSizeMenu, setShowSizeMenu] = useState(false);
+  const [selectedBin, setSelectedBin] = useState<string | null>(null);
+  const [stagedBins, setStagedBins] = useState<string[]>([]);
+  const [creatingBin, setCreatingBin] = useState(false);
+  const [newBinName, setNewBinName] = useState("");
+  const [binContextMenu, setBinContextMenu] =
+    useState<GalleryBinContextMenuState | null>(null);
+  const [assetContextMenu, setAssetContextMenu] =
+    useState<GalleryAssetContextMenuState | null>(null);
   const [isGalleryDragOver, setIsGalleryDragOver] = useState(false);
   const [isGalleryImporting, setIsGalleryImporting] = useState(false);
   const [galleryToast, setGalleryToast] = useState<string | null>(null);
@@ -3186,12 +3216,81 @@ export function GenSpace() {
 
   const filteredAssets = useMemo(() => {
     let list = filterGalleryAssets(assets, galleryFilter);
+    if (selectedBin !== null) {
+      list = filterGalleryAssetsByBin(list, selectedBin);
+    }
     if (showFavorites) {
       list = list.filter((asset) => asset.favorite);
     }
     return list;
-  }, [assets, galleryFilter, showFavorites]);
-  const favoriteCount = assets.filter((a) => a.favorite).length;
+  }, [assets, galleryFilter, showFavorites, selectedBin]);
+
+  const galleryBins = useMemo(
+    () => collectGalleryBins(assets, stagedBins),
+    [assets, stagedBins],
+  );
+
+  const handleAssignAssetToBin = useCallback(
+    (assetId: string, bin: string | undefined) => {
+      if (!currentProjectId) return;
+      updateAsset(currentProjectId, assetId, { bin });
+    },
+    [currentProjectId, updateAsset],
+  );
+
+  const handleCommitNewBin = useCallback((name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setStagedBins((prev) =>
+      prev.includes(trimmed) ? prev : [...prev, trimmed].sort(),
+    );
+    setSelectedBin(trimmed);
+    setCreatingBin(false);
+    setNewBinName("");
+  }, []);
+
+  const handleRenameBin = useCallback(
+    (oldName: string, newName: string) => {
+      if (!currentProjectId) return;
+      const trimmed = newName.trim();
+      if (!trimmed || trimmed === oldName) return;
+      for (const asset of assets.filter((entry) => entry.bin === oldName)) {
+        updateAsset(currentProjectId, asset.id, { bin: trimmed });
+      }
+      setStagedBins((prev) =>
+        prev
+          .map((entry) => (entry === oldName ? trimmed : entry))
+          .sort((a, b) => a.localeCompare(b)),
+      );
+      if (selectedBin === oldName) {
+        setSelectedBin(trimmed);
+      }
+    },
+    [assets, currentProjectId, selectedBin, updateAsset],
+  );
+
+  const handleDeleteBin = useCallback(
+    (bin: string) => {
+      if (!currentProjectId) return;
+      for (const asset of assets.filter((entry) => entry.bin === bin)) {
+        updateAsset(currentProjectId, asset.id, { bin: undefined });
+      }
+      setStagedBins((prev) => prev.filter((entry) => entry !== bin));
+      if (selectedBin === bin) {
+        setSelectedBin(null);
+      }
+    },
+    [assets, currentProjectId, selectedBin, updateAsset],
+  );
+
+  const handleAssetContextMenu = useCallback(
+    (e: React.MouseEvent, asset: Asset) => {
+      setAssetContextMenu({ asset, x: e.clientX, y: e.clientY });
+      setBinContextMenu(null);
+    },
+    [],
+  );
+
   const galleryFilterActive = isGalleryFilterActive(galleryFilter);
 
   // Navigation for the asset preview modal
@@ -3281,6 +3380,24 @@ export function GenSpace() {
       {/* No filter matches empty state */}
       {mode !== "retake" &&
         !showFavorites &&
+        selectedBin !== null &&
+        filteredAssets.length === 0 &&
+        assets.length > 0 &&
+        !isGenerating && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+            <Folder className="h-12 w-12 text-zinc-700 mb-4" />
+            <h3 className="text-lg font-semibold text-white mb-2">
+              No assets in &ldquo;{selectedBin}&rdquo;
+            </h3>
+            <p className="text-zinc-500 text-sm">
+              Right-click an asset and choose Move to Bin to add it here.
+            </p>
+          </div>
+        )}
+
+      {mode !== "retake" &&
+        !showFavorites &&
+        selectedBin === null &&
         galleryFilterActive &&
         filteredAssets.length === 0 &&
         assets.length > 0 &&
@@ -3299,35 +3416,52 @@ export function GenSpace() {
       {/* Assets area — full width, no background, above the prompt bar */}
       {mode !== "retake" && (assets.length > 0 || isGenerating) && (
         <div className="absolute inset-x-0 top-0 bottom-0 flex flex-col px-4 pt-4">
-          {/* Top bar */}
-          <div className="flex items-center justify-end pb-2 gap-2">
-            <button
-              onClick={() => setShowFavorites(!showFavorites)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                showFavorites
-                  ? "bg-red-500/20 text-red-400 border border-red-500/30"
-                  : "text-zinc-400 hover:text-white hover:bg-zinc-800"
-              }`}
-            >
-              <Heart
-                className={`h-4 w-4 ${showFavorites ? "fill-current" : ""}`}
+          {/* Top bar — filter + favorites + bins left, view right */}
+          <div className="flex items-center justify-between gap-3 pb-2">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <GalleryFilters
+                filter={galleryFilter}
+                onChange={setGalleryFilter}
               />
-              Favorites
-              {favoriteCount > 0 && (
-                <span
-                  className={`text-xs px-1.5 py-0.5 rounded-full ${
-                    showFavorites
-                      ? "bg-red-500/30 text-red-300"
-                      : "bg-zinc-800 text-zinc-500"
-                  }`}
-                >
-                  {favoriteCount}
-                </span>
-              )}
-            </button>
+              <button
+                type="button"
+                onClick={() => setShowFavorites(!showFavorites)}
+                className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md border transition-colors ${
+                  showFavorites
+                    ? "border-red-500/30 bg-red-500/20 text-red-400"
+                    : "border-transparent text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                }`}
+                aria-label="Show favorites"
+                aria-pressed={showFavorites}
+                title="Show favorites"
+              >
+                <Heart
+                  className={`h-4 w-4 ${showFavorites ? "fill-current" : ""}`}
+                />
+              </button>
+              <div className="min-w-0 flex-1">
+                <GalleryBinBar
+                  bins={galleryBins}
+                  assets={assets}
+                  selectedBin={selectedBin}
+                  creatingBin={creatingBin}
+                  newBinName={newBinName}
+                  onSelectBin={setSelectedBin}
+                  onCreatingBinChange={setCreatingBin}
+                  onNewBinNameChange={setNewBinName}
+                  onCommitNewBin={handleCommitNewBin}
+                  onAssignAssetToBin={(assetId, bin) =>
+                    handleAssignAssetToBin(assetId, bin)
+                  }
+                  onRenameBin={handleRenameBin}
+                  onDeleteBin={handleDeleteBin}
+                  binContextMenu={binContextMenu}
+                  onBinContextMenuChange={setBinContextMenu}
+                />
+              </div>
+            </div>
 
-            <GalleryFilters filter={galleryFilter} onChange={setGalleryFilter} />
-
+            <div className="flex flex-shrink-0 items-center gap-2">
             <div ref={sizeMenuRef} className="relative">
               <button
                 onClick={() => setShowSizeMenu(!showSizeMenu)}
@@ -3410,6 +3544,7 @@ export function GenSpace() {
                 </div>
               )}
             </div>
+            </div>
           </div>
 
           {/* Assets grid — fills remaining space, scrollable */}
@@ -3486,6 +3621,7 @@ export function GenSpace() {
                     onDelete={() => handleDelete(asset.id)}
                     onPlay={() => setSelectedAsset(asset)}
                     onDragStart={handleDragStart}
+                    onContextMenu={handleAssetContextMenu}
                     onToggleFavorite={() =>
                       currentProjectId &&
                       toggleFavorite(currentProjectId, asset.id)
@@ -3498,6 +3634,7 @@ export function GenSpace() {
                     onDelete={() => handleDelete(asset.id)}
                     onPlay={() => setSelectedAsset(asset)}
                     onDragStart={handleDragStart}
+                    onContextMenu={handleAssetContextMenu}
                     onCreateVideo={handleCreateVideo}
                     onRetake={handleRetake}
                     onToggleFavorite={() =>
@@ -3689,6 +3826,21 @@ export function GenSpace() {
         <DuplicateFilenameDialog
           fileName={duplicateFilenameChoice.fileName}
           onChoose={handleDuplicateFilenameChoice}
+        />
+      )}
+
+      {assetContextMenu && (
+        <GalleryAssetContextMenu
+          menu={assetContextMenu}
+          bins={galleryBins}
+          onClose={() => setAssetContextMenu(null)}
+          onAssignBin={(bin) => {
+            handleAssignAssetToBin(assetContextMenu.asset.id, bin);
+          }}
+          onCreateBin={(name) => {
+            handleCommitNewBin(name);
+            handleAssignAssetToBin(assetContextMenu.asset.id, name);
+          }}
         />
       )}
 

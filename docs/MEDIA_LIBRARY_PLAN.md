@@ -12,7 +12,7 @@ Make adding, reusing, and organizing media in QuickGen as frictionless as possib
 | --- | --- |
 | **GenSpace vs editor storage** | **GenSpace copies** files into project assets (portable, safe for generation inputs). **Editor references in place** for user imports (heavy video files stay where they are). |
 | **Audio gallery tiles** | Prefer **real waveform** via existing `computeWaveform` / `ClipWaveform` (cached). Fallback: static placeholder wave + Music icon while loading or on decode failure. |
-| **Mini picker modal** | **Deferred.** Re-evaluate after Phases A–C; may skip if drag/drop + gallery upload is enough. |
+| **Mini picker modal** | **Cancelled.** Bins + type/source filters + drag/drop cover input picking; no mini-gallery modal in v1. |
 | **Folders** | **Bins only** (`Asset.bin` string). Reuse editor bin patterns; no nested folder tree in v1. |
 
 ## Current baseline (code)
@@ -106,7 +106,7 @@ GenSpace gallery: show **all** image/video/audio assets (stop filtering to `gene
 | `AssetCard` updates | A, B | Drag video/audio; audio waveform tile |
 | `GalleryFilters` | C | Type + source checkboxes |
 | `GalleryBinBar` | D | Port from editor `LeftPanel` bin UX |
-| `MediaPickerModal` | Optional | Deferred mini-gallery picker |
+| `MediaPickerModal` | — | Cancelled (Phase E); bins + filters sufficient |
 
 ---
 
@@ -194,32 +194,17 @@ GenSpace gallery: show **all** image/video/audio assets (stop filtering to `gene
 
 ---
 
-### Phase D — Bins in GenSpace
+**D — Bins in GenSpace** ✅ (2026-07-08)
 
-- Port bin bar patterns from `frontend/views/editor/LeftPanel.tsx`:
-  - Create bin, select bin filter, assign asset to bin (context menu or drag — start with context menu).
-  - Rename/delete bin (update `Asset.bin` on affected assets).
-- GenSpace filtered view respects selected bin + Phase C filters.
-
-**Verify:** Create bin “References”, assign uploaded image, filter gallery to bin.
-
-**Estimated effort:** ~1–2 days.
+- `GalleryBinBar` — All/bin chips, create bin, drag asset onto bin, right-click rename/delete.
+- `GalleryAssetContextMenu` — right-click asset → Move to Bin / New Bin / Remove from Bin.
+- Gallery filter pipeline combines bin + Phase C type/source + Favorites.
 
 ---
 
-### Phase E — Mini picker (optional, deferred)
+### Phase E — Mini picker ❌ Cancelled (2026-07-08)
 
-Re-evaluate after A–D. Build only if click-to-pick is still painful.
-
-**Scope if approved:**
-
-- Modal anchored to clicked input slot.
-- Tabs: Generated | Uploads (filter by `source`).
-- Default type filter from slot kind (image vs video/audio).
-- Grid reuses `AssetCard` compact variant + upload button.
-- Select → assign to slot + close.
-
-**Estimated effort:** ~2–3 days.
+Product decision after A–D: bins + type/source filter popover + gallery drag/drop make a slot-anchored mini picker unnecessary for v1. Do not implement unless requirements change.
 
 ---
 
@@ -234,7 +219,7 @@ Re-evaluate after A–D. Build only if click-to-pick is still painful.
 7. **C1** — Filter dropdown  
 8. **C2** — Audio waveform tiles  
 9. **D** — Bins in GenSpace  
-10. **E** — Mini picker (optional)
+~~10. **E** — Mini picker~~ — cancelled
 
 ---
 
@@ -253,7 +238,7 @@ Re-evaluate after A–D. Build only if click-to-pick is still painful.
 ## Out of scope (v1)
 
 - Nested folder tree
-- Mini picker (until re-evaluated)
+- Mini picker (cancelled — bins + filters sufficient)
 - Backend/API changes (local Electron + project JSON only)
 - WanGP model changes
 - Auto-sync editor imports into GenSpace copies

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Check, ListFilter } from 'lucide-react'
+import { ListFilter } from 'lucide-react'
 import {
   GALLERY_SOURCE_OPTIONS,
   GALLERY_TYPE_OPTIONS,
@@ -15,7 +15,12 @@ interface GalleryFiltersProps {
   onChange: (filter: GalleryFilterState) => void
 }
 
-function FilterCheckboxGroup<T extends string>({
+const filterChipClass = (active: boolean) =>
+  active
+    ? 'border border-blue-500/40 bg-blue-600/30 text-blue-300'
+    : 'border border-transparent bg-zinc-800 text-zinc-500 hover:text-zinc-300'
+
+function FilterChipGroup<T extends string>({
   title,
   options,
   selected,
@@ -28,33 +33,20 @@ function FilterCheckboxGroup<T extends string>({
 }) {
   return (
     <div>
-      <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+      <div className="px-0.5 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
         {title}
       </div>
-      <div className="space-y-0.5">
+      <div className="flex flex-wrap gap-1.5">
         {options.map((option) => {
-          const isChecked = selected.includes(option.value)
+          const isActive = selected.includes(option.value)
           return (
             <button
               key={option.value}
               type="button"
               onClick={() => onToggle(option.value)}
-              className={`w-full flex items-center justify-between px-2 py-2 rounded-md transition-colors text-left ${
-                isChecked
-                  ? 'bg-white/15 text-white'
-                  : 'text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
-              }`}
+              className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${filterChipClass(isActive)}`}
             >
-              <span className="text-sm">{option.label}</span>
-              <span
-                className={`flex h-4 w-4 items-center justify-center rounded border ${
-                  isChecked
-                    ? 'border-violet-400 bg-violet-500/30 text-violet-200'
-                    : 'border-zinc-600 bg-zinc-900/40'
-                }`}
-              >
-                {isChecked && <Check className="h-3 w-3" />}
-              </span>
+              {option.label}
             </button>
           )
         })}
@@ -81,6 +73,9 @@ export function GalleryFilters({ filter, onChange }: GalleryFiltersProps) {
   }, [open])
 
   const toggleType = (value: GalleryMediaType) => {
+    if (filter.types.includes(value) && filter.types.length === 1) {
+      return
+    }
     onChange({
       ...filter,
       types: toggleGalleryFilterValue(filter.types, value),
@@ -88,6 +83,9 @@ export function GalleryFilters({ filter, onChange }: GalleryFiltersProps) {
   }
 
   const toggleSource = (value: GalleryAssetSource) => {
+    if (filter.sources.includes(value) && filter.sources.length === 1) {
+      return
+    }
     onChange({
       ...filter,
       sources: toggleGalleryFilterValue(filter.sources, value),
@@ -95,32 +93,33 @@ export function GalleryFilters({ filter, onChange }: GalleryFiltersProps) {
   }
 
   return (
-    <div ref={menuRef} className="relative">
+    <div ref={menuRef} className="relative flex-shrink-0">
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+        className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md border transition-colors ${
           open || filterActive
-            ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30'
-            : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+            ? 'border-blue-500/40 bg-blue-600/30 text-blue-300'
+            : 'border-transparent text-zinc-400 hover:bg-zinc-800 hover:text-white'
         }`}
         aria-expanded={open}
         aria-haspopup="true"
+        aria-label="Filter gallery"
+        title="Filter gallery"
       >
         <ListFilter className="h-4 w-4" />
-        Filter
       </button>
 
       {open && (
-        <div className="absolute top-full mt-2 right-0 bg-zinc-800 border border-zinc-700 rounded-md p-2 min-w-[200px] shadow-xl z-50 space-y-3">
-          <FilterCheckboxGroup
+        <div className="absolute top-full left-0 z-50 mt-2 min-w-[220px] rounded-md border border-zinc-700 bg-zinc-800 p-2.5 shadow-xl space-y-3">
+          <FilterChipGroup
             title="Type"
             options={GALLERY_TYPE_OPTIONS}
             selected={filter.types}
             onToggle={toggleType}
           />
           <div className="h-px bg-zinc-700" />
-          <FilterCheckboxGroup
+          <FilterChipGroup
             title="Source"
             options={GALLERY_SOURCE_OPTIONS}
             selected={filter.sources}

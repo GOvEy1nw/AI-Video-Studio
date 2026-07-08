@@ -71,3 +71,22 @@ export function getAssetDisplayFileName(asset: Asset): string {
   if (asset.prompt.trim()) return asset.prompt.trim()
   return `${asset.type}-${asset.id}`
 }
+
+export function collectGalleryBins(
+  assets: Asset[],
+  extraBins: string[] = [],
+): string[] {
+  const binSet = new Set<string>(extraBins)
+  for (const asset of assets) {
+    if (asset.bin) binSet.add(asset.bin)
+  }
+  return Array.from(binSet).sort((a, b) => a.localeCompare(b))
+}
+
+export function filterGalleryAssetsByBin(
+  assets: Asset[],
+  selectedBin: string | null,
+): Asset[] {
+  if (selectedBin === null) return assets
+  return assets.filter((asset) => asset.bin === selectedBin)
+}

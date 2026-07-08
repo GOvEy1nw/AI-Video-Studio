@@ -13,8 +13,6 @@ AI Video Studio (AiVS) is a local-first desktop app for AI image, video, and fut
 - Media library plan: GenSpace copies uploads into project assets for generation reuse; video editor keeps in-place references for heavy imports. Shared importMediaAsset helper bridges both paths.
 
 ## Notes
-- Phase A1 done: gallery video/audio draggable; Vid/Aud guide slot accepts gallery asset drops with blue highlight; shared applyGalleryAsset helper.
-- Phase A2 done: Vid/Aud empty slot uses single guideInputRef picker (video+audio); format infers role; popup removed.
 - Phase B1 complete: frontend/lib/media-import.ts + electron/lib/project-asset-import.ts + import-to-project-assets IPC (suffix/reuse/overwrite/prompt). copy-to-project-assets uses overwrite. Test: pnpm test:media-import. [frontend/lib/media-import.ts]
 - Phase B2 complete: GenSpace gallery accepts OS file drops (empty + populated), importGalleryFile via media-import, source:uploaded assets, all image/video/audio shown in gallery (not generationParams-only). Toast feedback for import success/rejection. [frontend/views/GenSpace.tsx]
 - Project assets on disk: uploads/ and generated/ subfolders per project. copy-to-project-assets moves from AppData outputs to generated/; import-to-project-assets copies to uploads/. outputs/ stays as backend staging only. [electron/lib/project-asset-import.ts]
@@ -23,6 +21,8 @@ AI Video Studio (AiVS) is a local-first desktop app for AI image, video, and fut
 - Phase C1: GalleryFilters popover — type (image/video/audio) + source (generated/uploaded) multi-select; filterGalleryAssets in gallery-filters.ts; combines with Favorites. [frontend/components/GalleryFilters.tsx]
 - Phase C2: GenSpace AssetCard shows truncated filename footer on all asset types (getAssetDisplayFileName); audio uses Music icon + hover playback via hidden audio element (audible, loop, reset on leave) instead of waveforms. [frontend/views/GenSpace.tsx]
 - GenSpace gallery: filename on grid cards is hover-only overlay (bg-black/60 bar at bottom). Added list view mode (4th option in size menu) with AssetListRow — thumbnail, name, type, source, favorite, delete. [frontend/views/GenSpace.tsx]
+- Phase D: GenSpace bins via GalleryBinBar (filter chips, create/rename/delete, drag-to-assign) + GalleryAssetContextMenu on asset right-click. Uses Asset.bin + updateAsset; combines with type/source/favorites filters. [frontend/components/GalleryBinBar.tsx]
+- Gallery toolbar: filter icon-only, far left before bins. Phase E mini picker cancelled — bins + filters + drag/drop sufficient. [frontend/components/GalleryFilters.tsx]
 
 ## Key files
 - `LTX-2.3_Cinematic_hardcut.safetensors`
@@ -32,6 +32,7 @@ AI Video Studio (AiVS) is a local-first desktop app for AI image, video, and fut
 - `electron/lib/project-asset-import.ts`
 - `asset.path`
 - `gallery-filters.ts`
+- `Asset.bin`
 
 ## Open questions
 - None logged yet.
