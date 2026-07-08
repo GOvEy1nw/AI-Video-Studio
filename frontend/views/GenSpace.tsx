@@ -70,6 +70,12 @@ import { backendFetch } from "../lib/backend";
 import { fileUrlToPath } from "../lib/url-to-path";
 import { logger } from "../lib/logger";
 import { RetakePanel } from "../components/RetakePanel";
+import { SeedControl } from "../components/SeedControl";
+import { useAppSettings } from "../contexts/AppSettingsContext";
+import {
+  clampGenSpaceSeed,
+  DEFAULT_GENSPACE_LOCKED_SEED,
+} from "../types/project";
 
 type ImageInputItem = {
   id: string;
@@ -827,6 +833,9 @@ function PromptBar({
   onEnhancePrompt,
   isGenerating,
   isEnhancingPrompt,
+  seedLocked,
+  lockedSeed,
+  onSeedChange,
   inputImage,
   onInputImageChange,
   imageInputs,
@@ -856,6 +865,9 @@ function PromptBar({
   onEnhancePrompt: () => void;
   isGenerating: boolean;
   isEnhancingPrompt: boolean;
+  seedLocked: boolean;
+  lockedSeed: number;
+  onSeedChange: (seed: { seedLocked: boolean; lockedSeed: number }) => void;
   canGenerate: boolean;
   buttonLabel: string;
   buttonIcon: React.ReactNode;
@@ -2047,20 +2059,28 @@ function PromptBar({
                   Timing
                 </button>
               )}
-              <button
-                type="button"
-                onClick={onEnhancePrompt}
-                disabled={isGenerating || isEnhancingPrompt || !prompt.trim()}
-                className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-zinc-400 transition-colors"
-                title="Enhance prompt"
-              >
-                {isEnhancingPrompt ? (
-                  <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Sparkles className="h-3.5 w-3.5" />
-                )}
-                Enhance
-              </button>
+              <div className="flex items-center gap-2">
+                <SeedControl
+                  seedLocked={seedLocked}
+                  lockedSeed={lockedSeed}
+                  onChange={onSeedChange}
+                  disabled={isGenerating}
+                />
+                <button
+                  type="button"
+                  onClick={onEnhancePrompt}
+                  disabled={isGenerating || isEnhancingPrompt || !prompt.trim()}
+                  className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-zinc-400 transition-colors"
+                  title="Enhance prompt"
+                >
+                  {isEnhancingPrompt ? (
+                    <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-3.5 w-3.5" />
+                  )}
+                  Enhance
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -2440,7 +2460,9 @@ export function GenSpace() {
     genSpaceRetakeSource,
     setGenSpaceRetakeSource,
     setPendingRetakeUpdate,
+    updateProjectGenSpaceSeed,
   } = useProjects();
+  const { updateSettings, isLoaded: appSettingsLoaded } = useAppSettings();
   const [mode, setMode] = useState<"image" | "video" | "retake">("video");
   const [prompt, setPrompt] = useState("");
   const [inputImage, setInputImage] = useState<string | null>(null);
@@ -2477,6 +2499,7 @@ export function GenSpace() {
     resolve: (choice: DuplicateFilenameChoice) => void;
   } | null>(null);
   const sizeMenuRef = useRef<HTMLDivElement>(null);
+  const prevProjectIdRef = useRef<string | null>(null);
   const persistedVideoKeyRef = useRef<string | null>(null);
   const persistedImageKeyRef = useRef<string | null>(null);
   const retakeSubmissionRef = useRef<{
@@ -2582,6 +2605,49 @@ export function GenSpace() {
       a.type === "image" || a.type === "video" || a.type === "audio",
   );
   const [lastPrompt, setLastPrompt] = useState("");
+
+  const seedLocked = currentProject?.genSpaceSeedLocked ?? false;
+  const lockedSeed = clampGenSpaceSeed(
+    currentProject?.genSpaceLockedSeed ?? DEFAULT_GENSPACE_LOCKED_SEED,
+  );
+
+  const handleSeedChange = useCallback(
+    (seed: { seedLocked: boolean; lockedSeed: number }) => {
+      const nextSeed = {
+        seedLocked: seed.seedLocked,
+        lockedSeed: clampGenSpaceSeed(seed.lockedSeed),
+      };
+      if (currentProjectId) {
+        updateProjectGenSpaceSeed(currentProjectId, nextSeed);
+      }
+      updateSettings(nextSeed);
+    },
+    [currentProjectId, updateProjectGenSpaceSeed, updateSettings],
+  );
+
+  useEffect(() => {
+    if (!appSettingsLoaded) return;
+    if (!currentProjectId) {
+      prevProjectIdRef.current = null;
+      return;
+    }
+    if (prevProjectIdRef.current === currentProjectId) return;
+
+    prevProjectIdRef.current = currentProjectId;
+    const projectSeed = {
+      seedLocked: currentProject?.genSpaceSeedLocked ?? false,
+      lockedSeed: clampGenSpaceSeed(
+        currentProject?.genSpaceLockedSeed ?? DEFAULT_GENSPACE_LOCKED_SEED,
+      ),
+    };
+    updateSettings(projectSeed);
+  }, [
+    appSettingsLoaded,
+    currentProjectId,
+    currentProject?.genSpaceSeedLocked,
+    currentProject?.genSpaceLockedSeed,
+    updateSettings,
+  ]);
 
   // When video generation completes, add to project assets
   useEffect(() => {
@@ -3681,6 +3747,9 @@ export function GenSpace() {
           onEnhancePrompt={handleEnhancePrompt}
           isGenerating={promptGenerating}
           isEnhancingPrompt={isEnhancingPrompt}
+          seedLocked={seedLocked}
+          lockedSeed={lockedSeed}
+          onSeedChange={handleSeedChange}
           canGenerate={canSubmit}
           buttonLabel={promptButtonLabel}
           buttonIcon={promptButtonIcon}

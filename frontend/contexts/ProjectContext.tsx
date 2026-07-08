@@ -18,6 +18,10 @@ interface ProjectContextType {
   createProject: (name: string) => Project
   deleteProject: (id: string) => void
   renameProject: (id: string, name: string) => void
+  updateProjectGenSpaceSeed: (
+    id: string,
+    seed: { seedLocked: boolean; lockedSeed: number },
+  ) => void
   
   // Assets
   addAsset: (projectId: string, asset: Omit<Asset, 'id' | 'createdAt'>) => Asset
@@ -234,6 +238,22 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const renameProject = useCallback((id: string, name: string) => {
     setProjects(prev => prev.map(p => 
       p.id === id ? { ...p, name, updatedAt: Date.now() } : p
+    ))
+  }, [])
+
+  const updateProjectGenSpaceSeed = useCallback((
+    id: string,
+    seed: { seedLocked: boolean; lockedSeed: number },
+  ) => {
+    setProjects(prev => prev.map(p =>
+      p.id === id
+        ? {
+            ...p,
+            genSpaceSeedLocked: seed.seedLocked,
+            genSpaceLockedSeed: seed.lockedSeed,
+            updatedAt: Date.now(),
+          }
+        : p,
     ))
   }, [])
 
@@ -513,6 +533,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       createProject,
       deleteProject,
       renameProject,
+      updateProjectGenSpaceSeed,
       addAsset,
       deleteAsset,
       updateAsset,

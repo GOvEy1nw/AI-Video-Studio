@@ -1,6 +1,6 @@
 # Project Map - AI Video Studio
 
-Status: Updated 2026-07-08 after phase 4.41 prompt enhancement, phase 4.42 multi-shot video prompts, and venv preservation fixes.
+Status: Updated 2026-07-08 after GenSpace media library plan phases A–D (gallery import, filters, bins, list view).
 
 ## Purpose
 
@@ -53,7 +53,15 @@ Files, dialogs, ffmpeg, backend process management
 
 ### Primary files
 
-- `frontend/views/GenSpace.tsx` - QuickGen surface for image/video/retake modes, prompt bar, profile-driven controls, media input strip, gallery persistence.
+- `frontend/views/GenSpace.tsx` - QuickGen surface for image/video/retake modes, prompt bar, profile-driven controls, media input strip, gallery with filters/bins/list view, asset persistence.
+- `frontend/lib/media-import.ts` - GenSpace media ingestion (copy-into-project), gallery file import, input-to-gallery sync, duplicate filename handling.
+- `frontend/lib/gallery-filters.ts` - Gallery type/source/bin filter helpers and display filename inference.
+- `frontend/lib/asset-delete.ts` - Scoped project asset delete with media handle release before trash.
+- `frontend/lib/asset-copy.ts` - Move generated outputs into project `generated/` folder.
+- `frontend/components/GalleryFilters.tsx` - Icon-only filter trigger; type/source toggle chips in popover.
+- `frontend/components/GalleryBinBar.tsx` - Bin chips, create/rename/delete, drag-to-assign; toolbar row left of view controls.
+- `frontend/components/GalleryAssetContextMenu.tsx` - Right-click asset → Move to Bin / New Bin / Remove from Bin.
+- `frontend/components/DuplicateFilenameDialog.tsx` - Basename collision modal for uploads.
 - `frontend/hooks/use-generation.ts` - submit/cancel/progress polling for video and image generation.
 - `frontend/hooks/use-image-profiles.ts` - fetches model profiles and exposes image/video filtered hooks.
 - `frontend/types/model-profiles.ts` - frontend mirror of backend model profile API.
@@ -70,6 +78,16 @@ Files, dialogs, ffmpeg, backend process management
 - Multi-shot mode replaces the prompt textarea with an optional global prompt row and timed shot rows capped at 20 total seconds.
 - Prompt enhancement is available in image/video prompt areas and routes through WanGP.
 - Gallery persistence guards avoid repeated save loops after generation completion.
+
+### GenSpace media library (phases A–D, `docs/MEDIA_LIBRARY_PLAN.md`)
+
+- **Storage:** GenSpace copies into `{AiVS Assets}/{projectId}/uploads/` (imports) and `generated/` (WanGP outputs moved from staging). Editor still references heavy imports in place.
+- **Inputs:** Gallery drag video/audio/image to prompt slots; single file picker infers role for Vid/Aud.
+- **Import:** OS drop on gallery + input attach sync via `media-import.ts`; duplicate basename dialog (reuse / suffix / cancel).
+- **Gallery UI:** Grid sizes (small/medium/large) + list view (`AssetListRow`); hover filename overlay; audio/video hover preview; lightbox supports audio.
+- **Toolbar (left→right):** filter icon → favorites heart → bin chips; view size menu on the right. Toolbar controls use `h-8` with reserved border to avoid layout shift.
+- **Filters:** Type (image/video/audio) + source (generated/uploaded) as blue/grey toggle chips; combines with favorites and bin selection.
+- **Bins:** `Asset.bin` string labels; shared with video editor; create/rename/delete, drag or context menu assign. Phase E mini picker cancelled.
 
 ## Backend map
 
@@ -97,6 +115,19 @@ _routes/* -> AppHandler -> handlers/* -> services/* + state/*
 ```
 
 Heavy side effects live behind services. Tests use fakes instead of mocks.
+
+## Electron map
+
+### Primary files
+
+- `electron/lib/project-asset-import.ts` - Copy/import into project uploads with suffix/reuse/overwrite strategies.
+- `electron/lib/project-asset-delete.ts` - Scoped trash with retry for Windows file locks.
+- `electron/ipc/file-handlers.ts` - IPC for import-to-project-assets, copy-to-project-assets, asset delete/trash.
+
+### Asset IPC
+
+- `import-to-project-assets` → copy to `{projectId}/uploads/`
+- `copy-to-project-assets` → move from backend staging to `{projectId}/generated/`
 
 ## Model profile contract
 
@@ -201,6 +232,7 @@ Then run scripts through the same direct pnpm entry if needed.
 | Phase 4.3 | Update input media slots for better feature support & run backend/WanGP connection in the background to avoid delays loading UI | Complete |
 | Phase 4.41 | WanGP prompt enhancement for image/video modes                                                                            | Complete    |
 | Phase 4.42 | Video multi-shot prompt rows with relayed WanGP prompt formatting                                                         | Complete    |
+| Media A–D | GenSpace media library: import, gallery filters, bins, list view (`docs/MEDIA_LIBRARY_PLAN.md`)                          | Complete    |
 | Phase 5   | LoRA MVP                                                                                                                  | Pending     |
 | Phase 6   | QuickGen image polish                                                                                                     | Pending     |
 | Phase 7   | Video input capabilities (start/end/control/source video)                                                                 | Pending     |
@@ -213,17 +245,18 @@ Then run scripts through the same direct pnpm entry if needed.
 - Add video start frame / end frame / source video / control video UI and backend mapping from existing LTX2 raw metadata.
 - Add LoRA folder detection, selection, strength, and metadata.
 - Improve model availability/missing-model UX.
+- Optional: port GenSpace bin/filter toolbar patterns to video editor LeftPanel for visual parity.
 - Keep inherited editor stable and avoid major rewrites until QuickGen is stronger.
 
 ## Suggested first reads
 
 1. `AGENTS_PRD.md`
 2. `AGENTS.md`
-3. `README.md`
+3. `docs/MEDIA_LIBRARY_PLAN.md`
 4. `.projectmem/summary.md`
-5. `docs/PHASE0_AUDIT.md`
-6. `docs/PHASE4_DETAILS.md`
-7. `backend/architecture.md`
-8. `backend/model_profiles/profiles.py`
-9. `backend/services/wangp_bridge.py`
-10. `frontend/views/GenSpace.tsx`
+5. `frontend/views/GenSpace.tsx`
+6. `frontend/lib/media-import.ts`
+7. `frontend/lib/gallery-filters.ts`
+8. `backend/architecture.md`
+9. `backend/model_profiles/profiles.py`
+10. `backend/services/wangp_bridge.py`

@@ -412,6 +412,17 @@ export interface Project {
   thumbnail?: string
   timelines: Timeline[]
   activeTimelineId?: string
+  /** GenSpace seed lock persists per project until changed. */
+  genSpaceSeedLocked?: boolean
+  genSpaceLockedSeed?: number
+}
+
+export const DEFAULT_GENSPACE_LOCKED_SEED = 42
+export const MAX_GENSPACE_SEED = 2_147_483_647
+
+export function clampGenSpaceSeed(value: number): number {
+  if (!Number.isFinite(value)) return DEFAULT_GENSPACE_LOCKED_SEED
+  return Math.min(MAX_GENSPACE_SEED, Math.max(0, Math.floor(value)))
 }
 
 export type ViewType = 'home' | 'project' | 'playground'
