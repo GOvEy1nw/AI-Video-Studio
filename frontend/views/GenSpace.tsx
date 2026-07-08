@@ -2159,6 +2159,8 @@ const gallerySizeClasses: Record<GallerySize, string> = {
     "grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3",
 };
 
+const GALLERY_BOTTOM_FADE_HEIGHT_PX = 160;
+
 const DEFAULT_VIDEO_SETTINGS = {
   model: "fast",
   videoProfileId: "ltx2_22b_distilled",
@@ -2883,7 +2885,7 @@ export function GenSpace() {
 
       {/* Assets area — full width, no background, above the prompt bar */}
       {mode !== "retake" && (assets.length > 0 || isGenerating) && (
-        <div className="absolute inset-x-0 top-0 bottom-[160px] flex flex-col px-4 pt-4">
+        <div className="absolute inset-x-0 top-0 bottom-0 flex flex-col px-4 pt-4">
           {/* Top bar */}
           <div className="flex items-center justify-end pb-2 gap-2">
             <button
@@ -2989,7 +2991,10 @@ export function GenSpace() {
           </div>
 
           {/* Assets grid — fills remaining space, scrollable */}
-          <div className="overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable] flex-1">
+          <div
+            className="overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable] flex-1"
+            style={{ paddingBottom: GALLERY_BOTTOM_FADE_HEIGHT_PX }}
+          >
             <div className={`grid ${gallerySizeClasses[gallerySize]} gap-4`}>
               {isGenerating && (
                 <div className="relative rounded-xl overflow-hidden bg-zinc-800 aspect-video">
@@ -3032,6 +3037,11 @@ export function GenSpace() {
               ))}
             </div>
           </div>
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black to-transparent"
+            style={{ height: GALLERY_BOTTOM_FADE_HEIGHT_PX }}
+          />
         </div>
       )}
 
@@ -3051,7 +3061,7 @@ export function GenSpace() {
       )}
 
       {/* Floating prompt panel — wider, responsive, centered */}
-      <div className="absolute bottom-5 left-1/2 w-[min(700px,calc(100%-2rem))] -translate-x-1/2">
+      <div className="absolute bottom-5 left-1/2 z-20 w-[min(700px,calc(100%-2rem))] -translate-x-1/2">
         {/* Prompt bar */}
         <PromptBar
           mode={mode}
