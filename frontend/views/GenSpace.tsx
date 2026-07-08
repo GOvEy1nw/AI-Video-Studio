@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Copy,
   Check,
+  ClipboardPaste,
   AlertCircle,
   Pencil,
   LoaderCircle,
@@ -72,6 +73,14 @@ import { logger } from "../lib/logger";
 import { RetakePanel } from "../components/RetakePanel";
 import { SeedControl } from "../components/SeedControl";
 import { useAppSettings } from "../contexts/AppSettingsContext";
+import {
+  buildImageInputsFromParams,
+  genSpaceModeFromParams,
+  resolveLegacyInputMedia,
+  resolveInputMediaPath,
+  settingsPatchFromGenerationParams,
+  toStoredInputMediaEntry,
+} from "../lib/apply-generation-params";
 import {
   clampGenSpaceSeed,
   DEFAULT_GENSPACE_LOCKED_SEED,
@@ -126,6 +135,7 @@ function AssetCard({
   onDragStart,
   onCreateVideo,
   onRetake,
+  onApplyPrompt,
   onToggleFavorite,
   onContextMenu,
 }: {
@@ -135,6 +145,7 @@ function AssetCard({
   onDragStart: (e: React.DragEvent, asset: Asset) => void;
   onCreateVideo?: (asset: Asset) => void;
   onRetake?: (asset: Asset) => void;
+  onApplyPrompt?: (asset: Asset) => void;
   onToggleFavorite?: () => void;
   onContextMenu?: (e: React.MouseEvent, asset: Asset) => void;
 }) {
@@ -145,6 +156,7 @@ function AssetCard({
   const [isMuted, setIsMuted] = useState(true);
   const isFavorite = asset.favorite || false;
   const displayFileName = getAssetDisplayFileName(asset);
+  const canApplyPrompt = !!asset.generationParams;
 
   useEffect(() => {
     if (asset.type === "video" && videoRef.current) {
@@ -303,19 +315,47 @@ function AssetCard({
                     <Film className="h-3 w-3" />
                     Create video
                   </button>
+                  {canApplyPrompt && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onApplyPrompt?.(asset);
+                      }}
+                      className="p-1.5 rounded-lg bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-colors"
+                      title="Apply prompt"
+                      aria-label="Apply prompt"
+                    >
+                      <ClipboardPaste className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </>
               )}
               {asset.type === "video" && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRetake?.(asset);
-                  }}
-                  className="px-2.5 py-1.5 rounded-lg bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-colors flex items-center gap-1.5 text-xs font-medium whitespace-nowrap"
-                >
-                  <Scissors className="h-3 w-3" />
-                  Retake
-                </button>
+                <>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRetake?.(asset);
+                    }}
+                    className="px-2.5 py-1.5 rounded-lg bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-colors flex items-center gap-1.5 text-xs font-medium whitespace-nowrap"
+                  >
+                    <Scissors className="h-3 w-3" />
+                    Retake
+                  </button>
+                  {canApplyPrompt && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onApplyPrompt?.(asset);
+                      }}
+                      className="p-1.5 rounded-lg bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-colors"
+                      title="Apply prompt"
+                      aria-label="Apply prompt"
+                    >
+                      <ClipboardPaste className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </>
               )}
             </div>
 
@@ -382,6 +422,7 @@ function AssetListRow({
   onDelete,
   onPlay,
   onDragStart,
+  onApplyPrompt,
   onToggleFavorite,
   onContextMenu,
 }: {
@@ -389,6 +430,7 @@ function AssetListRow({
   onDelete: () => void;
   onPlay: () => void;
   onDragStart: (e: React.DragEvent, asset: Asset) => void;
+  onApplyPrompt?: (asset: Asset) => void;
   onToggleFavorite?: () => void;
   onContextMenu?: (e: React.MouseEvent, asset: Asset) => void;
 }) {
@@ -517,6 +559,20 @@ function AssetListRow({
       >
         <Heart className={`h-4 w-4 ${isFavorite ? "fill-current" : ""}`} />
       </button>
+
+      {asset.generationParams && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onApplyPrompt?.(asset);
+          }}
+          className="flex-shrink-0 rounded-md p-2 text-zinc-500 transition-colors hover:bg-zinc-700 hover:text-zinc-200"
+          title="Apply prompt"
+          aria-label="Apply prompt"
+        >
+          <ClipboardPaste className="h-4 w-4" />
+        </button>
+      )}
 
       <button
         onClick={(e) => {
@@ -856,6 +912,7 @@ function PromptBar({
   multiShotRows,
   onMultiShotRowsChange,
   syncInputFileToGallery,
+  mediaInputsExpandKey = 0,
 }: {
   mode: "image" | "video" | "retake";
   onModeChange: (mode: "image" | "video" | "retake") => void;
@@ -901,6 +958,7 @@ function PromptBar({
   multiShotRows: MultiShotRow[];
   onMultiShotRowsChange: (rows: MultiShotRow[]) => void;
   syncInputFileToGallery?: (file: File) => Promise<string | null>;
+  mediaInputsExpandKey?: number;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const guideInputRef = useRef<HTMLInputElement>(null);
@@ -981,12 +1039,14 @@ function PromptBar({
     const supportedRoles = new Set([
       "start_image",
       "end_image",
+      "control_video",
       "human_motion",
       "human_motion_pose",
       "depth",
       "canny_edges",
       "sdr_to_hdr",
       "continue_video",
+      "audio_guide",
       "audio_to_video",
       "reference_voice",
     ]);
@@ -1549,12 +1609,14 @@ function PromptBar({
   const renderCombinedGuideSlot = () => {
     const guideItem = imageInputs.find((x) =>
       [
+        "control_video",
         "human_motion",
         "human_motion_pose",
         "depth",
         "canny_edges",
         "sdr_to_hdr",
         "continue_video",
+        "audio_guide",
         "audio_to_video",
         "reference_voice",
       ].includes(x.role),
@@ -1765,6 +1827,12 @@ function PromptBar({
   useEffect(() => {
     setMediaInputsExpanded(false);
   }, [mode, selectedVideoProfile?.id, selectedImageProfile?.id]);
+
+  useEffect(() => {
+    if (mediaInputsExpandKey > 0) {
+      setMediaInputsExpanded(true);
+    }
+  }, [mediaInputsExpandKey]);
 
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-visible">
@@ -2494,12 +2562,19 @@ export function GenSpace() {
   const [isGalleryDragOver, setIsGalleryDragOver] = useState(false);
   const [isGalleryImporting, setIsGalleryImporting] = useState(false);
   const [galleryToast, setGalleryToast] = useState<string | null>(null);
+  const [mediaInputsExpandKey, setMediaInputsExpandKey] = useState(0);
+  const [inputRestoreVersion, setInputRestoreVersion] = useState(0);
   const [duplicateFilenameChoice, setDuplicateFilenameChoice] = useState<{
     fileName: string;
     resolve: (choice: DuplicateFilenameChoice) => void;
   } | null>(null);
   const sizeMenuRef = useRef<HTMLDivElement>(null);
   const prevProjectIdRef = useRef<string | null>(null);
+  const pendingInputRestoreRef = useRef<{
+    imageInputs: ImageInputItem[];
+    inputImage: string | null;
+    inputAudio: string | null;
+  } | null>(null);
   const persistedVideoKeyRef = useRef<string | null>(null);
   const persistedImageKeyRef = useRef<string | null>(null);
   const retakeSubmissionRef = useRef<{
@@ -2700,10 +2775,11 @@ export function GenSpace() {
             imageSteps: savedVideoSettings.imageSteps,
             inputImageUrl,
             inputAudioUrl,
-            imageInputMedia: imageInputs.map((item) => ({
-              url: item.url,
-              role: item.role,
-            })),
+            inputImagePath: resolveInputMediaPath(inputImageUrl, assets),
+            inputAudioPath: resolveInputMediaPath(inputAudioUrl, assets),
+            imageInputMedia: imageInputs.map((item) =>
+              toStoredInputMediaEntry(item, assets),
+            ),
           },
           takes: [
             {
@@ -2860,11 +2936,14 @@ export function GenSpace() {
                 imageSteps: savedSettings.imageSteps,
                 imageProfileId: savedSettings.imageProfileId,
                 inputImageUrl: savedImageInputs[0]?.url,
+                inputImagePath: resolveInputMediaPath(
+                  savedImageInputs[0]?.url,
+                  assets,
+                ),
                 imageInputRole: savedImageInputs[0]?.role,
-                imageInputMedia: savedImageInputs.map((item) => ({
-                  url: item.url,
-                  role: item.role,
-                })),
+                imageInputMedia: savedImageInputs.map((item) =>
+                  toStoredInputMediaEntry(item, assets),
+                ),
               },
               takes: [
                 {
@@ -3247,6 +3326,77 @@ export function GenSpace() {
     });
     setRetakePanelKey((prev) => prev + 1);
   };
+
+  const handleApplyPrompt = useCallback(
+    (asset: Asset) => {
+      const params = asset.generationParams;
+      if (!params) return;
+
+      const projectAssets = currentProject?.assets ?? [];
+
+      setLocalError(null);
+      setMultiShotEnabled(false);
+      setMultiShotRows([createMultiShotRow(4), createMultiShotRow(4)]);
+
+      const nextMode = genSpaceModeFromParams(params);
+      const restoredInputs = buildImageInputsFromParams(params, projectAssets);
+      const { inputImage: restoredImage, inputAudio: restoredAudio } =
+        resolveLegacyInputMedia(params, restoredInputs, projectAssets);
+
+      pendingInputRestoreRef.current = {
+        imageInputs: restoredInputs,
+        inputImage: restoredImage,
+        inputAudio: restoredAudio,
+      };
+
+      setImageInputs([]);
+      setInputImage(null);
+      setInputAudio(null);
+      setMode(nextMode);
+      setPrompt(params.prompt);
+      setSettings((prev) => settingsPatchFromGenerationParams(params, prev));
+      setInputRestoreVersion((version) => version + 1);
+
+      if (nextMode === "retake") {
+        setActiveRetakeSource(null);
+        setRetakeInitial({
+          videoUrl: asset.url,
+          videoPath: asset.path,
+          duration: asset.duration ?? params.retakeDuration,
+        });
+        setRetakePanelKey((prev) => prev + 1);
+      }
+    },
+    [currentProject?.assets],
+  );
+
+  useEffect(() => {
+    const pending = pendingInputRestoreRef.current;
+    if (!pending) return;
+
+    const hasMedia =
+      pending.imageInputs.length > 0 || pending.inputImage || pending.inputAudio;
+    if (!hasMedia) {
+      pendingInputRestoreRef.current = null;
+      return;
+    }
+
+    if (mode === "image" && imageProfiles.length === 0) return;
+    if (mode === "video" && videoProfiles.length === 0) return;
+
+    pendingInputRestoreRef.current = null;
+    setImageInputs(pending.imageInputs);
+    setInputImage(pending.inputImage);
+    setInputAudio(pending.inputAudio);
+    setMediaInputsExpandKey((key) => key + 1);
+  }, [
+    inputRestoreVersion,
+    mode,
+    settings.imageProfileId,
+    settings.videoProfileId,
+    imageProfiles.length,
+    videoProfiles.length,
+  ]);
 
   const isRetakeMode = mode === "retake";
   const canSubmit = isRetakeMode
@@ -3688,6 +3838,7 @@ export function GenSpace() {
                     onPlay={() => setSelectedAsset(asset)}
                     onDragStart={handleDragStart}
                     onContextMenu={handleAssetContextMenu}
+                    onApplyPrompt={handleApplyPrompt}
                     onToggleFavorite={() =>
                       currentProjectId &&
                       toggleFavorite(currentProjectId, asset.id)
@@ -3703,6 +3854,7 @@ export function GenSpace() {
                     onContextMenu={handleAssetContextMenu}
                     onCreateVideo={handleCreateVideo}
                     onRetake={handleRetake}
+                    onApplyPrompt={handleApplyPrompt}
                     onToggleFavorite={() =>
                       currentProjectId &&
                       toggleFavorite(currentProjectId, asset.id)
@@ -3770,6 +3922,7 @@ export function GenSpace() {
           multiShotRows={multiShotRows}
           onMultiShotRowsChange={setMultiShotRows}
           syncInputFileToGallery={syncInputFileToGallery}
+          mediaInputsExpandKey={mediaInputsExpandKey}
         />
       </div>
 

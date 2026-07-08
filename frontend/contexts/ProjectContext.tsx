@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import type { Project, Asset, AssetTake, ViewType, ProjectTab, Timeline } from '../types/project'
 import { createDefaultTimeline } from '../types/project'
+import { recoverGenerationParamsMedia } from '../lib/apply-generation-params'
 import { logger } from '../lib/logger'
 
 interface ProjectContextType {
@@ -106,34 +107,60 @@ function isRealPath(p: string): boolean {
 // Recover broken blob URLs by rebuilding file:// URLs from stored paths
 function recoverAssetUrls(project: Project): Project {
   let changed = false
-  const fixedAssets = project.assets.map(asset => {
-    // If the URL is a blob: URL and we have a real file path, recover it
+  const fixedAssets = project.assets.map((asset) => {
     if (asset.url && asset.url.startsWith('blob:') && isRealPath(asset.path)) {
       changed = true
       const fixedUrl = pathToFileUrl(asset.path)
-      const fixedTakes = asset.takes?.map(t => ({
+      const fixedTakes = asset.takes?.map((t) => ({
         ...t,
-        url: t.url.startsWith('blob:') && isRealPath(t.path) ? pathToFileUrl(t.path) : t.url
+        url:
+          t.url.startsWith('blob:') && isRealPath(t.path)
+            ? pathToFileUrl(t.path)
+            : t.url,
       }))
       return { ...asset, url: fixedUrl, takes: fixedTakes || asset.takes }
     }
     return asset
   })
-  
-  if (!changed) return project
-  
-  // Also fix clip embedded assets and timeline clip references
-  const fixedTimelines = project.timelines?.map(tl => ({
+
+  let timelinesChanged = false
+  const fixedTimelines = project.timelines?.map((tl) => ({
     ...tl,
-    clips: tl.clips?.map(clip => {
-      if (clip.asset?.url?.startsWith('blob:') && isRealPath(clip.asset.path)) {
-        return { ...clip, asset: { ...clip.asset, url: pathToFileUrl(clip.asset.path) } }
-      }
-      return clip
-    }) || tl.clips
+    clips:
+      tl.clips?.map((clip) => {
+        if (clip.asset?.url?.startsWith('blob:') && isRealPath(clip.asset.path)) {
+          timelinesChanged = true
+          return {
+            ...clip,
+            asset: { ...clip.asset, url: pathToFileUrl(clip.asset.path) },
+          }
+        }
+        return clip
+      }) || tl.clips,
   }))
-  
-  return { ...project, assets: fixedAssets, timelines: fixedTimelines || project.timelines }
+
+  if (timelinesChanged) {
+    changed = true
+  }
+
+  const assetsWithParams = fixedAssets.map((asset) => {
+    if (!asset.generationParams) return asset
+    const recovered = recoverGenerationParamsMedia(
+      asset.generationParams,
+      fixedAssets,
+    )
+    if (recovered === asset.generationParams) return asset
+    changed = true
+    return { ...asset, generationParams: recovered }
+  })
+
+  if (!changed) return project
+
+  return {
+    ...project,
+    assets: assetsWithParams,
+    timelines: fixedTimelines || project.timelines,
+  }
 }
 
 // Load initial projects from localStorage synchronously

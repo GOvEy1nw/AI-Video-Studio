@@ -15,9 +15,6 @@ AI Video Studio (AiVS) is a local-first desktop app for AI image, video, and fut
 - GenSpace seed control: per-project genSpaceSeedLocked/genSpaceLockedSeed on Project, SeedControl popover (dice/lock icons) beside Enhance, syncs to backend app settings on change and project switch.
 
 ## Notes
-- GenSpace gallery: filename on grid cards is hover-only overlay (bg-black/60 bar at bottom). Added list view mode (4th option in size menu) with AssetListRow — thumbnail, name, type, source, favorite, delete. [frontend/views/GenSpace.tsx]
-- Phase D: GenSpace bins via GalleryBinBar (filter chips, create/rename/delete, drag-to-assign) + GalleryAssetContextMenu on asset right-click. Uses Asset.bin + updateAsset; combines with type/source/favorites filters. [frontend/components/GalleryBinBar.tsx]
-- Gallery toolbar: filter icon-only, far left before bins. Phase E mini picker cancelled — bins + filters + drag/drop sufficient. [frontend/components/GalleryFilters.tsx]
 - GenSpace gallery toolbar (left→right): filter icon, favorites heart icon, bin chips (scroll); view-size menu alone on right. All toolbar toggles use h-8 fixed height, border always reserved (transparent inactive) to prevent layout shift. [frontend/views/GenSpace.tsx]
 - GalleryFilters: icon-only trigger; popover uses bin-style toggle chips (blue=include type/source, grey=exclude). Last chip per group cannot be deselected. Active filter trigger uses blue chip styling. [frontend/components/GalleryFilters.tsx]
 - GalleryBinBar: h-8 bin chips (min content width), Folder+ h-8 w-8; All/bin select, drag asset onto chip, right-click rename/delete. Staged bin names until first asset assigned. Pairs with GalleryAssetContextMenu (right-click asset → Move to Bin). [frontend/components/GalleryBinBar.tsx]
@@ -25,6 +22,9 @@ AI Video Studio (AiVS) is a local-first desktop app for AI image, video, and fut
 - gallery-filters.ts: filterGalleryAssets (type+source), collectGalleryBins, filterGalleryAssetsByBin, getAssetDisplayFileName, inferAssetSource. GenSpace pipeline: type/source filter → bin filter → favorites. [frontend/lib/gallery-filters.ts]
 - Media import (B1–B4): importMediaAsset copy-into-project for GenSpace; uploads/ vs generated/ on disk; ensureGalleryAssetForInputFile syncs inputs to gallery; DuplicateFilenameDialog on basename collision. Test: pnpm test:media-import. [frontend/lib/media-import.ts]
 - Gallery delete: remove asset from project JSON then waitForMediaFileHandlesReleased before shell.trashItem (Windows file locks). Only paths under {projectId}/ trashed. Do not video.removeAttribute(src) on AssetCard unmount — breaks thumbnails. [frontend/lib/asset-delete.ts]
+- GenSpace gallery Apply prompt (ClipboardPaste icon): restores generationParams to prompt bar — mode, prompt, settings, image/audio inputs. Grid hover next to Create video/Retake; list view action column. Helper: frontend/lib/apply-generation-params.ts.
+- Apply prompt input media fix: deferred restore after PromptBar profile normalization; buildImageInputsFromParams merges inputAudioUrl; expand media strip; add control_video/audio_guide to video input roles.
+- Legacy apply-prompt media: generationParams now stores input paths; recoverGenerationParamsMedia on project load resolves stale blob URLs via project asset paths; buildImageInputsFromParams resolves against gallery assets at apply time.
 
 ## Key files
 - `LTX-2.3_Cinematic_hardcut.safetensors`
@@ -37,6 +37,7 @@ AI Video Studio (AiVS) is a local-first desktop app for AI image, video, and fut
 - `Asset.bin`
 - `shell.trashItem`
 - `video.removeAttribute`
+- `frontend/lib/apply-generation-params.ts`
 
 ## Open questions
 - None logged yet.

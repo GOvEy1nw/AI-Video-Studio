@@ -15,9 +15,11 @@ export interface GenerationParams {
   videoProfileId?: string  // Curated AiVS video model profile id
   imageProfileId?: string  // Phase 4 curated AiVS model profile id
   inputImageUrl?: string // For I2V: the input image used
+  inputImagePath?: string
   imageInputRole?: string
-  imageInputMedia?: { url: string; role: string }[]
+  imageInputMedia?: { url: string; role: string; path?: string }[]
   inputAudioUrl?: string // For A2V: the input audio used
+  inputAudioPath?: string
   retakeVideoPath?: string
   retakeStartTime?: number
   retakeDuration?: number
