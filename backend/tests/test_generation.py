@@ -117,6 +117,8 @@ class TestGenerate:
             "[0s:4s] The knight raises a shield.\n"
             "[4s:9s] The dragon breathes fire."
         )
+        assert call.default_settings["activated_loras"] == ["LTX-2.3_Cinematic_hardcut.safetensors"]
+        assert call.default_settings["loras_multipliers"] == "1.0"
 
     def test_multi_shot_allows_empty_global_prompt(
         self, client, enable_wangp: FakeWanGPBridge
@@ -139,6 +141,27 @@ class TestGenerate:
         call = enable_wangp.video_calls[0]
         assert call.duration_seconds == 2
         assert call.prompt == "[0s:2s] Shot-only prompt."
+        assert call.default_settings["activated_loras"] == ["LTX-2.3_Cinematic_hardcut.safetensors"]
+        assert call.default_settings["loras_multipliers"] == "1.0"
+
+    def test_regular_video_generation_does_not_activate_multi_shot_lora(
+        self, client, enable_wangp: FakeWanGPBridge
+    ):
+        r = client.post(
+            "/api/generate",
+            json={
+                "prompt": "A single continuous shot.",
+                "resolution": "540p",
+                "modelProfileId": "ltx2_22b_distilled",
+                "duration": "5",
+                "fps": "24",
+            },
+        )
+
+        assert r.status_code == 200
+        call = enable_wangp.video_calls[0]
+        assert "activated_loras" not in call.default_settings
+        assert "loras_multipliers" not in call.default_settings
 
     def test_unknown_video_profile_rejected(
         self, client, enable_wangp: FakeWanGPBridge

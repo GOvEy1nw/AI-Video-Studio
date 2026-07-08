@@ -49,6 +49,8 @@ FORCED_API_RESOLUTION_MAP: dict[str, dict[str, str]] = {
 A2V_FORCED_API_RESOLUTION = "1920x1080"
 FORCED_API_ALLOWED_ASPECT_RATIOS = {"16:9", "9:16"}
 FORCED_API_ALLOWED_FPS = {24, 25, 48, 50}
+MULTI_SHOT_LORA_FILENAME = "LTX-2.3_Cinematic_hardcut.safetensors"
+MULTI_SHOT_LORA_STRENGTH = "1.0"
 
 
 def _get_allowed_durations(model_id: str, resolution_label: str, fps: int) -> set[int]:
@@ -600,6 +602,10 @@ class VideoGenerationHandler(StateHandlerBase):
             else:
                 steps = 8 if req.model.strip().lower() == "fast" else max(1, settings.pro_model.steps)
             seed = self._resolve_seed()
+            default_settings = dict(profile.wangp_default_settings)
+            if req.shotPrompts:
+                default_settings["activated_loras"] = [MULTI_SHOT_LORA_FILENAME]
+                default_settings["loras_multipliers"] = MULTI_SHOT_LORA_STRENGTH
 
             output_path = self._wangp_bridge.generate_video(
                 prompt=wangp_prompt,
@@ -616,7 +622,7 @@ class VideoGenerationHandler(StateHandlerBase):
                 on_progress=self._generation.update_progress,
                 is_cancelled=self._generation.is_generation_cancelled,
                 model_type=profile.wangp_model_type,
-                default_settings=profile.wangp_default_settings,
+                default_settings=default_settings,
                 start_image_path=validated_start_image_path,
                 end_image_path=validated_end_image_path,
                 control_video_path=validated_control_video_path,

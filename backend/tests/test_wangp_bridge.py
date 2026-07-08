@@ -77,6 +77,40 @@ def test_ltx2_video_uses_full_video_length_as_sliding_window_size() -> None:
     assert captured["settings"]["sliding_window_size"] == 145
 
 
+def test_generate_video_forwards_default_lora_settings() -> None:
+    bridge = _make_bridge()
+    captured: dict[str, object] = {}
+
+    def fake_run_manifest(*, manifest, media_suffixes, on_progress, is_cancelled):  # type: ignore[no-untyped-def]
+        captured["settings"] = manifest[0]["params"]
+        return ["E:/tmp/out.mp4"]
+
+    bridge._run_manifest = fake_run_manifest  # type: ignore[method-assign]
+
+    bridge.generate_video(
+        prompt="Shot one\n[0s:4s] Cut to shot two",
+        resolution_label="720p",
+        aspect_ratio="16:9",
+        duration_seconds=8,
+        fps=24,
+        steps=8,
+        seed=123,
+        camera_motion="none",
+        negative_prompt="",
+        image_path=None,
+        audio_path=None,
+        on_progress=lambda *_args: None,
+        is_cancelled=lambda: False,
+        default_settings={
+            "activated_loras": ["LTX-2.3_Cinematic_hardcut.safetensors"],
+            "loras_multipliers": "1.0",
+        },
+    )
+
+    assert captured["settings"]["activated_loras"] == ["LTX-2.3_Cinematic_hardcut.safetensors"]
+    assert captured["settings"]["loras_multipliers"] == "1.0"
+
+
 def test_bridge_prefers_root_wgp_config_when_present(tmp_path: Path) -> None:
     root = tmp_path / "wangp-root"
     root.mkdir()
