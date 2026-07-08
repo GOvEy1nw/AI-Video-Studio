@@ -164,3 +164,14 @@ def test_forced_mode_warmup_skips_fast_pipeline(test_state):
 
     assert test_state.state.gpu_slot is None
     assert test_state.state.cpu_slot is None
+
+
+def test_wangp_startup_preloads_session_and_marks_ready(test_state, wangp_bridge):
+    test_state.config.wangp_enabled = True
+    wangp_bridge.session_ready = False
+
+    test_state.health.default_warmup()
+
+    assert wangp_bridge.preload_calls == 1
+    assert wangp_bridge.session_ready is True
+    assert isinstance(test_state.state.startup, StartupReady)

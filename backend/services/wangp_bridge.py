@@ -44,6 +44,7 @@ class WanGPBridgeStatus:
     root: Path | None
     python_executable: str | None
     reason: str | None = None
+    session_ready: bool = False
 
 
 class WanGPBridge:
@@ -129,7 +130,16 @@ class WanGPBridge:
             available=True,
             root=self._root,
             python_executable=self._python,
+            session_ready=self._session is not None,
         )
+
+    def preload_session(self) -> None:
+        if not self._enabled:
+            return
+        logger.info("Preloading WanGP session...")
+        session = self._get_session()
+        session.ensure_ready()
+        logger.info("WanGP runtime preloaded successfully")
 
     def generate_video(
         self,
@@ -149,6 +159,12 @@ class WanGPBridge:
         is_cancelled: CancelledCallback,
         model_type: str | None = None,
         default_settings: dict[str, object] | None = None,
+        start_image_path: str | None = None,
+        end_image_path: str | None = None,
+        control_video_path: str | None = None,
+        video_prompt_type: str | None = None,
+        image_prompt_type: str | None = None,
+        audio_prompt_type: str | None = None,
     ) -> str:
         active_model_type = model_type if model_type is not None else self._video_model_type
         resolution = self._map_video_resolution(resolution_label, aspect_ratio)
@@ -158,6 +174,7 @@ class WanGPBridge:
         settings: dict[str, object] = {
             "model_type": active_model_type,
             "prompt": merged_prompt,
+            "multi_prompts_gen_type": "FG",
             "resolution": resolution,
             "num_inference_steps": max(1, steps),
             "video_length": video_length,
@@ -173,16 +190,41 @@ class WanGPBridge:
             settings["negative_prompt"] = negative_prompt.strip()
         if seed is not None:
             settings["seed"] = seed
-        if image_path:
-            settings["image_prompt_type"] = "S"
-            settings["image_start"] = str(Path(image_path).resolve())
+
+        active_start_image_path = start_image_path or image_path
+        if active_start_image_path:
+            if image_prompt_type and "V" in image_prompt_type:
+                settings["video_source"] = str(Path(active_start_image_path).resolve())
+            else:
+                settings["image_start"] = str(Path(active_start_image_path).resolve())
+
+        if end_image_path:
+            settings["image_end"] = str(Path(end_image_path).resolve())
+
+        if image_prompt_type:
+            settings["image_prompt_type"] = image_prompt_type
+        else:
+            prompt_type = ""
+            if active_start_image_path:
+                prompt_type += "S"
+            if end_image_path:
+                prompt_type += "E"
+            if prompt_type:
+                settings["image_prompt_type"] = prompt_type
+
+        if control_video_path:
+            settings["video_guide"] = str(Path(control_video_path).resolve())
+            settings["video_prompt_type"] = video_prompt_type or "VG"
+
         if audio_path:
-            settings["audio_prompt_type"] = "A"
             settings["audio_guide"] = str(Path(audio_path).resolve())
+            settings["audio_prompt_type"] = audio_prompt_type or ("K" if control_video_path else "A")
+        elif audio_prompt_type:
+            settings["audio_prompt_type"] = audio_prompt_type
 
         outputs = self._run_manifest(
             manifest=[{"id": 1, "params": settings, "plugin_data": {}}],
-            media_suffixes={".mp4", ".mov", ".mkv", ".avi", ".webm"},
+            media_suffixes={".mp4", ".mov", ".mkv", ".avi", ".webm", ".mp3", ".wav", ".ogg", ".aac", ".flac", ".m4a"},
             on_progress=on_progress,
             is_cancelled=is_cancelled,
         )
@@ -210,6 +252,7 @@ class WanGPBridge:
         settings: dict[str, object] = {
             "model_type": active_model_type,
             "prompt": prompt,
+            "multi_prompts_gen_type": "FG",
             "resolution": f"{mapped_width}x{mapped_height}",
             "num_inference_steps": normalized_steps,
             "batch_size": max(1, num_images),
@@ -234,6 +277,51 @@ class WanGPBridge:
         if not outputs:
             raise RuntimeError("WanGP completed without producing any images")
         return outputs
+
+    def enhance_prompt(
+        self,
+        *,
+        prompt: str,
+        mode: str,
+        model_type: str,
+        image_path: str | None = None,
+    ) -> str:
+        session = self._get_session()
+        runtime = session._ensure_runtime()
+        prompt_enhancer = "TI" if image_path else "T"
+        image_start = [str(Path(image_path).resolve())] if image_path else [None]
+        is_image = mode == "image"
+
+        class _PromptEnhanceProgress:
+            def __call__(self, *args: object, **kwargs: object) -> None:
+                return None
+
+        with self._load_api_module()._pushd(runtime.root):
+            model_def = runtime.module.get_model_def(model_type)
+            if model_def is None:
+                raise RuntimeError(f"Unknown WanGP model_type: {model_type}")
+            enhanced_prompts = runtime.module.exec_prompt_enhancer_engine(
+                session._state,
+                model_type,
+                model_def,
+                prompt_enhancer,
+                [prompt],
+                image_start,
+                None,
+                is_image,
+                bool(model_def.get("audio_only", False)),
+                -1,
+                _PromptEnhanceProgress(),
+                -1,
+                enhancer_kwargs={
+                    "image_prompt_type": "S" if image_path else "",
+                    "video_prompt_type": "",
+                    "audio_prompt_type": "",
+                },
+            )
+            if not enhanced_prompts or not enhanced_prompts[0]:
+                raise RuntimeError("WanGP completed without producing an enhanced prompt")
+            return runtime.module.normalize_generated_prompt_lines(enhanced_prompts[0][0], "FG").strip()
 
     @staticmethod
     def compute_num_frames(duration_seconds: int, fps: int) -> int:
@@ -335,6 +423,8 @@ class WanGPBridge:
         startup_phase = "starting_wangp" if not self._submitted_manifest_once else "validating_request"
         self._submitted_manifest_once = True
         on_progress(startup_phase, 2, None, None)
+        import json
+        logger.info("Submitting WanGP manifest: %s", json.dumps(manifest, indent=2))
         job = session.submit_manifest(manifest)
         error_lines: deque[str] = deque(maxlen=40)
         cancel_requested = False

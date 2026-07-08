@@ -27,6 +27,7 @@ from server_utils.media_validation import (
     normalize_optional_path,
     validate_audio_file,
     validate_image_file,
+    validate_video_file,
 )
 from services.interfaces import LTXAPIClient
 from state.app_state_types import AppState
@@ -474,14 +475,123 @@ class VideoGenerationHandler(StateHandlerBase):
 
         duration = self._parse_forced_numeric_field(req.duration, "INVALID_DURATION")
         fps = self._parse_forced_numeric_field(req.fps, "INVALID_FPS")
-        image_path = normalize_optional_path(req.imagePath)
+        if not req.prompt.strip() and not req.shotPrompts:
+            raise HTTPError(400, "PROMPT_REQUIRED")
+        wangp_prompt, duration = self._resolve_prompt_and_duration(req, duration)
+
+        start_image_path = None
+        end_image_path = None
+        control_video_path = None
         audio_path = normalize_optional_path(req.audioPath)
+
+        video_prompt_type = req.videoPromptType
+        image_prompt_type = None
+        audio_prompt_type = None
+
+        legacy_image = normalize_optional_path(req.imagePath)
+        if legacy_image:
+            start_image_path = legacy_image
+
+        for media in req.inputMedia:
+            media_path = normalize_optional_path(media.path)
+            if not media_path:
+                continue
+            if media.role == "start_image":
+                start_image_path = media_path
+            elif media.role == "end_image":
+                end_image_path = media_path
+            elif media.role == "control_video":
+                control_video_path = media_path
+            elif media.role == "audio_guide":
+                audio_path = media_path
+            elif media.role == "human_motion":
+                control_video_path = media_path
+                video_prompt_type = "PVG"
+                if req.useAudioTrack:
+                    audio_path = media_path
+                    audio_prompt_type = "K"
+                else:
+                    audio_prompt_type = "2"
+            elif media.role == "human_motion_pose":
+                control_video_path = media_path
+                video_prompt_type = "OVG"
+                if req.useAudioTrack:
+                    audio_path = media_path
+                    audio_prompt_type = "K"
+                else:
+                    audio_prompt_type = "2"
+            elif media.role == "depth":
+                control_video_path = media_path
+                video_prompt_type = "DVG"
+                if req.useAudioTrack:
+                    audio_path = media_path
+                    audio_prompt_type = "K"
+                else:
+                    audio_prompt_type = "2"
+            elif media.role == "canny_edges":
+                control_video_path = media_path
+                video_prompt_type = "EVG"
+                if req.useAudioTrack:
+                    audio_path = media_path
+                    audio_prompt_type = "K"
+                else:
+                    audio_prompt_type = "2"
+            elif media.role == "sdr_to_hdr":
+                control_video_path = media_path
+                video_prompt_type = "V&G"
+                if req.useAudioTrack:
+                    audio_path = media_path
+                    audio_prompt_type = "K"
+                else:
+                    audio_prompt_type = "2"
+            elif media.role == "continue_video":
+                start_image_path = media_path
+                image_prompt_type = "V"
+            elif media.role == "audio_to_video":
+                audio_path = media_path
+                audio_prompt_type = "A"
+            elif media.role == "reference_voice":
+                audio_path = media_path
+                audio_prompt_type = "A1OF"
 
         try:
             profile = self._resolve_video_profile(req)
-            self._validate_video_profile_request(profile, req, bool(image_path), bool(audio_path))
-            validated_image_path = str(validate_image_file(image_path)) if image_path else None
-            validated_audio_path = str(validate_audio_file(audio_path)) if audio_path else None
+            self._validate_video_profile_request(
+                profile,
+                req,
+                start_image_path=start_image_path,
+                end_image_path=end_image_path,
+                control_video_path=control_video_path,
+                audio_path=audio_path,
+            )
+
+            # continue_video holds a video in start_image_path, so validate as video
+            is_start_video = False
+            if start_image_path:
+                for media in req.inputMedia:
+                    if media.role == "continue_video" and normalize_optional_path(media.path) == start_image_path:
+                        is_start_video = True
+                        break
+
+            if start_image_path:
+                validated_start_image_path = str(validate_video_file(start_image_path)) if is_start_video else str(validate_image_file(start_image_path))
+            else:
+                validated_start_image_path = None
+
+            validated_end_image_path = str(validate_image_file(end_image_path)) if end_image_path else None
+            validated_control_video_path = str(validate_video_file(control_video_path)) if control_video_path else None
+            is_audio_video = False
+            if audio_path:
+                if any(media.role in {"human_motion", "human_motion_pose", "depth", "canny_edges", "sdr_to_hdr", "control_video"} for media in req.inputMedia if normalize_optional_path(media.path) == audio_path):
+                    is_audio_video = True
+
+            if audio_path:
+                if is_audio_video or audio_path.lower().endswith(('.mp4', '.mov', '.mkv', '.avi', '.webm')):
+                    validated_audio_path = str(validate_video_file(audio_path))
+                else:
+                    validated_audio_path = str(validate_audio_file(audio_path))
+            else:
+                validated_audio_path = None
 
             settings = self.state.app_settings.model_copy(deep=True)
             default_steps = profile.wangp_default_settings.get("num_inference_steps")
@@ -492,7 +602,7 @@ class VideoGenerationHandler(StateHandlerBase):
             seed = self._resolve_seed()
 
             output_path = self._wangp_bridge.generate_video(
-                prompt=req.prompt,
+                prompt=wangp_prompt,
                 resolution_label=req.resolution,
                 aspect_ratio=req.aspectRatio,
                 duration_seconds=duration,
@@ -501,12 +611,18 @@ class VideoGenerationHandler(StateHandlerBase):
                 seed=seed,
                 camera_motion=req.cameraMotion,
                 negative_prompt=req.negativePrompt,
-                image_path=validated_image_path,
+                image_path=validated_start_image_path,
                 audio_path=validated_audio_path,
                 on_progress=self._generation.update_progress,
                 is_cancelled=self._generation.is_generation_cancelled,
                 model_type=profile.wangp_model_type,
                 default_settings=profile.wangp_default_settings,
+                start_image_path=validated_start_image_path,
+                end_image_path=validated_end_image_path,
+                control_video_path=validated_control_video_path,
+                video_prompt_type=video_prompt_type,
+                image_prompt_type=image_prompt_type,
+                audio_prompt_type=audio_prompt_type,
             )
 
             self._generation.complete_generation(output_path)
@@ -540,19 +656,58 @@ class VideoGenerationHandler(StateHandlerBase):
         return profile
 
     @staticmethod
+    def _resolve_prompt_and_duration(req: GenerateVideoRequest, duration: int) -> tuple[str, int]:
+        if not req.shotPrompts:
+            return req.prompt, duration
+
+        cursor = 0
+        relayed_prompts: list[str] = []
+        for shot in req.shotPrompts:
+            start = cursor
+            cursor += shot.seconds
+            relayed_prompts.append(f"[{start}s:{cursor}s] {shot.prompt}")
+
+        if cursor > 20:
+            raise HTTPError(400, "MULTI_SHOT_DURATION_TOO_LONG")
+        lines = [req.prompt.strip(), *relayed_prompts] if req.prompt.strip() else relayed_prompts
+        return "\n".join(lines), cursor
+
+    @staticmethod
     def _validate_video_profile_request(
         profile: ModelProfile,
         req: GenerateVideoRequest,
-        has_input_image: bool,
-        has_input_audio: bool,
+        *,
+        start_image_path: str | None = None,
+        end_image_path: str | None = None,
+        control_video_path: str | None = None,
+        audio_path: str | None = None,
     ) -> None:
         if req.resolution not in profile.allowed_resolution_tiers:
             raise HTTPError(400, "UNSUPPORTED_VIDEO_RESOLUTION_TIER")
         if req.aspectRatio not in profile.allowed_aspect_ratios:
             raise HTTPError(400, "UNSUPPORTED_VIDEO_ASPECT_RATIO")
-        if has_input_image and not profile.image_to_video:
+
+        if req.inputMedia and profile.input_media and profile.input_media.supports_image_inputs:
+            allowed_roles = {role_def.role for role_def in profile.input_media.roles}
+            if profile.start_image:
+                allowed_roles.add("start_image")
+            if profile.end_image:
+                allowed_roles.add("end_image")
+            if profile.control_video:
+                allowed_roles.add("control_video")
+            if profile.audio_to_video:
+                allowed_roles.add("audio_guide")
+            for media in req.inputMedia:
+                if media.role not in allowed_roles:
+                    raise HTTPError(400, f"Role {media.role} is not supported by this model profile")
+
+        if start_image_path and not (profile.start_image or profile.image_to_video or profile.video_continuation):
             raise HTTPError(400, "VIDEO_IMAGE_INPUT_NOT_SUPPORTED")
-        if has_input_audio and not profile.audio_to_video:
+        if end_image_path and not profile.end_image:
+            raise HTTPError(400, "VIDEO_IMAGE_INPUT_NOT_SUPPORTED")
+        if control_video_path and not profile.control_video:
+            raise HTTPError(400, "VIDEO_IMAGE_INPUT_NOT_SUPPORTED")
+        if audio_path and not profile.audio_to_video:
             raise HTTPError(400, "VIDEO_AUDIO_INPUT_NOT_SUPPORTED")
 
     @staticmethod

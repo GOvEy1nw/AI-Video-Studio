@@ -1,6 +1,6 @@
 # projectmem - AI Video Studio
 
-_Last updated: 2026-07-07_
+_Last updated: 2026-07-08_
 
 ## Project purpose
 
@@ -49,6 +49,31 @@ AI Video Studio (AiVS) is a local-first desktop app for AI image, video, and fut
 - Backend validates profile id, resolution tier, aspect ratio, and curated resolution before calling WanGP.
 - `WanGPBridge.generate_images()` and `generate_video()` accept per-request model type/default settings.
 
+### Phase 4.3 - Combined guide & connection management
+
+- Merged video and audio guide slots into a single dynamic slot with context-aware role selection.
+- Handled file validation, request routing, and payload building to route the guides to the WanGP engine manifest.
+- Re-routed startup flow to launch the UI instantly, executing backend loading in the background.
+- Preloads the WanGP session/runtime at startup without directly calling `wgp.load_models()`, avoiding stuck model loading while keeping first generation snappier.
+- Replaced the connection dropdown with a simplified status indicator badge governed by a two-step bridge/WanGP readiness state machine and a 60-second backend connection timeout.
+- Connection indicator now shows `Connecting 0/2`, `Connecting 1/2`, `Ready`, or `Disconnected`, and manual backend reconnect forces it back through connecting states until WanGP is ready again.
+- Exposed a manual backend restart/reconnect icon button that kills and restarts the Python FastAPI subprocess.
+
+### Phase 4.41 - Prompt enhancement
+
+- Added prompt enhancement for image and video modes through WanGP.
+- Prompt enhancement uses the text-only WanGP setting when no start image exists and the text+start-image setting when an input image exists.
+- Image/video generation now sends prompts to WanGP as `All the Lines are Part of the Same Prompt`.
+- Frontend prompt area shows an enhance icon and swaps to a loading spinner while enhancement is running.
+
+### Phase 4.42 - Video multi-shot prompts
+
+- Added video-only Multi-shot mode in GenSpace.
+- Multi-shot mode replaces the normal prompt area with an optional `Global` row plus timed shot rows.
+- Shot rows include numbered indicators, two-digit second selectors (`01s`, `02s`, etc.), prompt inputs, and add/remove behavior capped at 20 total seconds.
+- Video duration control becomes disabled `auto` while multi-shot mode is active and uses the total shot duration.
+- Backend formats multi-shot requests as WanGP relayed prompts using second ranges, with the global prompt before timed ranges when supplied.
+
 ## Current model profiles
 
 ### Image profiles
@@ -86,6 +111,7 @@ Video profile behavior:
 
 ## Recent bug fixes
 
+- Fixed startup/model loading regression where direct WanGP `load_models()` preload could leave model options stuck on "Loading models"; profile fetching now retries while backend/WanGP come up.
 - Fixed image generation 540p/720p failure by skipping legacy frontend dimension mapping when `imageProfileId` is set.
 - Fixed HTTPError masking in image/video WanGP generation handlers so intentional 400/409 errors are not wrapped as 500s.
 - Fixed runaway gallery persistence after image generation by guarding repeated completion effects with a persisted image key, resetting generation state after persistence, and checking duplicate URL/path.
@@ -102,6 +128,7 @@ Video profile behavior:
 - Stack installer detects NVIDIA GPU generation and selects cu130/cu128 stack.
 - Canonical Windows path uses curated wheels for torch, sageattention, sparge/flash/gguf/nunchaku/triton/lightx2v where supported.
 - `setup-dev.ps1` calls the stack installer.
+- Setup scripts and `pnpm backend:test` use `uv sync --inexact` so uv updates declared backend dependencies without pruning WanGP requirements/performance wheels installed into the same venv.
 - `WANGP_VIDEO_MODEL_TYPE` default is now `ltx2_22B_distilled_1_1`.
 
 ## Tooling notes
@@ -136,6 +163,7 @@ The workspace-local `.pnpm-store/` may appear because pnpm store path is configu
 - `backend/api_types.py`
 - `backend/handlers/image_generation_handler.py`
 - `backend/handlers/video_generation_handler.py`
+- `backend/handlers/prompt_enhancement_handler.py`
 - `backend/handlers/model_profiles_handler.py`
 - `backend/model_profiles/profiles.py`
 - `backend/model_profiles/resolution_resolver.py`
@@ -151,7 +179,8 @@ The workspace-local `.pnpm-store/` may appear because pnpm store path is configu
 
 ## Next likely work
 
-- Add video input feature UI incrementally: end frame, source video, control video, and control process choices.
+- Test and polish multi-shot video prompt behavior against real WanGP output.
+- Add start image and end image video guides.
 - Add LoRA MVP.
 - Improve model availability/download UX.
 - Keep Production deferred until QuickGen image/video are stable.

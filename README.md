@@ -16,6 +16,8 @@ Working today:
 - Image model profiles with curated resolution/aspect controls
 - Video model profiles using the same curated profile system
 - Image input roles for models that support reference/control images
+- WanGP-backed prompt enhancement for image and video prompts
+- Video multi-shot prompts with timed relayed WanGP prompt formatting
 - WanGP runtime bridge with backend tests and fakes
 - Inherited video editor retained as a beta/future workflow surface
 
@@ -126,6 +128,8 @@ scripts/install-wangp-stack.ps1 -SkipWan2gpRequirements
 
 The installer detects NVIDIA GPU generation, selects the configured CUDA stack from `scripts/wangp-stacks.json`, and installs matching PyTorch plus curated performance wheels into `backend/.venv`.
 
+Development setup and backend test commands use `uv sync --inexact` so normal dependency syncs update declared backend packages without pruning WanGP requirements or performance wheels installed into the same virtual environment.
+
 ## Development
 
 Install dependencies:
@@ -170,6 +174,8 @@ If pnpm tries to recreate `node_modules` in a non-interactive terminal, set CI m
 $env:CI = "true"
 pnpm typecheck:ts
 ```
+
+This repo pins `pnpm@10.30.3` through `package.json`. Use Corepack or the same pnpm version consistently to avoid `node_modules` reinstall prompts caused by package-manager metadata mismatches.
 
 ## Architecture
 

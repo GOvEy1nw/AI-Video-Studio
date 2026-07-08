@@ -41,18 +41,19 @@ class HealthHandler(StateHandlerBase):
     def get_health(self) -> HealthResponse:
         if self._config.wangp_enabled:
             bridge = self._wangp_bridge.get_status()
+            models_ready = bridge.available and bridge.session_ready
             return HealthResponse(
                 status="ok",
-                models_loaded=bridge.available,
-                active_model="wangp" if bridge.available else None,
+                models_loaded=models_ready,
+                active_model="wangp" if models_ready else None,
                 gpu_info=GpuTelemetry(**self._gpu_info.get_gpu_info()),
                 sage_attention=self._use_sage_attention,
                 models_status=[
                     ModelStatusItem(
                         id="fast",
                         name="WanGP LTX-2.3 Distilled",
-                        loaded=bridge.available,
-                        downloaded=bridge.available,
+                        loaded=models_ready,
+                        downloaded=models_ready,
                     ),
                 ],
             )
@@ -115,11 +116,18 @@ class HealthHandler(StateHandlerBase):
     def default_warmup(self) -> None:
         try:
             if self._config.wangp_enabled:
+                self.set_startup_loading("Initializing WanGP session", 20)
+                try:
+                    self._wangp_bridge.preload_session()
+                except Exception as exc:
+                    self.set_startup_error(f"Failed to preload WanGP session: {exc}")
+                    return
+
                 status = self._wangp_bridge.get_status()
-                if status.available:
+                if status.available and status.session_ready:
                     self.set_startup_ready()
                 else:
-                    self.set_startup_error(status.reason or "WanGP bridge is unavailable")
+                    self.set_startup_error(status.reason or "WanGP bridge session is not ready")
                 return
 
             self.set_startup_loading("Checking models", 5)

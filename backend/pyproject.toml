@@ -4,7 +4,12 @@ version = "0.1.0"
 description = "AiVS Generation Backend"
 requires-python = ">=3.11"
 dependencies = [
-    "pillow>=10.3.0",
+    "pillow==11.3.0",
+    "filelock==3.29.0",
+    "fsspec==2026.4.0",
+    "numpy==2.1.2",
+    "websockets==15.0.1",
+    "tokenizers==0.21.4",
     # Torch is pinned to the cu130 stack's exact version so `uv sync` and
     # scripts/install-wangp-stack.ps1 agree. The stack installer owns the
     # CUDA index (cu130 for RTX 30/40/50, cu128 fallback) and the curated
@@ -16,17 +21,17 @@ dependencies = [
     "huggingface-hub>=0.23.0",
     "tqdm>=4.66.0",
     "pynvml>=11.5.0; sys_platform != 'darwin'",
-    "pydantic>=2.7.0",
+    "pydantic==2.10.6",
     # LTX-2 inference dependencies
     "ltx-core",
     "ltx-pipelines",
-    "diffusers>=0.36.0",
+    "diffusers==0.36.0",
     "ftfy>=6.0.0",
     "imageio>=2.37.2",
     "imageio-ffmpeg>=0.6.0",
-    "peft>=0.13.2",
+    "peft==0.17.0",
     "protobuf>=3.20.0",
-    "transformers>=4.52,<5",
+    "transformers==4.54.0",
     "sentencepiece>=0.1.99",
     "opencv-python-headless>=4.8.0",
     "fastapi>=0.115.0",
@@ -52,7 +57,6 @@ torchvision = [
     { index = "pytorch-cu130", marker = "sys_platform == 'win32' or sys_platform == 'linux'" },
 ]
 torchaudio = { index = "pytorch-cu130" }
-diffusers = { git = "https://github.com/huggingface/diffusers.git", rev = "01de02e8b4f2cc91df4f3e91cb6535ebcbeb490c" }
 ltx-core = { git = "https://github.com/Lightricks/LTX-2.git", subdirectory = "packages/ltx-core", rev = "00dc53d3f81c405932f9f16d9c57557de411e702" }
 ltx-pipelines = { git = "https://github.com/Lightricks/LTX-2.git", subdirectory = "packages/ltx-pipelines", rev = "00dc53d3f81c405932f9f16d9c57557de411e702" }
 

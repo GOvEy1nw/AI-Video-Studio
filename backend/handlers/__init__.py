@@ -8,6 +8,7 @@ from handlers.image_generation_handler import ImageGenerationHandler
 from handlers.model_profiles_handler import ModelProfilesHandler
 from handlers.models_handler import ModelsHandler
 from handlers.pipelines_handler import PipelinesHandler
+from handlers.prompt_enhancement_handler import PromptEnhancementHandler
 from handlers.retake_handler import RetakeHandler
 from handlers.runtime_policy_handler import RuntimePolicyHandler
 from handlers.settings_handler import SettingsHandler
@@ -20,6 +21,7 @@ __all__ = [
     "DownloadHandler",
     "TextHandler",
     "PipelinesHandler",
+    "PromptEnhancementHandler",
     "GenerationHandler",
     "VideoGenerationHandler",
     "ImageGenerationHandler",

@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Literal, NamedTuple, TypeAlias, TypedDict
 from typing import Annotated
 
-from pydantic import BaseModel, Field, StringConstraints
+from pydantic import BaseModel, Field, StringConstraints, model_validator
 
 NonEmptyPrompt = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
@@ -187,6 +187,17 @@ class GenerateImageResponse(BaseModel):
     image_paths: list[str] | None = None
 
 
+class EnhancePromptRequest(BaseModel):
+    prompt: NonEmptyPrompt
+    mode: Literal["image", "video"]
+    modelProfileId: str | None = None
+    inputImagePath: str | None = None
+
+
+class EnhancePromptResponse(BaseModel):
+    prompt: str
+
+
 class CancelResponse(BaseModel):
     status: str
     id: str | None = None
@@ -314,8 +325,41 @@ class ModelProfileListResponse(BaseModel):
 # ============================================================
 
 
-class GenerateVideoRequest(BaseModel):
+class GenerateVideoInputMedia(BaseModel):
+    id: str | None = None
+    type: Literal["image", "video", "audio"] = "image"
+    path: str
+    role: Literal[
+        "start_image",
+        "end_image",
+        "control_video",
+        "audio_guide",
+        "human_motion",
+        "human_motion_pose",
+        "depth",
+        "canny_edges",
+        "sdr_to_hdr",
+        "continue_video",
+        "audio_to_video",
+        "reference_voice",
+    ]
+
+
+def _default_video_input_media() -> list[GenerateVideoInputMedia]:
+    return []
+
+
+class GenerateVideoShotPrompt(BaseModel):
+    seconds: int = Field(ge=1, le=20)
     prompt: NonEmptyPrompt
+
+
+def _default_video_shot_prompts() -> list[GenerateVideoShotPrompt]:
+    return []
+
+
+class GenerateVideoRequest(BaseModel):
+    prompt: str = ""
     resolution: str = "540p"
     model: str = "fast"
     modelProfileId: str | None = None
@@ -327,6 +371,16 @@ class GenerateVideoRequest(BaseModel):
     imagePath: str | None = None
     audioPath: str | None = None
     aspectRatio: Literal["16:9", "9:16"] = "16:9"
+    inputMedia: list[GenerateVideoInputMedia] = Field(default_factory=_default_video_input_media)
+    videoPromptType: str | None = None
+    useAudioTrack: bool = True
+    shotPrompts: list[GenerateVideoShotPrompt] = Field(default_factory=_default_video_shot_prompts)
+
+    @model_validator(mode="after")
+    def validate_prompt_or_shots(self) -> "GenerateVideoRequest":
+        if not self.prompt.strip() and not self.shotPrompts:
+            raise ValueError("prompt is required unless shotPrompts are provided")
+        return self
 
 
 class GenerateImageInputMedia(BaseModel):

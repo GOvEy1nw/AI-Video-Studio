@@ -46,7 +46,7 @@ Ok "pnpm install complete"
 Write-Host ""
 Write-Host "Setting up Python backend venv..."
 Set-Location $BackendDir
-uv sync --extra dev
+uv sync --inexact --extra dev --extra test
 if ($LASTEXITCODE -ne 0) {
     Fail "uv sync failed"
 }
