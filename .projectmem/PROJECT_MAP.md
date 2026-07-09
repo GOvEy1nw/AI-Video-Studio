@@ -102,7 +102,7 @@ Files, dialogs, ffmpeg, backend process management
 - **Reset:** Refresh button (after aspect chips) resets zoom to 0 and padding to fit (presets) or zero (custom) without changing aspect mode.
 - **Generate:** `use-generation.ts` sends `reframe` on POST `/api/generate` with padding, aspectMode, trim; `normalizeReframeForApi` clamps 0–200.
 - **Persistence:** `generationParams` stores reframe fields; gallery Apply prompt restores via `apply-generation-params.ts`.
-- **Backend:** `video_generation_handler` reframe branch → FFmpeg clip extract → `reframe_wangp_mapping.py` → WanGP `video_guide_outpainting*` + `video_prompt_type` `VG|` + prompt `outpaint`.
+- **Backend:** `video_generation_handler` reframe branch → FFmpeg clip extract → `reframe_wangp_mapping.py` → WanGP `video_guide_outpainting*` + `video_prompt_type` `VG` + prompt `outpaint`.
 - **API types:** `ReframeOptions`, `ReframePadding` in `api_types.py` — per-edge `le=200` required for pan >100% (100 rejects whole payload).
 
 ## Backend map
@@ -239,25 +239,25 @@ Then run scripts through the same direct pnpm entry if needed.
 
 ## Roadmap
 
-| Phase     | Goal                                                                                                                      | Status      |
-| --------- | ------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| Phase 0   | Fork audit + preservation map                                                                                             | Complete    |
-| Phase 1   | Local-only product shell                                                                                                  | Complete    |
-| Phase 2   | WanGP-only generation enforcement                                                                                         | Complete    |
-| Phase 3   | QuickGen image baseline                                                                                                   | Complete    |
-| Phase 4   | Curated image model expansion                                                                                             | Complete    |
-| Phase 4.1 | Image input media roles + multi-image support                                                                             | Complete    |
-| Phase 4.2 | Video model profile alignment                                                                                             | Complete    |
-| Phase 4.3 | Update input media slots for better feature support & run backend/WanGP connection in the background to avoid delays loading UI | Complete |
-| Phase 4.41 | WanGP prompt enhancement for image/video modes                                                                            | Complete    |
-| Phase 4.42 | Video multi-shot prompt rows with relayed WanGP prompt formatting                                                         | Complete    |
-| Media A–D | GenSpace media library: import, gallery filters, bins, list view (`docs/MEDIA_LIBRARY_PLAN.md`)                          | Complete    |
-| Reframe   | Outpaint reframe mode: trim, aspect/zoom/pan UI, backend WanGP outpaint mapping                                          | Complete    |
-| Phase 5   | LoRA MVP                                                                                                                  | Pending     |
-| Phase 6   | QuickGen image polish                                                                                                     | Pending     |
-| Phase 7   | Video input capabilities (start/end/control/source video)                                                                 | Pending     |
-| Phase 8   | QuickGen audio/TTS                                                                                                        | Pending     |
-| Phase 9   | Production planning                                                                                                       | Pending     |
+| Phase      | Goal                                                                                                                            | Status   |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| Phase 0    | Fork audit + preservation map                                                                                                   | Complete |
+| Phase 1    | Local-only product shell                                                                                                        | Complete |
+| Phase 2    | WanGP-only generation enforcement                                                                                               | Complete |
+| Phase 3    | QuickGen image baseline                                                                                                         | Complete |
+| Phase 4    | Curated image model expansion                                                                                                   | Complete |
+| Phase 4.1  | Image input media roles + multi-image support                                                                                   | Complete |
+| Phase 4.2  | Video model profile alignment                                                                                                   | Complete |
+| Phase 4.3  | Update input media slots for better feature support & run backend/WanGP connection in the background to avoid delays loading UI | Complete |
+| Phase 4.41 | WanGP prompt enhancement for image/video modes                                                                                  | Complete |
+| Phase 4.42 | Video multi-shot prompt rows with relayed WanGP prompt formatting                                                               | Complete |
+| Media A–D  | GenSpace media library: import, gallery filters, bins, list view (`docs/MEDIA_LIBRARY_PLAN.md`)                                 | Complete |
+| Reframe    | Outpaint reframe mode: trim, aspect/zoom/pan UI, backend WanGP outpaint mapping                                                 | Complete |
+| Phase 5    | LoRA MVP                                                                                                                        | Pending  |
+| Phase 6    | QuickGen image polish                                                                                                           | Pending  |
+| Phase 7    | Video input capabilities (start/end/control/source video)                                                                       | Pending  |
+| Phase 8    | QuickGen audio/TTS                                                                                                              | Pending  |
+| Phase 9    | Production planning                                                                                                             | Pending  |
 
 ## Next work
 

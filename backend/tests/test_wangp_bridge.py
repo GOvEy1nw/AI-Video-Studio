@@ -74,7 +74,7 @@ def test_ltx2_video_uses_full_video_length_as_sliding_window_size() -> None:
 
     assert output == "E:/tmp/out.mp4"
     assert captured["settings"]["video_length"] == 145
-    assert captured["settings"]["sliding_window_size"] == 145
+    assert captured["settings"]["sliding_window_size"] == 481
 
 
 def test_generate_video_forwards_default_lora_settings() -> None:
@@ -136,15 +136,54 @@ def test_generate_video_forwards_outpainting_settings() -> None:
         on_progress=lambda *_args: None,
         is_cancelled=lambda: False,
         control_video_path="E:/tmp/guide.mp4",
-        video_prompt_type="VG|",
+        video_prompt_type="VG",
         video_guide_outpainting="35 70 40 30",
         video_guide_outpainting_ratio="",
+        default_settings={
+            "force_fps": "auto",
+            "sliding_window_overlap": 33,
+        },
     )
 
     settings = captured["settings"]
+    assert settings["multi_prompts_gen_type"] == "FG"
+    assert settings["force_fps"] == "auto"
+    assert settings["sliding_window_overlap"] == 33
     assert settings["video_guide_outpainting"] == "35 70 40 30"
     assert settings["video_guide_outpainting_ratio"] == ""
-    assert settings["video_prompt_type"] == "VG|"
+    assert settings["video_prompt_type"] == "VG"
+
+
+def test_generate_video_uses_source_frame_count_for_video_length() -> None:
+    bridge = _make_bridge()
+    captured: dict[str, object] = {}
+
+    def fake_run_manifest(*, manifest, media_suffixes, on_progress, is_cancelled):  # type: ignore[no-untyped-def]
+        captured["settings"] = manifest[0]["params"]
+        return ["E:/tmp/out.mp4"]
+
+    bridge._run_manifest = fake_run_manifest  # type: ignore[method-assign]
+
+    bridge.generate_video(
+        prompt="outpaint",
+        resolution_label="540p",
+        aspect_ratio="16:9",
+        duration_seconds=5,
+        fps=24,
+        steps=8,
+        seed=123,
+        camera_motion="none",
+        negative_prompt="",
+        image_path=None,
+        audio_path=None,
+        on_progress=lambda *_args: None,
+        is_cancelled=lambda: False,
+        control_video_path="E:/tmp/guide.mp4",
+        video_length_frames=150,
+    )
+
+    assert captured["settings"]["force_fps"] == 24
+    assert captured["settings"]["video_length"] == 145
 
 
 def test_bridge_prefers_root_wgp_config_when_present(tmp_path: Path) -> None:

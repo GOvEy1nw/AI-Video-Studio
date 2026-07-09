@@ -1,4 +1,4 @@
-"""Curated resolution resolver for AiVS image profiles.
+"""Curated resolution resolver for AiVS model profiles.
 
 Maps simple frontend labels (``1080p``, ``16:9``) to the exact ``WxH``
 value WanGP expects. Per the Phase 4 brief: for each
@@ -67,6 +67,16 @@ _RESOLUTION_TABLE: dict[tuple[str, ResolutionTier, AspectRatio], tuple[int, int]
     ("hidream_o1_dev", "1440p", "1:1"): (1456, 1456),
     ("hidream_o1_dev", "1440p", "16:9"): (2560, 1440),
     ("hidream_o1_dev", "1440p", "9:16"): (1440, 2560),
+    # LTX 2.3 Fast video
+    ("ltx2_22b_distilled", "540p", "1:1"): (320, 320),
+    ("ltx2_22b_distilled", "540p", "16:9"): (960, 544),
+    ("ltx2_22b_distilled", "540p", "9:16"): (544, 960),
+    ("ltx2_22b_distilled", "720p", "1:1"): (1024, 1024),
+    ("ltx2_22b_distilled", "720p", "16:9"): (1280, 720),
+    ("ltx2_22b_distilled", "720p", "9:16"): (720, 1280),
+    ("ltx2_22b_distilled", "1080p", "1:1"): (1088, 1088),
+    ("ltx2_22b_distilled", "1080p", "16:9"): (1920, 1088),
+    ("ltx2_22b_distilled", "1080p", "9:16"): (1088, 1920),
 }
 
 

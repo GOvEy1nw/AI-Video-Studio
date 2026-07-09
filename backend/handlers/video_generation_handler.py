@@ -11,7 +11,7 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 from threading import RLock
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from PIL import Image
 
@@ -21,11 +21,11 @@ from handlers.base import StateHandlerBase
 from handlers.generation_handler import GenerationHandler
 from handlers.pipelines_handler import PipelinesHandler
 from handlers.text_handler import TextHandler
-from model_profiles import get_video_profile
-from model_profiles.profiles import ModelProfile
+from model_profiles import get_video_profile, is_combination_supported, resolve_resolution
+from model_profiles.profiles import AspectRatio, ModelProfile, ResolutionTier
 from services.wangp_bridge import WanGPBridge
 from services.reframe_wangp_mapping import ReframePadding, map_reframe_to_wangp
-from services.video_clip import extract_video_clip
+from services.video_clip import extract_video_clip, probe_video_metadata
 from server_utils.media_validation import (
     normalize_optional_path,
     validate_audio_file,
@@ -45,12 +45,12 @@ FORCED_API_MODEL_MAP: dict[str, str] = {
     "pro": "ltx-2-3-pro",
 }
 FORCED_API_RESOLUTION_MAP: dict[str, dict[str, str]] = {
-    "1080p": {"16:9": "1920x1080", "9:16": "1080x1920"},
-    "1440p": {"16:9": "2560x1440", "9:16": "1440x2560"},
-    "2160p": {"16:9": "3840x2160", "9:16": "2160x3840"},
+    "1080p": {"16:9": "1920x1080", "1:1": "1080x1080", "9:16": "1080x1920"},
+    "1440p": {"16:9": "2560x1440", "1:1": "1440x1440", "9:16": "1440x2560"},
+    "2160p": {"16:9": "3840x2160", "1:1": "2160x2160", "9:16": "2160x3840"},
 }
 A2V_FORCED_API_RESOLUTION = "1920x1080"
-FORCED_API_ALLOWED_ASPECT_RATIOS = {"16:9", "9:16"}
+FORCED_API_ALLOWED_ASPECT_RATIOS = {"16:9", "1:1", "9:16"}
 FORCED_API_ALLOWED_FPS = {24, 25, 48, 50}
 MULTI_SHOT_LORA_FILENAME = "LTX-2.3_Cinematic_hardcut.safetensors"
 MULTI_SHOT_LORA_STRENGTH = "1.0"
@@ -482,10 +482,9 @@ class VideoGenerationHandler(StateHandlerBase):
         fps = self._parse_forced_numeric_field(req.fps, "INVALID_FPS")
         is_reframe = req.reframe is not None
         looks_like_reframe = (
-            req.videoPromptType == "VG|"
-            or (req.prompt.strip().lower() == "outpaint" and any(
+            req.prompt.strip().lower() == "outpaint" and any(
                 media.role == "control_video" for media in req.inputMedia
-            ))
+            )
         )
         if looks_like_reframe and not is_reframe:
             raise HTTPError(400, "REFRAME_OPTIONS_REQUIRED")
@@ -495,7 +494,7 @@ class VideoGenerationHandler(StateHandlerBase):
             reframe = req.reframe
             assert reframe is not None
             duration = max(2, int(math.ceil(reframe.controlVideoDuration)))
-            wangp_prompt = "outpaint"
+            wangp_prompt = req.prompt.strip() or "outpaint"
         else:
             wangp_prompt, duration = self._resolve_prompt_and_duration(req, duration)
 
@@ -504,9 +503,9 @@ class VideoGenerationHandler(StateHandlerBase):
         control_video_path = None
         audio_path = normalize_optional_path(req.audioPath)
 
-        video_prompt_type = "VG|" if is_reframe else req.videoPromptType
+        video_prompt_type = "VG" if is_reframe else req.videoPromptType
         image_prompt_type = None
-        audio_prompt_type = None
+        audio_prompt_type = "K" if is_reframe else None
 
         legacy_image = normalize_optional_path(req.imagePath)
         if legacy_image:
@@ -589,6 +588,7 @@ class VideoGenerationHandler(StateHandlerBase):
         video_guide_outpainting: str | None = None
         video_guide_outpainting_ratio: str | None = None
         output_aspect_ratio = req.aspectRatio
+        source_video_frame_count: int | None = None
 
         try:
             profile = self._resolve_video_profile(req)
@@ -608,6 +608,18 @@ class VideoGenerationHandler(StateHandlerBase):
                 control_video_path=control_video_path,
                 audio_path=audio_path,
             )
+            resolution_tier = cast(ResolutionTier, req.resolution)
+            request_aspect_ratio: AspectRatio = req.aspectRatio
+            if is_reframe:
+                reframe = req.reframe
+                assert reframe is not None
+                request_aspect_ratio = reframe.aspectMode if reframe.aspectMode != "custom" else req.aspectRatio
+            resolved_width, resolved_height = resolve_resolution(
+                profile,
+                resolution_tier,
+                request_aspect_ratio,
+            )
+            resolved_resolution_label = f"{resolved_width}x{resolved_height}"
 
             # continue_video holds a video in start_image_path, so validate as video
             is_start_video = False
@@ -628,6 +640,8 @@ class VideoGenerationHandler(StateHandlerBase):
             if is_reframe:
                 reframe = req.reframe
                 assert reframe is not None
+                if validated_control_video_path is None:
+                    raise HTTPError(400, "REFRAME_SOURCE_REQUIRED")
                 source_path = Path(validated_control_video_path)
                 temp_clip_path = extract_video_clip(
                     source_path,
@@ -657,6 +671,16 @@ class VideoGenerationHandler(StateHandlerBase):
                     video_guide_outpainting_ratio,
                 )
 
+            if validated_control_video_path is not None:
+                source_metadata = probe_video_metadata(validated_control_video_path)
+                if source_metadata is not None:
+                    source_video_frame_count = source_metadata.frame_count
+                    logger.info(
+                        "Using source video frame count for WanGP video_length: frames=%s duration=%.3fs",
+                        source_metadata.frame_count,
+                        source_metadata.duration_seconds,
+                    )
+
             is_audio_video = False
             if audio_path:
                 if any(media.role in {"human_motion", "human_motion_pose", "depth", "canny_edges", "sdr_to_hdr", "control_video"} for media in req.inputMedia if normalize_optional_path(media.path) == audio_path):
@@ -681,10 +705,13 @@ class VideoGenerationHandler(StateHandlerBase):
             if req.shotPrompts:
                 default_settings["activated_loras"] = [MULTI_SHOT_LORA_FILENAME]
                 default_settings["loras_multipliers"] = MULTI_SHOT_LORA_STRENGTH
+            if is_reframe:
+                default_settings["force_fps"] = "auto"
+                default_settings["sliding_window_overlap"] = 33
 
             output_path = self._wangp_bridge.generate_video(
                 prompt=wangp_prompt,
-                resolution_label=req.resolution,
+                resolution_label=resolved_resolution_label,
                 aspect_ratio=output_aspect_ratio,
                 duration_seconds=duration,
                 fps=fps,
@@ -706,6 +733,7 @@ class VideoGenerationHandler(StateHandlerBase):
                 audio_prompt_type=audio_prompt_type,
                 video_guide_outpainting=video_guide_outpainting,
                 video_guide_outpainting_ratio=video_guide_outpainting_ratio,
+                video_length_frames=source_video_frame_count,
             )
 
             self._generation.complete_generation(output_path)
@@ -775,6 +803,8 @@ class VideoGenerationHandler(StateHandlerBase):
             raise HTTPError(400, "UNSUPPORTED_VIDEO_RESOLUTION_TIER")
         if req.aspectRatio not in profile.allowed_aspect_ratios:
             raise HTTPError(400, "UNSUPPORTED_VIDEO_ASPECT_RATIO")
+        if not is_combination_supported(profile, req.resolution, req.aspectRatio):
+            raise HTTPError(400, "NO_CURATED_VIDEO_RESOLUTION")
 
         if req.inputMedia and profile.input_media and profile.input_media.supports_image_inputs:
             allowed_roles = {role_def.role for role_def in profile.input_media.roles}

@@ -167,11 +167,15 @@ class WanGPBridge:
         audio_prompt_type: str | None = None,
         video_guide_outpainting: str | None = None,
         video_guide_outpainting_ratio: str | None = None,
+        video_length_frames: int | None = None,
     ) -> str:
         active_model_type = model_type if model_type is not None else self._video_model_type
         resolution = self._map_video_resolution(resolution_label, aspect_ratio)
         merged_prompt = prompt + self._camera_motion_prompts.get(camera_motion, "")
-        video_length = self.compute_num_frames(duration_seconds, fps)
+        if video_length_frames is not None:
+            video_length = self.normalize_video_frame_count(video_length_frames)
+        else:
+            video_length = self.compute_num_frames(duration_seconds, fps)
 
         settings: dict[str, object] = {
             "model_type": active_model_type,
@@ -186,8 +190,10 @@ class WanGPBridge:
         if default_settings:
             for key, value in default_settings.items():
                 settings.setdefault(key, value)
+            if "force_fps" in default_settings:
+                settings["force_fps"] = default_settings["force_fps"]
         if active_model_type.startswith("ltx2_"):
-            settings["sliding_window_size"] = video_length
+            settings["sliding_window_size"] = 481
         if negative_prompt.strip():
             settings["negative_prompt"] = negative_prompt.strip()
         if seed is not None:
@@ -334,7 +340,13 @@ class WanGPBridge:
     def compute_num_frames(duration_seconds: int, fps: int) -> int:
         return max(((duration_seconds * fps) // 8) * 8 + 1, 9)
 
+    @staticmethod
+    def normalize_video_frame_count(frame_count: int) -> int:
+        return max((max(1, frame_count) // 8) * 8 + 1, 9)
+
     def _map_video_resolution(self, resolution_label: str, aspect_ratio: str) -> str:
+        if re.fullmatch(r"\d+x\d+", resolution_label):
+            return resolution_label
         per_aspect = _VIDEO_RESOLUTION_MAP.get(resolution_label)
         if per_aspect is None:
             raise RuntimeError(f"Unsupported WanGP video resolution: {resolution_label}")

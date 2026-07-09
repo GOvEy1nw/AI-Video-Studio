@@ -52,10 +52,8 @@ def map_reframe_to_wangp(
 ) -> WanGPOutpaintParams:
     """Convert Reframe UI state to WanGP ``video_guide_outpainting*`` fields.
 
-    Custom mode uses percentage units (ratio empty). Preset aspect modes with
-    zero padding fit the box only. Preset modes with padding send the same
-    integer edge values while ratio stays set — WanGP interprets those as
-    multiplier (x) units when ratio is non-empty.
+    Custom and preset modes both keep ratio empty; AiVS sends explicit edge
+    padding so same-aspect zoom-out can still outpaint all sides.
     """
     if aspect_mode == "custom":
         return WanGPOutpaintParams(
@@ -74,13 +72,13 @@ def map_reframe_to_wangp(
 
     if not _has_padding(padding):
         return WanGPOutpaintParams(
-            video_guide_outpainting="",
-            video_guide_outpainting_ratio=ratio,
+            video_guide_outpainting="" if not _has_padding(padding) else _format_padding(padding),
+            video_guide_outpainting_ratio="",
             output_aspect_ratio=output_aspect,
         )
 
     return WanGPOutpaintParams(
-        video_guide_outpainting=_format_padding(padding),
-        video_guide_outpainting_ratio=ratio,
+        video_guide_outpainting="" if not _has_padding(padding) else _format_padding(padding),
+        video_guide_outpainting_ratio="",
         output_aspect_ratio=output_aspect,
     )

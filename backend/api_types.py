@@ -384,7 +384,7 @@ class GenerateVideoRequest(BaseModel):
     audio: str = "false"
     imagePath: str | None = None
     audioPath: str | None = None
-    aspectRatio: Literal["16:9", "9:16"] = "16:9"
+    aspectRatio: Literal["1:1", "16:9", "9:16"] = "16:9"
     inputMedia: list[GenerateVideoInputMedia] = Field(default_factory=_default_video_input_media)
     videoPromptType: str | None = None
     useAudioTrack: bool = True

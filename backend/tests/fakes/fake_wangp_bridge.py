@@ -41,6 +41,7 @@ class FakeWangpVideoCall:
     audio_prompt_type: str | None = None
     video_guide_outpainting: str | None = None
     video_guide_outpainting_ratio: str | None = None
+    video_length_frames: int | None = None
 
 
 @dataclass
@@ -138,6 +139,7 @@ class FakeWanGPBridge:
         audio_prompt_type: str | None = None,
         video_guide_outpainting: str | None = None,
         video_guide_outpainting_ratio: str | None = None,
+        video_length_frames: int | None = None,
     ) -> str:
         self.video_calls.append(
             FakeWangpVideoCall(
@@ -162,6 +164,7 @@ class FakeWanGPBridge:
                 audio_prompt_type=audio_prompt_type,
                 video_guide_outpainting=video_guide_outpainting,
                 video_guide_outpainting_ratio=video_guide_outpainting_ratio,
+                video_length_frames=video_length_frames,
             )
         )
         if self.raise_on_video is not None:

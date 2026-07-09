@@ -12,6 +12,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from state.app_state_types import GpuSlot, VideoPipelineState, VideoPipelineWarmth
+from services.video_clip import VideoMetadata
 from tests.fakes.fake_wangp_bridge import FakeWanGPBridge
 from tests.fakes.services import FakeFastVideoPipeline
 
@@ -62,7 +63,7 @@ class TestGenerate:
         assert len(enable_wangp.video_calls) == 1
         call = enable_wangp.video_calls[0]
         assert call.prompt == "A beautiful sunset"
-        assert call.resolution_label == "1080p"
+        assert call.resolution_label == "1920x1088"
         assert call.aspect_ratio == "16:9"
         assert call.duration_seconds == 2
         assert call.fps == 24
@@ -87,9 +88,29 @@ class TestGenerate:
         assert r.status_code == 200
         call = enable_wangp.video_calls[0]
         assert call.model_type == "ltx2_22B_distilled_1_1"
-        assert call.resolution_label == "720p"
+        assert call.resolution_label == "720x1280"
         assert call.aspect_ratio == "9:16"
         assert call.steps == 8
+
+    def test_video_profile_square_aspect_routes_to_ltx2(
+        self, client, enable_wangp: FakeWanGPBridge
+    ):
+        r = client.post(
+            "/api/generate",
+            json={
+                "prompt": "A beautiful sunset",
+                "resolution": "1080p",
+                "modelProfileId": "ltx2_22b_distilled",
+                "duration": "5",
+                "fps": "24",
+                "aspectRatio": "1:1",
+            },
+        )
+
+        assert r.status_code == 200
+        call = enable_wangp.video_calls[0]
+        assert call.resolution_label == "1088x1088"
+        assert call.aspect_ratio == "1:1"
 
     def test_multi_shot_prompt_formats_relay_ranges(
         self, client, enable_wangp: FakeWanGPBridge
@@ -285,6 +306,10 @@ class TestGenerate:
             "handlers.video_generation_handler.extract_video_clip",
             fake_extract,
         )
+        monkeypatch.setattr(
+            "handlers.video_generation_handler.probe_video_metadata",
+            lambda path: VideoMetadata(frame_count=150, duration_seconds=5.0),
+        )
 
         r = client.post(
             "/api/generate",
@@ -313,9 +338,13 @@ class TestGenerate:
         call = enable_wangp.video_calls[0]
         assert call.prompt == "outpaint"
         assert call.control_video_path == str(clipped)
-        assert call.video_prompt_type == "VG|"
+        assert call.video_prompt_type == "VG"
+        assert call.audio_prompt_type == "K"
         assert call.video_guide_outpainting == ""
-        assert call.video_guide_outpainting_ratio == "1:1"
+        assert call.video_guide_outpainting_ratio == ""
+        assert call.video_length_frames == 150
+        assert call.default_settings["force_fps"] == "auto"
+        assert call.default_settings["sliding_window_overlap"] == 33
 
     def test_reframe_custom_padding(
         self, client, enable_wangp: FakeWanGPBridge, tmp_path: Path, monkeypatch
@@ -333,7 +362,7 @@ class TestGenerate:
         r = client.post(
             "/api/generate",
             json={
-                "prompt": "",
+                "prompt": "extend the office background",
                 "resolution": "540p",
                 "modelProfileId": "ltx2_22b_distilled",
                 "duration": "5",
@@ -353,6 +382,7 @@ class TestGenerate:
 
         assert r.status_code == 200
         call = enable_wangp.video_calls[0]
+        assert call.prompt == "extend the office background"
         assert call.video_guide_outpainting == "35 70 40 30"
         assert call.video_guide_outpainting_ratio == ""
 
@@ -410,7 +440,7 @@ class TestGenerate:
                 "duration": "5",
                 "fps": "24",
                 "cameraMotion": "none",
-                "videoPromptType": "VG|",
+                "videoPromptType": "VG",
                 "inputMedia": [
                     {"role": "control_video", "path": str(video), "type": "video"},
                 ],
@@ -426,7 +456,7 @@ class TestGenerate:
         assert r.status_code == 200
 
         call = enable_wangp.video_calls[0]
-        assert call.resolution_label == "540p"
+        assert call.resolution_label == "960x544"
         assert call.aspect_ratio == "16:9"
 
     def test_resolution_mapping_720p(self, client, enable_wangp: FakeWanGPBridge):
@@ -434,7 +464,7 @@ class TestGenerate:
         assert r.status_code == 200
 
         call = enable_wangp.video_calls[0]
-        assert call.resolution_label == "720p"
+        assert call.resolution_label == "1280x720"
 
     def test_locked_seed(self, client, enable_wangp: FakeWanGPBridge, test_state):
         test_state.state.app_settings.seed_locked = True

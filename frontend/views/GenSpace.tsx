@@ -55,7 +55,10 @@ import {
   deleteProjectAssetFilesFromDisk,
   waitForMediaFileHandlesReleased,
 } from "../lib/asset-delete";
-import { importGalleryFile, ensureGalleryAssetForInputFile } from "../lib/media-import";
+import {
+  importGalleryFile,
+  ensureGalleryAssetForInputFile,
+} from "../lib/media-import";
 import type { DuplicateFilenameChoice } from "../lib/media-import";
 import {
   DEFAULT_GALLERY_FILTER,
@@ -72,7 +75,10 @@ import { backendFetch } from "../lib/backend";
 import { fileUrlToPath } from "../lib/url-to-path";
 import { logger } from "../lib/logger";
 import { RetakePanel } from "../components/RetakePanel";
-import { ReframePanel, type ReframePanelState } from "../components/ReframePanel";
+import {
+  ReframePanel,
+  type ReframePanelState,
+} from "../components/ReframePanel";
 import { SeedControl } from "../components/SeedControl";
 import { useAppSettings } from "../contexts/AppSettingsContext";
 import {
@@ -88,7 +94,8 @@ import {
   DEFAULT_GENSPACE_LOCKED_SEED,
 } from "../types/project";
 
-type GenSpaceMode = "image" | "video" | "retake" | "reframe";
+type GenSpaceMode = "image" | "video";
+type VideoProcessMode = "generate" | "reframe" | "retake";
 
 type ImageInputItem = {
   id: string;
@@ -208,9 +215,7 @@ function AssetCard({
   };
 
   const isDraggable =
-    asset.type === "image" ||
-    asset.type === "video" ||
-    asset.type === "audio";
+    asset.type === "image" || asset.type === "video" || asset.type === "audio";
 
   return (
     <div
@@ -459,8 +464,7 @@ function AssetListRow({
     GALLERY_SOURCE_OPTIONS.find(
       (option) => option.value === inferAssetSource(asset),
     )?.label ?? "Unknown";
-  const typeLabel =
-    asset.type.charAt(0).toUpperCase() + asset.type.slice(1);
+  const typeLabel = asset.type.charAt(0).toUpperCase() + asset.type.slice(1);
 
   useEffect(() => {
     if (asset.type === "video" && videoRef.current) {
@@ -485,9 +489,7 @@ function AssetListRow({
   }, [isHovered, asset.type]);
 
   const isDraggable =
-    asset.type === "image" ||
-    asset.type === "video" ||
-    asset.type === "audio";
+    asset.type === "image" || asset.type === "video" || asset.type === "audio";
 
   return (
     <div
@@ -555,7 +557,9 @@ function AssetListRow({
         {displayFileName}
       </p>
 
-      <span className="w-16 flex-shrink-0 text-sm text-zinc-400">{typeLabel}</span>
+      <span className="w-16 flex-shrink-0 text-sm text-zinc-400">
+        {typeLabel}
+      </span>
 
       <span className="w-24 flex-shrink-0 text-sm text-zinc-400">
         {sourceLabel}
@@ -899,6 +903,8 @@ function ImageModeControls({
 function PromptBar({
   mode,
   onModeChange,
+  videoMode,
+  onVideoModeChange,
   prompt,
   onPromptChange,
   onGenerate,
@@ -930,9 +936,12 @@ function PromptBar({
   syncInputFileToGallery,
   mediaInputsExpandKey = 0,
   reframeDurationSeconds,
+  videoToolPanel,
 }: {
   mode: GenSpaceMode;
   onModeChange: (mode: GenSpaceMode) => void;
+  videoMode: VideoProcessMode;
+  onVideoModeChange: (mode: VideoProcessMode) => void;
   prompt: string;
   onPromptChange: (prompt: string) => void;
   onGenerate: () => void;
@@ -977,6 +986,7 @@ function PromptBar({
   syncInputFileToGallery?: (file: File) => Promise<string | null>;
   mediaInputsExpandKey?: number;
   reframeDurationSeconds?: number;
+  videoToolPanel?: React.ReactNode;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const guideInputRef = useRef<HTMLInputElement>(null);
@@ -988,8 +998,8 @@ function PromptBar({
   const [activeImageInputId, setActiveImageInputId] = useState<string | null>(
     null,
   );
-  const isRetake = mode === "retake";
-  const isReframe = mode === "reframe";
+  const isRetake = mode === "video" && videoMode === "retake";
+  const isReframe = mode === "video" && videoMode === "reframe";
   const isPanelMode = isRetake || isReframe;
   const LOCAL_MAX_DURATION: Record<string, number> = {
     "540p": 20,
@@ -1237,9 +1247,7 @@ function PromptBar({
     setSlotMedia(url, "audio_to_video", "audio");
   };
 
-  const readGalleryAssetFromDrop = (
-    e: React.DragEvent,
-  ): Asset | null => {
+  const readGalleryAssetFromDrop = (e: React.DragEvent): Asset | null => {
     const assetData = e.dataTransfer.getData("asset");
     if (!assetData) return null;
     try {
@@ -1816,9 +1824,7 @@ function PromptBar({
       <div
         key="empty_guide_slot"
         className={`relative h-14 w-14 rounded-lg border-2 border-dashed transition-colors flex flex-col items-center justify-center flex-shrink-0 cursor-pointer hover:border-zinc-500 ${
-          isGuideDragOver
-            ? "border-blue-500 bg-blue-500/10"
-            : "border-zinc-700"
+          isGuideDragOver ? "border-blue-500 bg-blue-500/10" : "border-zinc-700"
         }`}
         onDragOver={(e) => {
           e.preventDefault();
@@ -1839,8 +1845,10 @@ function PromptBar({
   };
 
   const supportsInputStrip =
-    (mode === "image" && supportsImageInput) ||
-    (mode === "video" && selectedVideoProfile?.inputMedia?.supportsImageInputs);
+    !isPanelMode &&
+    ((mode === "image" && supportsImageInput) ||
+      (mode === "video" &&
+        selectedVideoProfile?.inputMedia?.supportsImageInputs));
   const attachedMediaCount =
     imageInputs.length + (inputImage ? 1 : 0) + (inputAudio ? 1 : 0);
 
@@ -1909,7 +1917,9 @@ function PromptBar({
                                   title={option.description}
                                 >
                                   <Image className="h-3.5 w-3.5 flex-shrink-0" />
-                                  <span className="text-xs">{option.label}</span>
+                                  <span className="text-xs">
+                                    {option.label}
+                                  </span>
                                 </button>
                               ))}
                               <div className="h-px bg-zinc-700 my-1" />
@@ -2006,6 +2016,12 @@ function PromptBar({
           />
         </div>
       )}
+
+      {isPanelMode && videoToolPanel ? (
+        <div className="border-b border-zinc-800/60 bg-zinc-950/20">
+          {videoToolPanel}
+        </div>
+      ) : null}
 
       {/* Top row: media inputs | Prompt */}
       <div className="flex items-start">
@@ -2112,17 +2128,19 @@ function PromptBar({
 
         {/* Prompt input - fills remaining width */}
         <div className="flex flex-1 min-w-0 flex-col py-1">
-          {!(mode === "video" && multiShotEnabled) && !isReframe && (
+          {!(mode === "video" && multiShotEnabled) && (
             <textarea
               value={prompt}
               onChange={(e) => onPromptChange(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={
-                mode === "retake"
-                  ? "Describe what should happen in the selected section..."
-                  : mode === "image"
-                    ? "A close-up of a woman talking on the phone..."
-                    : "The woman sips from a cup of coffee..."
+                isReframe
+                  ? "optional text prompt to drive outpainting..."
+                  : isRetake
+                    ? "Describe what should happen in the selected section..."
+                    : mode === "image"
+                      ? "A close-up of a woman talking on the phone..."
+                      : "The woman sips from a cup of coffee..."
               }
               className="w-full bg-transparent text-white text-sm placeholder:text-zinc-500 focus:outline-none px-2 py-2 resize-none overflow-y-auto h-[70px] leading-5"
             />
@@ -2281,41 +2299,65 @@ function PromptBar({
               label: "Video",
               icon: <Video className="h-4 w-4" />,
             },
-            {
-              value: "retake",
-              label: "Retake",
-              icon: <Scissors className="h-4 w-4" />,
-            },
-            {
-              value: "reframe",
-              label: "Reframe",
-              icon: <Expand className="h-4 w-4" />,
-            },
           ]}
           trigger={
             <>
               {mode === "image" ? (
                 <Image className="h-3.5 w-3.5" />
-              ) : mode === "retake" ? (
-                <Scissors className="h-3.5 w-3.5" />
-              ) : mode === "reframe" ? (
-                <Expand className="h-3.5 w-3.5" />
               ) : (
                 <Video className="h-3.5 w-3.5" />
               )}
               <span className="text-zinc-300 font-medium">
-                {mode === "image"
-                  ? "Image"
-                  : mode === "retake"
-                    ? "Retake"
-                    : mode === "reframe"
-                      ? "Reframe"
-                      : "Video"}
+                {mode === "image" ? "Image" : "Video"}
               </span>
               <ChevronUp className="h-3 w-3 text-zinc-500" />
             </>
           }
         />
+
+        {mode === "video" && (
+          <SettingsDropdown
+            title="VIDEO"
+            value={videoMode}
+            onChange={(v) => onVideoModeChange(v as VideoProcessMode)}
+            options={[
+              {
+                value: "generate",
+                label: "Generate",
+                icon: <Sparkles className="h-4 w-4" />,
+              },
+              {
+                value: "reframe",
+                label: "Reframe",
+                icon: <Expand className="h-4 w-4" />,
+              },
+              {
+                value: "retake",
+                label: "Retake",
+                icon: <Scissors className="h-4 w-4" />,
+              },
+            ]}
+            trigger={
+              <>
+                {videoMode === "retake" ? (
+                  <Scissors className="h-3.5 w-3.5" />
+                ) : videoMode === "reframe" ? (
+                  <Expand className="h-3.5 w-3.5" />
+                ) : (
+                  <Sparkles className="h-3.5 w-3.5" />
+                )}
+                <span className="text-zinc-300 font-medium">
+                  {videoMode === "retake"
+                    ? "Retake"
+                    : videoMode === "reframe"
+                      ? "Reframe"
+                      : "Generate"}
+                </span>
+                <ChevronUp className="h-3 w-3 text-zinc-500" />
+              </>
+            }
+          />
+        )}
 
         <div className="flex-1" />
 
@@ -2471,10 +2513,10 @@ function PromptBar({
               options={
                 inputAudio
                   ? [{ value: "16:9", label: "16:9" }]
-                  : [
-                      { value: "16:9", label: "16:9" },
-                      { value: "9:16", label: "9:16" },
-                    ]
+                  : (selectedVideoProfile?.ui.allowedAspectRatios ?? [
+                      "16:9",
+                      "9:16",
+                    ]).map((ratio) => ({ value: ratio, label: ratio }))
               }
               trigger={
                 <>
@@ -2603,6 +2645,7 @@ export function GenSpace() {
   } = useProjects();
   const { updateSettings, isLoaded: appSettingsLoaded } = useAppSettings();
   const [mode, setMode] = useState<GenSpaceMode>("video");
+  const [videoMode, setVideoMode] = useState<VideoProcessMode>("generate");
   const [prompt, setPrompt] = useState("");
   const [inputImage, setInputImage] = useState<string | null>(null);
   const [imageInputs, setImageInputs] = useState<ImageInputItem[]>([]);
@@ -2618,8 +2661,9 @@ export function GenSpace() {
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
-  const [galleryFilter, setGalleryFilter] =
-    useState<GalleryFilterState>(DEFAULT_GALLERY_FILTER);
+  const [galleryFilter, setGalleryFilter] = useState<GalleryFilterState>(
+    DEFAULT_GALLERY_FILTER,
+  );
   const [gallerySize, setGallerySize] = useState<GallerySize>("medium");
   const [showSizeMenu, setShowSizeMenu] = useState(false);
   const [selectedBin, setSelectedBin] = useState<string | null>(null);
@@ -2733,6 +2777,7 @@ export function GenSpace() {
   useEffect(() => {
     if (genSpaceEditImageUrl) {
       setMode("video");
+      setVideoMode("generate");
       setInputImage(genSpaceEditImageUrl);
       setPrompt("");
       setGenSpaceEditImageUrl(null);
@@ -2744,6 +2789,7 @@ export function GenSpace() {
   useEffect(() => {
     if (genSpaceAudioUrl) {
       setMode("video");
+      setVideoMode("generate");
       setInputAudio(genSpaceAudioUrl);
       setPrompt("");
       setGenSpaceAudioUrl(null);
@@ -2752,7 +2798,8 @@ export function GenSpace() {
 
   useEffect(() => {
     if (!genSpaceRetakeSource) return;
-    setMode("retake");
+    setMode("video");
+    setVideoMode("retake");
     setPrompt("");
     setActiveRetakeSource(genSpaceRetakeSource);
     setRetakeInitial({
@@ -2772,8 +2819,7 @@ export function GenSpace() {
 
   // Gallery shows all image/video/audio assets (generated + uploaded)
   const assets = (currentProject?.assets || []).filter(
-    (a) =>
-      a.type === "image" || a.type === "video" || a.type === "audio",
+    (a) => a.type === "image" || a.type === "video" || a.type === "audio",
   );
   const [lastPrompt, setLastPrompt] = useState("");
 
@@ -2881,7 +2927,6 @@ export function GenSpace() {
             activeTakeIndex: 0,
           });
           reset();
-          setMode("video");
         } catch (err) {
           persistedVideoKeyRef.current = null;
           logger.error(`Failed to persist reframe asset: ${err}`);
@@ -3029,7 +3074,6 @@ export function GenSpace() {
           takes: [{ url: finalUrl, path: finalPath, createdAt: Date.now() }],
           activeTakeIndex: 0,
         });
-        setMode("video");
       }
 
       setActiveRetakeSource(null);
@@ -3134,8 +3178,9 @@ export function GenSpace() {
   ]);
 
   const handleGenerate = async () => {
-    if (mode === "reframe") {
+    if (mode === "video" && videoMode === "reframe") {
       if (!reframeInput.videoPath || reframeInput.duration < 2) return;
+      const reframePrompt = prompt.trim() || "outpaint";
       const reframeSettings = {
         ...settings,
         duration: Math.max(2, Math.ceil(reframeInput.duration)),
@@ -3145,9 +3190,9 @@ export function GenSpace() {
         input: reframeInput,
         settings: reframeSettings,
       };
-      setLastPrompt("outpaint");
+      setLastPrompt(reframePrompt);
       await generate(
-        "outpaint",
+        reframePrompt,
         null,
         {
           model: reframeSettings.model as "fast" | "pro",
@@ -3176,7 +3221,7 @@ export function GenSpace() {
       return;
     }
 
-    if (mode === "retake") {
+    if (mode === "video" && videoMode === "retake") {
       if (!retakeInput.videoPath || retakeInput.duration < 2) return;
       retakeSubmissionRef.current = {
         prompt,
@@ -3197,7 +3242,8 @@ export function GenSpace() {
       return;
     }
 
-    const shouldUseMultiShot = mode === "video" && multiShotEnabled;
+    const shouldUseMultiShot =
+      mode === "video" && videoMode === "generate" && multiShotEnabled;
     if (!shouldUseMultiShot && !prompt.trim()) return;
     if (shouldUseMultiShot && multiShotRows.some((row) => !row.prompt.trim()))
       return;
@@ -3317,8 +3363,7 @@ export function GenSpace() {
     const trimmedPrompt = prompt.trim();
     if (
       !trimmedPrompt ||
-      mode === "retake" ||
-      mode === "reframe" ||
+      (mode === "video" && videoMode !== "generate") ||
       promptGenerating ||
       isEnhancingPrompt
     )
@@ -3512,12 +3557,14 @@ export function GenSpace() {
 
   const handleCreateVideo = (imageAsset: Asset) => {
     setMode("video");
+    setVideoMode("generate");
     setInputImage(imageAsset.url);
     setPrompt(`${imageAsset.prompt || "The scene comes to life..."}`);
   };
 
   const handleRetake = (videoAsset: Asset) => {
-    setMode("retake");
+    setMode("video");
+    setVideoMode("retake");
     setPrompt("");
     setActiveRetakeSource(null);
     setRetakeInitial({
@@ -3529,7 +3576,8 @@ export function GenSpace() {
   };
 
   const handleReframe = (videoAsset: Asset) => {
-    setMode("reframe");
+    setMode("video");
+    setVideoMode("reframe");
     setPrompt("");
     setReframeInitial({
       videoUrl: videoAsset.url,
@@ -3538,6 +3586,23 @@ export function GenSpace() {
     });
     setReframePanelKey((prev) => prev + 1);
   };
+
+  const handleModeChange = useCallback((nextMode: GenSpaceMode) => {
+    setMode(nextMode);
+    if (nextMode !== "video") {
+      setVideoMode("generate");
+    }
+  }, []);
+
+  const handleVideoModeChange = useCallback((nextMode: VideoProcessMode) => {
+    setVideoMode(nextMode);
+    if (nextMode !== "generate") {
+      setMultiShotEnabled(false);
+    }
+    if (nextMode === "reframe") {
+      setPrompt("");
+    }
+  }, []);
 
   const handleApplyPrompt = useCallback(
     (asset: Asset) => {
@@ -3564,7 +3629,14 @@ export function GenSpace() {
       setImageInputs([]);
       setInputImage(null);
       setInputAudio(null);
-      setMode(nextMode);
+      setMode(nextMode === "image" ? "image" : "video");
+      setVideoMode(
+        nextMode === "retake"
+          ? "retake"
+          : nextMode === "reframe"
+            ? "reframe"
+            : "generate",
+      );
       setPrompt(params.prompt);
       setSettings((prev) => settingsPatchFromGenerationParams(params, prev));
       setInputRestoreVersion((version) => version + 1);
@@ -3597,7 +3669,9 @@ export function GenSpace() {
     if (!pending) return;
 
     const hasMedia =
-      pending.imageInputs.length > 0 || pending.inputImage || pending.inputAudio;
+      pending.imageInputs.length > 0 ||
+      pending.inputImage ||
+      pending.inputAudio;
     if (!hasMedia) {
       pendingInputRestoreRef.current = null;
       return;
@@ -3620,16 +3694,57 @@ export function GenSpace() {
     videoProfiles.length,
   ]);
 
-  const isRetakeMode = mode === "retake";
-  const isReframeMode = mode === "reframe";
+  const isRetakeMode = mode === "video" && videoMode === "retake";
+  const isReframeMode = mode === "video" && videoMode === "reframe";
   const isPanelMode = isRetakeMode || isReframeMode;
+  const handleRetakePanelChange = useCallback(
+    (data: {
+      videoUrl: string | null;
+      videoPath: string | null;
+      startTime: number;
+      duration: number;
+      videoDuration: number;
+      ready: boolean;
+    }) => {
+      setRetakeInput((prev) =>
+        prev.videoUrl === data.videoUrl &&
+        prev.videoPath === data.videoPath &&
+        prev.startTime === data.startTime &&
+        prev.duration === data.duration &&
+        prev.videoDuration === data.videoDuration &&
+        prev.ready === data.ready
+          ? prev
+          : data,
+      );
+    },
+    [],
+  );
+  const handleReframePanelChange = useCallback((data: ReframePanelState) => {
+    setReframeInput((prev) =>
+      prev.videoUrl === data.videoUrl &&
+      prev.videoPath === data.videoPath &&
+      prev.startTime === data.startTime &&
+      prev.duration === data.duration &&
+      prev.videoDuration === data.videoDuration &&
+      prev.videoWidth === data.videoWidth &&
+      prev.videoHeight === data.videoHeight &&
+      prev.aspectMode === data.aspectMode &&
+      prev.padding.top === data.padding.top &&
+      prev.padding.bottom === data.padding.bottom &&
+      prev.padding.left === data.padding.left &&
+      prev.padding.right === data.padding.right &&
+      prev.ready === data.ready
+        ? prev
+        : data,
+    );
+  }, []);
   const canSubmit = isReframeMode
     ? reframeInput.ready && !!reframeInput.videoPath && !isGenerating
     : isRetakeMode
-    ? retakeInput.ready && !!retakeInput.videoPath && !isRetaking
-    : mode === "video" && multiShotEnabled
-      ? multiShotRows.every((row) => row.prompt.trim())
-      : !!prompt.trim();
+      ? retakeInput.ready && !!retakeInput.videoPath && !isRetaking
+      : mode === "video" && multiShotEnabled
+        ? multiShotRows.every((row) => row.prompt.trim())
+        : !!prompt.trim();
   const promptButtonLabel = isReframeMode
     ? "Reframe"
     : isRetakeMode
@@ -3645,6 +3760,33 @@ export function GenSpace() {
     />
   );
   const promptGenerating = isRetakeMode ? isRetaking : isGenerating;
+  const videoToolPanel = isRetakeMode ? (
+    <div className="max-h-[52vh] overflow-y-auto">
+      <RetakePanel
+        initialVideoUrl={retakeInitial.videoUrl}
+        initialVideoPath={retakeInitial.videoPath}
+        initialDuration={retakeInitial.duration}
+        resetKey={retakePanelKey}
+        isProcessing={isRetaking}
+        processingStatus={retakeStatus}
+        onChange={handleRetakePanelChange}
+      />
+    </div>
+  ) : isReframeMode ? (
+    <div className="max-h-[52vh] overflow-y-auto">
+      <ReframePanel
+        initialVideoUrl={reframeInitial.videoUrl}
+        initialVideoPath={reframeInitial.videoPath}
+        initialDuration={reframeInitial.duration}
+        initialAspectMode={reframeInitial.aspectMode}
+        initialPadding={reframeInitial.padding}
+        resetKey={reframePanelKey}
+        isProcessing={isGenerating}
+        processingStatus={statusMessage}
+        onChange={handleReframePanelChange}
+      />
+    </div>
+  ) : null;
 
   // Close size menu on click outside
   useEffect(() => {
@@ -3781,7 +3923,7 @@ export function GenSpace() {
       onDragLeave={!isPanelMode ? handleGalleryDragLeave : undefined}
       onDrop={!isPanelMode ? handleGalleryDrop : undefined}
     >
-      {!isPanelMode && galleryToast && (
+      {galleryToast && (
         <div className="absolute top-6 left-1/2 z-30 -translate-x-1/2 rounded-lg border border-zinc-700 bg-zinc-900/95 px-4 py-2 text-sm text-zinc-200 shadow-xl">
           {galleryToast}
         </div>
@@ -3794,7 +3936,7 @@ export function GenSpace() {
         </div>
       )}
       {/* Empty state */}
-      {!isPanelMode && assets.length === 0 && !isGenerating && (
+      {assets.length === 0 && !isGenerating && (
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
           <div className="w-24 h-24 rounded-2xl border-2 border-dashed border-zinc-700 flex items-center justify-center mb-4">
             <Sparkles className="h-10 w-10 text-zinc-600" />
@@ -3810,24 +3952,20 @@ export function GenSpace() {
       )}
 
       {/* No favorites empty state */}
-      {!isPanelMode &&
-        showFavorites &&
-        filteredAssets.length === 0 &&
-        assets.length > 0 && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
-            <Heart className="h-12 w-12 text-zinc-700 mb-4" />
-            <h3 className="text-lg font-semibold text-white mb-2">
-              No favorites yet
-            </h3>
-            <p className="text-zinc-500 text-sm">
-              Click the heart icon on any asset to add it to your favorites.
-            </p>
-          </div>
-        )}
+      {showFavorites && filteredAssets.length === 0 && assets.length > 0 && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+          <Heart className="h-12 w-12 text-zinc-700 mb-4" />
+          <h3 className="text-lg font-semibold text-white mb-2">
+            No favorites yet
+          </h3>
+          <p className="text-zinc-500 text-sm">
+            Click the heart icon on any asset to add it to your favorites.
+          </p>
+        </div>
+      )}
 
       {/* No filter matches empty state */}
-      {!isPanelMode &&
-        !showFavorites &&
+      {!showFavorites &&
         selectedBin !== null &&
         filteredAssets.length === 0 &&
         assets.length > 0 &&
@@ -3843,8 +3981,7 @@ export function GenSpace() {
           </div>
         )}
 
-      {!isPanelMode &&
-        !showFavorites &&
+      {!showFavorites &&
         selectedBin === null &&
         galleryFilterActive &&
         filteredAssets.length === 0 &&
@@ -3862,7 +3999,7 @@ export function GenSpace() {
         )}
 
       {/* Assets area — full width, no background, above the prompt bar */}
-      {!isPanelMode && (assets.length > 0 || isGenerating) && (
+      {(assets.length > 0 || isGenerating) && (
         <div className="absolute inset-x-0 top-0 bottom-0 flex flex-col px-4 pt-4">
           {/* Top bar — filter + favorites + bins left, view right */}
           <div className="flex items-center justify-between gap-3 pb-2">
@@ -3910,88 +4047,88 @@ export function GenSpace() {
             </div>
 
             <div className="flex flex-shrink-0 items-center gap-2">
-            <div ref={sizeMenuRef} className="relative">
-              <button
-                onClick={() => setShowSizeMenu(!showSizeMenu)}
-                className={`p-2 rounded-md transition-colors ${
-                  showSizeMenu
-                    ? "bg-zinc-800 text-white"
-                    : "text-zinc-400 hover:text-white hover:bg-zinc-800"
-                }`}
-              >
-                {gallerySize === "list" ? (
-                  <List className="h-4 w-4" />
-                ) : gallerySize === "small" ? (
-                  <GridSmallIcon className="h-4 w-4" />
-                ) : gallerySize === "medium" ? (
-                  <GridMediumIcon className="h-4 w-4" />
-                ) : (
-                  <GridLargeIcon className="h-4 w-4" />
-                )}
-              </button>
+              <div ref={sizeMenuRef} className="relative">
+                <button
+                  onClick={() => setShowSizeMenu(!showSizeMenu)}
+                  className={`p-2 rounded-md transition-colors ${
+                    showSizeMenu
+                      ? "bg-zinc-800 text-white"
+                      : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                  }`}
+                >
+                  {gallerySize === "list" ? (
+                    <List className="h-4 w-4" />
+                  ) : gallerySize === "small" ? (
+                    <GridSmallIcon className="h-4 w-4" />
+                  ) : gallerySize === "medium" ? (
+                    <GridMediumIcon className="h-4 w-4" />
+                  ) : (
+                    <GridLargeIcon className="h-4 w-4" />
+                  )}
+                </button>
 
-              {showSizeMenu && (
-                <div className="absolute top-full mt-2 right-0 bg-zinc-800 border border-zinc-700 rounded-md p-2 min-w-[160px] shadow-xl z-50">
-                  {[
-                    {
-                      value: "small" as GallerySize,
-                      label: "Small",
-                      icon: GridSmallIcon,
-                    },
-                    {
-                      value: "medium" as GallerySize,
-                      label: "Medium",
-                      icon: GridMediumIcon,
-                    },
-                    {
-                      value: "large" as GallerySize,
-                      label: "Large",
-                      icon: GridLargeIcon,
-                    },
-                    {
-                      value: "list" as GallerySize,
-                      label: "List",
-                      icon: List,
-                    },
-                  ].map((option) => (
-                    <button
-                      key={option.value}
-                      onClick={() => {
-                        setGallerySize(option.value);
-                        setShowSizeMenu(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-2 py-2.5 rounded-md transition-colors text-left ${gallerySize === option.value ? "bg-white/20 hover:bg-white/25" : "hover:bg-zinc-700"}`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <option.icon
-                          className={`h-4 w-4 ${gallerySize === option.value ? "text-white" : "text-zinc-500"}`}
-                        />
-                        <span
-                          className={`text-sm ${gallerySize === option.value ? "text-white font-medium" : "text-zinc-400"}`}
-                        >
-                          {option.label}
-                        </span>
-                      </div>
-                      {gallerySize === option.value && (
-                        <svg
-                          className="w-4 h-4 text-white"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M5 13l4 4L19 7"
+                {showSizeMenu && (
+                  <div className="absolute top-full mt-2 right-0 bg-zinc-800 border border-zinc-700 rounded-md p-2 min-w-[160px] shadow-xl z-50">
+                    {[
+                      {
+                        value: "small" as GallerySize,
+                        label: "Small",
+                        icon: GridSmallIcon,
+                      },
+                      {
+                        value: "medium" as GallerySize,
+                        label: "Medium",
+                        icon: GridMediumIcon,
+                      },
+                      {
+                        value: "large" as GallerySize,
+                        label: "Large",
+                        icon: GridLargeIcon,
+                      },
+                      {
+                        value: "list" as GallerySize,
+                        label: "List",
+                        icon: List,
+                      },
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => {
+                          setGallerySize(option.value);
+                          setShowSizeMenu(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-2 py-2.5 rounded-md transition-colors text-left ${gallerySize === option.value ? "bg-white/20 hover:bg-white/25" : "hover:bg-zinc-700"}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <option.icon
+                            className={`h-4 w-4 ${gallerySize === option.value ? "text-white" : "text-zinc-500"}`}
                           />
-                        </svg>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+                          <span
+                            className={`text-sm ${gallerySize === option.value ? "text-white font-medium" : "text-zinc-400"}`}
+                          >
+                            {option.label}
+                          </span>
+                        </div>
+                        {gallerySize === option.value && (
+                          <svg
+                            className="w-4 h-4 text-white"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -4105,44 +4242,14 @@ export function GenSpace() {
         </div>
       )}
 
-      {mode === "retake" && (
-        <div className="absolute inset-x-0 top-0 bottom-[160px] px-4 pt-4 pb-4 flex flex-col overflow-hidden">
-          <RetakePanel
-            initialVideoUrl={retakeInitial.videoUrl}
-            initialVideoPath={retakeInitial.videoPath}
-            initialDuration={retakeInitial.duration}
-            resetKey={retakePanelKey}
-            fillHeight
-            isProcessing={isRetaking}
-            processingStatus={retakeStatus}
-            onChange={(data) => setRetakeInput(data)}
-          />
-        </div>
-      )}
-
-      {mode === "reframe" && (
-        <div className="absolute inset-x-0 top-0 bottom-[160px] px-4 pt-4 pb-4 flex flex-col overflow-hidden">
-          <ReframePanel
-            initialVideoUrl={reframeInitial.videoUrl}
-            initialVideoPath={reframeInitial.videoPath}
-            initialDuration={reframeInitial.duration}
-            initialAspectMode={reframeInitial.aspectMode}
-            initialPadding={reframeInitial.padding}
-            resetKey={reframePanelKey}
-            fillHeight
-            isProcessing={isGenerating}
-            processingStatus={statusMessage}
-            onChange={(data) => setReframeInput(data)}
-          />
-        </div>
-      )}
-
       {/* Floating prompt panel — wider, responsive, centered */}
       <div className="absolute bottom-5 left-1/2 z-20 w-[min(700px,calc(100%-2rem))] -translate-x-1/2">
         {/* Prompt bar */}
         <PromptBar
           mode={mode}
-          onModeChange={setMode}
+          onModeChange={handleModeChange}
+          videoMode={videoMode}
+          onVideoModeChange={handleVideoModeChange}
           prompt={prompt}
           onPromptChange={setPrompt}
           onGenerate={handleGenerate}
@@ -4174,6 +4281,7 @@ export function GenSpace() {
           syncInputFileToGallery={syncInputFileToGallery}
           mediaInputsExpandKey={mediaInputsExpandKey}
           reframeDurationSeconds={reframeInput.duration}
+          videoToolPanel={videoToolPanel}
         />
       </div>
 

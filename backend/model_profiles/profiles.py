@@ -930,7 +930,7 @@ VIDEO_PROFILES: tuple[ModelProfile, ...] = (
         ),
         default_aspect_ratio="16:9",
         default_resolution_tier="540p",
-        allowed_aspect_ratios=("16:9", "9:16"),
+        allowed_aspect_ratios=("1:1", "16:9", "9:16"),
         allowed_resolution_tiers=("540p", "720p", "1080p"),
     ),
 )

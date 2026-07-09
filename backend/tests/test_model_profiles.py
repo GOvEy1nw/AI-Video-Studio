@@ -49,10 +49,10 @@ class TestCuratedProfiles:
         assert profile.input_media.wangp_model_type == "z_image_control2_1"
         assert profile.lora == "future"
 
-    def test_krea2_turbo_is_experimental(self) -> None:
+    def test_krea2_turbo_is_stable(self) -> None:
         profile = get_image_profile("krea2_turbo")
         assert profile is not None
-        assert profile.status == "experimental"
+        assert profile.status == "stable"
         assert profile.wangp_model_type == "krea2_turbo"
         assert profile.wangp_default_settings == {
             "image_mode": 1,
@@ -61,10 +61,10 @@ class TestCuratedProfiles:
         }
         assert "1440p" in profile.allowed_resolution_tiers
 
-    def test_flux2_klein_4b_is_experimental(self) -> None:
+    def test_flux2_klein_4b_is_stable(self) -> None:
         profile = get_image_profile("flux2_klein_4b")
         assert profile is not None
-        assert profile.status == "experimental"
+        assert profile.status == "stable"
         assert profile.wangp_model_type == "flux2_klein_4b"
         assert profile.text_to_image is True
         assert profile.reference_images is True
@@ -80,10 +80,10 @@ class TestCuratedProfiles:
         assert profile.wangp_metadata.media_inputs["image"]["multiple_references"] is True
         assert "1440p" in profile.allowed_resolution_tiers
 
-    def test_hidream_o1_dev_is_experimental(self) -> None:
+    def test_hidream_o1_dev_is_stable(self) -> None:
         profile = get_image_profile("hidream_o1_dev")
         assert profile is not None
-        assert profile.status == "experimental"
+        assert profile.status == "stable"
         assert profile.wangp_model_type == "hidream_o1_dev"
         assert profile.display_name == "HiDream O1"
         assert profile.reference_images is True
@@ -121,7 +121,7 @@ class TestCuratedProfiles:
         assert profile.control_video is True
         assert profile.sliding_window is True
         assert profile.default_resolution_tier == "540p"
-        assert profile.allowed_aspect_ratios == ("16:9", "9:16")
+        assert profile.allowed_aspect_ratios == ("1:1", "16:9", "9:16")
 
     def test_no_krea2_raw_exposed(self) -> None:
         # Phase 4 brief: do not expose Krea 2 Raw in this phase.
@@ -218,7 +218,7 @@ class TestModelProfilesEndpoint:
         krea = next(p for p in data["profiles"] if p["id"] == "krea2_turbo")
         assert krea["displayName"] == "Krea 2 Turbo"
         assert krea["mediaType"] == "image"
-        assert krea["status"] == "experimental"
+        assert krea["status"] == "stable"
         assert krea["wangpModelType"] == "krea2_turbo"
         assert krea["wangpMetadata"]["family"] == "krea2"
         assert krea["wangpMetadata"]["inputs"] == ["text", "image"]
@@ -252,7 +252,12 @@ class TestModelProfilesEndpoint:
         assert ltx["capabilities"]["controlVideo"] is True
         assert ltx["capabilities"]["slidingWindow"] is True
         assert ltx["wangpMetadata"]["mediaInputs"]["video"]["control"] is True
-        assert ltx["ui"]["allowedAspectRatios"] == ["16:9", "9:16"]
+        assert ltx["ui"]["allowedAspectRatios"] == ["1:1", "16:9", "9:16"]
+
+    def test_ltx2_video_square_resolution_supported(self) -> None:
+        profile = get_video_profile("ltx2_22b_distilled")
+        assert profile is not None
+        assert resolve_resolution(profile, "1080p", "1:1") == (1088, 1088)
 
     def test_profile_shape_includes_wangp_setting_choices(self, client) -> None:
         r = client.get("/api/model-profiles")

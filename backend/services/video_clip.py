@@ -4,9 +4,35 @@ from __future__ import annotations
 
 import subprocess
 import uuid
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 import imageio_ffmpeg
+
+
+@dataclass(frozen=True)
+class VideoMetadata:
+    frame_count: int
+    duration_seconds: float
+
+
+def probe_video_metadata(source_path: str | Path) -> VideoMetadata | None:
+    """Return frame/duration metadata when ffmpeg can read the source."""
+    try:
+        count_frames = cast(
+            Callable[[str], tuple[int | None, float | None]],
+            getattr(imageio_ffmpeg, "count_frames_and_secs"),
+        )
+        frame_count, duration_seconds = count_frames(str(Path(source_path).resolve()))
+    except Exception:
+        return None
+    if frame_count is None or duration_seconds is None:
+        return None
+    if frame_count <= 0 or duration_seconds <= 0:
+        return None
+    return VideoMetadata(frame_count=int(frame_count), duration_seconds=float(duration_seconds))
 
 
 def extract_video_clip(
