@@ -1,4 +1,12 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useMemo,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import {
   Trash2,
   Download,
@@ -227,25 +235,9 @@ function MediaInputTrimEditor({
   }, [mediaKind]);
 
   return (
-    <div className="mt-2 rounded-lg border border-zinc-800 bg-zinc-950/45 py-2">
-      <div className="mb-1 flex items-center justify-between px-4 text-[10px] text-zinc-500">
-        <span>{mediaKind === "audio" ? "Audio trim" : "Video trim"}</span>
-        <div className="flex items-center gap-2">
-          <span>
-            {formatAutoDuration(item.trimDuration ?? item.mediaDuration)}
-          </span>
-          <button
-            type="button"
-            onClick={onConfirm}
-            className="inline-flex items-center gap-1 rounded bg-blue-600 px-2 py-1 text-[10px] font-medium text-white transition-colors hover:bg-blue-500"
-          >
-            <Check className="h-3 w-3" />
-            Confirm
-          </button>
-        </div>
-      </div>
+    <div className="mt-2 mb-2 rounded-lg border border-zinc-800 bg-zinc-950/45">
       {mediaKind === "video" && (
-        <div className="relative bg-black aspect-video max-h-[32vh] w-full">
+        <div className="relative rounded-lg bg-black aspect-video max-h-[32vh] w-full">
           <video
             ref={videoRef}
             src={item.url}
@@ -330,6 +322,16 @@ function MediaInputTrimEditor({
           })
         }
       />
+      <div className="mb-1 flex items-center justify-between px-4 py-3 text-[10px] text-zinc-500">
+        <button
+          type="button"
+          onClick={onConfirm}
+          className="inline-flex items-center gap-1 rounded bg-blue-600 px-2 py-1 text-[10px] font-medium text-white transition-colors hover:bg-blue-500 w-full justify-center"
+        >
+          <Check className="h-3 w-3" />
+          Confirm
+        </button>
+      </div>
     </div>
   );
 }
@@ -1167,7 +1169,7 @@ function PromptBar({
   inputImage: string | null;
   onInputImageChange: (url: string | null) => void;
   imageInputs: ImageInputItem[];
-  onImageInputsChange: (items: ImageInputItem[]) => void;
+  onImageInputsChange: Dispatch<SetStateAction<ImageInputItem[]>>;
   inputAudio: string | null;
   onInputAudioChange: (url: string | null) => void;
   settings: {
@@ -1208,7 +1210,6 @@ function PromptBar({
   const [activeImageInputId, setActiveImageInputId] = useState<string | null>(
     null,
   );
-  const mediaMenuRef = useRef<HTMLDivElement>(null);
   const [editingGuideTrimId, setEditingGuideTrimId] = useState<string | null>(
     null,
   );
@@ -1336,6 +1337,7 @@ function PromptBar({
       imageInputPolicy.roles.map((role) => role.role),
     );
     const normalized = imageInputs
+      .filter((item) => item.type === undefined || item.type === "image")
       .slice(0, imageInputPolicy.maxImages)
       .map((item) =>
         supportedRoles.has(item.role)
@@ -1523,13 +1525,20 @@ function PromptBar({
   };
 
   const removeImageInput = (id: string) => {
-    onImageInputsChange(imageInputs.filter((item) => item.id !== id));
-    if (activeImageInputId === id) {
-      setActiveImageInputId(null);
-    }
-    if (editingGuideTrimId === id) {
-      setEditingGuideTrimId(null);
-    }
+    const removedItem = imageInputs.find((item) => item.id === id);
+    onImageInputsChange((items) => items.filter((item) => item.id !== id));
+    setActiveImageInputId((current) => {
+      if (current === id || current === removedItem?.role) return null;
+      if (
+        current === "guide_slot" &&
+        removedItem &&
+        GUIDE_MEDIA_ROLES.includes(removedItem.role)
+      ) {
+        return null;
+      }
+      return current;
+    });
+    setEditingGuideTrimId((current) => (current === id ? null : current));
     resetImageFileInput();
   };
 
@@ -1734,7 +1743,7 @@ function PromptBar({
         <div key={roleName} className="relative">
           {isActive && (
             <div
-              ref={mediaMenuRef}
+              data-media-menu
               className="absolute bottom-full left-0 mb-2 w-56 rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl z-[10000]"
             >
               <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">
@@ -1769,7 +1778,19 @@ function PromptBar({
                   </>
                 )}
                 <button
-                  onClick={() => removeImageInput(item.id)}
+                  onPointerDown={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    removeImageInput(item.id);
+                  }}
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    removeImageInput(item.id);
+                  }}
+                  onClick={(event) => {
+                    if (event.detail === 0) removeImageInput(item.id);
+                  }}
                   className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-left text-red-300 hover:bg-red-500/15 transition-colors"
                 >
                   <Trash2 className="h-3.5 w-3.5 flex-shrink-0" />
@@ -1901,7 +1922,7 @@ function PromptBar({
         >
           {isActive && (
             <div
-              ref={mediaMenuRef}
+              data-media-menu
               className="absolute bottom-full left-0 mb-2 w-64 rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl z-[10000]"
             >
               <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">
@@ -1970,7 +1991,19 @@ function PromptBar({
 
                 <div className="h-px bg-zinc-700 my-1" />
                 <button
-                  onClick={() => removeImageInput(guideItem.id)}
+                  onPointerDown={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    removeImageInput(guideItem.id);
+                  }}
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    removeImageInput(guideItem.id);
+                  }}
+                  onClick={(event) => {
+                    if (event.detail === 0) removeImageInput(guideItem.id);
+                  }}
                   className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-left text-red-300 hover:bg-red-500/15 transition-colors"
                 >
                   <Trash2 className="h-3.5 w-3.5 flex-shrink-0" />
@@ -2059,13 +2092,11 @@ function PromptBar({
       : undefined;
   const updateGuideTrim = useCallback(
     (id: string, patch: Partial<ImageInputItem>) => {
-      onImageInputsChange(
-        imageInputs.map((item) =>
-          item.id === id ? { ...item, ...patch } : item,
-        ),
+      onImageInputsChange((items) =>
+        items.map((item) => (item.id === id ? { ...item, ...patch } : item)),
       );
     },
-    [imageInputs, onImageInputsChange],
+    [onImageInputsChange],
   );
   const autoMediaDuration = guideItemForTrim
     ? (guideItemForTrim.trimDuration ?? guideItemForTrim.mediaDuration ?? 0)
@@ -2077,10 +2108,6 @@ function PromptBar({
     );
 
   useEffect(() => {
-    setMediaInputsExpanded(false);
-  }, [mode, selectedVideoProfile?.id, selectedImageProfile?.id]);
-
-  useEffect(() => {
     if (mediaInputsExpandKey > 0) {
       setMediaInputsExpanded(true);
     }
@@ -2090,7 +2117,7 @@ function PromptBar({
     if (!activeImageInputId) return;
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target;
-      if (target instanceof Node && mediaMenuRef.current?.contains(target)) {
+      if (target instanceof Element && target.closest("[data-media-menu]")) {
         return;
       }
       setActiveImageInputId(null);
@@ -2147,7 +2174,7 @@ function PromptBar({
                         <div key={item.id} className="relative">
                           {isActive && imageInputPolicy && (
                             <div
-                              ref={mediaMenuRef}
+                              data-media-menu
                               className="absolute bottom-full left-0 mb-2 w-56 rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl z-[10000]"
                             >
                               <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">
@@ -2175,7 +2202,21 @@ function PromptBar({
                                 ))}
                                 <div className="h-px bg-zinc-700 my-1" />
                                 <button
-                                  onClick={() => removeImageInput(item.id)}
+                                  onPointerDown={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    removeImageInput(item.id);
+                                  }}
+                                  onMouseDown={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    removeImageInput(item.id);
+                                  }}
+                                  onClick={(event) => {
+                                    if (event.detail === 0) {
+                                      removeImageInput(item.id);
+                                    }
+                                  }}
                                   className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-left text-red-300 hover:bg-red-500/15 transition-colors"
                                 >
                                   <Trash2 className="h-3.5 w-3.5 flex-shrink-0" />
@@ -3892,6 +3933,12 @@ export function GenSpace() {
     setMode(nextMode);
     if (nextMode !== "video") {
       setVideoMode("generate");
+      setImageInputs((items) =>
+        items.filter(
+          (item) => item.type === undefined || item.type === "image",
+        ),
+      );
+      setInputAudio(null);
     }
   }, []);
 

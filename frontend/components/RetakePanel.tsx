@@ -269,7 +269,7 @@ export function RetakePanel({
     <div
       className={`bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden flex flex-col ${fillHeight ? "h-full min-h-0" : ""}`}
     >
-      <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 flex-shrink-0">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-zinc-800 flex-shrink-0">
         <div className="flex items-center gap-2">
           <Film className="h-4 w-4 text-blue-400" />
           <span className="text-sm font-semibold text-white">Retake</span>
