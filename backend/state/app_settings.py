@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any, TypeGuard, TypeVar, cast, get_args
+from typing import Any, Literal, TypeGuard, TypeVar, cast, get_args
 
-from pydantic import BaseModel, ConfigDict, Field, create_model, field_validator
+from pydantic import BaseModel, ConfigDict, Field, create_model, field_validator, model_validator
 
 
 def _to_camel_case(field_name: str) -> str:
@@ -59,6 +59,34 @@ class ProModelSettings(SettingsBaseModel):
         return _clamp_int(value, minimum=1, maximum=100, default=20)
 
 
+class OutputSettings(SettingsBaseModel):
+    video_container: Literal["mp4", "mov", "mkv"] = "mp4"
+    video_codec: Literal[
+        "libx264_8",
+        "libx264_10",
+        "libx264_lossless",
+        "libx265_28",
+        "libx265_8",
+        "prores_422",
+    ] = "libx264_8"
+    image_codec: Literal["jpeg", "webp", "png", "webp_lossless"] = "jpeg"
+    image_quality: int = 95
+    audio_codec: Literal["aac_128", "aac_192", "aac_256", "aac_320"] = "aac_192"
+    metadata_mode: Literal["metadata", "json"] = "metadata"
+    keep_intermediate_sliding_windows: bool = False
+
+    @field_validator("image_quality", mode="before")
+    @classmethod
+    def _clamp_image_quality(cls, value: Any) -> int:
+        return _clamp_int(value, minimum=95, maximum=100, default=95)
+
+    @model_validator(mode="after")
+    def _validate_container_codec(self) -> "OutputSettings":
+        if self.video_codec == "prores_422" and self.video_container not in {"mov", "mkv"}:
+            raise ValueError("ProRes output requires MOV or MKV container")
+        return self
+
+
 class AppSettings(SettingsBaseModel):
     use_torch_compile: bool = False
     load_on_startup: bool = False
@@ -74,6 +102,7 @@ class AppSettings(SettingsBaseModel):
     gemini_api_key: str = ""
     seed_locked: bool = False
     locked_seed: int = 42
+    output_settings: OutputSettings = Field(default_factory=OutputSettings)
 
     @field_validator("prompt_cache_size", mode="before")
     @classmethod
@@ -145,6 +174,7 @@ class SettingsResponse(SettingsBaseModel):
     has_gemini_api_key: bool = False
     seed_locked: bool = False
     locked_seed: int = 42
+    output_settings: OutputSettings = Field(default_factory=OutputSettings)
 
 
 def to_settings_response(settings: AppSettings) -> SettingsResponse:

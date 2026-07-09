@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import os
 from pathlib import Path
 
 from services.wangp_bridge import WanGPBridge
@@ -184,6 +185,17 @@ def test_generate_video_uses_source_frame_count_for_video_length() -> None:
 
     assert captured["settings"]["force_fps"] == 24
     assert captured["settings"]["video_length"] == 145
+
+
+def test_select_final_output_prefers_newest_combined_file(tmp_path: Path) -> None:
+    first = tmp_path / "2026-07-09-15h41m19s_seed1783608007_outpaint.mp4"
+    combined = tmp_path / "2026-07-09-15h42m23s_seed1783608007_outpaint.mp4"
+    final = tmp_path / "2026-07-09-15h43m31s_seed1783608007_outpaint.mp4"
+    for index, path in enumerate([first, combined, final], start=1):
+        path.write_bytes(f"segment-{index}".encode("utf-8"))
+        os.utime(path, (1_700_000_000 + index, 1_700_000_000 + index))
+
+    assert WanGPBridge._select_final_output([str(first), str(combined), str(final)]) == str(final)
 
 
 def test_bridge_prefers_root_wgp_config_when_present(tmp_path: Path) -> None:

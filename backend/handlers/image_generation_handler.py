@@ -90,6 +90,15 @@ class ImageGenerationHandler(StateHandlerBase):
         # — the backend resolves it to e.g. '1920x1088'.
         wangp_model_type = profile.wangp_model_type if profile is not None else self._config.wangp_image_model_type
         wangp_default_settings = dict(profile.wangp_default_settings) if profile is not None else {}
+        output_settings = settings.output_settings
+        wangp_default_settings.update(
+            {
+                "image_output_codec": f"{output_settings.image_codec}_{output_settings.image_quality}"
+                if output_settings.image_codec in {"jpeg", "webp"}
+                else output_settings.image_codec,
+                "metadata_type": output_settings.metadata_mode,
+            }
+        )
         input_settings = self._resolve_input_media_settings(req, profile)
         if input_settings.model_type is not None:
             wangp_model_type = input_settings.model_type

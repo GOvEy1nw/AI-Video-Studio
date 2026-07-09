@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import json
 
-from state.app_settings import AppSettings, UpdateSettingsRequest
+from pydantic import ValidationError
+
+from state.app_settings import AppSettings, OutputSettings, UpdateSettingsRequest
 from state import build_initial_state
 from app_handler import ServiceBundle
 from tests.fakes.services import FakeServices
@@ -29,6 +31,12 @@ class TestGetSettings:
         assert data["hasGeminiApiKey"] is False
         assert data["seedLocked"] is False
         assert data["lockedSeed"] == 42
+        assert data["outputSettings"]["videoContainer"] == "mp4"
+        assert data["outputSettings"]["videoCodec"] == "libx264_8"
+        assert data["outputSettings"]["imageCodec"] == "jpeg"
+        assert data["outputSettings"]["imageQuality"] == 95
+        assert data["outputSettings"]["audioCodec"] == "aac_192"
+        assert data["outputSettings"]["metadataMode"] == "metadata"
         assert "ltxApiKey" not in data
         assert "falApiKey" not in data
         assert "geminiApiKey" not in data
@@ -137,6 +145,36 @@ class TestPostSettings:
     def test_unknown_field_rejected(self, client):
         r = client.post("/api/settings", json={"unknownSetting": True})
         assert r.status_code == 422
+
+    def test_update_output_settings(self, client, test_state):
+        r = client.post(
+            "/api/settings",
+            json={
+                "outputSettings": {
+                    "videoContainer": "mov",
+                    "videoCodec": "prores_422",
+                    "imageCodec": "webp_lossless",
+                    "audioCodec": "aac_320",
+                    "metadataMode": "json",
+                    "keepIntermediateSlidingWindows": True,
+                },
+            },
+        )
+        assert r.status_code == 200
+        output = test_state.state.app_settings.output_settings
+        assert output.video_container == "mov"
+        assert output.video_codec == "prores_422"
+        assert output.image_codec == "webp_lossless"
+        assert output.audio_codec == "aac_320"
+        assert output.metadata_mode == "json"
+        assert output.keep_intermediate_sliding_windows is True
+
+    def test_output_settings_reject_prores_mp4(self):
+        try:
+            OutputSettings(videoContainer="mp4", videoCodec="prores_422")
+        except ValidationError:
+            return
+        raise AssertionError("ProRes MP4 should be rejected")
 
 
 class TestSettingsPersistence:

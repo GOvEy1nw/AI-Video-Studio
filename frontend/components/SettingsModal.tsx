@@ -3,6 +3,7 @@ import { Folder, Info, Settings, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Button } from './ui/button'
 import { logger } from '../lib/logger'
+import { useAppSettings } from '../contexts/AppSettingsContext'
 
 interface SettingsModalProps {
   isOpen: boolean
@@ -10,9 +11,10 @@ interface SettingsModalProps {
   initialTab?: TabId
 }
 
-type TabId = 'general' | 'about'
+type TabId = 'general' | 'outputs' | 'about'
 
 export function SettingsModal({ isOpen, onClose, initialTab }: SettingsModalProps) {
+  const { settings, updateSettings } = useAppSettings()
   const [activeTab, setActiveTab] = useState<TabId>('general')
   const [appVersion, setAppVersion] = useState('')
   const [noticesText, setNoticesText] = useState<string | null>(null)
@@ -69,6 +71,7 @@ export function SettingsModal({ isOpen, onClose, initialTab }: SettingsModalProp
 
   const tabs = [
     { id: 'general' as TabId, label: 'General', icon: Settings },
+    { id: 'outputs' as TabId, label: 'Outputs', icon: Folder },
     { id: 'about' as TabId, label: 'About', icon: Info },
   ]
 
@@ -154,30 +157,8 @@ export function SettingsModal({ isOpen, onClose, initialTab }: SettingsModalProp
                 </div>
               </div>
 
-              {/* Preload on startup — greyed out (WanGP-managed) */}
-              <div className="space-y-3 pt-4 border-t border-zinc-800 opacity-50 pointer-events-none">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <svg className="h-4 w-4 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83" />
-                      </svg>
-                      <label className="text-sm font-medium text-white">
-                        Preload models on startup
-                      </label>
-                    </div>
-                    <p className="text-xs text-zinc-500 leading-relaxed">
-                      Managed by WanGP. Models are loaded on first generation.
-                    </p>
-                  </div>
-                  <button disabled className="relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent bg-zinc-700">
-                    <span className="inline-block h-5 w-5 rounded-full bg-white shadow translate-x-0" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Torch Compile — greyed out (WanGP-managed) */}
-              <div className="space-y-3 pt-4 border-t border-zinc-800 opacity-50 pointer-events-none">
+              {/* Torch Compile */}
+              <div className="space-y-3 pt-4 border-t border-zinc-800">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
@@ -189,38 +170,160 @@ export function SettingsModal({ isOpen, onClose, initialTab }: SettingsModalProp
                       </label>
                     </div>
                     <p className="text-xs text-zinc-500 leading-relaxed">
-                      Managed by WanGP. Compilation settings are handled automatically.
+                      Uses WanGP's compile flag. Restart backend before generating if WanGP is already connected.
                     </p>
                   </div>
-                  <button disabled className="relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent bg-zinc-700">
-                    <span className="inline-block h-5 w-5 rounded-full bg-white shadow translate-x-0" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Seed Lock — greyed out (WanGP-managed) */}
-              <div className="space-y-3 pt-4 border-t border-zinc-800 opacity-50 pointer-events-none">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <svg className="h-4 w-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                      </svg>
-                      <label className="text-sm font-medium text-white">
-                        Lock Seed
-                      </label>
-                    </div>
-                    <p className="text-xs text-zinc-500 leading-relaxed">
-                      Managed by WanGP. Seed control will be available in QuickGen.
-                    </p>
-                  </div>
-                  <button disabled className="relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent bg-zinc-700">
-                    <span className="inline-block h-5 w-5 rounded-full bg-white shadow translate-x-0" />
+                  <button
+                    type="button"
+                    onClick={() => updateSettings({ useTorchCompile: !settings.useTorchCompile })}
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${
+                      settings.useTorchCompile ? 'bg-blue-600' : 'bg-zinc-700'
+                    }`}
+                    aria-pressed={settings.useTorchCompile}
+                  >
+                    <span
+                      className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                        settings.useTorchCompile ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
                   </button>
                 </div>
               </div>
             </>
+          )}
+
+          {activeTab === 'outputs' && (
+            <div className="space-y-5">
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-white">Video Quality</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="space-y-1">
+                    <span className="text-xs text-zinc-500">Container</span>
+                    <select
+                      value={settings.outputSettings.videoContainer}
+                      onChange={(event) =>
+                        updateSettings((prev) => ({
+                          ...prev,
+                          outputSettings: { ...prev.outputSettings, videoContainer: event.target.value as 'mp4' | 'mov' | 'mkv' },
+                        }))
+                      }
+                      className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white"
+                    >
+                      <option value="mp4">MP4</option>
+                      <option value="mov">MOV</option>
+                      <option value="mkv">MKV</option>
+                    </select>
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-xs text-zinc-500">Codec</span>
+                    <select
+                      value={settings.outputSettings.videoCodec}
+                      onChange={(event) =>
+                        updateSettings((prev) => ({
+                          ...prev,
+                          outputSettings: { ...prev.outputSettings, videoCodec: event.target.value as typeof prev.outputSettings.videoCodec },
+                        }))
+                      }
+                      className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white"
+                    >
+                      <option value="libx264_8">x264 Medium</option>
+                      <option value="libx264_10">x264 High</option>
+                      <option value="libx265_28">x265 Medium</option>
+                      <option value="libx265_8">x265 Very High</option>
+                      <option value="libx264_lossless">x264 Lossless</option>
+                      <option value="prores_422" disabled={settings.outputSettings.videoContainer === 'mp4'}>
+                        ProRes 422
+                      </option>
+                    </select>
+                  </label>
+                </div>
+                <label className="space-y-1 block">
+                  <span className="text-xs text-zinc-500">Audio Format</span>
+                  <select
+                    value={settings.outputSettings.audioCodec}
+                    onChange={(event) =>
+                      updateSettings((prev) => ({
+                        ...prev,
+                        outputSettings: { ...prev.outputSettings, audioCodec: event.target.value as typeof prev.outputSettings.audioCodec },
+                      }))
+                    }
+                    className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white"
+                  >
+                    <option value="aac_128">AAC 128 kbps</option>
+                    <option value="aac_192">AAC 192 kbps</option>
+                    <option value="aac_256">AAC 256 kbps</option>
+                    <option value="aac_320">AAC 320 kbps</option>
+                  </select>
+                </label>
+                <p className="text-xs text-zinc-500">
+                  HDR output support depends on selected WanGP codec and model.
+                </p>
+              </div>
+
+              <div className="space-y-3 border-t border-zinc-800 pt-4">
+                <h3 className="text-sm font-semibold text-white">Image Quality</h3>
+                <select
+                  value={settings.outputSettings.imageCodec}
+                  onChange={(event) =>
+                    updateSettings((prev) => ({
+                      ...prev,
+                      outputSettings: { ...prev.outputSettings, imageCodec: event.target.value as typeof prev.outputSettings.imageCodec },
+                    }))
+                  }
+                  className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white"
+                >
+                  <option value="jpeg">JPEG q95</option>
+                  <option value="webp">WebP q95</option>
+                  <option value="png">PNG lossless</option>
+                  <option value="webp_lossless">WebP lossless</option>
+                </select>
+              </div>
+
+              <div className="space-y-3 border-t border-zinc-800 pt-4">
+                <h3 className="text-sm font-semibold text-white">Metadata Output</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { value: 'metadata', label: 'Embed metadata' },
+                    { value: 'json', label: 'Export JSON files' },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() =>
+                        updateSettings((prev) => ({
+                          ...prev,
+                          outputSettings: { ...prev.outputSettings, metadataMode: option.value as 'metadata' | 'json' },
+                        }))
+                      }
+                      className={`rounded-lg border px-3 py-2 text-sm ${
+                        settings.outputSettings.metadataMode === option.value
+                          ? 'border-blue-500 bg-blue-500/10 text-white'
+                          : 'border-zinc-700 bg-zinc-800 text-zinc-400'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                <label className="flex items-center gap-2 text-sm text-zinc-300">
+                  <input
+                    type="checkbox"
+                    checked={settings.outputSettings.keepIntermediateSlidingWindows}
+                    onChange={(event) =>
+                      updateSettings((prev) => ({
+                        ...prev,
+                        outputSettings: {
+                          ...prev.outputSettings,
+                          keepIntermediateSlidingWindows: event.target.checked,
+                        },
+                      }))
+                    }
+                    className="h-4 w-4 accent-blue-500"
+                  />
+                  Keep intermediate sliding windows
+                </label>
+              </div>
+            </div>
           )}
 
           {activeTab === 'about' && (

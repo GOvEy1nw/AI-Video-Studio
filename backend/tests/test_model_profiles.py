@@ -322,11 +322,11 @@ class TestImageGenerationProfileRouting:
         assert call.width == 1920
         assert call.height == 1088
         assert call.num_steps == 8
-        assert call.default_settings == {
-            "image_mode": 1,
-            "num_inference_steps": 8,
-            "guidance_scale": 0,
-        }
+        assert call.default_settings["image_mode"] == 1
+        assert call.default_settings["num_inference_steps"] == 8
+        assert call.default_settings["guidance_scale"] == 0
+        assert call.default_settings["image_output_codec"] == "jpeg_95"
+        assert call.default_settings["metadata_type"] == "metadata"
 
     def test_profile_request_routes_to_z_image(
         self, client, enable_wangp

@@ -68,7 +68,9 @@ class TestGenerate:
         assert call.duration_seconds == 2
         assert call.fps == 24
         assert call.model_type == "ltx2_22B_distilled_1_1"
-        assert call.default_settings == {"num_inference_steps": 8}
+        assert call.default_settings["num_inference_steps"] == 8
+        assert call.default_settings["video_output_codec"] == "libx264_8"
+        assert call.default_settings["video_container"] == "mp4"
 
     def test_video_profile_request_routes_to_ltx2(
         self, client, enable_wangp: FakeWanGPBridge
@@ -283,6 +285,116 @@ class TestGenerate:
         assert call.control_video_path == str(video)
         assert call.audio_path == str(audio)
         assert call.video_prompt_type == "VG"
+
+    def test_video_input_trim_passes_clipped_path_and_frame_count(
+        self, client, enable_wangp: FakeWanGPBridge, tmp_path: Path, monkeypatch
+    ):
+        video = tmp_path / "video.mp4"
+        video.write_bytes(b"fake-video")
+        clipped = tmp_path / "video_trimmed.mp4"
+        clipped.write_bytes(b"fake-video")
+
+        def fake_extract(
+            source_path: str | Path,
+            *,
+            start_time: float,
+            duration: float,
+            output_dir: Path,
+        ) -> Path:
+            del output_dir
+            assert str(source_path) == str(video)
+            assert start_time == 1.5
+            assert duration == 4.0
+            return clipped
+
+        monkeypatch.setattr(
+            "handlers.video_generation_handler.extract_video_clip",
+            fake_extract,
+        )
+        monkeypatch.setattr(
+            "handlers.video_generation_handler.probe_video_metadata",
+            lambda path: VideoMetadata(frame_count=97, duration_seconds=4.0),
+        )
+
+        r = client.post(
+            "/api/generate",
+            json={
+                "prompt": "A dancer",
+                "resolution": "540p",
+                "modelProfileId": "ltx2_22b_distilled",
+                "duration": "10",
+                "fps": "24",
+                "cameraMotion": "none",
+                "videoPromptType": "VG",
+                "inputMedia": [
+                    {
+                        "role": "control_video",
+                        "path": str(video),
+                        "type": "video",
+                        "trimStartTime": 1.5,
+                        "trimDuration": 4.0,
+                    },
+                ],
+            },
+        )
+
+        assert r.status_code == 200
+        call = enable_wangp.video_calls[0]
+        assert call.duration_seconds == 4
+        assert call.control_video_path == str(clipped)
+        assert call.video_length_frames == 97
+
+    def test_audio_input_trim_passes_clipped_path_and_duration(
+        self, client, enable_wangp: FakeWanGPBridge, tmp_path: Path, monkeypatch
+    ):
+        audio = tmp_path / "audio.wav"
+        audio.write_bytes(b"RIFF\x0c\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00")
+        clipped = tmp_path / "audio_trimmed.wav"
+        clipped.write_bytes(b"RIFF\x0c\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00")
+
+        def fake_extract(
+            source_path: str | Path,
+            *,
+            start_time: float,
+            duration: float,
+            output_dir: Path,
+        ) -> Path:
+            del output_dir
+            assert str(source_path) == str(audio)
+            assert start_time == 2.0
+            assert duration == 3.0
+            return clipped
+
+        monkeypatch.setattr(
+            "handlers.video_generation_handler.extract_audio_clip",
+            fake_extract,
+        )
+
+        r = client.post(
+            "/api/generate",
+            json={
+                "prompt": "A music video",
+                "resolution": "540p",
+                "modelProfileId": "ltx2_22b_distilled",
+                "duration": "10",
+                "fps": "24",
+                "cameraMotion": "none",
+                "inputMedia": [
+                    {
+                        "role": "audio_to_video",
+                        "path": str(audio),
+                        "type": "audio",
+                        "trimStartTime": 2.0,
+                        "trimDuration": 3.0,
+                    },
+                ],
+            },
+        )
+
+        assert r.status_code == 200
+        call = enable_wangp.video_calls[0]
+        assert call.duration_seconds == 3
+        assert call.audio_path == str(clipped)
 
     def test_reframe_happy_path(
         self, client, enable_wangp: FakeWanGPBridge, tmp_path: Path, monkeypatch

@@ -4,6 +4,8 @@ import {
   Download,
   Image,
   Video,
+  Play,
+  Pause,
   X,
   Heart,
   Film,
@@ -79,6 +81,10 @@ import {
   ReframePanel,
   type ReframePanelState,
 } from "../components/ReframePanel";
+import {
+  VideoTrimPanel,
+  formatTrimTimecode,
+} from "../components/VideoTrimPanel";
 import { SeedControl } from "../components/SeedControl";
 import { useAppSettings } from "../contexts/AppSettingsContext";
 import {
@@ -102,6 +108,9 @@ type ImageInputItem = {
   url: string;
   role: string;
   type?: "image" | "video" | "audio";
+  trimStartTime?: number;
+  trimDuration?: number;
+  mediaDuration?: number;
 };
 
 type MultiShotRow = {
@@ -116,12 +125,213 @@ const MULTI_SHOT_SECONDS = Array.from(
   (_, index) => index + 1,
 );
 
+const GUIDE_MEDIA_ROLES = [
+  "control_video",
+  "human_motion",
+  "human_motion_pose",
+  "depth",
+  "canny_edges",
+  "sdr_to_hdr",
+  "continue_video",
+  "audio_guide",
+  "audio_to_video",
+  "reference_voice",
+];
+
 function createMultiShotRow(seconds = 4): MultiShotRow {
   return {
     id: crypto.randomUUID(),
     seconds,
     prompt: "",
   };
+}
+
+function formatAutoDuration(seconds: number | undefined): string {
+  if (seconds === undefined || !Number.isFinite(seconds) || seconds <= 0) {
+    return "auto";
+  }
+  return `${seconds.toFixed(seconds < 10 ? 1 : 0)}s auto`;
+}
+
+function MediaInputTrimEditor({
+  item,
+  onChange,
+  onConfirm,
+}: {
+  item: ImageInputItem;
+  onChange: (patch: Partial<ImageInputItem>) => void;
+  onConfirm: () => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [videoDuration, setVideoDuration] = useState(item.mediaDuration ?? 0);
+  const mediaKind = item.type === "audio" ? "audio" : "video";
+
+  const syncMediaDuration = useCallback(() => {
+    const node = mediaKind === "audio" ? audioRef.current : videoRef.current;
+    if (!node) return;
+    let duration = node.duration;
+    if (
+      (!Number.isFinite(duration) || duration <= 0) &&
+      node.seekable.length > 0
+    ) {
+      duration = node.seekable.end(node.seekable.length - 1);
+    }
+    if (!Number.isFinite(duration) || duration <= 0) return;
+    setVideoDuration(duration);
+    if (item.mediaDuration !== duration || item.trimStartTime === undefined) {
+      onChange({
+        ...(item.mediaDuration !== duration ? { mediaDuration: duration } : {}),
+        ...(item.trimStartTime === undefined ? { trimStartTime: 0 } : {}),
+      });
+    }
+  }, [item.mediaDuration, item.trimStartTime, mediaKind, onChange]);
+
+  useEffect(() => {
+    const node = mediaKind === "audio" ? audioRef.current : videoRef.current;
+    if (!node) return;
+    setVideoDuration(item.mediaDuration ?? 0);
+    if (node.readyState >= 1) syncMediaDuration();
+  }, [item.url, item.mediaDuration, mediaKind, syncMediaDuration]);
+
+  const handleSeek = useCallback(
+    (time: number) => {
+      const node = mediaKind === "audio" ? audioRef.current : videoRef.current;
+      if (!node) return;
+      node.currentTime = Math.max(0, Math.min(videoDuration, time));
+      setCurrentTime(node.currentTime);
+    },
+    [mediaKind, videoDuration],
+  );
+
+  const togglePlay = useCallback(() => {
+    const node = mediaKind === "audio" ? audioRef.current : videoRef.current;
+    if (!node) return;
+    if (node.paused) {
+      void node.play();
+      setIsPlaying(true);
+    } else {
+      node.pause();
+      setIsPlaying(false);
+    }
+  }, [mediaKind]);
+
+  const toggleMute = useCallback(() => {
+    const node = mediaKind === "audio" ? audioRef.current : videoRef.current;
+    if (!node) return;
+    node.muted = !node.muted;
+    setIsMuted(node.muted);
+  }, [mediaKind]);
+
+  return (
+    <div className="mt-2 rounded-lg border border-zinc-800 bg-zinc-950/45 py-2">
+      <div className="mb-1 flex items-center justify-between px-4 text-[10px] text-zinc-500">
+        <span>{mediaKind === "audio" ? "Audio trim" : "Video trim"}</span>
+        <div className="flex items-center gap-2">
+          <span>
+            {formatAutoDuration(item.trimDuration ?? item.mediaDuration)}
+          </span>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="inline-flex items-center gap-1 rounded bg-blue-600 px-2 py-1 text-[10px] font-medium text-white transition-colors hover:bg-blue-500"
+          >
+            <Check className="h-3 w-3" />
+            Confirm
+          </button>
+        </div>
+      </div>
+      {mediaKind === "video" && (
+        <div className="relative bg-black aspect-video max-h-[32vh] w-full">
+          <video
+            ref={videoRef}
+            src={item.url}
+            preload="metadata"
+            playsInline
+            onLoadedMetadata={syncMediaDuration}
+            onDurationChange={syncMediaDuration}
+            onCanPlay={syncMediaDuration}
+            onTimeUpdate={(event) =>
+              setCurrentTime(event.currentTarget.currentTime)
+            }
+            onClick={togglePlay}
+            onEnded={() => setIsPlaying(false)}
+            className="w-full h-full object-contain"
+            style={{ objectPosition: "center center" }}
+          />
+          <div className="absolute bottom-2 left-2 z-10 flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={toggleMute}
+              className="rounded bg-black/60 p-1.5 text-white/80 transition-colors hover:bg-black/80 hover:text-white"
+              title={isMuted ? "Unmute video" : "Mute video"}
+            >
+              {isMuted ? (
+                <VolumeX className="h-3.5 w-3.5" />
+              ) : (
+                <Volume2 className="h-3.5 w-3.5" />
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+      {mediaKind === "audio" && (
+        <>
+          <audio
+            ref={audioRef}
+            src={item.url}
+            preload="metadata"
+            onLoadedMetadata={syncMediaDuration}
+            onDurationChange={syncMediaDuration}
+            onCanPlay={syncMediaDuration}
+            onTimeUpdate={(event) =>
+              setCurrentTime(event.currentTarget.currentTime)
+            }
+            className="hidden"
+          />
+          <div className="flex aspect-[3/1] max-h-24 items-center justify-center bg-zinc-950 text-emerald-400">
+            <Music className="h-8 w-8" />
+          </div>
+        </>
+      )}
+      <div className="flex items-center justify-center gap-3 border-b border-zinc-800 bg-zinc-900 px-4 py-2">
+        <button
+          type="button"
+          onClick={togglePlay}
+          className="rounded p-1 text-white transition-colors hover:bg-zinc-800"
+          title={isPlaying ? "Pause" : "Play"}
+        >
+          {isPlaying ? (
+            <Pause className="h-4 w-4" />
+          ) : (
+            <Play className="h-4 w-4" />
+          )}
+        </button>
+        <span className="text-xs font-mono text-zinc-400">
+          {formatTrimTimecode(currentTime)} /{" "}
+          {formatTrimTimecode(videoDuration)}
+        </span>
+      </div>
+      <VideoTrimPanel
+        videoUrl={item.url}
+        videoDuration={videoDuration}
+        mediaKind={mediaKind}
+        initialStartTime={item.trimStartTime}
+        initialDuration={item.trimDuration}
+        currentTime={currentTime}
+        onSeek={handleSeek}
+        onSelectionChange={(start, end) =>
+          onChange({
+            trimStartTime: start,
+            trimDuration: Math.max(0, end - start),
+          })
+        }
+      />
+    </div>
+  );
 }
 
 function formatMultiShotPrompt(
@@ -998,6 +1208,10 @@ function PromptBar({
   const [activeImageInputId, setActiveImageInputId] = useState<string | null>(
     null,
   );
+  const mediaMenuRef = useRef<HTMLDivElement>(null);
+  const [editingGuideTrimId, setEditingGuideTrimId] = useState<string | null>(
+    null,
+  );
   const isRetake = mode === "video" && videoMode === "retake";
   const isReframe = mode === "video" && videoMode === "reframe";
   const isPanelMode = isRetake || isReframe;
@@ -1069,16 +1283,7 @@ function PromptBar({
     const supportedRoles = new Set([
       "start_image",
       "end_image",
-      "control_video",
-      "human_motion",
-      "human_motion_pose",
-      "depth",
-      "canny_edges",
-      "sdr_to_hdr",
-      "continue_video",
-      "audio_guide",
-      "audio_to_video",
-      "reference_voice",
+      ...GUIDE_MEDIA_ROLES,
     ]);
     const seen = new Set<string>();
     const normalized: ImageInputItem[] = [];
@@ -1163,32 +1368,10 @@ function PromptBar({
     role: string,
     type: "image" | "video" | "audio",
   ) => {
-    const isGuideRole = [
-      "human_motion",
-      "human_motion_pose",
-      "depth",
-      "canny_edges",
-      "sdr_to_hdr",
-      "continue_video",
-      "audio_to_video",
-      "reference_voice",
-      "control_video",
-      "audio_guide",
-    ].includes(role);
+    const isGuideRole = GUIDE_MEDIA_ROLES.includes(role);
     const filtered = imageInputs.filter((item) => {
       if (isGuideRole) {
-        return ![
-          "human_motion",
-          "human_motion_pose",
-          "depth",
-          "canny_edges",
-          "sdr_to_hdr",
-          "continue_video",
-          "audio_to_video",
-          "reference_voice",
-          "control_video",
-          "audio_guide",
-        ].includes(item.role);
+        return !GUIDE_MEDIA_ROLES.includes(item.role);
       }
       return item.role !== role;
     });
@@ -1199,6 +1382,10 @@ function PromptBar({
       type,
     };
     onImageInputsChange([...filtered, newItem]);
+    if (isGuideRole && mode === "video" && videoMode === "generate") {
+      setMediaInputsExpanded(true);
+      setEditingGuideTrimId(newItem.id);
+    }
   };
 
   const resetImageFileInput = () => {
@@ -1339,6 +1526,9 @@ function PromptBar({
     onImageInputsChange(imageInputs.filter((item) => item.id !== id));
     if (activeImageInputId === id) {
       setActiveImageInputId(null);
+    }
+    if (editingGuideTrimId === id) {
+      setEditingGuideTrimId(null);
     }
     resetImageFileInput();
   };
@@ -1543,7 +1733,10 @@ function PromptBar({
       return (
         <div key={roleName} className="relative">
           {isActive && (
-            <div className="absolute bottom-full left-0 mb-2 w-56 rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl z-[10000]">
+            <div
+              ref={mediaMenuRef}
+              className="absolute bottom-full left-0 mb-2 w-56 rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl z-[10000]"
+            >
               <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">
                 {label}
               </div>
@@ -1636,18 +1829,7 @@ function PromptBar({
 
   const renderCombinedGuideSlot = () => {
     const guideItem = imageInputs.find((x) =>
-      [
-        "control_video",
-        "human_motion",
-        "human_motion_pose",
-        "depth",
-        "canny_edges",
-        "sdr_to_hdr",
-        "continue_video",
-        "audio_guide",
-        "audio_to_video",
-        "reference_voice",
-      ].includes(x.role),
+      GUIDE_MEDIA_ROLES.includes(x.role),
     );
 
     if (guideItem) {
@@ -1718,7 +1900,10 @@ function PromptBar({
           onDrop={handleGuideSlotDrop}
         >
           {isActive && (
-            <div className="absolute bottom-full left-0 mb-2 w-64 rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl z-[10000]">
+            <div
+              ref={mediaMenuRef}
+              className="absolute bottom-full left-0 mb-2 w-64 rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl z-[10000]"
+            >
               <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">
                 {mediaType === "video"
                   ? "Video Guide Role"
@@ -1744,6 +1929,19 @@ function PromptBar({
                     </span>
                   </button>
                 ))}
+
+                <div className="h-px bg-zinc-700 my-1" />
+                <button
+                  onClick={() => {
+                    setMediaInputsExpanded(true);
+                    setEditingGuideTrimId(guideItem.id);
+                    setActiveImageInputId(null);
+                  }}
+                  className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-left text-zinc-300 hover:bg-zinc-700 transition-colors"
+                >
+                  <Scissors className="h-3.5 w-3.5 flex-shrink-0" />
+                  <span className="text-xs">Trim</span>
+                </button>
 
                 {mediaType === "video" &&
                   guideItem.role !== "continue_video" && (
@@ -1851,6 +2049,32 @@ function PromptBar({
         selectedVideoProfile?.inputMedia?.supportsImageInputs));
   const attachedMediaCount =
     imageInputs.length + (inputImage ? 1 : 0) + (inputAudio ? 1 : 0);
+  const guideItemForTrim =
+    mode === "video" && videoMode === "generate"
+      ? imageInputs.find(
+          (item) =>
+            GUIDE_MEDIA_ROLES.includes(item.role) &&
+            (item.type === "video" || item.type === "audio"),
+        )
+      : undefined;
+  const updateGuideTrim = useCallback(
+    (id: string, patch: Partial<ImageInputItem>) => {
+      onImageInputsChange(
+        imageInputs.map((item) =>
+          item.id === id ? { ...item, ...patch } : item,
+        ),
+      );
+    },
+    [imageInputs, onImageInputsChange],
+  );
+  const autoMediaDuration = guideItemForTrim
+    ? (guideItemForTrim.trimDuration ?? guideItemForTrim.mediaDuration ?? 0)
+    : 0;
+  const hasAudioInput =
+    !!inputAudio ||
+    imageInputs.some((item) =>
+      ["audio_guide", "audio_to_video", "reference_voice"].includes(item.role),
+    );
 
   useEffect(() => {
     setMediaInputsExpanded(false);
@@ -1861,6 +2085,19 @@ function PromptBar({
       setMediaInputsExpanded(true);
     }
   }, [mediaInputsExpandKey]);
+
+  useEffect(() => {
+    if (!activeImageInputId) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (target instanceof Node && mediaMenuRef.current?.contains(target)) {
+        return;
+      }
+      setActiveImageInputId(null);
+    };
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [activeImageInputId]);
 
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-visible">
@@ -1887,110 +2124,127 @@ function PromptBar({
             )}
           </button>
           {mediaInputsExpanded && (
-            <div className="relative flex items-center gap-2 overflow-visible px-2 pt-1 pb-2">
-              {mode === "image" ? (
-                <>
-                  {imageInputs.map((item) => {
-                    const role = imageInputPolicy?.roles.find(
-                      (candidate) => candidate.role === item.role,
-                    );
-                    const isActive = activeImageInputId === item.id;
-                    return (
-                      <div key={item.id} className="relative">
-                        {isActive && imageInputPolicy && (
-                          <div className="absolute bottom-full left-0 mb-2 w-56 rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl z-[10000]">
-                            <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">
-                              Image input
-                            </div>
-                            <div className="space-y-1">
-                              {imageInputPolicy.roles.map((option) => (
+            <div className="px-2 pt-1 pb-2">
+              {guideItemForTrim &&
+              editingGuideTrimId === guideItemForTrim.id ? (
+                <MediaInputTrimEditor
+                  item={guideItemForTrim}
+                  onChange={(patch) =>
+                    updateGuideTrim(guideItemForTrim.id, patch)
+                  }
+                  onConfirm={() => setEditingGuideTrimId(null)}
+                />
+              ) : null}
+              <div className="relative flex items-center gap-2 overflow-visible">
+                {mode === "image" ? (
+                  <>
+                    {imageInputs.map((item) => {
+                      const role = imageInputPolicy?.roles.find(
+                        (candidate) => candidate.role === item.role,
+                      );
+                      const isActive = activeImageInputId === item.id;
+                      return (
+                        <div key={item.id} className="relative">
+                          {isActive && imageInputPolicy && (
+                            <div
+                              ref={mediaMenuRef}
+                              className="absolute bottom-full left-0 mb-2 w-56 rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl z-[10000]"
+                            >
+                              <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">
+                                Image input
+                              </div>
+                              <div className="space-y-1">
+                                {imageInputPolicy.roles.map((option) => (
+                                  <button
+                                    key={option.role}
+                                    onClick={() =>
+                                      updateImageInputRole(item.id, option.role)
+                                    }
+                                    className={`w-full flex items-center gap-2 px-2 py-2 rounded-md text-left transition-colors ${
+                                      item.role === option.role
+                                        ? "bg-white/20 text-white"
+                                        : "text-zinc-400 hover:bg-zinc-700"
+                                    }`}
+                                    title={option.description}
+                                  >
+                                    <Image className="h-3.5 w-3.5 flex-shrink-0" />
+                                    <span className="text-xs">
+                                      {option.label}
+                                    </span>
+                                  </button>
+                                ))}
+                                <div className="h-px bg-zinc-700 my-1" />
                                 <button
-                                  key={option.role}
-                                  onClick={() =>
-                                    updateImageInputRole(item.id, option.role)
-                                  }
-                                  className={`w-full flex items-center gap-2 px-2 py-2 rounded-md text-left transition-colors ${
-                                    item.role === option.role
-                                      ? "bg-white/20 text-white"
-                                      : "text-zinc-400 hover:bg-zinc-700"
-                                  }`}
-                                  title={option.description}
+                                  onClick={() => removeImageInput(item.id)}
+                                  className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-left text-red-300 hover:bg-red-500/15 transition-colors"
                                 >
-                                  <Image className="h-3.5 w-3.5 flex-shrink-0" />
-                                  <span className="text-xs">
-                                    {option.label}
-                                  </span>
+                                  <Trash2 className="h-3.5 w-3.5 flex-shrink-0" />
+                                  <span className="text-xs">Remove</span>
                                 </button>
-                              ))}
-                              <div className="h-px bg-zinc-700 my-1" />
-                              <button
-                                onClick={() => removeImageInput(item.id)}
-                                className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-left text-red-300 hover:bg-red-500/15 transition-colors"
-                              >
-                                <Trash2 className="h-3.5 w-3.5 flex-shrink-0" />
-                                <span className="text-xs">Remove</span>
-                              </button>
+                              </div>
                             </div>
-                          </div>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setActiveImageInputId(isActive ? null : item.id)
-                          }
-                          className="group relative h-14 w-14 overflow-hidden rounded-lg border border-zinc-700 bg-zinc-800 flex items-center justify-center flex-shrink-0"
-                          title={role?.label || imageInputPolicy?.tooltipLabel}
-                        >
-                          <img
-                            src={item.url}
-                            alt=""
-                            className="h-full w-full object-cover"
-                          />
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
-                            <Pencil className="h-4 w-4 text-white" />
-                          </div>
-                        </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setActiveImageInputId(isActive ? null : item.id)
+                            }
+                            className="group relative h-14 w-14 overflow-hidden rounded-lg border border-zinc-700 bg-zinc-800 flex items-center justify-center flex-shrink-0"
+                            title={
+                              role?.label || imageInputPolicy?.tooltipLabel
+                            }
+                          >
+                            <img
+                              src={item.url}
+                              alt=""
+                              className="h-full w-full object-cover"
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                              <Pencil className="h-4 w-4 text-white" />
+                            </div>
+                          </button>
+                        </div>
+                      );
+                    })}
+                    {canAddImageInput && (
+                      <div
+                        className={`relative h-14 w-14 rounded-lg border-2 border-dashed transition-colors flex items-center justify-center flex-shrink-0 cursor-pointer ${
+                          isDragOver
+                            ? "border-blue-500 bg-blue-500/10"
+                            : "border-zinc-700 hover:border-zinc-500"
+                        }`}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setIsDragOver(true);
+                        }}
+                        onDragLeave={() => setIsDragOver(false)}
+                        onDrop={handleDrop}
+                        onClick={() => inputRef.current?.click()}
+                        title={imageInputPolicy?.tooltipLabel}
+                      >
+                        <Image className="h-4 w-4 text-zinc-500" />
                       </div>
-                    );
-                  })}
-                  {canAddImageInput && (
-                    <div
-                      className={`relative h-14 w-14 rounded-lg border-2 border-dashed transition-colors flex items-center justify-center flex-shrink-0 cursor-pointer ${
-                        isDragOver
-                          ? "border-blue-500 bg-blue-500/10"
-                          : "border-zinc-700 hover:border-zinc-500"
-                      }`}
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        setIsDragOver(true);
-                      }}
-                      onDragLeave={() => setIsDragOver(false)}
-                      onDrop={handleDrop}
-                      onClick={() => inputRef.current?.click()}
-                      title={imageInputPolicy?.tooltipLabel}
-                    >
-                      <Image className="h-4 w-4 text-zinc-500" />
-                    </div>
-                  )}
-                </>
-              ) : (
-                <>
-                  {renderVideoSlot(
-                    "start_image",
-                    "Image 1 (Start)",
-                    "image",
-                    inputRef,
-                  )}
-                  {imageInputs.some((x) => x.role === "start_image") &&
-                    renderVideoSlot(
-                      "end_image",
-                      "Image 2 (End)",
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {renderVideoSlot(
+                      "start_image",
+                      "Image 1 (Start)",
                       "image",
                       inputRef,
                     )}
-                  {renderCombinedGuideSlot()}
-                </>
-              )}
+                    {imageInputs.some((x) => x.role === "start_image") &&
+                      renderVideoSlot(
+                        "end_image",
+                        "Image 2 (End)",
+                        "image",
+                        inputRef,
+                      )}
+                    {renderCombinedGuideSlot()}
+                  </>
+                )}
+              </div>
             </div>
           )}
           <input
@@ -2457,6 +2711,21 @@ function PromptBar({
                 <span>auto</span>
                 <span className="text-zinc-600">{multiShotTotalSeconds}s</span>
               </button>
+            ) : guideItemForTrim ? (
+              <button
+                type="button"
+                disabled
+                className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-zinc-800/40 text-zinc-500 cursor-not-allowed"
+                title="Video duration follows the selected media trim"
+              >
+                <Clock className="h-3.5 w-3.5" />
+                <span>auto</span>
+                {autoMediaDuration > 0 && (
+                  <span className="text-zinc-600">
+                    {formatTrimTimecode(autoMediaDuration)}
+                  </span>
+                )}
+              </button>
             ) : (
               <SettingsDropdown
                 title="DURATION"
@@ -2511,12 +2780,14 @@ function PromptBar({
                 onSettingsChange({ ...settings, aspectRatio: v })
               }
               options={
-                inputAudio
+                hasAudioInput
                   ? [{ value: "16:9", label: "16:9" }]
-                  : (selectedVideoProfile?.ui.allowedAspectRatios ?? [
-                      "16:9",
-                      "9:16",
-                    ]).map((ratio) => ({ value: ratio, label: ratio }))
+                  : (
+                      selectedVideoProfile?.ui.allowedAspectRatios ?? [
+                        "16:9",
+                        "9:16",
+                      ]
+                    ).map((ratio) => ({ value: ratio, label: ratio }))
               }
               trigger={
                 <>
@@ -2713,13 +2984,22 @@ export function GenSpace() {
     generate,
     generateImage,
     isGenerating,
+    isCancelling,
     progress,
     statusMessage,
+    phaseIndex,
+    phaseCount,
+    currentStep,
+    totalSteps,
+    sectionIndex,
+    sectionCount,
+    previewUrl,
     videoUrl,
     videoPath,
     imageUrls,
     imagePaths,
     error,
+    cancel,
     reset,
   } = useGeneration();
 
@@ -3265,14 +3545,17 @@ export function GenSpace() {
     setLastPrompt(generationPrompt);
 
     if (mode === "image") {
-      const inputMedia = imageInputs
-        .map((item) => {
-          const path = fileUrlToPath(item.url);
-          return path ? { path, role: item.role } : null;
-        })
-        .filter(
-          (item): item is { path: string; role: string } => item !== null,
-        );
+      const inputMedia = imageInputs.flatMap((item) => {
+        const path = fileUrlToPath(item.url);
+        if (!path) return [];
+        const entry: {
+          path: string;
+          role: string;
+          type?: "image" | "video" | "audio";
+        } = { path, role: item.role };
+        if (item.type) entry.type = item.type;
+        return [entry];
+      });
       generateImage(
         generationPrompt,
         {
@@ -3306,6 +3589,7 @@ export function GenSpace() {
           "depth",
           "canny_edges",
           "sdr_to_hdr",
+          "continue_video",
         ].includes(x.role),
       );
 
@@ -3323,17 +3607,34 @@ export function GenSpace() {
             : null;
       const videoSettings = { ...settings };
       if (shouldUseMultiShot) videoSettings.duration = multiShotDuration;
+      const autoDuration = imageInputs.find(
+        (item) =>
+          GUIDE_MEDIA_ROLES.includes(item.role) &&
+          (item.type === "video" || item.type === "audio"),
+      )?.trimDuration;
+      if (!shouldUseMultiShot && autoDuration && autoDuration > 0) {
+        videoSettings.duration = Math.max(2, Math.ceil(autoDuration));
+      }
       if (audioPath) videoSettings.model = "pro";
-      if (shouldUseMultiShot) setSettings(videoSettings);
+      if (shouldUseMultiShot || autoDuration) setSettings(videoSettings);
 
-      const inputMedia = imageInputs
-        .map((item) => {
-          const path = fileUrlToPath(item.url);
-          return path ? { path, role: item.role } : null;
-        })
-        .filter(
-          (item): item is { path: string; role: string } => item !== null,
-        );
+      const inputMedia = imageInputs.flatMap((item) => {
+        const path = fileUrlToPath(item.url);
+        if (!path) return [];
+        const entry: {
+          path: string;
+          role: string;
+          type?: "image" | "video" | "audio";
+          trimStartTime?: number;
+          trimDuration?: number;
+        } = { path, role: item.role };
+        if (item.type) entry.type = item.type;
+        if (item.trimStartTime !== undefined)
+          entry.trimStartTime = item.trimStartTime;
+        if (item.trimDuration !== undefined)
+          entry.trimDuration = item.trimDuration;
+        return [entry];
+      });
 
       generate(
         prompt,
@@ -3890,6 +4191,13 @@ export function GenSpace() {
   const canGoPrev = selectedIndex > 0;
   const canGoNext =
     selectedIndex >= 0 && selectedIndex < filteredAssets.length - 1;
+  const generationBadges = [
+    phaseIndex && phaseCount ? `Phase ${phaseIndex}/${phaseCount}` : null,
+    currentStep && totalSteps ? `Step ${currentStep}/${totalSteps}` : null,
+    sectionIndex && sectionCount
+      ? `Section ${sectionIndex}/${sectionCount}`
+      : null,
+  ].filter(Boolean) as string[];
 
   const goToPrev = useCallback(() => {
     if (canGoPrev) setSelectedAsset(filteredAssets[selectedIndex - 1]);
@@ -4148,27 +4456,78 @@ export function GenSpace() {
                 (gallerySize === "list" ? (
                   <div className="flex items-center gap-4 rounded-lg px-3 py-3">
                     <div className="relative h-12 w-20 flex-shrink-0 overflow-hidden rounded-md bg-zinc-800">
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <LoaderCircle className="h-5 w-5 animate-spin text-violet-400" />
-                      </div>
+                      {previewUrl ? (
+                        <img
+                          src={previewUrl}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <LoaderCircle className="h-5 w-5 animate-spin text-violet-400" />
+                        </div>
+                      )}
                     </div>
-                    <p className="text-sm text-zinc-400">
-                      {statusMessage || "Generating..."}
-                    </p>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm text-zinc-400">
+                        {statusMessage || "Generating..."}
+                      </p>
+                      {generationBadges.length > 0 && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {generationBadges.map((badge) => (
+                            <span
+                              key={badge}
+                              className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-500"
+                            >
+                              {badge}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void cancel()}
+                      disabled={isCancelling}
+                      className="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-300 transition-colors hover:bg-zinc-800 disabled:cursor-wait disabled:opacity-50"
+                    >
+                      {isCancelling ? "Cancelling..." : "Cancel"}
+                    </button>
                   </div>
                 ) : (
                   <div className="relative rounded-xl overflow-hidden bg-zinc-800 aspect-video">
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <div className="relative w-16 h-16 mb-3">
-                        <div className="absolute inset-0 rounded-full border-2 border-violet-500/30" />
-                        <div className="absolute inset-0 rounded-full border-2 border-violet-500 border-t-transparent animate-spin" />
-                        <div className="absolute inset-2 rounded-full bg-zinc-800 flex items-center justify-center">
-                          <Sparkles className="h-6 w-6 text-violet-400" />
+                    {previewUrl && (
+                      <img
+                        src={previewUrl}
+                        alt=""
+                        className="absolute inset-0 h-full w-full object-cover"
+                      />
+                    )}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/35 px-4">
+                      {!previewUrl && (
+                        <div className="relative w-16 h-16 mb-3">
+                          <div className="absolute inset-0 rounded-full border-2 border-violet-500/30" />
+                          <div className="absolute inset-0 rounded-full border-2 border-violet-500 border-t-transparent animate-spin" />
+                          <div className="absolute inset-2 rounded-full bg-zinc-800 flex items-center justify-center">
+                            <Sparkles className="h-6 w-6 text-violet-400" />
+                          </div>
                         </div>
-                      </div>
-                      <p className="text-sm text-zinc-400">
+                      )}
+                      <p className="max-w-full truncate text-sm text-zinc-200">
                         {statusMessage || "Generating..."}
                       </p>
+                      {generationBadges.length > 0 && (
+                        <div className="mt-2 flex max-w-full flex-wrap justify-center gap-1">
+                          {generationBadges.map((badge) => (
+                            <span
+                              key={badge}
+                              className="rounded bg-black/50 px-1.5 py-0.5 text-[10px] text-zinc-300"
+                            >
+                              {badge}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                       {progress > 0 && (
                         <div className="w-32 h-1 bg-zinc-800 rounded-full mt-2 overflow-hidden">
                           <div
@@ -4177,6 +4536,14 @@ export function GenSpace() {
                           />
                         </div>
                       )}
+                      <button
+                        type="button"
+                        onClick={() => void cancel()}
+                        disabled={isCancelling}
+                        className="mt-3 rounded-md border border-white/15 bg-black/30 px-2 py-1 text-xs text-zinc-200 transition-colors hover:bg-black/50 disabled:cursor-wait disabled:opacity-60"
+                      >
+                        {isCancelling ? "Cancelling..." : "Cancel"}
+                      </button>
                     </div>
                   </div>
                 ))}

@@ -25,7 +25,7 @@ from model_profiles import get_video_profile, is_combination_supported, resolve_
 from model_profiles.profiles import AspectRatio, ModelProfile, ResolutionTier
 from services.wangp_bridge import WanGPBridge
 from services.reframe_wangp_mapping import ReframePadding, map_reframe_to_wangp
-from services.video_clip import extract_video_clip, probe_video_metadata
+from services.video_clip import extract_audio_clip, extract_video_clip, probe_video_metadata
 from server_utils.media_validation import (
     normalize_optional_path,
     validate_audio_file,
@@ -585,10 +585,12 @@ class VideoGenerationHandler(StateHandlerBase):
                 raise HTTPError(400, "REFRAME_CONTROL_VIDEO_REQUIRED")
 
         temp_clip_path: Path | None = None
+        temp_media_paths: list[Path] = []
         video_guide_outpainting: str | None = None
         video_guide_outpainting_ratio: str | None = None
         output_aspect_ratio = req.aspectRatio
         source_video_frame_count: int | None = None
+        input_media_duration: float | None = None
 
         try:
             profile = self._resolve_video_profile(req)
@@ -621,11 +623,50 @@ class VideoGenerationHandler(StateHandlerBase):
             )
             resolved_resolution_label = f"{resolved_width}x{resolved_height}"
 
+            trimmed_media_paths: dict[str, str] = {}
+            for media in req.inputMedia:
+                media_path = normalize_optional_path(media.path)
+                if not media_path or media.trimDuration is None:
+                    continue
+                if media.type == "audio":
+                    trimmed_path = extract_audio_clip(
+                        media_path,
+                        start_time=media.trimStartTime or 0.0,
+                        duration=media.trimDuration,
+                        output_dir=self._outputs_dir,
+                    )
+                else:
+                    trimmed_path = extract_video_clip(
+                        media_path,
+                        start_time=media.trimStartTime or 0.0,
+                        duration=media.trimDuration,
+                        output_dir=self._outputs_dir,
+                    )
+                temp_media_paths.append(trimmed_path)
+                trimmed_media_paths[media_path] = str(trimmed_path)
+                input_media_duration = media.trimDuration
+
+            if trimmed_media_paths:
+                if start_image_path in trimmed_media_paths:
+                    start_image_path = trimmed_media_paths[start_image_path]
+                if control_video_path in trimmed_media_paths:
+                    control_video_path = trimmed_media_paths[control_video_path]
+                if audio_path in trimmed_media_paths:
+                    audio_path = trimmed_media_paths[audio_path]
+
+            if input_media_duration is not None and not is_reframe and not req.shotPrompts:
+                duration = max(2, int(math.ceil(input_media_duration)))
+
             # continue_video holds a video in start_image_path, so validate as video
             is_start_video = False
             if start_image_path:
                 for media in req.inputMedia:
-                    if media.role == "continue_video" and normalize_optional_path(media.path) == start_image_path:
+                    original_media_path = normalize_optional_path(media.path)
+                    effective_media_path = trimmed_media_paths.get(
+                        original_media_path or "",
+                        original_media_path,
+                    )
+                    if media.role == "continue_video" and effective_media_path == start_image_path:
                         is_start_video = True
                         break
 
@@ -680,10 +721,28 @@ class VideoGenerationHandler(StateHandlerBase):
                         source_metadata.frame_count,
                         source_metadata.duration_seconds,
                     )
+            if source_video_frame_count is None and is_start_video and validated_start_image_path is not None:
+                source_metadata = probe_video_metadata(validated_start_image_path)
+                if source_metadata is not None:
+                    source_video_frame_count = source_metadata.frame_count
+                    logger.info(
+                        "Using continue-video frame count for WanGP video_length: frames=%s duration=%.3fs",
+                        source_metadata.frame_count,
+                        source_metadata.duration_seconds,
+                    )
 
             is_audio_video = False
             if audio_path:
-                if any(media.role in {"human_motion", "human_motion_pose", "depth", "canny_edges", "sdr_to_hdr", "control_video"} for media in req.inputMedia if normalize_optional_path(media.path) == audio_path):
+                if any(
+                    media.role
+                    in {"human_motion", "human_motion_pose", "depth", "canny_edges", "sdr_to_hdr", "control_video"}
+                    for media in req.inputMedia
+                    if trimmed_media_paths.get(
+                        normalize_optional_path(media.path) or "",
+                        normalize_optional_path(media.path),
+                    )
+                    == audio_path
+                ):
                     is_audio_video = True
 
             if audio_path:
@@ -702,6 +761,21 @@ class VideoGenerationHandler(StateHandlerBase):
                 steps = 8 if req.model.strip().lower() == "fast" else max(1, settings.pro_model.steps)
             seed = self._resolve_seed()
             default_settings = dict(profile.wangp_default_settings)
+            output_settings = settings.output_settings
+            default_settings.update(
+                {
+                    "video_output_codec": output_settings.video_codec,
+                    "video_container": output_settings.video_container,
+                    "audio_output_codec": output_settings.audio_codec,
+                    "image_output_codec": f"{output_settings.image_codec}_{output_settings.image_quality}"
+                    if output_settings.image_codec in {"jpeg", "webp"}
+                    else output_settings.image_codec,
+                    "metadata_type": output_settings.metadata_mode,
+                    "keep_intermediate_sliding_windows": 1
+                    if output_settings.keep_intermediate_sliding_windows
+                    else 0,
+                }
+            )
             if req.shotPrompts:
                 default_settings["activated_loras"] = [MULTI_SHOT_LORA_FILENAME]
                 default_settings["loras_multipliers"] = MULTI_SHOT_LORA_STRENGTH
@@ -756,6 +830,13 @@ class VideoGenerationHandler(StateHandlerBase):
                     temp_clip_path.unlink()
                 except OSError:
                     logger.warning("Could not remove temporary reframe clip: %s", temp_clip_path)
+            for media_path in temp_media_paths:
+                if not media_path.exists():
+                    continue
+                try:
+                    media_path.unlink()
+                except OSError:
+                    logger.warning("Could not remove temporary input clip: %s", media_path)
 
     @staticmethod
     def _resolve_video_profile(req: GenerateVideoRequest) -> ModelProfile:

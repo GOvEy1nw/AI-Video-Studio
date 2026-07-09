@@ -4,8 +4,17 @@ import { backendFetch } from "../lib/backend";
 
 interface GenerationState {
   isGenerating: boolean;
+  isCancelling: boolean;
   progress: number;
   statusMessage: string;
+  phaseIndex: number | null;
+  phaseCount: number | null;
+  currentStep: number | null;
+  totalSteps: number | null;
+  sectionIndex: number | null;
+  sectionCount: number | null;
+  statusDetail: string | null;
+  previewUrl: string | null;
   videoUrl: string | null;
   videoPath: string | null; // Original file path for upscaling
   imageUrl: string | null;
@@ -21,7 +30,21 @@ interface GenerationProgress {
   progress: number;
   currentStep: number | null;
   totalSteps: number | null;
+  phaseIndex?: number | null;
+  phaseCount?: number | null;
+  sectionIndex?: number | null;
+  sectionCount?: number | null;
+  statusDetail?: string | null;
+  previewUrl?: string | null;
 }
+
+type InputMediaRequest = {
+  path: string;
+  role: string;
+  type?: "image" | "video" | "audio";
+  trimStartTime?: number;
+  trimDuration?: number;
+};
 
 interface ReframeGenerateOptions {
   aspectMode: "1:1" | "16:9" | "9:16" | "custom";
@@ -54,7 +77,7 @@ interface UseGenerationReturn extends GenerationState {
     imagePath: string | null,
     settings: GenerationSettings,
     audioPath?: string | null,
-    inputMedia?: { path: string; role: string }[],
+    inputMedia?: InputMediaRequest[],
     useAudioTrack?: boolean,
     shotPrompts?: { seconds: number; prompt: string }[],
     reframe?: ReframeGenerateOptions,
@@ -62,9 +85,9 @@ interface UseGenerationReturn extends GenerationState {
   generateImage: (
     prompt: string,
     settings: GenerationSettings,
-    inputMedia?: { path: string; role: string }[],
+    inputMedia?: InputMediaRequest[],
   ) => Promise<void>;
-  cancel: () => void;
+  cancel: () => Promise<void>;
   reset: () => void;
 }
 
@@ -148,8 +171,17 @@ function getPhaseMessage(phase: string): string {
 export function useGeneration(): UseGenerationReturn {
   const [state, setState] = useState<GenerationState>({
     isGenerating: false,
+    isCancelling: false,
     progress: 0,
     statusMessage: "",
+    phaseIndex: null,
+    phaseCount: null,
+    currentStep: null,
+    totalSteps: null,
+    sectionIndex: null,
+    sectionCount: null,
+    statusDetail: null,
+    previewUrl: null,
     videoUrl: null,
     videoPath: null,
     imageUrl: null,
@@ -167,7 +199,7 @@ export function useGeneration(): UseGenerationReturn {
       imagePath: string | null,
       settings: GenerationSettings,
       audioPath?: string | null,
-      inputMedia?: { path: string; role: string }[],
+      inputMedia?: InputMediaRequest[],
       useAudioTrack?: boolean,
       shotPrompts?: { seconds: number; prompt: string }[],
       reframe?: ReframeGenerateOptions,
@@ -179,8 +211,17 @@ export function useGeneration(): UseGenerationReturn {
 
       setState({
         isGenerating: true,
+        isCancelling: false,
         progress: 0,
         statusMessage: statusMsg,
+        phaseIndex: null,
+        phaseCount: null,
+        currentStep: null,
+        totalSteps: null,
+        sectionIndex: null,
+        sectionCount: null,
+        statusDetail: null,
+        previewUrl: null,
         videoUrl: null,
         videoPath: null,
         imageUrl: null,
@@ -216,7 +257,7 @@ export function useGeneration(): UseGenerationReturn {
         }
         if (inputMedia && inputMedia.length > 0) {
           body.inputMedia = inputMedia.map((item) => {
-            let type = "image";
+            let type = item.type || "image";
             if (
               [
                 "control_video",
@@ -240,6 +281,8 @@ export function useGeneration(): UseGenerationReturn {
               type,
               path: item.path,
               role: item.role,
+              trimStartTime: item.trimStartTime,
+              trimDuration: item.trimDuration,
             };
           });
         }
@@ -267,7 +310,7 @@ export function useGeneration(): UseGenerationReturn {
               if (!shouldApplyPollingUpdates) return;
 
               let displayProgress = data.progress;
-              let statusMessage = getPhaseMessage(data.phase);
+              let statusMessage = data.statusDetail || getPhaseMessage(data.phase);
               const hasStructuredStepProgress =
                 data.currentStep !== null &&
                 data.totalSteps !== null &&
@@ -300,6 +343,14 @@ export function useGeneration(): UseGenerationReturn {
                 ...prev,
                 progress: displayProgress,
                 statusMessage,
+                phaseIndex: data.phaseIndex ?? null,
+                phaseCount: data.phaseCount ?? null,
+                currentStep: data.currentStep ?? null,
+                totalSteps: data.totalSteps ?? null,
+                sectionIndex: data.sectionIndex ?? null,
+                sectionCount: data.sectionCount ?? null,
+                statusDetail: data.statusDetail ?? null,
+                previewUrl: data.previewUrl ?? prev.previewUrl,
               }));
             }
           } catch {
@@ -334,8 +385,17 @@ export function useGeneration(): UseGenerationReturn {
 
           setState({
             isGenerating: false,
+            isCancelling: false,
             progress: 100,
             statusMessage: "Complete!",
+            phaseIndex: null,
+            phaseCount: null,
+            currentStep: null,
+            totalSteps: null,
+            sectionIndex: null,
+            sectionCount: null,
+            statusDetail: null,
+            previewUrl: null,
             videoUrl: fileUrl,
             videoPath: result.video_path, // Keep original path for API calls
             imageUrl: null,
@@ -348,6 +408,7 @@ export function useGeneration(): UseGenerationReturn {
           setState((prev) => ({
             ...prev,
             isGenerating: false,
+            isCancelling: false,
             statusMessage: "Cancelled",
           }));
         } else if (result.error) {
@@ -358,12 +419,14 @@ export function useGeneration(): UseGenerationReturn {
           setState((prev) => ({
             ...prev,
             isGenerating: false,
+            isCancelling: false,
             statusMessage: "Cancelled",
           }));
         } else {
           setState((prev) => ({
             ...prev,
             isGenerating: false,
+            isCancelling: false,
             error: error instanceof Error ? error.message : "Unknown error",
           }));
         }
@@ -378,33 +441,33 @@ export function useGeneration(): UseGenerationReturn {
   );
 
   const cancel = useCallback(async () => {
-    // Abort the fetch request
-    abortControllerRef.current?.abort();
-
-    // Also tell the backend to cancel
+    setState((prev) => ({
+      ...prev,
+      isCancelling: true,
+      statusMessage: "Cancelling...",
+    }));
     try {
       await backendFetch("/api/generate/cancel", { method: "POST" });
     } catch {
-      // Ignore errors from cancel request
+      setState((prev) => ({
+        ...prev,
+        isCancelling: false,
+        error: "Failed to cancel generation",
+      }));
     }
-
-    setState((prev) => ({
-      ...prev,
-      isGenerating: false,
-      statusMessage: "Cancelled",
-    }));
   }, []);
 
   const generateImage = useCallback(
     async (
       prompt: string,
       settings: GenerationSettings,
-      inputMedia?: { path: string; role: string }[],
+      inputMedia?: InputMediaRequest[],
     ) => {
       const numImages = settings.variations || 1;
 
       setState({
         isGenerating: true,
+        isCancelling: false,
         progress: 0,
         statusMessage:
           numImages > 1
@@ -417,6 +480,14 @@ export function useGeneration(): UseGenerationReturn {
         imageUrls: [],
         imagePaths: [],
         error: null,
+        phaseIndex: null,
+        phaseCount: null,
+        currentStep: null,
+        totalSteps: null,
+        sectionIndex: null,
+        sectionCount: null,
+        statusDetail: null,
+        previewUrl: null,
       });
 
       abortControllerRef.current = new AbortController();
@@ -444,8 +515,16 @@ export function useGeneration(): UseGenerationReturn {
               const totalImages = data.totalSteps || numImages;
               const phaseMessage = getPhaseMessage(data.phase);
               setState((prev) => ({
-                ...prev,
-                progress: data.progress,
+            ...prev,
+            progress: data.progress,
+            phaseIndex: data.phaseIndex ?? null,
+            phaseCount: data.phaseCount ?? null,
+            currentStep: data.currentStep ?? null,
+            totalSteps: data.totalSteps ?? null,
+            sectionIndex: data.sectionIndex ?? null,
+            sectionCount: data.sectionCount ?? null,
+            statusDetail: data.statusDetail ?? null,
+            previewUrl: data.previewUrl ?? prev.previewUrl,
                 statusMessage:
                   data.phase === "inference"
                     ? numImages > 1
@@ -524,6 +603,7 @@ export function useGeneration(): UseGenerationReturn {
 
             setState({
               isGenerating: false,
+              isCancelling: false,
               progress: 100,
               statusMessage: "Complete!",
               videoUrl: null,
@@ -533,12 +613,21 @@ export function useGeneration(): UseGenerationReturn {
               imageUrls: fileUrls, // All images
               imagePaths: rawPaths, // All image paths
               error: null,
+              phaseIndex: null,
+              phaseCount: null,
+              currentStep: null,
+              totalSteps: null,
+              sectionIndex: null,
+              sectionCount: null,
+              statusDetail: null,
+              previewUrl: null,
             });
           }
         } else if (result.status === "cancelled") {
           setState((prev) => ({
             ...prev,
             isGenerating: false,
+            isCancelling: false,
             statusMessage: "Cancelled",
           }));
         } else if (result.error) {
@@ -549,12 +638,14 @@ export function useGeneration(): UseGenerationReturn {
           setState((prev) => ({
             ...prev,
             isGenerating: false,
+            isCancelling: false,
             statusMessage: "Cancelled",
           }));
         } else {
           setState((prev) => ({
             ...prev,
             isGenerating: false,
+            isCancelling: false,
             error: error instanceof Error ? error.message : "Unknown error",
           }));
         }
@@ -570,8 +661,17 @@ export function useGeneration(): UseGenerationReturn {
   const reset = useCallback(() => {
     setState({
       isGenerating: false,
+      isCancelling: false,
       progress: 0,
       statusMessage: "",
+      phaseIndex: null,
+      phaseCount: null,
+      currentStep: null,
+      totalSteps: null,
+      sectionIndex: null,
+      sectionCount: null,
+      statusDetail: null,
+      previewUrl: null,
       videoUrl: null,
       videoPath: null,
       imageUrl: null,

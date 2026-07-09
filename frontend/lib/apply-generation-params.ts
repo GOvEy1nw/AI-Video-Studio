@@ -6,6 +6,9 @@ export type GenSpaceImageInput = {
   url: string
   role: string
   type?: 'image' | 'video' | 'audio'
+  trimStartTime?: number
+  trimDuration?: number
+  mediaDuration?: number
 }
 
 export type GenSpaceSettingsPatch = {
@@ -106,13 +109,27 @@ export function resolveInputMediaPath(
 }
 
 export function toStoredInputMediaEntry(
-  item: { url: string; role: string },
+  item: {
+    url: string
+    role: string
+    type?: 'image' | 'video' | 'audio'
+    trimStartTime?: number
+    trimDuration?: number
+    mediaDuration?: number
+  },
   projectAssets: Asset[],
-): { url: string; role: string; path?: string } {
+): NonNullable<GenerationParams['imageInputMedia']>[number] {
   const path = resolveInputMediaPath(item.url, projectAssets)
-  return path
-    ? { url: item.url, role: item.role, path }
-    : { url: item.url, role: item.role }
+  const entry: NonNullable<GenerationParams['imageInputMedia']>[number] = {
+    url: item.url,
+    role: item.role,
+  }
+  if (path) entry.path = path
+  if (item.type) entry.type = item.type
+  if (item.trimStartTime !== undefined) entry.trimStartTime = item.trimStartTime
+  if (item.trimDuration !== undefined) entry.trimDuration = item.trimDuration
+  if (item.mediaDuration !== undefined) entry.mediaDuration = item.mediaDuration
+  return entry
 }
 
 /** Repair generationParams input URLs when loading projects from localStorage. */
@@ -194,7 +211,10 @@ export function buildImageInputsFromParams(
         id: crypto.randomUUID(),
         url,
         role: item.role,
-        type: inferInputType(item.role),
+        type: item.type ?? inferInputType(item.role),
+        trimStartTime: item.trimStartTime,
+        trimDuration: item.trimDuration,
+        mediaDuration: item.mediaDuration,
       })
     }
   }

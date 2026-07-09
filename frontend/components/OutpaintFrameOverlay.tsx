@@ -404,7 +404,6 @@ export function OutpaintFrameOverlay({
         style={{
           left: outer.x + 8,
           top: outer.y + 8,
-          display: "none",
         }}
       >
         {formatPaddingLabel(padding)}

@@ -124,6 +124,7 @@ class AppHandler:
             settings_file=config.settings_file,
         )
         self.settings.load_settings(default_settings)
+        self.wangp_bridge.set_compile_enabled(self.state.app_settings.use_torch_compile)
 
         self.models = ModelsHandler(
             state=self.state,

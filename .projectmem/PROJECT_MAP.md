@@ -1,6 +1,6 @@
 # Project Map - AI Video Studio
 
-Status: Updated 2026-07-09 after Reframe gen mode (outpaint UI, zoom/pan UX, backend WanGP mapping).
+Status: Updated 2026-07-09 after Reframe/Retake prompt-bar integration, optional reframe prompts, and source-frame video_length handling.
 
 ## Purpose
 
@@ -58,6 +58,7 @@ Files, dialogs, ffmpeg, backend process management
 - `frontend/components/OutpaintFrameOverlay.tsx` - Draggable outpaint frame overlay: aspect chips (1:1/16:9/9:16/custom), zoom slider (preset modes), mirrored edge handles (custom), pan area, refresh reset, padding label.
 - `frontend/lib/reframe-outpaint.ts` - Reframe padding/layout math (fit, max aspect zoom, pan, mirrored expand, two-phase frame layout).
 - `frontend/components/VideoTrimPanel.tsx` - Shared trim UI extracted for Retake and Reframe panels.
+- `docs/REFRAME_MODE.md` - Current Reframe UX/backend contract: optional prompt, WanGP settings, source-frame video_length behavior.
 - `frontend/lib/media-import.ts` - GenSpace media ingestion (copy-into-project), gallery file import, input-to-gallery sync, duplicate filename handling.
 - `frontend/lib/gallery-filters.ts` - Gallery type/source/bin filter helpers and display filename inference.
 - `frontend/lib/asset-delete.ts` - Scoped project asset delete with media handle release before trash.
@@ -95,14 +96,16 @@ Files, dialogs, ffmpeg, backend process management
 
 ### Reframe gen mode (outpaint reframe)
 
-- **UI:** GenSpace mode `reframe` → `ReframePanel` (no prompt box). User picks aspect (1:1 / 16:9 / 9:16 / custom), trims clip, adjusts frame via overlay.
+- **UI:** GenSpace video mode has process dropdown `Generate` / `Reframe` / `Retake`. Reframe/Retake render inside the prompt bar so the gallery remains visible.
+- **Prompt:** Reframe shows an optional prompt textarea below the panel, placeholder `optional text prompt to drive outpainting...`; blank prompt submits `outpaint`.
 - **Preset aspects:** Zoom slider 0% = fit box (`computeFitPadding`), 100% = max expansion at target aspect (`computeMaxAspectZoomPadding` — e.g. 1:1→16:9 max is L/R 100%, T/B ~34%, not all edges 100%). Pan drag reframes video inside box.
 - **Custom:** Mirrored edge drag expands both sides on an axis; pan for fine reframe. Edge handles hidden in preset modes.
 - **Padding limits:** UI expand/zoom capped at 100% per edge; pan may redistribute up to 200% on one side internally (`MAX_PADDING_INTERNAL`).
 - **Reset:** Refresh button (after aspect chips) resets zoom to 0 and padding to fit (presets) or zero (custom) without changing aspect mode.
 - **Generate:** `use-generation.ts` sends `reframe` on POST `/api/generate` with padding, aspectMode, trim; `normalizeReframeForApi` clamps 0–200.
 - **Persistence:** `generationParams` stores reframe fields; gallery Apply prompt restores via `apply-generation-params.ts`.
-- **Backend:** `video_generation_handler` reframe branch → FFmpeg clip extract → `reframe_wangp_mapping.py` → WanGP `video_guide_outpainting*` + `video_prompt_type` `VG` + prompt `outpaint`.
+- **Backend:** `video_generation_handler` reframe branch → FFmpeg clip extract → `reframe_wangp_mapping.py` → WanGP `video_guide_outpainting*`, `video_prompt_type=VG`, `audio_prompt_type=K`, `force_fps=auto`, `sliding_window_overlap=33`.
+- **Video length:** Reframe probes extracted trim metadata and passes `video_length_frames`; `wangp_bridge` normalizes source frame count to WanGP `8n+1` `video_length` instead of using request FPS when metadata is available.
 - **API types:** `ReframeOptions`, `ReframePadding` in `api_types.py` — per-edge `le=200` required for pan >100% (100 rejects whole payload).
 
 ## Backend map
@@ -116,7 +119,7 @@ Files, dialogs, ffmpeg, backend process management
 - `backend/handlers/image_generation_handler.py` - WanGP image generation routing and profile validation.
 - `backend/handlers/video_generation_handler.py` - WanGP video generation routing, profile validation, **reframe/outpaint branch**.
 - `backend/services/reframe_wangp_mapping.py` - Maps reframe padding percentages to WanGP outpaint guide fields.
-- `backend/services/video_clip.py` - FFmpeg clip extraction for reframe trim window.
+- `backend/services/video_clip.py` - FFmpeg clip extraction for reframe trim window plus best-effort source video frame/duration metadata probing.
 - `backend/handlers/prompt_enhancement_handler.py` - WanGP prompt enhancement routing.
 - `backend/handlers/model_profiles_handler.py` - `GET /api/model-profiles`.
 - `backend/services/wangp_bridge.py` - WanGP API bridge for image/video manifest execution.
@@ -274,13 +277,14 @@ Then run scripts through the same direct pnpm entry if needed.
 1. `AGENTS_PRD.md`
 2. `AGENTS.md`
 3. `docs/MEDIA_LIBRARY_PLAN.md`
-4. `.projectmem/summary.md`
-5. `frontend/views/GenSpace.tsx`
-6. `frontend/lib/reframe-outpaint.ts` (reframe work)
-7. `frontend/components/ReframePanel.tsx` (reframe work)
-8. `frontend/lib/media-import.ts`
-9. `frontend/lib/gallery-filters.ts`
-10. `backend/architecture.md`
-11. `backend/services/reframe_wangp_mapping.py` (reframe work)
-12. `backend/model_profiles/profiles.py`
-13. `backend/services/wangp_bridge.py`
+4. `docs/REFRAME_MODE.md` (reframe work)
+5. `.projectmem/summary.md`
+6. `frontend/views/GenSpace.tsx`
+7. `frontend/lib/reframe-outpaint.ts` (reframe work)
+8. `frontend/components/ReframePanel.tsx` (reframe work)
+9. `frontend/lib/media-import.ts`
+10. `frontend/lib/gallery-filters.ts`
+11. `backend/architecture.md`
+12. `backend/services/reframe_wangp_mapping.py` (reframe work)
+13. `backend/model_profiles/profiles.py`
+14. `backend/services/wangp_bridge.py`

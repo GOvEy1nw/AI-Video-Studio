@@ -88,6 +88,7 @@ class FakeWanGPBridge:
     unavailable_reason: str | None = "WanGP bridge disabled in test"
     session_ready: bool = False
     preload_calls: int = 0
+    compile_enabled: bool = False
 
     video_calls: list[FakeWangpVideoCall] = field(default_factory=list)
     image_calls: list[FakeWangpImageCall] = field(default_factory=list)
@@ -112,6 +113,9 @@ class FakeWanGPBridge:
         if not self.available:
             raise RuntimeError(self.unavailable_reason or "WanGP bridge is unavailable")
         self.session_ready = True
+
+    def set_compile_enabled(self, enabled: bool) -> None:
+        self.compile_enabled = enabled
 
     def generate_video(
         self,

@@ -135,6 +135,15 @@ class GenerationProgress:
     progress: float
     current_step: int | None
     total_steps: int | None
+    phase_index: int | None = None
+    phase_count: int | None = None
+    section_index: int | None = None
+    section_count: int | None = None
+    status_detail: str | None = None
+    preview_url: str | None = None
+    download_current_file: str | None = None
+    download_current_file_progress: int | None = None
+    download_total_progress: int | None = None
 
 
 @dataclass

@@ -108,6 +108,15 @@ class GenerationProgressResponse(BaseModel):
     progress: int
     currentStep: int | None
     totalSteps: int | None
+    phaseIndex: int | None = None
+    phaseCount: int | None = None
+    sectionIndex: int | None = None
+    sectionCount: int | None = None
+    statusDetail: str | None = None
+    previewUrl: str | None = None
+    downloadCurrentFile: str | None = None
+    downloadCurrentFileProgress: int | None = None
+    downloadTotalProgress: int | None = None
 
 
 class ModelInfo(BaseModel):
@@ -329,6 +338,8 @@ class GenerateVideoInputMedia(BaseModel):
     id: str | None = None
     type: Literal["image", "video", "audio"] = "image"
     path: str
+    trimStartTime: float | None = Field(default=None, ge=0)
+    trimDuration: float | None = Field(default=None, gt=0)
     role: Literal[
         "start_image",
         "end_image",

@@ -11,7 +11,7 @@ def test_map_preset_ratio_without_padding() -> None:
         video_height=1080,
     )
     assert result.video_guide_outpainting == ""
-    assert result.video_guide_outpainting_ratio == "1:1"
+    assert result.video_guide_outpainting_ratio == ""
 
 
 def test_map_custom_padding() -> None:

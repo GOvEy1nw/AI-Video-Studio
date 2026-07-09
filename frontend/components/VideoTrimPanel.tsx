@@ -15,6 +15,9 @@ export interface VideoTrimState {
 interface VideoTrimPanelProps {
   videoUrl: string | null;
   videoDuration: number;
+  mediaKind?: "video" | "audio";
+  initialStartTime?: number;
+  initialDuration?: number;
   currentTime?: number;
   defaultToFullClip?: boolean;
   onTimeUpdate?: (currentTime: number) => void;
@@ -31,6 +34,9 @@ function formatTimecode(seconds: number): string {
 export function VideoTrimPanel({
   videoUrl,
   videoDuration,
+  mediaKind = "video",
+  initialStartTime,
+  initialDuration,
   currentTime,
   defaultToFullClip = false,
   onTimeUpdate,
@@ -66,10 +72,17 @@ export function VideoTrimPanel({
   useEffect(() => {
     if (!videoUrl || videoDuration <= 0 || initialSelectionAppliedRef.current)
       return;
-    setSelStart(0);
-    setSelEnd(defaultToFullClip ? videoDuration : Math.min(videoDuration, 5));
+    const start = Math.max(0, Math.min(videoDuration, initialStartTime ?? 0));
+    const end =
+      initialDuration && initialDuration > 0
+        ? Math.min(videoDuration, start + initialDuration)
+        : defaultToFullClip
+          ? videoDuration
+          : Math.min(videoDuration, 5);
+    setSelStart(start);
+    setSelEnd(Math.max(start, end));
     initialSelectionAppliedRef.current = true;
-  }, [videoDuration, videoUrl, defaultToFullClip]);
+  }, [videoDuration, videoUrl, defaultToFullClip, initialStartTime, initialDuration]);
 
   useEffect(() => {
     onSelectionChange?.(selStart, selEnd);
@@ -80,7 +93,13 @@ export function VideoTrimPanel({
   }, [internalCurrentTime, onTimeUpdate]);
 
   useEffect(() => {
-    if (!videoUrl || extractingRef.current || videoDuration <= 0) return;
+    if (
+      mediaKind !== "video" ||
+      !videoUrl ||
+      extractingRef.current ||
+      videoDuration <= 0
+    )
+      return;
     extractingRef.current = true;
 
     const extractThumbnails = async () => {
@@ -131,7 +150,7 @@ export function VideoTrimPanel({
     extractThumbnails().catch((err) => {
       logger.warn(`Filmstrip extraction failed: ${err}`);
     });
-  }, [videoUrl, videoDuration, thumbCount]);
+  }, [videoUrl, videoDuration, thumbCount, mediaKind]);
 
   const selStartRef = useRef(selStart);
   selStartRef.current = selStart;
@@ -256,7 +275,21 @@ export function VideoTrimPanel({
           onClick={handleFilmstripClick}
         >
           <div className="absolute inset-0 flex">
-            {thumbnails.length > 0 ? (
+            {mediaKind === "audio" ? (
+              <div className="h-full w-full bg-zinc-800">
+                <div className="flex h-full items-center gap-0.5 px-1">
+                  {Array.from({ length: 36 }, (_, index) => (
+                    <div
+                      key={index}
+                      className="flex-1 rounded-full bg-emerald-500/40"
+                      style={{
+                        height: `${20 + ((index * 17) % 60)}%`,
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : thumbnails.length > 0 ? (
               thumbnails.map((thumb, i) => (
                 <img
                   key={i}

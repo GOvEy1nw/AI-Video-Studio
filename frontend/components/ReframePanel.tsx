@@ -5,7 +5,6 @@ import {
   Pause,
   Volume2,
   VolumeX,
-  Loader2,
   Upload,
   Trash2,
   RefreshCw,
@@ -84,8 +83,6 @@ export function ReframePanel({
   initialAspectMode = "16:9",
   initialPadding = ZERO_PADDING,
   resetKey,
-  isProcessing = false,
-  processingStatus = "",
   fillHeight = false,
   onChange,
 }: ReframePanelProps) {
@@ -147,6 +144,21 @@ export function ReframePanel({
           padding,
         )
       : null;
+  const zoomDisabled =
+    aspectMode !== "custom" &&
+    videoWidth > 0 &&
+    videoHeight > 0 &&
+    (() => {
+      const fitPadding = computeFitPadding(
+        videoWidth,
+        videoHeight,
+        aspectMode,
+      );
+      return (
+        (fitPadding.left >= 100 && fitPadding.right >= 100) ||
+        (fitPadding.top >= 100 && fitPadding.bottom >= 100)
+      );
+    })();
 
   useEffect(() => {
     if (resetKey === undefined) return;
@@ -262,6 +274,7 @@ export function ReframePanel({
   const handleZoomChange = useCallback(
     (nextZoom: number) => {
       if (videoWidth <= 0 || videoHeight <= 0) return;
+      if (aspectMode !== "custom" && zoomDisabled) return;
       setZoom(nextZoom);
       if (aspectMode === "custom") {
         const side = Math.max(0, Math.min(100, Math.round(nextZoom)));
@@ -287,7 +300,7 @@ export function ReframePanel({
         return samePadding(current, next) ? current : next;
       });
     },
-    [aspectMode, videoHeight, videoWidth],
+    [aspectMode, videoHeight, videoWidth, zoomDisabled],
   );
 
   const handleReset = useCallback(() => {
@@ -434,7 +447,10 @@ export function ReframePanel({
               </button>
             </div>
 
-            <div className="flex w-[178px] items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-950/70 px-2.5 py-1.5">
+            <div
+              className={`flex w-[178px] items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-950/70 px-2.5 py-1.5 ${zoomDisabled ? "opacity-50" : ""}`}
+              title={zoomDisabled ? "Zoom has no effect for this aspect ratio" : undefined}
+            >
               <span className="text-[10px] font-medium text-zinc-400">
                 Zoom
               </span>
@@ -444,10 +460,11 @@ export function ReframePanel({
                 max={100}
                 step={1}
                 value={zoom}
+                disabled={zoomDisabled}
                 onChange={(event) =>
                   handleZoomChange(Number(event.target.value))
                 }
-                className="h-1 min-w-0 flex-1 cursor-pointer accent-blue-500"
+                className={`h-1 min-w-0 flex-1 accent-blue-500 ${zoomDisabled ? "cursor-not-allowed" : "cursor-pointer"}`}
               />
               <span className="w-8 text-right font-mono text-[10px] text-zinc-300">
                 {zoom}%

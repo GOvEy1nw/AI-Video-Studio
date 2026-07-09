@@ -5,7 +5,6 @@ import {
   Pause,
   Volume2,
   VolumeX,
-  Loader2,
   Upload,
   Trash2,
   RefreshCw,
@@ -47,8 +46,6 @@ export function RetakePanel({
   initialVideoPath,
   initialDuration,
   resetKey,
-  isProcessing = false,
-  processingStatus = "",
   fillHeight = false,
   onChange,
 }: RetakePanelProps) {
