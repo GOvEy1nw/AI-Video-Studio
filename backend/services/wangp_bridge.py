@@ -165,6 +165,8 @@ class WanGPBridge:
         video_prompt_type: str | None = None,
         image_prompt_type: str | None = None,
         audio_prompt_type: str | None = None,
+        video_guide_outpainting: str | None = None,
+        video_guide_outpainting_ratio: str | None = None,
     ) -> str:
         active_model_type = model_type if model_type is not None else self._video_model_type
         resolution = self._map_video_resolution(resolution_label, aspect_ratio)
@@ -215,6 +217,11 @@ class WanGPBridge:
         if control_video_path:
             settings["video_guide"] = str(Path(control_video_path).resolve())
             settings["video_prompt_type"] = video_prompt_type or "VG"
+
+        if video_guide_outpainting is not None:
+            settings["video_guide_outpainting"] = video_guide_outpainting
+        if video_guide_outpainting_ratio is not None:
+            settings["video_guide_outpainting_ratio"] = video_guide_outpainting_ratio
 
         if audio_path:
             settings["audio_guide"] = str(Path(audio_path).resolve())

@@ -15,6 +15,7 @@ import {
   ChevronUp,
   ChevronDown,
   Scissors,
+  Expand,
   Music,
   ChevronLeft,
   ChevronRight,
@@ -71,6 +72,7 @@ import { backendFetch } from "../lib/backend";
 import { fileUrlToPath } from "../lib/url-to-path";
 import { logger } from "../lib/logger";
 import { RetakePanel } from "../components/RetakePanel";
+import { ReframePanel, type ReframePanelState } from "../components/ReframePanel";
 import { SeedControl } from "../components/SeedControl";
 import { useAppSettings } from "../contexts/AppSettingsContext";
 import {
@@ -85,6 +87,8 @@ import {
   clampGenSpaceSeed,
   DEFAULT_GENSPACE_LOCKED_SEED,
 } from "../types/project";
+
+type GenSpaceMode = "image" | "video" | "retake" | "reframe";
 
 type ImageInputItem = {
   id: string;
@@ -135,6 +139,7 @@ function AssetCard({
   onDragStart,
   onCreateVideo,
   onRetake,
+  onReframe,
   onApplyPrompt,
   onToggleFavorite,
   onContextMenu,
@@ -145,6 +150,7 @@ function AssetCard({
   onDragStart: (e: React.DragEvent, asset: Asset) => void;
   onCreateVideo?: (asset: Asset) => void;
   onRetake?: (asset: Asset) => void;
+  onReframe?: (asset: Asset) => void;
   onApplyPrompt?: (asset: Asset) => void;
   onToggleFavorite?: () => void;
   onContextMenu?: (e: React.MouseEvent, asset: Asset) => void;
@@ -341,6 +347,16 @@ function AssetCard({
                   >
                     <Scissors className="h-3 w-3" />
                     Retake
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onReframe?.(asset);
+                    }}
+                    className="px-2.5 py-1.5 rounded-lg bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-colors flex items-center gap-1.5 text-xs font-medium whitespace-nowrap"
+                  >
+                    <Expand className="h-3 w-3" />
+                    Reframe
                   </button>
                   {canApplyPrompt && (
                     <button
@@ -913,9 +929,10 @@ function PromptBar({
   onMultiShotRowsChange,
   syncInputFileToGallery,
   mediaInputsExpandKey = 0,
+  reframeDurationSeconds,
 }: {
-  mode: "image" | "video" | "retake";
-  onModeChange: (mode: "image" | "video" | "retake") => void;
+  mode: GenSpaceMode;
+  onModeChange: (mode: GenSpaceMode) => void;
   prompt: string;
   onPromptChange: (prompt: string) => void;
   onGenerate: () => void;
@@ -959,6 +976,7 @@ function PromptBar({
   onMultiShotRowsChange: (rows: MultiShotRow[]) => void;
   syncInputFileToGallery?: (file: File) => Promise<string | null>;
   mediaInputsExpandKey?: number;
+  reframeDurationSeconds?: number;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const guideInputRef = useRef<HTMLInputElement>(null);
@@ -971,6 +989,8 @@ function PromptBar({
     null,
   );
   const isRetake = mode === "retake";
+  const isReframe = mode === "reframe";
+  const isPanelMode = isRetake || isReframe;
   const LOCAL_MAX_DURATION: Record<string, number> = {
     "540p": 20,
     "720p": 10,
@@ -1991,7 +2011,7 @@ function PromptBar({
       <div className="flex items-start">
         {/* Input image drop zone — video mode only (I2V) */}
         {mode === "video" &&
-          !isRetake &&
+          !isPanelMode &&
           !selectedVideoProfile?.inputMedia?.supportsImageInputs && (
             <div
               className={`relative w-10 h-10 mx-2 mt-2 rounded-lg border-2 border-dashed transition-colors flex items-center justify-center flex-shrink-0 cursor-pointer ${
@@ -2041,7 +2061,7 @@ function PromptBar({
 
         {/* Audio drop zone — only in video mode */}
         {mode === "video" &&
-          !isRetake &&
+          !isPanelMode &&
           !selectedVideoProfile?.inputMedia?.supportsImageInputs && (
             <div
               className={`relative w-10 h-10 mt-2 rounded-lg border-2 border-dashed transition-colors flex items-center justify-center flex-shrink-0 cursor-pointer ${
@@ -2092,7 +2112,7 @@ function PromptBar({
 
         {/* Prompt input - fills remaining width */}
         <div className="flex flex-1 min-w-0 flex-col py-1">
-          {!(mode === "video" && multiShotEnabled) && (
+          {!(mode === "video" && multiShotEnabled) && !isReframe && (
             <textarea
               value={prompt}
               onChange={(e) => onPromptChange(e.target.value)}
@@ -2107,7 +2127,7 @@ function PromptBar({
               className="w-full bg-transparent text-white text-sm placeholder:text-zinc-500 focus:outline-none px-2 py-2 resize-none overflow-y-auto h-[70px] leading-5"
             />
           )}
-          {!isRetake && (
+          {!isPanelMode && (
             <div
               className={`flex items-center gap-2 px-2 pb-0.5 pt-1 ${mode === "video" ? "justify-between" : "justify-end"}`}
             >
@@ -2154,7 +2174,7 @@ function PromptBar({
         </div>
       </div>
 
-      {mode === "video" && !isRetake && multiShotEnabled && (
+      {mode === "video" && !isPanelMode && multiShotEnabled && (
         <div className="max-h-72 overflow-y-auto border-t border-zinc-800/60 bg-zinc-950/30">
           <div className="flex items-center gap-2 border-b border-zinc-800/60 px-2 py-2">
             <div className="flex h-8 w-[82px] shrink-0 items-center justify-center rounded-md bg-zinc-800/80 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
@@ -2249,7 +2269,7 @@ function PromptBar({
         <SettingsDropdown
           title="MODE"
           value={mode}
-          onChange={(v) => onModeChange(v as "image" | "video" | "retake")}
+          onChange={(v) => onModeChange(v as GenSpaceMode)}
           options={[
             {
               value: "image",
@@ -2266,6 +2286,11 @@ function PromptBar({
               label: "Retake",
               icon: <Scissors className="h-4 w-4" />,
             },
+            {
+              value: "reframe",
+              label: "Reframe",
+              icon: <Expand className="h-4 w-4" />,
+            },
           ]}
           trigger={
             <>
@@ -2273,6 +2298,8 @@ function PromptBar({
                 <Image className="h-3.5 w-3.5" />
               ) : mode === "retake" ? (
                 <Scissors className="h-3.5 w-3.5" />
+              ) : mode === "reframe" ? (
+                <Expand className="h-3.5 w-3.5" />
               ) : (
                 <Video className="h-3.5 w-3.5" />
               )}
@@ -2281,7 +2308,9 @@ function PromptBar({
                   ? "Image"
                   : mode === "retake"
                     ? "Retake"
-                    : "Video"}
+                    : mode === "reframe"
+                      ? "Reframe"
+                      : "Video"}
               </span>
               <ChevronUp className="h-3 w-3 text-zinc-500" />
             </>
@@ -2293,6 +2322,48 @@ function PromptBar({
         {isRetake ? (
           <div className="text-[10px] text-zinc-500 pr-2">
             Trim in the panel above, then retake
+          </div>
+        ) : isReframe ? (
+          <div className="flex items-center gap-2">
+            {selectedVideoProfile ? (
+              <SettingsDropdown
+                title="MODEL"
+                value={selectedVideoProfile.id}
+                onChange={(v) =>
+                  onSettingsChange({ ...settings, videoProfileId: v })
+                }
+                options={videoModelOptions}
+                trigger={
+                  <>
+                    <LightricksIcon className="h-3.5 w-3.5" />
+                    <span className="text-zinc-300 font-medium">
+                      {selectedVideoProfile.displayName}
+                    </span>
+                  </>
+                }
+              />
+            ) : null}
+            <SettingsDropdown
+              title="RESOLUTION"
+              value={settings.videoResolution}
+              onChange={(v) =>
+                onSettingsChange({ ...settings, videoResolution: v })
+              }
+              options={videoResolutionOptions.map((value) => ({
+                value,
+                label: value,
+              }))}
+              trigger={
+                <>
+                  <Monitor className="h-3.5 w-3.5" />
+                  <span>{settings.videoResolution.replace("p", "")}</span>
+                </>
+              }
+            />
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-zinc-800/40 text-zinc-400">
+              <Clock className="h-3.5 w-3.5" />
+              <span>{(reframeDurationSeconds ?? 0).toFixed(1)}s auto</span>
+            </div>
           </div>
         ) : mode === "image" ? (
           <ImageModeControls
@@ -2531,7 +2602,7 @@ export function GenSpace() {
     updateProjectGenSpaceSeed,
   } = useProjects();
   const { updateSettings, isLoaded: appSettingsLoaded } = useAppSettings();
-  const [mode, setMode] = useState<"image" | "video" | "retake">("video");
+  const [mode, setMode] = useState<GenSpaceMode>("video");
   const [prompt, setPrompt] = useState("");
   const [inputImage, setInputImage] = useState<string | null>(null);
   const [imageInputs, setImageInputs] = useState<ImageInputItem[]>([]);
@@ -2589,6 +2660,10 @@ export function GenSpace() {
   const [settings, setSettings] = useState(() => ({
     ...DEFAULT_VIDEO_SETTINGS,
   }));
+  const reframeSubmissionRef = useRef<{
+    input: ReframePanelState;
+    settings: typeof settings;
+  } | null>(null);
 
   const {
     generate,
@@ -2632,6 +2707,27 @@ export function GenSpace() {
   }>({ videoUrl: null, videoPath: null, duration: undefined });
   const [activeRetakeSource, setActiveRetakeSource] =
     useState<GenSpaceRetakeSource | null>(null);
+
+  const [reframeInput, setReframeInput] = useState<ReframePanelState>({
+    videoUrl: null,
+    videoPath: null,
+    startTime: 0,
+    duration: 0,
+    videoDuration: 0,
+    videoWidth: 0,
+    videoHeight: 0,
+    aspectMode: "16:9",
+    padding: { top: 0, bottom: 0, left: 0, right: 0 },
+    ready: false,
+  });
+  const [reframePanelKey, setReframePanelKey] = useState(0);
+  const [reframeInitial, setReframeInitial] = useState<{
+    videoUrl: string | null;
+    videoPath: string | null;
+    duration?: number;
+    aspectMode?: ReframePanelState["aspectMode"];
+    padding?: ReframePanelState["padding"];
+  }>({ videoUrl: null, videoPath: null });
 
   // Handle incoming frame from the Video Editor for editing
   useEffect(() => {
@@ -2731,6 +2827,68 @@ export function GenSpace() {
     const generationKey = `${videoUrl}|${videoPath}`;
     if (persistedVideoKeyRef.current === generationKey) return;
     persistedVideoKeyRef.current = generationKey;
+
+    const reframeSubmission = reframeSubmissionRef.current;
+    if (reframeSubmission) {
+      reframeSubmissionRef.current = null;
+      const usedInput = reframeSubmission.input;
+      const savedVideoSettings = reframeSubmission.settings;
+      (async () => {
+        try {
+          const copied = await copyToAssetFolder(videoPath, currentProjectId);
+          const finalPath = copied?.path ?? videoPath;
+          const finalUrl = copied?.url ?? videoUrl;
+          addAsset(currentProjectId, {
+            type: "video",
+            path: finalPath,
+            url: finalUrl,
+            prompt: "outpaint",
+            resolution: savedVideoSettings.videoResolution,
+            duration: usedInput.duration,
+            source: "generated",
+            generationParams: {
+              mode: "reframe",
+              prompt: "outpaint",
+              model: savedVideoSettings.model,
+              videoProfileId: savedVideoSettings.videoProfileId,
+              duration: usedInput.duration,
+              resolution: savedVideoSettings.videoResolution,
+              fps: savedVideoSettings.fps,
+              audio: false,
+              cameraMotion: "none",
+              reframeAspectMode: usedInput.aspectMode,
+              reframePadding: usedInput.padding,
+              reframeStartTime: usedInput.startTime,
+              reframeDuration: usedInput.duration,
+              reframeVideoPath: usedInput.videoPath ?? undefined,
+              imageInputMedia: usedInput.videoPath
+                ? [
+                    {
+                      url: usedInput.videoUrl ?? "",
+                      role: "control_video",
+                      path: usedInput.videoPath,
+                    },
+                  ]
+                : undefined,
+            },
+            takes: [
+              {
+                url: finalUrl,
+                path: finalPath,
+                createdAt: Date.now(),
+              },
+            ],
+            activeTakeIndex: 0,
+          });
+          reset();
+          setMode("video");
+        } catch (err) {
+          persistedVideoKeyRef.current = null;
+          logger.error(`Failed to persist reframe asset: ${err}`);
+        }
+      })();
+      return;
+    }
 
     const genMode = inputAudio
       ? "audio-to-video"
@@ -2976,6 +3134,48 @@ export function GenSpace() {
   ]);
 
   const handleGenerate = async () => {
+    if (mode === "reframe") {
+      if (!reframeInput.videoPath || reframeInput.duration < 2) return;
+      const reframeSettings = {
+        ...settings,
+        duration: Math.max(2, Math.ceil(reframeInput.duration)),
+      };
+      setSettings(reframeSettings);
+      reframeSubmissionRef.current = {
+        input: reframeInput,
+        settings: reframeSettings,
+      };
+      setLastPrompt("outpaint");
+      await generate(
+        "outpaint",
+        null,
+        {
+          model: reframeSettings.model as "fast" | "pro",
+          videoProfileId: reframeSettings.videoProfileId,
+          duration: reframeSettings.duration,
+          videoResolution: reframeSettings.videoResolution,
+          fps: reframeSettings.fps,
+          audio: false,
+          cameraMotion: "none",
+          aspectRatio: reframeSettings.aspectRatio,
+          imageResolution: reframeSettings.imageResolution,
+          imageAspectRatio: reframeSettings.aspectRatio,
+          imageSteps: reframeSettings.imageSteps,
+        },
+        null,
+        [{ path: reframeInput.videoPath, role: "control_video" }],
+        false,
+        undefined,
+        {
+          aspectMode: reframeInput.aspectMode,
+          padding: reframeInput.padding,
+          controlVideoStartTime: reframeInput.startTime,
+          controlVideoDuration: reframeInput.duration,
+        },
+      );
+      return;
+    }
+
     if (mode === "retake") {
       if (!retakeInput.videoPath || retakeInput.duration < 2) return;
       retakeSubmissionRef.current = {
@@ -3118,6 +3318,7 @@ export function GenSpace() {
     if (
       !trimmedPrompt ||
       mode === "retake" ||
+      mode === "reframe" ||
       promptGenerating ||
       isEnhancingPrompt
     )
@@ -3327,6 +3528,17 @@ export function GenSpace() {
     setRetakePanelKey((prev) => prev + 1);
   };
 
+  const handleReframe = (videoAsset: Asset) => {
+    setMode("reframe");
+    setPrompt("");
+    setReframeInitial({
+      videoUrl: videoAsset.url,
+      videoPath: videoAsset.path,
+      duration: videoAsset.duration,
+    });
+    setReframePanelKey((prev) => prev + 1);
+  };
+
   const handleApplyPrompt = useCallback(
     (asset: Asset) => {
       const params = asset.generationParams;
@@ -3366,6 +3578,16 @@ export function GenSpace() {
         });
         setRetakePanelKey((prev) => prev + 1);
       }
+      if (nextMode === "reframe") {
+        setReframeInitial({
+          videoUrl: asset.url,
+          videoPath: asset.path,
+          duration: asset.duration ?? params.reframeDuration,
+          aspectMode: params.reframeAspectMode,
+          padding: params.reframePadding,
+        });
+        setReframePanelKey((prev) => prev + 1);
+      }
     },
     [currentProject?.assets],
   );
@@ -3399,13 +3621,23 @@ export function GenSpace() {
   ]);
 
   const isRetakeMode = mode === "retake";
-  const canSubmit = isRetakeMode
+  const isReframeMode = mode === "reframe";
+  const isPanelMode = isRetakeMode || isReframeMode;
+  const canSubmit = isReframeMode
+    ? reframeInput.ready && !!reframeInput.videoPath && !isGenerating
+    : isRetakeMode
     ? retakeInput.ready && !!retakeInput.videoPath && !isRetaking
     : mode === "video" && multiShotEnabled
       ? multiShotRows.every((row) => row.prompt.trim())
       : !!prompt.trim();
-  const promptButtonLabel = isRetakeMode ? "Retake" : "Generate";
-  const promptButtonIcon = isRetakeMode ? (
+  const promptButtonLabel = isReframeMode
+    ? "Reframe"
+    : isRetakeMode
+      ? "Retake"
+      : "Generate";
+  const promptButtonIcon = isReframeMode ? (
+    <Expand className="h-3.5 w-3.5" />
+  ) : isRetakeMode ? (
     <Scissors className="h-3.5 w-3.5" />
   ) : (
     <Sparkles
@@ -3544,17 +3776,17 @@ export function GenSpace() {
   return (
     <div
       className="h-full relative bg-zinc-950"
-      onDragEnter={mode !== "retake" ? handleGalleryDragEnter : undefined}
-      onDragOver={mode !== "retake" ? handleGalleryDragOver : undefined}
-      onDragLeave={mode !== "retake" ? handleGalleryDragLeave : undefined}
-      onDrop={mode !== "retake" ? handleGalleryDrop : undefined}
+      onDragEnter={!isPanelMode ? handleGalleryDragEnter : undefined}
+      onDragOver={!isPanelMode ? handleGalleryDragOver : undefined}
+      onDragLeave={!isPanelMode ? handleGalleryDragLeave : undefined}
+      onDrop={!isPanelMode ? handleGalleryDrop : undefined}
     >
-      {mode !== "retake" && galleryToast && (
+      {!isPanelMode && galleryToast && (
         <div className="absolute top-6 left-1/2 z-30 -translate-x-1/2 rounded-lg border border-zinc-700 bg-zinc-900/95 px-4 py-2 text-sm text-zinc-200 shadow-xl">
           {galleryToast}
         </div>
       )}
-      {mode !== "retake" && isGalleryDragOver && (
+      {!isPanelMode && isGalleryDragOver && (
         <div className="pointer-events-none absolute inset-4 z-20 flex items-center justify-center rounded-xl border-2 border-dashed border-violet-400/70 bg-violet-500/10">
           <p className="text-sm font-medium text-violet-200">
             Drop image, video, or audio files to add to gallery
@@ -3562,7 +3794,7 @@ export function GenSpace() {
         </div>
       )}
       {/* Empty state */}
-      {mode !== "retake" && assets.length === 0 && !isGenerating && (
+      {!isPanelMode && assets.length === 0 && !isGenerating && (
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
           <div className="w-24 h-24 rounded-2xl border-2 border-dashed border-zinc-700 flex items-center justify-center mb-4">
             <Sparkles className="h-10 w-10 text-zinc-600" />
@@ -3578,7 +3810,7 @@ export function GenSpace() {
       )}
 
       {/* No favorites empty state */}
-      {mode !== "retake" &&
+      {!isPanelMode &&
         showFavorites &&
         filteredAssets.length === 0 &&
         assets.length > 0 && (
@@ -3594,7 +3826,7 @@ export function GenSpace() {
         )}
 
       {/* No filter matches empty state */}
-      {mode !== "retake" &&
+      {!isPanelMode &&
         !showFavorites &&
         selectedBin !== null &&
         filteredAssets.length === 0 &&
@@ -3611,7 +3843,7 @@ export function GenSpace() {
           </div>
         )}
 
-      {mode !== "retake" &&
+      {!isPanelMode &&
         !showFavorites &&
         selectedBin === null &&
         galleryFilterActive &&
@@ -3630,7 +3862,7 @@ export function GenSpace() {
         )}
 
       {/* Assets area — full width, no background, above the prompt bar */}
-      {mode !== "retake" && (assets.length > 0 || isGenerating) && (
+      {!isPanelMode && (assets.length > 0 || isGenerating) && (
         <div className="absolute inset-x-0 top-0 bottom-0 flex flex-col px-4 pt-4">
           {/* Top bar — filter + favorites + bins left, view right */}
           <div className="flex items-center justify-between gap-3 pb-2">
@@ -3854,6 +4086,7 @@ export function GenSpace() {
                     onContextMenu={handleAssetContextMenu}
                     onCreateVideo={handleCreateVideo}
                     onRetake={handleRetake}
+                    onReframe={handleReframe}
                     onApplyPrompt={handleApplyPrompt}
                     onToggleFavorite={() =>
                       currentProjectId &&
@@ -3883,6 +4116,23 @@ export function GenSpace() {
             isProcessing={isRetaking}
             processingStatus={retakeStatus}
             onChange={(data) => setRetakeInput(data)}
+          />
+        </div>
+      )}
+
+      {mode === "reframe" && (
+        <div className="absolute inset-x-0 top-0 bottom-[160px] px-4 pt-4 pb-4 flex flex-col overflow-hidden">
+          <ReframePanel
+            initialVideoUrl={reframeInitial.videoUrl}
+            initialVideoPath={reframeInitial.videoPath}
+            initialDuration={reframeInitial.duration}
+            initialAspectMode={reframeInitial.aspectMode}
+            initialPadding={reframeInitial.padding}
+            resetKey={reframePanelKey}
+            fillHeight
+            isProcessing={isGenerating}
+            processingStatus={statusMessage}
+            onChange={(data) => setReframeInput(data)}
           />
         </div>
       )}
@@ -3923,6 +4173,7 @@ export function GenSpace() {
           onMultiShotRowsChange={setMultiShotRows}
           syncInputFileToGallery={syncInputFileToGallery}
           mediaInputsExpandKey={mediaInputsExpandKey}
+          reframeDurationSeconds={reframeInput.duration}
         />
       </div>
 

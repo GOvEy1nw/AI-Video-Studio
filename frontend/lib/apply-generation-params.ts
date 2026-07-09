@@ -307,8 +307,9 @@ export function resolveLegacyInputMedia(
 
 export function genSpaceModeFromParams(
   params: GenerationParams,
-): 'image' | 'video' | 'retake' {
+): 'image' | 'video' | 'retake' | 'reframe' {
   if (params.mode === 'text-to-image') return 'image'
   if (params.mode === 'retake') return 'retake'
+  if (params.mode === 'reframe') return 'reframe'
   return 'video'
 }

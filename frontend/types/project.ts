@@ -2,7 +2,7 @@
 
 // Parameters needed to regenerate a shot
 export interface GenerationParams {
-  mode: 'text-to-video' | 'image-to-video' | 'audio-to-video' | 'text-to-image' | 'retake'
+  mode: 'text-to-video' | 'image-to-video' | 'audio-to-video' | 'text-to-image' | 'retake' | 'reframe'
   prompt: string
   model: string
   duration: number
@@ -24,6 +24,11 @@ export interface GenerationParams {
   retakeStartTime?: number
   retakeDuration?: number
   retakeMode?: string
+  reframeAspectMode?: '1:1' | '16:9' | '9:16' | 'custom'
+  reframePadding?: { top: number; bottom: number; left: number; right: number }
+  reframeStartTime?: number
+  reframeDuration?: number
+  reframeVideoPath?: string
 }
 
 // A single "take" (version) of a generated asset

@@ -358,6 +358,20 @@ def _default_video_shot_prompts() -> list[GenerateVideoShotPrompt]:
     return []
 
 
+class ReframePadding(BaseModel):
+    top: int = Field(ge=0, le=200)
+    bottom: int = Field(ge=0, le=200)
+    left: int = Field(ge=0, le=200)
+    right: int = Field(ge=0, le=200)
+
+
+class ReframeOptions(BaseModel):
+    aspectMode: Literal["1:1", "16:9", "9:16", "custom"]
+    padding: ReframePadding
+    controlVideoStartTime: float = Field(ge=0)
+    controlVideoDuration: float = Field(gt=0)
+
+
 class GenerateVideoRequest(BaseModel):
     prompt: str = ""
     resolution: str = "540p"
@@ -375,11 +389,12 @@ class GenerateVideoRequest(BaseModel):
     videoPromptType: str | None = None
     useAudioTrack: bool = True
     shotPrompts: list[GenerateVideoShotPrompt] = Field(default_factory=_default_video_shot_prompts)
+    reframe: ReframeOptions | None = None
 
     @model_validator(mode="after")
     def validate_prompt_or_shots(self) -> "GenerateVideoRequest":
-        if not self.prompt.strip() and not self.shotPrompts:
-            raise ValueError("prompt is required unless shotPrompts are provided")
+        if not self.prompt.strip() and not self.shotPrompts and self.reframe is None:
+            raise ValueError("prompt is required unless shotPrompts or reframe are provided")
         return self
 
 

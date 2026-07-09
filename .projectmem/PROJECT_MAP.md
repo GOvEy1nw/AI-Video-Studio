@@ -1,6 +1,6 @@
 # Project Map - AI Video Studio
 
-Status: Updated 2026-07-08 after GenSpace media library plan phases A–D (gallery import, filters, bins, list view).
+Status: Updated 2026-07-09 after Reframe gen mode (outpaint UI, zoom/pan UX, backend WanGP mapping).
 
 ## Purpose
 
@@ -53,7 +53,11 @@ Files, dialogs, ffmpeg, backend process management
 
 ### Primary files
 
-- `frontend/views/GenSpace.tsx` - QuickGen surface for image/video/retake modes, prompt bar, profile-driven controls, media input strip, gallery with filters/bins/list view, asset persistence.
+- `frontend/views/GenSpace.tsx` - QuickGen surface for image/video/retake/**reframe** modes, prompt bar, profile-driven controls, media input strip, gallery with filters/bins/list view, asset persistence.
+- `frontend/components/ReframePanel.tsx` - Reframe mode panel: video preview, trim (`VideoTrimPanel`), zoom/pan overlay, emits `ReframePanelState` to GenSpace.
+- `frontend/components/OutpaintFrameOverlay.tsx` - Draggable outpaint frame overlay: aspect chips (1:1/16:9/9:16/custom), zoom slider (preset modes), mirrored edge handles (custom), pan area, refresh reset, padding label.
+- `frontend/lib/reframe-outpaint.ts` - Reframe padding/layout math (fit, max aspect zoom, pan, mirrored expand, two-phase frame layout).
+- `frontend/components/VideoTrimPanel.tsx` - Shared trim UI extracted for Retake and Reframe panels.
 - `frontend/lib/media-import.ts` - GenSpace media ingestion (copy-into-project), gallery file import, input-to-gallery sync, duplicate filename handling.
 - `frontend/lib/gallery-filters.ts` - Gallery type/source/bin filter helpers and display filename inference.
 - `frontend/lib/asset-delete.ts` - Scoped project asset delete with media handle release before trash.
@@ -89,6 +93,18 @@ Files, dialogs, ffmpeg, backend process management
 - **Filters:** Type (image/video/audio) + source (generated/uploaded) as blue/grey toggle chips; combines with favorites and bin selection.
 - **Bins:** `Asset.bin` string labels; shared with video editor; create/rename/delete, drag or context menu assign. Phase E mini picker cancelled.
 
+### Reframe gen mode (outpaint reframe)
+
+- **UI:** GenSpace mode `reframe` → `ReframePanel` (no prompt box). User picks aspect (1:1 / 16:9 / 9:16 / custom), trims clip, adjusts frame via overlay.
+- **Preset aspects:** Zoom slider 0% = fit box (`computeFitPadding`), 100% = max expansion at target aspect (`computeMaxAspectZoomPadding` — e.g. 1:1→16:9 max is L/R 100%, T/B ~34%, not all edges 100%). Pan drag reframes video inside box.
+- **Custom:** Mirrored edge drag expands both sides on an axis; pan for fine reframe. Edge handles hidden in preset modes.
+- **Padding limits:** UI expand/zoom capped at 100% per edge; pan may redistribute up to 200% on one side internally (`MAX_PADDING_INTERNAL`).
+- **Reset:** Refresh button (after aspect chips) resets zoom to 0 and padding to fit (presets) or zero (custom) without changing aspect mode.
+- **Generate:** `use-generation.ts` sends `reframe` on POST `/api/generate` with padding, aspectMode, trim; `normalizeReframeForApi` clamps 0–200.
+- **Persistence:** `generationParams` stores reframe fields; gallery Apply prompt restores via `apply-generation-params.ts`.
+- **Backend:** `video_generation_handler` reframe branch → FFmpeg clip extract → `reframe_wangp_mapping.py` → WanGP `video_guide_outpainting*` + `video_prompt_type` `VG|` + prompt `outpaint`.
+- **API types:** `ReframeOptions`, `ReframePadding` in `api_types.py` — per-edge `le=200` required for pan >100% (100 rejects whole payload).
+
 ## Backend map
 
 ### Primary files
@@ -98,7 +114,9 @@ Files, dialogs, ffmpeg, backend process management
 - `backend/app_handler.py` - composition root for handlers, state, services.
 - `backend/api_types.py` - Pydantic request/response models.
 - `backend/handlers/image_generation_handler.py` - WanGP image generation routing and profile validation.
-- `backend/handlers/video_generation_handler.py` - WanGP video generation routing and profile validation.
+- `backend/handlers/video_generation_handler.py` - WanGP video generation routing, profile validation, **reframe/outpaint branch**.
+- `backend/services/reframe_wangp_mapping.py` - Maps reframe padding percentages to WanGP outpaint guide fields.
+- `backend/services/video_clip.py` - FFmpeg clip extraction for reframe trim window.
 - `backend/handlers/prompt_enhancement_handler.py` - WanGP prompt enhancement routing.
 - `backend/handlers/model_profiles_handler.py` - `GET /api/model-profiles`.
 - `backend/services/wangp_bridge.py` - WanGP API bridge for image/video manifest execution.
@@ -183,7 +201,8 @@ Profile response includes:
 - `backend/tests/conftest.py` wires a fresh `AppHandler` per test.
 - `enable_wangp` fixture turns on WanGP path and yields `FakeWanGPBridge`.
 - `backend/tests/test_model_profiles.py` covers profile shape, endpoint response, availability, image input routing, and profile generation routing.
-- `backend/tests/test_generation.py` covers video/image generation behavior through fake WanGP.
+- `backend/tests/test_generation.py` covers video/image generation behavior through fake WanGP (includes reframe branches).
+- `backend/tests/test_reframe_wangp_mapping.py` covers padding → WanGP outpaint field mapping.
 - `backend/tests/test_wangp_bridge.py` covers bridge mapping behavior.
 - `backend/tests/test_pyright.py` enforces pyright strict mode.
 
@@ -233,6 +252,7 @@ Then run scripts through the same direct pnpm entry if needed.
 | Phase 4.41 | WanGP prompt enhancement for image/video modes                                                                            | Complete    |
 | Phase 4.42 | Video multi-shot prompt rows with relayed WanGP prompt formatting                                                         | Complete    |
 | Media A–D | GenSpace media library: import, gallery filters, bins, list view (`docs/MEDIA_LIBRARY_PLAN.md`)                          | Complete    |
+| Reframe   | Outpaint reframe mode: trim, aspect/zoom/pan UI, backend WanGP outpaint mapping                                          | Complete    |
 | Phase 5   | LoRA MVP                                                                                                                  | Pending     |
 | Phase 6   | QuickGen image polish                                                                                                     | Pending     |
 | Phase 7   | Video input capabilities (start/end/control/source video)                                                                 | Pending     |
@@ -242,6 +262,7 @@ Then run scripts through the same direct pnpm entry if needed.
 ## Next work
 
 - Test and polish multi-shot video prompt behavior against real WanGP output.
+- Manual QA reframe against real WanGP (aspect fit, max zoom, pan >100%, custom mirrored edges).
 - Add video start frame / end frame / source video / control video UI and backend mapping from existing LTX2 raw metadata.
 - Add LoRA folder detection, selection, strength, and metadata.
 - Improve model availability/missing-model UX.
@@ -255,8 +276,11 @@ Then run scripts through the same direct pnpm entry if needed.
 3. `docs/MEDIA_LIBRARY_PLAN.md`
 4. `.projectmem/summary.md`
 5. `frontend/views/GenSpace.tsx`
-6. `frontend/lib/media-import.ts`
-7. `frontend/lib/gallery-filters.ts`
-8. `backend/architecture.md`
-9. `backend/model_profiles/profiles.py`
-10. `backend/services/wangp_bridge.py`
+6. `frontend/lib/reframe-outpaint.ts` (reframe work)
+7. `frontend/components/ReframePanel.tsx` (reframe work)
+8. `frontend/lib/media-import.ts`
+9. `frontend/lib/gallery-filters.ts`
+10. `backend/architecture.md`
+11. `backend/services/reframe_wangp_mapping.py` (reframe work)
+12. `backend/model_profiles/profiles.py`
+13. `backend/services/wangp_bridge.py`

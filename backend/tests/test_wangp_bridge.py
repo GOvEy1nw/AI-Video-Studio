@@ -111,6 +111,42 @@ def test_generate_video_forwards_default_lora_settings() -> None:
     assert captured["settings"]["loras_multipliers"] == "1.0"
 
 
+def test_generate_video_forwards_outpainting_settings() -> None:
+    bridge = _make_bridge()
+    captured: dict[str, object] = {}
+
+    def fake_run_manifest(*, manifest, media_suffixes, on_progress, is_cancelled):  # type: ignore[no-untyped-def]
+        captured["settings"] = manifest[0]["params"]
+        return ["E:/tmp/out.mp4"]
+
+    bridge._run_manifest = fake_run_manifest  # type: ignore[method-assign]
+
+    bridge.generate_video(
+        prompt="outpaint",
+        resolution_label="540p",
+        aspect_ratio="16:9",
+        duration_seconds=5,
+        fps=24,
+        steps=8,
+        seed=123,
+        camera_motion="none",
+        negative_prompt="",
+        image_path=None,
+        audio_path=None,
+        on_progress=lambda *_args: None,
+        is_cancelled=lambda: False,
+        control_video_path="E:/tmp/guide.mp4",
+        video_prompt_type="VG|",
+        video_guide_outpainting="35 70 40 30",
+        video_guide_outpainting_ratio="",
+    )
+
+    settings = captured["settings"]
+    assert settings["video_guide_outpainting"] == "35 70 40 30"
+    assert settings["video_guide_outpainting_ratio"] == ""
+    assert settings["video_prompt_type"] == "VG|"
+
+
 def test_bridge_prefers_root_wgp_config_when_present(tmp_path: Path) -> None:
     root = tmp_path / "wangp-root"
     root.mkdir()

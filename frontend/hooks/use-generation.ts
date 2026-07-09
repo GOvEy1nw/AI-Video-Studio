@@ -23,8 +23,31 @@ interface GenerationProgress {
   totalSteps: number | null
 }
 
+interface ReframeGenerateOptions {
+  aspectMode: '1:1' | '16:9' | '9:16' | 'custom'
+  padding: { top: number; bottom: number; left: number; right: number }
+  controlVideoStartTime: number
+  controlVideoDuration: number
+}
+
+function clampApiPadding(value: number): number {
+  return Math.max(0, Math.min(200, Math.round(value)))
+}
+
+function normalizeReframeForApi(reframe: ReframeGenerateOptions): ReframeGenerateOptions {
+  return {
+    ...reframe,
+    padding: {
+      top: clampApiPadding(reframe.padding.top),
+      bottom: clampApiPadding(reframe.padding.bottom),
+      left: clampApiPadding(reframe.padding.left),
+      right: clampApiPadding(reframe.padding.right),
+    },
+  }
+}
+
 interface UseGenerationReturn extends GenerationState {
-  generate: (prompt: string, imagePath: string | null, settings: GenerationSettings, audioPath?: string | null, inputMedia?: { path: string; role: string }[], useAudioTrack?: boolean, shotPrompts?: { seconds: number; prompt: string }[]) => Promise<void>
+  generate: (prompt: string, imagePath: string | null, settings: GenerationSettings, audioPath?: string | null, inputMedia?: { path: string; role: string }[], useAudioTrack?: boolean, shotPrompts?: { seconds: number; prompt: string }[], reframe?: ReframeGenerateOptions) => Promise<void>
   generateImage: (prompt: string, settings: GenerationSettings, inputMedia?: { path: string; role: string }[]) => Promise<void>
   cancel: () => void
   reset: () => void
@@ -124,6 +147,7 @@ export function useGeneration(): UseGenerationReturn {
     inputMedia?: { path: string; role: string }[],
     useAudioTrack?: boolean,
     shotPrompts?: { seconds: number; prompt: string }[],
+    reframe?: ReframeGenerateOptions,
   ) => {
     const statusMsg = settings.model === 'pro'
       ? 'Loading Pro model & generating...'
@@ -183,6 +207,11 @@ export function useGeneration(): UseGenerationReturn {
       }
       if (shotPrompts && shotPrompts.length > 0) {
         body.shotPrompts = shotPrompts
+      }
+      if (reframe) {
+        body.prompt = 'outpaint'
+        body.videoPromptType = 'VG|'
+        body.reframe = normalizeReframeForApi(reframe)
       }
 
       // Poll for real progress from backend with time-based interpolation

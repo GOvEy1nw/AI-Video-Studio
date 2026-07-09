@@ -263,6 +263,164 @@ class TestGenerate:
         assert call.audio_path == str(audio)
         assert call.video_prompt_type == "VG"
 
+    def test_reframe_happy_path(
+        self, client, enable_wangp: FakeWanGPBridge, tmp_path: Path, monkeypatch
+    ):
+        video = tmp_path / "video.mp4"
+        video.write_bytes(b"fake-video")
+        clipped = tmp_path / "clipped.mp4"
+        clipped.write_bytes(b"fake-video")
+
+        def fake_extract(
+            source_path: Path,
+            *,
+            start_time: float,
+            duration: float,
+            output_dir: Path,
+        ) -> Path:
+            del source_path, start_time, duration, output_dir
+            return clipped
+
+        monkeypatch.setattr(
+            "handlers.video_generation_handler.extract_video_clip",
+            fake_extract,
+        )
+
+        r = client.post(
+            "/api/generate",
+            json={
+                "prompt": "",
+                "resolution": "540p",
+                "modelProfileId": "ltx2_22b_distilled",
+                "duration": "5",
+                "fps": "24",
+                "cameraMotion": "none",
+                "inputMedia": [
+                    {"role": "control_video", "path": str(video), "type": "video"},
+                ],
+                "reframe": {
+                    "aspectMode": "1:1",
+                    "padding": {"top": 0, "bottom": 0, "left": 0, "right": 0},
+                    "controlVideoStartTime": 0,
+                    "controlVideoDuration": 5,
+                },
+            },
+        )
+
+        assert r.status_code == 200
+        assert r.json()["status"] == "complete"
+        assert len(enable_wangp.video_calls) == 1
+        call = enable_wangp.video_calls[0]
+        assert call.prompt == "outpaint"
+        assert call.control_video_path == str(clipped)
+        assert call.video_prompt_type == "VG|"
+        assert call.video_guide_outpainting == ""
+        assert call.video_guide_outpainting_ratio == "1:1"
+
+    def test_reframe_custom_padding(
+        self, client, enable_wangp: FakeWanGPBridge, tmp_path: Path, monkeypatch
+    ):
+        video = tmp_path / "video.mp4"
+        video.write_bytes(b"fake-video")
+        clipped = tmp_path / "clipped.mp4"
+        clipped.write_bytes(b"fake-video")
+
+        monkeypatch.setattr(
+            "handlers.video_generation_handler.extract_video_clip",
+            lambda source_path, *, start_time, duration, output_dir: clipped,
+        )
+
+        r = client.post(
+            "/api/generate",
+            json={
+                "prompt": "",
+                "resolution": "540p",
+                "modelProfileId": "ltx2_22b_distilled",
+                "duration": "5",
+                "fps": "24",
+                "cameraMotion": "none",
+                "inputMedia": [
+                    {"role": "control_video", "path": str(video), "type": "video"},
+                ],
+                "reframe": {
+                    "aspectMode": "custom",
+                    "padding": {"top": 35, "bottom": 70, "left": 40, "right": 30},
+                    "controlVideoStartTime": 1.5,
+                    "controlVideoDuration": 4,
+                },
+            },
+        )
+
+        assert r.status_code == 200
+        call = enable_wangp.video_calls[0]
+        assert call.video_guide_outpainting == "35 70 40 30"
+        assert call.video_guide_outpainting_ratio == ""
+
+    def test_reframe_internal_padding_up_to_200(
+        self, client, enable_wangp: FakeWanGPBridge, tmp_path: Path, monkeypatch
+    ):
+        video = tmp_path / "video.mp4"
+        video.write_bytes(b"fake-video")
+        clipped = tmp_path / "clipped.mp4"
+        clipped.write_bytes(b"fake-video")
+
+        monkeypatch.setattr(
+            "handlers.video_generation_handler.extract_video_clip",
+            lambda source_path, *, start_time, duration, output_dir: clipped,
+        )
+
+        r = client.post(
+            "/api/generate",
+            json={
+                "prompt": "",
+                "resolution": "540p",
+                "modelProfileId": "ltx2_22b_distilled",
+                "duration": "5",
+                "fps": "24",
+                "cameraMotion": "none",
+                "inputMedia": [
+                    {"role": "control_video", "path": str(video), "type": "video"},
+                ],
+                "reframe": {
+                    "aspectMode": "custom",
+                    "padding": {"top": 0, "bottom": 0, "left": 0, "right": 200},
+                    "controlVideoStartTime": 0,
+                    "controlVideoDuration": 5,
+                },
+            },
+        )
+
+        assert r.status_code == 200
+        call = enable_wangp.video_calls[0]
+        assert call.video_guide_outpainting == "0 0 0 200"
+        assert call.video_guide_outpainting_ratio == ""
+
+    def test_reframe_requires_options_payload(
+        self, client, enable_wangp: FakeWanGPBridge, tmp_path: Path
+    ):
+        video = tmp_path / "video.mp4"
+        video.write_bytes(b"fake-video")
+
+        r = client.post(
+            "/api/generate",
+            json={
+                "prompt": "outpaint",
+                "resolution": "540p",
+                "modelProfileId": "ltx2_22b_distilled",
+                "duration": "5",
+                "fps": "24",
+                "cameraMotion": "none",
+                "videoPromptType": "VG|",
+                "inputMedia": [
+                    {"role": "control_video", "path": str(video), "type": "video"},
+                ],
+            },
+        )
+
+        assert r.status_code == 400
+        assert "REFRAME_OPTIONS_REQUIRED" in r.text
+        assert len(enable_wangp.video_calls) == 0
+
     def test_resolution_mapping_540p(self, client, enable_wangp: FakeWanGPBridge):
         r = client.post("/api/generate", json=_T2V_JSON)
         assert r.status_code == 200

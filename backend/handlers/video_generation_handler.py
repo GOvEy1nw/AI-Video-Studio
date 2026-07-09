@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import math
 import os
 import tempfile
 import time
@@ -23,6 +24,8 @@ from handlers.text_handler import TextHandler
 from model_profiles import get_video_profile
 from model_profiles.profiles import ModelProfile
 from services.wangp_bridge import WanGPBridge
+from services.reframe_wangp_mapping import ReframePadding, map_reframe_to_wangp
+from services.video_clip import extract_video_clip
 from server_utils.media_validation import (
     normalize_optional_path,
     validate_audio_file,
@@ -477,16 +480,31 @@ class VideoGenerationHandler(StateHandlerBase):
 
         duration = self._parse_forced_numeric_field(req.duration, "INVALID_DURATION")
         fps = self._parse_forced_numeric_field(req.fps, "INVALID_FPS")
-        if not req.prompt.strip() and not req.shotPrompts:
+        is_reframe = req.reframe is not None
+        looks_like_reframe = (
+            req.videoPromptType == "VG|"
+            or (req.prompt.strip().lower() == "outpaint" and any(
+                media.role == "control_video" for media in req.inputMedia
+            ))
+        )
+        if looks_like_reframe and not is_reframe:
+            raise HTTPError(400, "REFRAME_OPTIONS_REQUIRED")
+        if not req.prompt.strip() and not req.shotPrompts and not is_reframe:
             raise HTTPError(400, "PROMPT_REQUIRED")
-        wangp_prompt, duration = self._resolve_prompt_and_duration(req, duration)
+        if is_reframe:
+            reframe = req.reframe
+            assert reframe is not None
+            duration = max(2, int(math.ceil(reframe.controlVideoDuration)))
+            wangp_prompt = "outpaint"
+        else:
+            wangp_prompt, duration = self._resolve_prompt_and_duration(req, duration)
 
         start_image_path = None
         end_image_path = None
         control_video_path = None
         audio_path = normalize_optional_path(req.audioPath)
 
-        video_prompt_type = req.videoPromptType
+        video_prompt_type = "VG|" if is_reframe else req.videoPromptType
         image_prompt_type = None
         audio_prompt_type = None
 
@@ -556,8 +574,32 @@ class VideoGenerationHandler(StateHandlerBase):
                 audio_path = media_path
                 audio_prompt_type = "A1OF"
 
+        if is_reframe:
+            reframe = req.reframe
+            assert reframe is not None
+            if not control_video_path:
+                for media in req.inputMedia:
+                    if media.role == "control_video":
+                        control_video_path = normalize_optional_path(media.path)
+                        break
+            if not control_video_path:
+                raise HTTPError(400, "REFRAME_CONTROL_VIDEO_REQUIRED")
+
+        temp_clip_path: Path | None = None
+        video_guide_outpainting: str | None = None
+        video_guide_outpainting_ratio: str | None = None
+        output_aspect_ratio = req.aspectRatio
+
         try:
             profile = self._resolve_video_profile(req)
+            if is_reframe:
+                reframe = req.reframe
+                assert reframe is not None
+                if not profile.control_video:
+                    raise HTTPError(400, "REFRAME_NOT_SUPPORTED")
+                if not profile.wangp_metadata.capabilities.get("outpainting", False):
+                    raise HTTPError(400, "REFRAME_NOT_SUPPORTED")
+
             self._validate_video_profile_request(
                 profile,
                 req,
@@ -582,6 +624,39 @@ class VideoGenerationHandler(StateHandlerBase):
 
             validated_end_image_path = str(validate_image_file(end_image_path)) if end_image_path else None
             validated_control_video_path = str(validate_video_file(control_video_path)) if control_video_path else None
+
+            if is_reframe:
+                reframe = req.reframe
+                assert reframe is not None
+                source_path = Path(validated_control_video_path)
+                temp_clip_path = extract_video_clip(
+                    source_path,
+                    start_time=reframe.controlVideoStartTime,
+                    duration=reframe.controlVideoDuration,
+                    output_dir=self._outputs_dir,
+                )
+                validated_control_video_path = str(temp_clip_path)
+
+                padding = ReframePadding(
+                    top=reframe.padding.top,
+                    bottom=reframe.padding.bottom,
+                    left=reframe.padding.left,
+                    right=reframe.padding.right,
+                )
+                outpaint = map_reframe_to_wangp(
+                    reframe.aspectMode,
+                    padding,
+                )
+                video_guide_outpainting = outpaint.video_guide_outpainting
+                video_guide_outpainting_ratio = outpaint.video_guide_outpainting_ratio
+                output_aspect_ratio = outpaint.output_aspect_ratio
+                logger.info(
+                    "Reframe outpaint mapping: padding=%s outpainting=%r ratio=%r",
+                    padding,
+                    video_guide_outpainting,
+                    video_guide_outpainting_ratio,
+                )
+
             is_audio_video = False
             if audio_path:
                 if any(media.role in {"human_motion", "human_motion_pose", "depth", "canny_edges", "sdr_to_hdr", "control_video"} for media in req.inputMedia if normalize_optional_path(media.path) == audio_path):
@@ -610,7 +685,7 @@ class VideoGenerationHandler(StateHandlerBase):
             output_path = self._wangp_bridge.generate_video(
                 prompt=wangp_prompt,
                 resolution_label=req.resolution,
-                aspect_ratio=req.aspectRatio,
+                aspect_ratio=output_aspect_ratio,
                 duration_seconds=duration,
                 fps=fps,
                 steps=steps,
@@ -629,6 +704,8 @@ class VideoGenerationHandler(StateHandlerBase):
                 video_prompt_type=video_prompt_type,
                 image_prompt_type=image_prompt_type,
                 audio_prompt_type=audio_prompt_type,
+                video_guide_outpainting=video_guide_outpainting,
+                video_guide_outpainting_ratio=video_guide_outpainting_ratio,
             )
 
             self._generation.complete_generation(output_path)
@@ -645,6 +722,12 @@ class VideoGenerationHandler(StateHandlerBase):
                 logger.info("WanGP generation cancelled by user")
                 return GenerateVideoResponse(status="cancelled")
             raise HTTPError(500, str(e)) from e
+        finally:
+            if temp_clip_path is not None and temp_clip_path.exists():
+                try:
+                    temp_clip_path.unlink()
+                except OSError:
+                    logger.warning("Could not remove temporary reframe clip: %s", temp_clip_path)
 
     @staticmethod
     def _resolve_video_profile(req: GenerateVideoRequest) -> ModelProfile:
