@@ -1,69 +1,83 @@
-import { useState, useRef, useEffect } from 'react'
-import { Sparkles, Trash2, Square, ImageIcon, ArrowLeft, Scissors } from 'lucide-react'
-import { logger } from '../lib/logger'
-import { ImageUploader } from '../components/ImageUploader'
-import { AudioUploader } from '../components/AudioUploader'
-import { VideoPlayer } from '../components/VideoPlayer'
-import { ImageResult } from '../components/ImageResult'
-import { SettingsPanel, type GenerationSettings } from '../components/SettingsPanel'
-import { ModeTabs, type GenerationMode } from '../components/ModeTabs'
-import { LtxLogo } from '../components/LtxLogo'
-import { Textarea } from '../components/ui/textarea'
-import { Button } from '../components/ui/button'
-import { useGeneration } from '../hooks/use-generation'
-import { useRetake } from '../hooks/use-retake'
-import { useBackend } from '../hooks/use-backend'
-import { useProjects } from '../contexts/ProjectContext'
-import { fileUrlToPath } from '../lib/url-to-path'
-import { RetakePanel } from '../components/RetakePanel'
+import { useState, useRef, useEffect } from "react";
+import {
+  Sparkles,
+  Trash2,
+  Square,
+  ImageIcon,
+  ArrowLeft,
+  Scissors,
+} from "lucide-react";
+import { logger } from "../lib/logger";
+import { ImageUploader } from "../components/ImageUploader";
+import { AudioUploader } from "../components/AudioUploader";
+import { VideoPlayer } from "../components/VideoPlayer";
+import { ImageResult } from "../components/ImageResult";
+import {
+  SettingsPanel,
+  type GenerationSettings,
+} from "../components/SettingsPanel";
+import { ModeTabs, type GenerationMode } from "../components/ModeTabs";
+import { AivsLogo } from "../components/AivsLogo";
+import { Textarea } from "../components/ui/textarea";
+import { Button } from "../components/ui/button";
+import { useGeneration } from "../hooks/use-generation";
+import { useRetake } from "../hooks/use-retake";
+import { useBackend } from "../hooks/use-backend";
+import { useProjects } from "../contexts/ProjectContext";
+import { fileUrlToPath } from "../lib/url-to-path";
+import { RetakePanel } from "../components/RetakePanel";
 
 const DEFAULT_SETTINGS: GenerationSettings = {
-  model: 'fast',
+  model: "fast",
   duration: 5,
-  videoResolution: '540p',
+  videoResolution: "540p",
   fps: 24,
   audio: true,
-  cameraMotion: 'none',
-  aspectRatio: '16:9',
+  cameraMotion: "none",
+  aspectRatio: "16:9",
   // Image settings
-  imageResolution: '1080p',
-  imageAspectRatio: '16:9',
+  imageResolution: "1080p",
+  imageAspectRatio: "16:9",
   imageSteps: 8,
-}
+};
 
 export function Playground() {
-  const { goHome } = useProjects()
-  const [mode, setMode] = useState<GenerationMode>('text-to-video')
-  const [prompt, setPrompt] = useState('')
-  const [selectedImage, setSelectedImage] = useState<string | null>(null)
-  const [selectedAudio, setSelectedAudio] = useState<string | null>(null)
-  const [settings, setSettings] = useState<GenerationSettings>(() => ({ ...DEFAULT_SETTINGS }))
+  const { goHome } = useProjects();
+  const [mode, setMode] = useState<GenerationMode>("text-to-video");
+  const [prompt, setPrompt] = useState("");
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedAudio, setSelectedAudio] = useState<string | null>(null);
+  const [settings, setSettings] = useState<GenerationSettings>(() => ({
+    ...DEFAULT_SETTINGS,
+  }));
 
-  const { status, processStatus } = useBackend()
+  const { status, processStatus } = useBackend();
 
   useEffect(() => {
-    if (selectedAudio && mode !== 'text-to-image') {
-      setSettings(prev => prev.model !== 'pro' ? { ...prev, model: 'pro' } : prev)
+    if (selectedAudio && mode !== "text-to-image") {
+      setSettings((prev) =>
+        prev.model !== "pro" ? { ...prev, model: "pro" } : prev,
+      );
     }
-  }, [mode, selectedAudio]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [mode, selectedAudio]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle mode change
   const handleModeChange = (newMode: GenerationMode) => {
-    setMode(newMode)
-  }
-  const { 
-    isGenerating, 
-    progress, 
-    statusMessage, 
+    setMode(newMode);
+  };
+  const {
+    isGenerating,
+    progress,
+    statusMessage,
     videoUrl,
     videoPath,
-    imageUrl, 
+    imageUrl,
     error: generationError,
     generate,
     generateImage,
     cancel,
     reset,
-  } = useGeneration()
+  } = useGeneration();
 
   const {
     submitRetake,
@@ -72,7 +86,7 @@ export function Playground() {
     retakeStatus,
     retakeError,
     retakeResult,
-  } = useRetake()
+  } = useRetake();
 
   const [retakeInput, setRetakeInput] = useState({
     videoUrl: null as string | null,
@@ -81,59 +95,59 @@ export function Playground() {
     duration: 0,
     videoDuration: 0,
     ready: false,
-  })
-  const [retakePanelKey, setRetakePanelKey] = useState(0)
-  
+  });
+  const [retakePanelKey, setRetakePanelKey] = useState(0);
+
   // Ref to store generated image URL for "Create video" flow
-  const generatedImageRef = useRef<string | null>(null)
+  const generatedImageRef = useRef<string | null>(null);
 
   const handleGenerate = () => {
-    if (mode === 'retake') {
-      if (!retakeInput.videoPath || retakeInput.duration < 2) return
+    if (mode === "retake") {
+      if (!retakeInput.videoPath || retakeInput.duration < 2) return;
       submitRetake({
         videoPath: retakeInput.videoPath,
         startTime: retakeInput.startTime,
         duration: retakeInput.duration,
         prompt,
-        mode: 'replace_audio_and_video',
-      })
-      return
+        mode: "replace_audio_and_video",
+      });
+      return;
     }
 
-    if (mode === 'text-to-image') {
-      if (!prompt.trim()) return
-      generateImage(prompt, settings)
+    if (mode === "text-to-image") {
+      if (!prompt.trim()) return;
+      generateImage(prompt, settings);
     } else {
-      const effectiveVideoSettings = { ...settings }
+      const effectiveVideoSettings = { ...settings };
       // Auto-detect: if image is loaded → I2V, otherwise → T2V
-      if (!prompt.trim()) return
-      const imagePath = selectedImage ? fileUrlToPath(selectedImage) : null
-      const audioPath = selectedAudio ? fileUrlToPath(selectedAudio) : null
-      if (audioPath) effectiveVideoSettings.model = 'pro'
-      generate(prompt, imagePath, effectiveVideoSettings, audioPath)
+      if (!prompt.trim()) return;
+      const imagePath = selectedImage ? fileUrlToPath(selectedImage) : null;
+      const audioPath = selectedAudio ? fileUrlToPath(selectedAudio) : null;
+      if (audioPath) effectiveVideoSettings.model = "pro";
+      generate(prompt, imagePath, effectiveVideoSettings, audioPath);
     }
-  }
-  
+  };
+
   // Handle "Create video" from generated image
   const handleCreateVideoFromImage = () => {
     if (!imageUrl) {
-      logger.error('No image URL available')
-      return
+      logger.error("No image URL available");
+      return;
     }
 
     // imageUrl is already a file:// URL — just pass it as the selected image path
-    setSelectedImage(imageUrl)
-    setMode('image-to-video')
-    generatedImageRef.current = imageUrl
-  }
+    setSelectedImage(imageUrl);
+    setMode("image-to-video");
+    generatedImageRef.current = imageUrl;
+  };
 
   const handleClearAll = () => {
-    setPrompt('')
-    setSelectedImage(null)
-    setSelectedAudio(null)
-    const baseDefaults = { ...DEFAULT_SETTINGS }
-    setSettings(baseDefaults)
-    if (mode !== 'text-to-image') setMode('text-to-video')
+    setPrompt("");
+    setSelectedImage(null);
+    setSelectedAudio(null);
+    const baseDefaults = { ...DEFAULT_SETTINGS };
+    setSettings(baseDefaults);
+    if (mode !== "text-to-image") setMode("text-to-video");
     setRetakeInput({
       videoUrl: null,
       videoPath: null,
@@ -141,27 +155,28 @@ export function Playground() {
       duration: 0,
       videoDuration: 0,
       ready: false,
-    })
-    setRetakePanelKey((prev) => prev + 1)
-    resetRetake()
-    reset()
-  }
+    });
+    setRetakePanelKey((prev) => prev + 1);
+    resetRetake();
+    reset();
+  };
 
-  const isRetakeMode = mode === 'retake'
-  const isVideoMode = mode === 'text-to-video' || mode === 'image-to-video'
-  const isBusy = isRetakeMode ? isRetaking : isGenerating
-  const canGenerate = processStatus === 'alive' && !isBusy && (
-    isRetakeMode
+  const isRetakeMode = mode === "retake";
+  const isVideoMode = mode === "text-to-video" || mode === "image-to-video";
+  const isBusy = isRetakeMode ? isRetaking : isGenerating;
+  const canGenerate =
+    processStatus === "alive" &&
+    !isBusy &&
+    (isRetakeMode
       ? retakeInput.ready && !!retakeInput.videoPath
-      : !!prompt.trim()
-  )
+      : !!prompt.trim());
 
   return (
     <div className="h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
         <div className="flex items-center gap-4">
-          <button 
+          <button
             onClick={goHome}
             className="p-2 rounded-lg hover:bg-zinc-800 transition-colors"
             title="Back to Home"
@@ -169,16 +184,20 @@ export function Playground() {
             <ArrowLeft className="h-5 w-5 text-zinc-400" />
           </button>
           <div className="flex items-center gap-2.5">
-            <LtxLogo className="h-6 w-auto text-white" />
-            <span className="text-zinc-400 text-base font-medium tracking-wide leading-none pt-1 pl-1.5">Playground</span>
+            <AivsLogo className="h-6 w-auto text-white" />
+            <span className="text-zinc-400 text-base font-medium tracking-wide leading-none pt-1 pl-1.5">
+              Playground
+            </span>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-4 pr-24">
           {/* GPU Info */}
           {status.gpuInfo && (
             <div className="text-sm text-zinc-500">
-              {status.gpuInfo.name} ({(status.gpuInfo.vramUsed / 1024).toFixed(1)}GB / {Math.round(status.gpuInfo.vram / 1024)}GB)
+              {status.gpuInfo.name} (
+              {(status.gpuInfo.vramUsed / 1024).toFixed(1)}GB /{" "}
+              {Math.round(status.gpuInfo.vram / 1024)}GB)
             </div>
           )}
         </div>
@@ -245,22 +264,33 @@ export function Playground() {
             {/* Error Display */}
             {(generationError || retakeError) && (
               <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm">
-                {(generationError || retakeError)!.includes('TEXT_ENCODING_NOT_CONFIGURED') ? (
+                {(generationError || retakeError)!.includes(
+                  "TEXT_ENCODING_NOT_CONFIGURED",
+                ) ? (
                   <div className="space-y-2">
-                    <p className="text-red-400 font-medium">Text encoding not configured</p>
+                    <p className="text-red-400 font-medium">
+                      Text encoding not configured
+                    </p>
                     <p className="text-red-400/80">
-                      To generate videos, you need to set up text encoding in Settings.
+                      To generate videos, you need to set up text encoding in
+                      Settings.
                     </p>
                   </div>
-                ) : (generationError || retakeError)!.includes('TEXT_ENCODER_NOT_DOWNLOADED') ? (
+                ) : (generationError || retakeError)!.includes(
+                    "TEXT_ENCODER_NOT_DOWNLOADED",
+                  ) ? (
                   <div className="space-y-2">
-                    <p className="text-red-400 font-medium">Text encoder not downloaded</p>
+                    <p className="text-red-400 font-medium">
+                      Text encoder not downloaded
+                    </p>
                     <p className="text-red-400/80">
                       The local text encoder needs to be downloaded (~25 GB).
                     </p>
                   </div>
                 ) : (
-                  <span className="text-red-400">{generationError || retakeError}</span>
+                  <span className="text-red-400">
+                    {generationError || retakeError}
+                  </span>
                 )}
               </div>
             )}
@@ -276,7 +306,7 @@ export function Playground() {
                 <Trash2 className="h-4 w-4" />
                 Clear all
               </Button>
-              
+
               {isGenerating ? (
                 <Button
                   onClick={cancel}
@@ -294,9 +324,9 @@ export function Playground() {
                   {isRetakeMode ? (
                     <>
                       <Scissors className="h-4 w-4" />
-                      {isRetaking ? 'Retaking...' : 'Retake'}
+                      {isRetaking ? "Retaking..." : "Retake"}
                     </>
-                  ) : mode === 'text-to-image' ? (
+                  ) : mode === "text-to-image" ? (
                     <>
                       <ImageIcon className="h-4 w-4" />
                       Generate image
@@ -315,7 +345,7 @@ export function Playground() {
 
         {/* Right Panel - Result Preview */}
         <div className="flex-1 p-6">
-          {mode === 'text-to-image' ? (
+          {mode === "text-to-image" ? (
             <ImageResult
               imageUrl={imageUrl}
               isGenerating={isGenerating}
@@ -323,7 +353,7 @@ export function Playground() {
               statusMessage={statusMessage}
               onCreateVideo={handleCreateVideoFromImage}
             />
-          ) : mode === 'retake' ? (
+          ) : mode === "retake" ? (
             <VideoPlayer
               videoUrl={retakeResult?.videoUrl || null}
               videoPath={retakeResult?.videoPath || null}
@@ -345,5 +375,5 @@ export function Playground() {
         </div>
       </main>
     </div>
-  )
+  );
 }

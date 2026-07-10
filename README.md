@@ -217,18 +217,18 @@ graph TD
 
 ## Key Commands
 
-| Command | Purpose |
-| --- | --- |
-| `pnpm dev` | Start Vite, Electron, and backend |
-| `pnpm dev:debug` | Start with Electron inspector and Python debugpy |
-| `pnpm typecheck` | Run TypeScript and Python type checks |
-| `pnpm typecheck:ts` | TypeScript only |
-| `pnpm typecheck:py` | Pyright only |
-| `pnpm backend:test` | Backend pytest suite |
-| `pnpm build:frontend` | Build renderer and Electron bundles |
-| `pnpm setup:dev:win` | Windows development setup |
-| `pnpm setup:dev:linux` | Linux development setup |
-| `scripts/install-wangp-stack.ps1` | Install/refresh WanGP GPU stack |
+| Command                           | Purpose                                          |
+| --------------------------------- | ------------------------------------------------ |
+| `pnpm dev`                        | Start Vite, Electron, and backend                |
+| `pnpm dev:debug`                  | Start with Electron inspector and Python debugpy |
+| `pnpm typecheck`                  | Run TypeScript and Python type checks            |
+| `pnpm typecheck:ts`               | TypeScript only                                  |
+| `pnpm typecheck:py`               | Pyright only                                     |
+| `pnpm backend:test`               | Backend pytest suite                             |
+| `pnpm build:frontend`             | Build renderer and Electron bundles              |
+| `pnpm setup:dev:win`              | Windows development setup                        |
+| `pnpm setup:dev:linux`            | Linux development setup                          |
+| `scripts/install-wangp-stack.ps1` | Install/refresh WanGP GPU stack                  |
 
 ## Data Locations
 
