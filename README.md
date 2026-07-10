@@ -1,57 +1,62 @@
-# AI Video Studio
+<p align="center"><img src="https://github.com/GOvEy1nw/AI-Video-Studio/blob/main/public/AiVS_Logo_White.png" width="200"></p>
+<p align="center">AI Video Studio</p>
+<p align="center">A local-only desktop app for AI image and video generation<br>powered by WanGP.</p>
 
-AI Video Studio is a local-first desktop app for AI image and video generation, powered by WanGP / Wan2GP.
+<p align="center"><img src="https://github.com/GOvEy1nw/AI-Video-Studio/blob/main/images/GenSpace.png" width="80%"></p>
 
-It is a fork of `deepbeepmeep/LTX-Desktop-WanGP` and keeps the inherited Electron, React, FastAPI, project, gallery, and editor foundations. The product direction is now AiVS: a community-focused creative studio with simple QuickGen workflows first, then deeper production tools later.
+This WIP project is a fork `deepbeepmeep/LTX-Desktop-WanGP`.
 
-## Current Status
+Note: I'm more of a Solutions Architect than a coder, so I'm up-front clarifying that this is heavily coded by AI. But I have a vision of what this should be (essentially the ease-of-use of online AI Platforms, Magnific/Higgsfield etc, with the beauty of OSS and local-only AI Gen, and the power of WanGP behind it!) I can't guarantee it'll work great for everyone, so far I've only tested this on one of my systems (128gb ram - RTX 4070Ti Super) and its working great there, will try to test on other systems in due course.
+
+# Product Principles
+
+- **Local-Only:** Powered by WanGP, no cloud/third-party/off-site generations.
+- **Curated models:** AiVS exposes tested - fast - model profiles, not every raw WanGP model or setting.
+- **Simple first:** GenSpace should show useful creative controls, not raw technical configuration.
+
+# Current Status
 
 AiVS is in active development.
 
-Working today:
+# New Features:
 
-- Local WanGP-backed image generation
-- Local WanGP-backed video generation
-- Project-based gallery and asset history
-- Image model profiles with curated resolution/aspect controls
-- Video model profiles using the same curated profile system
-- Image input roles for models that support reference/control images
-- WanGP-backed prompt enhancement for image and video prompts
-- Video multi-shot prompts with timed relayed WanGP prompt formatting
-- WanGP runtime bridge with backend tests and fakes
-- Inherited video editor retained as a beta/future workflow surface
+- Deeper integration with WanGP, removing all cloud/third-party/non-local elements.
+- Streamlined app launch & added connection indicator & refresh button for connection to WanGP backend.
+- Settings:
+	- Added video/image output settings (Settings > Outputs)
+	- Removed most other settings, but kept 'Torch-Compile' option and ensured it's hooked into WanGP. <p align="center"><img src="https://github.com/GOvEy1nw/AI-Video-Studio/blob/main/images/NewSettings.png" width="40%"></p>
+- Gallery:
+	- Added ability to drag and drop your own items into gallery (for easier access to regular references etc)
+	- Added Filtering (Type: Image/Video/Audio. Source: Generated/Uploaded)
+	- Added 'Bin' (folder) support so you can easily organise your assets
+	- Added 'List' view as an alternative to the grid views. <p align="center"><img src="https://github.com/GOvEy1nw/AI-Video-Studio/blob/main/images/NewFilters_NewBins.png" width="40%"></p>
+  - Added a 'cancel' button and better indications of generation progress in asset cards.<p align="center"><img src="https://github.com/GOvEy1nw/AI-Video-Studio/blob/main/images/AssetCardDeets01.png" width="25%"><img src="https://github.com/GOvEy1nw/AI-Video-Studio/blob/main/images/AssetCardDeets02.png" width="25%"><img src="https://github.com/GOvEy1nw/AI-Video-Studio/blob/main/images/AssetCardDeets03.png" width="25%"><img src="https://github.com/GOvEy1nw/AI-Video-Studio/blob/main/images/AssetCardDeets04.png" width="25%"><img src="https://github.com/GOvEy1nw/AI-Video-Studio/blob/main/images/AssetCardDeets05.png" width="25%"><img src="https://github.com/GOvEy1nw/AI-Video-Studio/blob/main/images/AssetCardDeets06.png" width="25%"><img src="https://github.com/GOvEy1nw/AI-Video-Studio/blob/main/images/AssetCardDeets07.png" width="25%"></p>
+- GenSpace:
+	- Prompting:
+		- Added seed lock button to prompt box
+		- added enhance prompt button to prompt box
+		- moved media inputs above text prompt area and made it collapsible for tidier working. <p align="center"><img src="https://github.com/GOvEy1nw/AI-Video-Studio/blob/main/images/PromptArea.png" width="80%"></p>
+	- Image Gen:
+		- Added Additional Image Models: Flux2 Klein 4b, Krea2 Turbo & HiDream O1, plus the existing z-image-turbo.
+		- Added support for input images for supporting models, including a dropdown menu to select reference type (Transfer Human Pose, Transfer Depth, Transfer Canny Edges etc):
+			- Z-Image-Turbo: Technically doesn't support inputs, but I've routed it so if you add one it'll use Z-Image-Turbo Fun ControlNet 6B v2.1 instead which can accept a controlnet image.
+			- Flux2 Klein 4b natively allows reference images, I've allows up to 5, which I think is a sane amount (not sure how many it can take).
+			- Krea2 Turbo currently doesn't support input images
+			- HiDream O1 natively allows reference images, I've allows up to 5, which I think is a sane amount (not sure how many it can take). <p align="center"><img src="https://github.com/GOvEy1nw/AI-Video-Studio/blob/main/images/NewImageModelOptions.png" width="80%"></p>
+	- Video Gen:
+		- Added Start/End frame support
+		- Added Control Video/Audio support with video trim capabilities (note when a control video is added, the 'duration' setting turns to 'auto' and is controlled by the trim length).
+		- Re-worked 'retake' mode a bit:
+			- It now lives in video mode in a separate dropdown of current video modes (Generate/Retake/Reframe - More on this one next)
+			- The UI & interaction with 'retake' mode also lives in the prompt area, not a separate page that takes over the gallery. <p align="center"><img src="https://github.com/GOvEy1nw/AI-Video-Studio/blob/main/images/NewRetakeUI.png" width="80%"></p>
+		- Added new reframe mode with a nice easy to use framing UI that takes a control video and then uses ltx outpaint lora to expand edges. <p align="center"><img src="https://github.com/GOvEy1nw/AI-Video-Studio/blob/main/images/NewReframeVideoMode.png" width="80%"></p>
+		- Added a 'Timing' switch in the text prompt area that lets you easily create timed prompts for videos and converts it to a compatible 'relay prompt' for WanGP in the background. <p align="center"><img src="https://github.com/GOvEy1nw/AI-Video-Studio/blob/main/images/NewVideoTimingOption.png" width="80%"></p>
 
-Not yet complete:
+# Planned
 
 - LoRA UI
-- Full video input controls such as end frame, source video, and control video
-- Audio/TTS QuickGen
+- Audio/TTS Gen
 - Production workflow
-
-## Product Principles
-
-- **Local-first:** normal generation should run locally through WanGP.
-- **WanGP-only:** normal product generation should not call external generation APIs.
-- **Curated models:** AiVS exposes tested model profiles, not every raw WanGP model or setting.
-- **Simple first:** QuickGen should show useful creative controls, not raw technical configuration.
-- **Preserve inherited systems:** projects, gallery, metadata, editor, Electron shell, and FastAPI structure are extended rather than rebuilt.
-
-## Model Profiles
-
-AiVS uses backend-owned curated model profiles exposed through `GET /api/model-profiles`.
-
-Image profiles currently include:
-
-- Z-Image Turbo
-- Krea 2 Turbo
-- Flux 2 Klein 4B
-- HiDream O1
-
-Video profiles currently include:
-
-- LTX 2.3 Fast, routed to WanGP model `ltx2_22B_distilled_1_1`
-
-Profiles define the user-facing model name, media type, WanGP model type, availability status, input capabilities, default settings, allowed aspect ratios, and allowed resolution tiers. The frontend renders model, resolution, and aspect controls from this profile API.
 
 ## Quick Start: Windows
 
@@ -195,7 +200,7 @@ graph TD
 
 - Path: `frontend/`
 - React 18, TypeScript, Vite, Tailwind
-- Main QuickGen surface: `frontend/views/GenSpace.tsx`
+- Main GenSpace surface: `frontend/views/GenSpace.tsx`
 - Model profile hook: `frontend/hooks/use-image-profiles.ts`
 - Model profile types: `frontend/types/model-profiles.ts`
 
