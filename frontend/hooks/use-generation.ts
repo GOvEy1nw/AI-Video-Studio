@@ -1,110 +1,187 @@
-import { useState, useCallback, useRef } from 'react'
-import { GenerationSettings } from '../components/SettingsPanel'
-import { backendFetch } from '../lib/backend'
+import { useState, useCallback, useRef } from "react";
+import { GenerationSettings } from "../components/SettingsPanel";
+import { backendFetch } from "../lib/backend";
 
 interface GenerationState {
-  isGenerating: boolean
-  progress: number
-  statusMessage: string
-  videoUrl: string | null
-  videoPath: string | null  // Original file path for upscaling
-  imageUrl: string | null
-  imagePath: string | null  // Original file path for first image
-  imageUrls: string[]  // For multiple image variations
-  imagePaths: string[]  // Original file paths for all images
-  error: string | null
+  isGenerating: boolean;
+  isCancelling: boolean;
+  progress: number;
+  statusMessage: string;
+  phaseIndex: number | null;
+  phaseCount: number | null;
+  currentStep: number | null;
+  totalSteps: number | null;
+  sectionIndex: number | null;
+  sectionCount: number | null;
+  statusDetail: string | null;
+  previewUrl: string | null;
+  videoUrl: string | null;
+  videoPath: string | null; // Original file path for upscaling
+  imageUrl: string | null;
+  imagePath: string | null; // Original file path for first image
+  imageUrls: string[]; // For multiple image variations
+  imagePaths: string[]; // Original file paths for all images
+  error: string | null;
 }
 
 interface GenerationProgress {
-  status: string
-  phase: string
-  progress: number
-  currentStep: number | null
-  totalSteps: number | null
+  status: string;
+  phase: string;
+  progress: number;
+  currentStep: number | null;
+  totalSteps: number | null;
+  phaseIndex?: number | null;
+  phaseCount?: number | null;
+  sectionIndex?: number | null;
+  sectionCount?: number | null;
+  statusDetail?: string | null;
+  previewUrl?: string | null;
+}
+
+type InputMediaRequest = {
+  path: string;
+  role: string;
+  type?: "image" | "video" | "audio";
+  trimStartTime?: number;
+  trimDuration?: number;
+};
+
+interface ReframeGenerateOptions {
+  aspectMode: "1:1" | "16:9" | "9:16" | "custom";
+  padding: { top: number; bottom: number; left: number; right: number };
+  controlVideoStartTime: number;
+  controlVideoDuration: number;
+}
+
+function clampApiPadding(value: number): number {
+  return Math.max(0, Math.min(200, Math.round(value)));
+}
+
+function normalizeReframeForApi(
+  reframe: ReframeGenerateOptions,
+): ReframeGenerateOptions {
+  return {
+    ...reframe,
+    padding: {
+      top: clampApiPadding(reframe.padding.top),
+      bottom: clampApiPadding(reframe.padding.bottom),
+      left: clampApiPadding(reframe.padding.left),
+      right: clampApiPadding(reframe.padding.right),
+    },
+  };
 }
 
 interface UseGenerationReturn extends GenerationState {
-  generate: (prompt: string, imagePath: string | null, settings: GenerationSettings, audioPath?: string | null, inputMedia?: { path: string; role: string }[], useAudioTrack?: boolean, shotPrompts?: { seconds: number; prompt: string }[]) => Promise<void>
-  generateImage: (prompt: string, settings: GenerationSettings, inputMedia?: { path: string; role: string }[]) => Promise<void>
-  cancel: () => void
-  reset: () => void
+  generate: (
+    prompt: string,
+    imagePath: string | null,
+    settings: GenerationSettings,
+    audioPath?: string | null,
+    inputMedia?: InputMediaRequest[],
+    useAudioTrack?: boolean,
+    shotPrompts?: { seconds: number; prompt: string }[],
+    reframe?: ReframeGenerateOptions,
+  ) => Promise<void>;
+  generateImage: (
+    prompt: string,
+    settings: GenerationSettings,
+    inputMedia?: InputMediaRequest[],
+  ) => Promise<void>;
+  cancel: () => Promise<void>;
+  reset: () => void;
 }
 
 const IMAGE_SHORT_SIDE_BY_RESOLUTION: Record<string, number> = {
-  '1080p': 1080,
-  '1440p': 1440,
-  '2048p': 2048,
-}
+  "1080p": 1080,
+  "1440p": 1440,
+  "2048p": 2048,
+};
 
 const IMAGE_ASPECT_RATIO_VALUE: Record<string, number> = {
-  '1:1': 1,
-  '16:9': 16 / 9,
-  '9:16': 9 / 16,
-  '4:3': 4 / 3,
-  '3:4': 3 / 4,
-  '21:9': 21 / 9,
-}
+  "1:1": 1,
+  "16:9": 16 / 9,
+  "9:16": 9 / 16,
+  "4:3": 4 / 3,
+  "3:4": 3 / 4,
+  "21:9": 21 / 9,
+};
 
-function getImageDimensions(settings: GenerationSettings): { width: number; height: number } {
-  const shortSide = IMAGE_SHORT_SIDE_BY_RESOLUTION[settings.imageResolution]
+function getImageDimensions(settings: GenerationSettings): {
+  width: number;
+  height: number;
+} {
+  const shortSide = IMAGE_SHORT_SIDE_BY_RESOLUTION[settings.imageResolution];
   if (!shortSide) {
-    throw new Error(`Unsupported image resolution mapping: ${settings.imageResolution}`)
+    throw new Error(
+      `Unsupported image resolution mapping: ${settings.imageResolution}`,
+    );
   }
 
-  const ratio = IMAGE_ASPECT_RATIO_VALUE[settings.imageAspectRatio]
+  const ratio = IMAGE_ASPECT_RATIO_VALUE[settings.imageAspectRatio];
   if (!ratio) {
-    throw new Error(`Unsupported image aspect ratio mapping: ${settings.imageAspectRatio}`)
+    throw new Error(
+      `Unsupported image aspect ratio mapping: ${settings.imageAspectRatio}`,
+    );
   }
 
   if (ratio >= 1) {
-    return { width: Math.round(shortSide * ratio), height: shortSide }
+    return { width: Math.round(shortSide * ratio), height: shortSide };
   }
-  return { width: shortSide, height: Math.round(shortSide / ratio) }
+  return { width: shortSide, height: Math.round(shortSide / ratio) };
 }
 
 // Map phase to user-friendly message
 function getPhaseMessage(phase: string): string {
   switch (phase) {
-    case 'starting_wangp':
-      return 'Starting WanGP...'
-    case 'validating_request':
-      return 'Validating request...'
-    case 'uploading_image':
-      return 'Uploading image...'
-    case 'uploading_audio':
-      return 'Uploading audio...'
-    case 'preparing_model':
-      return 'Preparing model...'
-    case 'downloading_model':
-      return 'Downloading model files...'
-    case 'loading_model':
-      return 'Loading model...'
-    case 'encoding_text':
-      return 'Encoding prompt...'
-    case 'inference':
-      return 'Generating...'
-    case 'inference_stage_1':
-      return 'Generating video (stage 1/2)...'
-    case 'inference_stage_2':
-      return 'Refining video (stage 2/2)...'
-    case 'inference_stage_3':
-      return 'Refining video (stage 3)...'
-    case 'downloading_output':
-      return 'Downloading output...'
-    case 'decoding':
-      return 'Decoding video...'
-    case 'complete':
-      return 'Complete!'
+    case "starting_wangp":
+      return "Starting WanGP...";
+    case "validating_request":
+      return "Validating request...";
+    case "uploading_image":
+      return "Uploading image...";
+    case "uploading_audio":
+      return "Uploading audio...";
+    case "preparing_model":
+      return "Preparing model...";
+    case "downloading_model":
+      return "Downloading model files...";
+    case "loading_model":
+      return "Loading model...";
+    case "encoding_text":
+      return "Encoding prompt...";
+    case "inference":
+      return "Generating...";
+    case "inference_stage_1":
+      return "Generating video (stage 1/2)...";
+    case "inference_stage_2":
+      return "Refining video (stage 2/2)...";
+    case "inference_stage_3":
+      return "Refining video (stage 3)...";
+    case "downloading_output":
+      return "Downloading output...";
+    case "decoding":
+      return "Decoding video...";
+    case "complete":
+      return "Complete!";
     default:
-      return 'Generating...'
+      return "Generating...";
   }
 }
 
 export function useGeneration(): UseGenerationReturn {
   const [state, setState] = useState<GenerationState>({
     isGenerating: false,
+    isCancelling: false,
     progress: 0,
-    statusMessage: '',
+    statusMessage: "",
+    phaseIndex: null,
+    phaseCount: null,
+    currentStep: null,
+    totalSteps: null,
+    sectionIndex: null,
+    sectionCount: null,
+    statusDetail: null,
+    previewUrl: null,
     videoUrl: null,
     videoPath: null,
     imageUrl: null,
@@ -112,385 +189,489 @@ export function useGeneration(): UseGenerationReturn {
     imageUrls: [],
     imagePaths: [],
     error: null,
-  })
+  });
 
-  const abortControllerRef = useRef<AbortController | null>(null)
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  const generate = useCallback(async (
-    prompt: string,
-    imagePath: string | null,
-    settings: GenerationSettings,
-    audioPath?: string | null,
-    inputMedia?: { path: string; role: string }[],
-    useAudioTrack?: boolean,
-    shotPrompts?: { seconds: number; prompt: string }[],
-  ) => {
-    const statusMsg = settings.model === 'pro'
-      ? 'Loading Pro model & generating...'
-      : 'Generating video...'
+  const generate = useCallback(
+    async (
+      prompt: string,
+      imagePath: string | null,
+      settings: GenerationSettings,
+      audioPath?: string | null,
+      inputMedia?: InputMediaRequest[],
+      useAudioTrack?: boolean,
+      shotPrompts?: { seconds: number; prompt: string }[],
+      reframe?: ReframeGenerateOptions,
+    ) => {
+      const statusMsg =
+        settings.model === "pro"
+          ? "Loading Pro model & generating..."
+          : "Generating video...";
 
-    setState({
-      isGenerating: true,
-      progress: 0,
-      statusMessage: statusMsg,
-      videoUrl: null,
-      videoPath: null,
-      imageUrl: null,
-      imagePath: null,
-      imageUrls: [],
-      imagePaths: [],
-      error: null,
-    })
+      setState({
+        isGenerating: true,
+        isCancelling: false,
+        progress: 0,
+        statusMessage: statusMsg,
+        phaseIndex: null,
+        phaseCount: null,
+        currentStep: null,
+        totalSteps: null,
+        sectionIndex: null,
+        sectionCount: null,
+        statusDetail: null,
+        previewUrl: null,
+        videoUrl: null,
+        videoPath: null,
+        imageUrl: null,
+        imagePath: null,
+        imageUrls: [],
+        imagePaths: [],
+        error: null,
+      });
 
-    abortControllerRef.current = new AbortController()
-    let progressInterval: ReturnType<typeof setInterval> | null = null
-    let shouldApplyPollingUpdates = true
+      abortControllerRef.current = new AbortController();
+      let progressInterval: ReturnType<typeof setInterval> | null = null;
+      let shouldApplyPollingUpdates = true;
 
-    try {
-      // Prepare JSON body
-      const body: Record<string, unknown> = {
-        prompt,
-        model: settings.model,
-        modelProfileId: settings.videoProfileId,
-        duration: String(settings.duration),
-        resolution: settings.videoResolution,
-        fps: String(settings.fps),
-        audio: String(settings.audio),
-        cameraMotion: settings.cameraMotion,
-        aspectRatio: settings.aspectRatio || '16:9',
-        useAudioTrack: useAudioTrack !== undefined ? useAudioTrack : true,
-      }
-      if (imagePath) {
-        body.imagePath = imagePath
-      }
-      if (audioPath) {
-        body.audioPath = audioPath
-      }
-      if (inputMedia && inputMedia.length > 0) {
-        body.inputMedia = inputMedia.map((item) => {
-          let type = 'image'
-          if (['control_video', 'human_motion', 'human_motion_pose', 'depth', 'canny_edges', 'sdr_to_hdr', 'continue_video'].includes(item.role)) {
-            type = 'video'
-          } else if (['audio_guide', 'audio_to_video', 'reference_voice'].includes(item.role)) {
-            type = 'audio'
-          }
-          return {
-            type,
-            path: item.path,
-            role: item.role,
-          }
-        })
-      }
-      if (shotPrompts && shotPrompts.length > 0) {
-        body.shotPrompts = shotPrompts
-      }
-
-      // Poll for real progress from backend with time-based interpolation
-      let lastPhase = ''
-      let inferenceStartTime = 0
-      // Estimated inference time in seconds based on model
-      const estimatedInferenceTime = settings.model === 'pro' ? 120 : 45
-      
-      const pollProgress = async () => {
-        if (!shouldApplyPollingUpdates) return
-        try {
-          const res = await backendFetch('/api/generation/progress')
-          if (res.ok) {
-            const data: GenerationProgress = await res.json()
-            if (!shouldApplyPollingUpdates) return
-
-            let displayProgress = data.progress
-            let statusMessage = getPhaseMessage(data.phase)
-            const hasStructuredStepProgress =
-              data.currentStep !== null &&
-              data.totalSteps !== null &&
-              data.totalSteps > 0
-            
-            // Time-based interpolation during inference phase
-            if (data.phase === 'inference' && !hasStructuredStepProgress) {
-              if (lastPhase !== 'inference') {
-                inferenceStartTime = Date.now()
-              }
-              const elapsed = (Date.now() - inferenceStartTime) / 1000
-              // Interpolate from 15% to 95% based on estimated time
-              const inferenceProgress = Math.min(elapsed / estimatedInferenceTime, 0.95)
-              displayProgress = 15 + Math.floor(inferenceProgress * 80)
-            }
-
-            // Keep API/local completion as a terminal response state, not polling state.
-            // Polling complete means backend state is finalized, but request can still be in-flight.
-            if (data.phase === 'complete' || data.status === 'complete') {
-              displayProgress = 95
-              statusMessage = 'Finalizing...'
-            }
-            
-            lastPhase = data.phase
-            
-            setState(prev => ({
-              ...prev,
-              progress: displayProgress,
-              statusMessage,
-            }))
-          }
-        } catch {
-          // Ignore polling errors
+      try {
+        // Prepare JSON body
+        const body: Record<string, unknown> = {
+          prompt,
+          model: settings.model,
+          modelProfileId: settings.videoProfileId,
+          duration: String(settings.duration),
+          resolution: settings.videoResolution,
+          fps: String(settings.fps),
+          audio: String(settings.audio),
+          cameraMotion: settings.cameraMotion,
+          aspectRatio: settings.aspectRatio || "16:9",
+          useAudioTrack: useAudioTrack !== undefined ? useAudioTrack : true,
+        };
+        if (imagePath) {
+          body.imagePath = imagePath;
         }
-      }
-      
-      progressInterval = setInterval(pollProgress, 500)
-
-      // Start generation (HTTP POST - synchronous, returns when done)
-      const response = await backendFetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-        signal: abortControllerRef.current.signal,
-      })
-      shouldApplyPollingUpdates = false
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(errorText || 'Generation failed')
-      }
-
-      const result = await response.json()
-      
-      if (result.status === 'complete' && result.video_path) {
-        // Convert Windows path to proper file:// URL
-        const videoPathNormalized = result.video_path.replace(/\\/g, '/')
-        const fileUrl = videoPathNormalized.startsWith('/') ? `file://${videoPathNormalized}` : `file:///${videoPathNormalized}`
-        
-        setState({
-          isGenerating: false,
-          progress: 100,
-          statusMessage: 'Complete!',
-          videoUrl: fileUrl,
-          videoPath: result.video_path,  // Keep original path for API calls
-          imageUrl: null,
-          imagePath: null,
-          imageUrls: [],
-          imagePaths: [],
-          error: null,
-        })
-      } else if (result.status === 'cancelled') {
-        setState(prev => ({
-          ...prev,
-          isGenerating: false,
-          statusMessage: 'Cancelled',
-        }))
-      } else if (result.error) {
-        throw new Error(result.error)
-      }
-
-    } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        setState(prev => ({
-          ...prev,
-          isGenerating: false,
-          statusMessage: 'Cancelled',
-        }))
-      } else {
-        setState(prev => ({
-          ...prev,
-          isGenerating: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        }))
-      }
-    } finally {
-      shouldApplyPollingUpdates = false
-      if (progressInterval) {
-        clearInterval(progressInterval)
-      }
-    }
-  }, [])
-
-  const cancel = useCallback(async () => {
-    // Abort the fetch request
-    abortControllerRef.current?.abort()
-    
-    // Also tell the backend to cancel
-    try {
-      await backendFetch('/api/generate/cancel', { method: 'POST' })
-    } catch {
-      // Ignore errors from cancel request
-    }
-    
-    setState(prev => ({
-      ...prev,
-      isGenerating: false,
-      statusMessage: 'Cancelled',
-    }))
-  }, [])
-
-  const generateImage = useCallback(async (
-    prompt: string,
-    settings: GenerationSettings,
-    inputMedia?: { path: string; role: string }[],
-  ) => {
-    const numImages = settings.variations || 1
-    
-    setState({
-      isGenerating: true,
-      progress: 0,
-      statusMessage: numImages > 1 ? `Generating ${numImages} images...` : 'Generating image...',
-      videoUrl: null,
-      videoPath: null,
-      imageUrl: null,
-      imagePath: null,
-      imageUrls: [],
-      imagePaths: [],
-      error: null,
-    })
-
-    abortControllerRef.current = new AbortController()
-    let progressInterval: ReturnType<typeof setInterval> | null = null
-
-    try {
-      // Skip prompt enhancement for T2I - use original prompt directly
-      const finalPrompt = prompt
-
-      // Phase 4: when a curated profile is selected, the backend
-      // resolves the exact WxH from (profileId, tier, aspect). We only
-      // need the legacy getImageDimensions path when no profile is set
-      // (backwards-compatible raw width/height).
-      const hasProfile = !!settings.imageProfileId
-      const dims = hasProfile ? null : getImageDimensions(settings)
-      const numSteps = settings.imageSteps || 8
-
-      // Poll for progress
-      const pollProgress = async () => {
-        try {
-          const res = await backendFetch('/api/generation/progress')
-          if (res.ok) {
-            const data = await res.json()
-            const currentImage = data.currentStep || 0
-            const totalImages = data.totalSteps || numImages
-            const phaseMessage = getPhaseMessage(data.phase)
-            setState(prev => ({
-              ...prev,
-              progress: data.progress,
-              statusMessage: data.phase === 'inference'
-                ? numImages > 1
-                  ? `Generating image ${currentImage + 1}/${totalImages}...`
-                  : 'Generating image...'
-                : phaseMessage,
-            }))
-          }
-        } catch {
-          // Ignore polling errors
+        if (audioPath) {
+          body.audioPath = audioPath;
         }
-      }
-
-      progressInterval = setInterval(pollProgress, 500)
-
-      // Phase 4: when a curated profile is selected, send the profile
-      // id + tier + aspect and let the backend resolve the exact WxH.
-      // Raw width/height still accepted for backwards compatibility.
-      const body: Record<string, unknown> = {
-        prompt: finalPrompt,
-        numSteps,
-        numImages,
-      }
-      if (hasProfile) {
-        body.modelProfileId = settings.imageProfileId
-        body.aspectRatio = settings.imageAspectRatio || '1:1'
-        body.resolutionTier = settings.imageResolution
         if (inputMedia && inputMedia.length > 0) {
-          body.inputMedia = inputMedia.map((item) => ({
-            type: 'image',
-            path: item.path,
-            role: item.role,
-          }))
+          body.inputMedia = inputMedia.map((item) => {
+            let type = item.type || "image";
+            if (
+              [
+                "control_video",
+                "human_motion",
+                "human_motion_pose",
+                "depth",
+                "canny_edges",
+                "sdr_to_hdr",
+                "continue_video",
+              ].includes(item.role)
+            ) {
+              type = "video";
+            } else if (
+              ["audio_guide", "audio_to_video", "reference_voice"].includes(
+                item.role,
+              )
+            ) {
+              type = "audio";
+            }
+            return {
+              type,
+              path: item.path,
+              role: item.role,
+              trimStartTime: item.trimStartTime,
+              trimDuration: item.trimDuration,
+            };
+          });
         }
-      } else if (dims) {
-        body.width = dims.width
-        body.height = dims.height
-      }
-
-      const response = await backendFetch('/api/generate-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-        signal: abortControllerRef.current.signal,
-      })
-
-      if (progressInterval) {
-        clearInterval(progressInterval)
-        progressInterval = null
-      }
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(errorText || 'Image generation failed')
-      }
-
-      const result = await response.json()
-      
-      if (result.status === 'complete') {
-        // Handle both new format (image_paths array) and old format (single image_path)
-        let rawPaths: string[] = []
-        if (result.image_paths && Array.isArray(result.image_paths)) {
-          rawPaths = result.image_paths
-        } else if (result.image_path) {
-          rawPaths = [result.image_path]
+        if (shotPrompts && shotPrompts.length > 0) {
+          body.shotPrompts = shotPrompts;
         }
-        
-        if (rawPaths.length > 0) {
-          // Convert all paths to file URLs
-          const fileUrls = rawPaths.map((path: string) => {
-            const imagePath = path.replace(/\\/g, '/')
-            return imagePath.startsWith('/') ? `file://${imagePath}` : `file:///${imagePath}`
-          })
-          
+        if (reframe) {
+          body.prompt = prompt.trim() || "outpaint";
+          body.videoPromptType = "VG";
+          body.reframe = normalizeReframeForApi(reframe);
+        }
+
+        // Poll for real progress from backend with time-based interpolation
+        let lastPhase = "";
+        let inferenceStartTime = 0;
+        // Estimated inference time in seconds based on model
+        const estimatedInferenceTime = settings.model === "pro" ? 120 : 45;
+
+        const pollProgress = async () => {
+          if (!shouldApplyPollingUpdates) return;
+          try {
+            const res = await backendFetch("/api/generation/progress");
+            if (res.ok) {
+              const data: GenerationProgress = await res.json();
+              if (!shouldApplyPollingUpdates) return;
+
+              let displayProgress = data.progress;
+              let statusMessage = data.statusDetail || getPhaseMessage(data.phase);
+              const hasStructuredStepProgress =
+                data.currentStep !== null &&
+                data.totalSteps !== null &&
+                data.totalSteps > 0;
+
+              // Time-based interpolation during inference phase
+              if (data.phase === "inference" && !hasStructuredStepProgress) {
+                if (lastPhase !== "inference") {
+                  inferenceStartTime = Date.now();
+                }
+                const elapsed = (Date.now() - inferenceStartTime) / 1000;
+                // Interpolate from 15% to 95% based on estimated time
+                const inferenceProgress = Math.min(
+                  elapsed / estimatedInferenceTime,
+                  0.95,
+                );
+                displayProgress = 15 + Math.floor(inferenceProgress * 80);
+              }
+
+              // Keep API/local completion as a terminal response state, not polling state.
+              // Polling complete means backend state is finalized, but request can still be in-flight.
+              if (data.phase === "complete" || data.status === "complete") {
+                displayProgress = 95;
+                statusMessage = "Finalizing...";
+              }
+
+              lastPhase = data.phase;
+
+              setState((prev) => ({
+                ...prev,
+                progress: displayProgress,
+                statusMessage,
+                phaseIndex: data.phaseIndex ?? null,
+                phaseCount: data.phaseCount ?? null,
+                currentStep: data.currentStep ?? null,
+                totalSteps: data.totalSteps ?? null,
+                sectionIndex: data.sectionIndex ?? null,
+                sectionCount: data.sectionCount ?? null,
+                statusDetail: data.statusDetail ?? null,
+                previewUrl: data.previewUrl ?? prev.previewUrl,
+              }));
+            }
+          } catch {
+            // Ignore polling errors
+          }
+        };
+
+        progressInterval = setInterval(pollProgress, 500);
+
+        // Start generation (HTTP POST - synchronous, returns when done)
+        const response = await backendFetch("/api/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+          signal: abortControllerRef.current.signal,
+        });
+        shouldApplyPollingUpdates = false;
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || "Generation failed");
+        }
+
+        const result = await response.json();
+
+        if (result.status === "complete" && result.video_path) {
+          // Convert Windows path to proper file:// URL
+          const videoPathNormalized = result.video_path.replace(/\\/g, "/");
+          const fileUrl = videoPathNormalized.startsWith("/")
+            ? `file://${videoPathNormalized}`
+            : `file:///${videoPathNormalized}`;
+
           setState({
             isGenerating: false,
+            isCancelling: false,
             progress: 100,
-            statusMessage: 'Complete!',
-            videoUrl: null,
-            videoPath: null,
-            imageUrl: fileUrls[0],  // First image for backwards compatibility
-            imagePath: rawPaths[0],  // First image path
-            imageUrls: fileUrls,    // All images
-            imagePaths: rawPaths,   // All image paths
+            statusMessage: "Complete!",
+            phaseIndex: null,
+            phaseCount: null,
+            currentStep: null,
+            totalSteps: null,
+            sectionIndex: null,
+            sectionCount: null,
+            statusDetail: null,
+            previewUrl: null,
+            videoUrl: fileUrl,
+            videoPath: result.video_path, // Keep original path for API calls
+            imageUrl: null,
+            imagePath: null,
+            imageUrls: [],
+            imagePaths: [],
             error: null,
-          })
+          });
+        } else if (result.status === "cancelled") {
+          setState((prev) => ({
+            ...prev,
+            isGenerating: false,
+            isCancelling: false,
+            statusMessage: "Cancelled",
+          }));
+        } else if (result.error) {
+          throw new Error(result.error);
         }
-      } else if (result.status === 'cancelled') {
-        setState(prev => ({
-          ...prev,
-          isGenerating: false,
-          statusMessage: 'Cancelled',
-        }))
-      } else if (result.error) {
-        throw new Error(result.error)
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+          setState((prev) => ({
+            ...prev,
+            isGenerating: false,
+            isCancelling: false,
+            statusMessage: "Cancelled",
+          }));
+        } else {
+          setState((prev) => ({
+            ...prev,
+            isGenerating: false,
+            isCancelling: false,
+            error: error instanceof Error ? error.message : "Unknown error",
+          }));
+        }
+      } finally {
+        shouldApplyPollingUpdates = false;
+        if (progressInterval) {
+          clearInterval(progressInterval);
+        }
       }
+    },
+    [],
+  );
 
-    } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        setState(prev => ({
-          ...prev,
-          isGenerating: false,
-          statusMessage: 'Cancelled',
-        }))
-      } else {
-        setState(prev => ({
-          ...prev,
-          isGenerating: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        }))
-      }
-    } finally {
-      if (progressInterval) {
-        clearInterval(progressInterval)
-      }
+  const cancel = useCallback(async () => {
+    setState((prev) => ({
+      ...prev,
+      isCancelling: true,
+      statusMessage: "Cancelling...",
+    }));
+    try {
+      await backendFetch("/api/generate/cancel", { method: "POST" });
+    } catch {
+      setState((prev) => ({
+        ...prev,
+        isCancelling: false,
+        error: "Failed to cancel generation",
+      }));
     }
-  }, [])
+  }, []);
+
+  const generateImage = useCallback(
+    async (
+      prompt: string,
+      settings: GenerationSettings,
+      inputMedia?: InputMediaRequest[],
+    ) => {
+      const numImages = settings.variations || 1;
+
+      setState({
+        isGenerating: true,
+        isCancelling: false,
+        progress: 0,
+        statusMessage:
+          numImages > 1
+            ? `Generating ${numImages} images...`
+            : "Generating image...",
+        videoUrl: null,
+        videoPath: null,
+        imageUrl: null,
+        imagePath: null,
+        imageUrls: [],
+        imagePaths: [],
+        error: null,
+        phaseIndex: null,
+        phaseCount: null,
+        currentStep: null,
+        totalSteps: null,
+        sectionIndex: null,
+        sectionCount: null,
+        statusDetail: null,
+        previewUrl: null,
+      });
+
+      abortControllerRef.current = new AbortController();
+      let progressInterval: ReturnType<typeof setInterval> | null = null;
+
+      try {
+        // Skip prompt enhancement for T2I - use original prompt directly
+        const finalPrompt = prompt;
+
+        // Phase 4: when a curated profile is selected, the backend
+        // resolves the exact WxH from (profileId, tier, aspect). We only
+        // need the legacy getImageDimensions path when no profile is set
+        // (backwards-compatible raw width/height).
+        const hasProfile = !!settings.imageProfileId;
+        const dims = hasProfile ? null : getImageDimensions(settings);
+        const numSteps = settings.imageSteps || 8;
+
+        // Poll for progress
+        const pollProgress = async () => {
+          try {
+            const res = await backendFetch("/api/generation/progress");
+            if (res.ok) {
+              const data = await res.json();
+              const currentImage = data.currentStep || 0;
+              const totalImages = data.totalSteps || numImages;
+              const phaseMessage = getPhaseMessage(data.phase);
+              setState((prev) => ({
+            ...prev,
+            progress: data.progress,
+            phaseIndex: data.phaseIndex ?? null,
+            phaseCount: data.phaseCount ?? null,
+            currentStep: data.currentStep ?? null,
+            totalSteps: data.totalSteps ?? null,
+            sectionIndex: data.sectionIndex ?? null,
+            sectionCount: data.sectionCount ?? null,
+            statusDetail: data.statusDetail ?? null,
+            previewUrl: data.previewUrl ?? prev.previewUrl,
+                statusMessage:
+                  data.phase === "inference"
+                    ? numImages > 1
+                      ? `Generating image ${currentImage + 1}/${totalImages}...`
+                      : "Generating image..."
+                    : phaseMessage,
+              }));
+            }
+          } catch {
+            // Ignore polling errors
+          }
+        };
+
+        progressInterval = setInterval(pollProgress, 500);
+
+        // Phase 4: when a curated profile is selected, send the profile
+        // id + tier + aspect and let the backend resolve the exact WxH.
+        // Raw width/height still accepted for backwards compatibility.
+        const body: Record<string, unknown> = {
+          prompt: finalPrompt,
+          numSteps,
+          numImages,
+        };
+        if (hasProfile) {
+          body.modelProfileId = settings.imageProfileId;
+          body.aspectRatio = settings.imageAspectRatio || "1:1";
+          body.resolutionTier = settings.imageResolution;
+          if (inputMedia && inputMedia.length > 0) {
+            body.inputMedia = inputMedia.map((item) => ({
+              type: "image",
+              path: item.path,
+              role: item.role,
+            }));
+          }
+        } else if (dims) {
+          body.width = dims.width;
+          body.height = dims.height;
+        }
+
+        const response = await backendFetch("/api/generate-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+          signal: abortControllerRef.current.signal,
+        });
+
+        if (progressInterval) {
+          clearInterval(progressInterval);
+          progressInterval = null;
+        }
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || "Image generation failed");
+        }
+
+        const result = await response.json();
+
+        if (result.status === "complete") {
+          // Handle both new format (image_paths array) and old format (single image_path)
+          let rawPaths: string[] = [];
+          if (result.image_paths && Array.isArray(result.image_paths)) {
+            rawPaths = result.image_paths;
+          } else if (result.image_path) {
+            rawPaths = [result.image_path];
+          }
+
+          if (rawPaths.length > 0) {
+            // Convert all paths to file URLs
+            const fileUrls = rawPaths.map((path: string) => {
+              const imagePath = path.replace(/\\/g, "/");
+              return imagePath.startsWith("/")
+                ? `file://${imagePath}`
+                : `file:///${imagePath}`;
+            });
+
+            setState({
+              isGenerating: false,
+              isCancelling: false,
+              progress: 100,
+              statusMessage: "Complete!",
+              videoUrl: null,
+              videoPath: null,
+              imageUrl: fileUrls[0], // First image for backwards compatibility
+              imagePath: rawPaths[0], // First image path
+              imageUrls: fileUrls, // All images
+              imagePaths: rawPaths, // All image paths
+              error: null,
+              phaseIndex: null,
+              phaseCount: null,
+              currentStep: null,
+              totalSteps: null,
+              sectionIndex: null,
+              sectionCount: null,
+              statusDetail: null,
+              previewUrl: null,
+            });
+          }
+        } else if (result.status === "cancelled") {
+          setState((prev) => ({
+            ...prev,
+            isGenerating: false,
+            isCancelling: false,
+            statusMessage: "Cancelled",
+          }));
+        } else if (result.error) {
+          throw new Error(result.error);
+        }
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+          setState((prev) => ({
+            ...prev,
+            isGenerating: false,
+            isCancelling: false,
+            statusMessage: "Cancelled",
+          }));
+        } else {
+          setState((prev) => ({
+            ...prev,
+            isGenerating: false,
+            isCancelling: false,
+            error: error instanceof Error ? error.message : "Unknown error",
+          }));
+        }
+      } finally {
+        if (progressInterval) {
+          clearInterval(progressInterval);
+        }
+      }
+    },
+    [],
+  );
 
   const reset = useCallback(() => {
     setState({
       isGenerating: false,
+      isCancelling: false,
       progress: 0,
-      statusMessage: '',
+      statusMessage: "",
+      phaseIndex: null,
+      phaseCount: null,
+      currentStep: null,
+      totalSteps: null,
+      sectionIndex: null,
+      sectionCount: null,
+      statusDetail: null,
+      previewUrl: null,
       videoUrl: null,
       videoPath: null,
       imageUrl: null,
@@ -498,8 +679,8 @@ export function useGeneration(): UseGenerationReturn {
       imageUrls: [],
       imagePaths: [],
       error: null,
-    })
-  }, [])
+    });
+  }, []);
 
   return {
     ...state,
@@ -507,5 +688,5 @@ export function useGeneration(): UseGenerationReturn {
     generateImage,
     cancel,
     reset,
-  }
+  };
 }

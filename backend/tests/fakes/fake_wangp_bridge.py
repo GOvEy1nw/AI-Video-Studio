@@ -39,6 +39,9 @@ class FakeWangpVideoCall:
     video_prompt_type: str | None = None
     image_prompt_type: str | None = None
     audio_prompt_type: str | None = None
+    video_guide_outpainting: str | None = None
+    video_guide_outpainting_ratio: str | None = None
+    video_length_frames: int | None = None
 
 
 @dataclass
@@ -85,6 +88,7 @@ class FakeWanGPBridge:
     unavailable_reason: str | None = "WanGP bridge disabled in test"
     session_ready: bool = False
     preload_calls: int = 0
+    compile_enabled: bool = False
 
     video_calls: list[FakeWangpVideoCall] = field(default_factory=list)
     image_calls: list[FakeWangpImageCall] = field(default_factory=list)
@@ -110,6 +114,9 @@ class FakeWanGPBridge:
             raise RuntimeError(self.unavailable_reason or "WanGP bridge is unavailable")
         self.session_ready = True
 
+    def set_compile_enabled(self, enabled: bool) -> None:
+        self.compile_enabled = enabled
+
     def generate_video(
         self,
         *,
@@ -134,6 +141,9 @@ class FakeWanGPBridge:
         video_prompt_type: str | None = None,
         image_prompt_type: str | None = None,
         audio_prompt_type: str | None = None,
+        video_guide_outpainting: str | None = None,
+        video_guide_outpainting_ratio: str | None = None,
+        video_length_frames: int | None = None,
     ) -> str:
         self.video_calls.append(
             FakeWangpVideoCall(
@@ -156,6 +166,9 @@ class FakeWanGPBridge:
                 video_prompt_type=video_prompt_type,
                 image_prompt_type=image_prompt_type,
                 audio_prompt_type=audio_prompt_type,
+                video_guide_outpainting=video_guide_outpainting,
+                video_guide_outpainting_ratio=video_guide_outpainting_ratio,
+                video_length_frames=video_length_frames,
             )
         )
         if self.raise_on_video is not None:

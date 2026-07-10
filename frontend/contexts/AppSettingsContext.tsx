@@ -10,6 +10,16 @@ export interface FastModelSettings {
   useUpscaler: boolean
 }
 
+export interface OutputSettings {
+  videoContainer: 'mp4' | 'mov' | 'mkv'
+  videoCodec: 'libx264_8' | 'libx264_10' | 'libx264_lossless' | 'libx265_28' | 'libx265_8' | 'prores_422'
+  imageCodec: 'jpeg' | 'webp' | 'png' | 'webp_lossless'
+  imageQuality: number
+  audioCodec: 'aac_128' | 'aac_192' | 'aac_256' | 'aac_320'
+  metadataMode: 'metadata' | 'json'
+  keepIntermediateSlidingWindows: boolean
+}
+
 export interface AppSettings {
   useTorchCompile: boolean
   loadOnStartup: boolean
@@ -19,6 +29,17 @@ export interface AppSettings {
   promptCacheSize: number
   seedLocked: boolean
   lockedSeed: number
+  outputSettings: OutputSettings
+}
+
+const DEFAULT_OUTPUT_SETTINGS: OutputSettings = {
+  videoContainer: 'mp4',
+  videoCodec: 'libx264_8',
+  imageCodec: 'jpeg',
+  imageQuality: 95,
+  audioCodec: 'aac_192',
+  metadataMode: 'metadata',
+  keepIntermediateSlidingWindows: false,
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
@@ -30,6 +51,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   promptCacheSize: 1,
   seedLocked: false,
   lockedSeed: 42,
+  outputSettings: DEFAULT_OUTPUT_SETTINGS,
 }
 
 type BackendProcessStatus = 'alive' | 'restarting' | 'dead'
@@ -65,6 +87,10 @@ function normalizeAppSettings(data: Partial<AppSettings>): AppSettings {
     promptCacheSize: data.promptCacheSize ?? DEFAULT_APP_SETTINGS.promptCacheSize,
     seedLocked: data.seedLocked ?? DEFAULT_APP_SETTINGS.seedLocked,
     lockedSeed: data.lockedSeed ?? DEFAULT_APP_SETTINGS.lockedSeed,
+    outputSettings: {
+      ...DEFAULT_OUTPUT_SETTINGS,
+      ...(data.outputSettings ?? {}),
+    },
   }
 }
 

@@ -369,7 +369,7 @@ IMAGE_PROFILES: tuple[ModelProfile, ...] = (
         display_name="Krea 2 Turbo",
         media_type="image",
         visible=True,
-        status="experimental",
+        status="stable",
         wangp_model_type="krea2_turbo",
         wangp_metadata=WanGPModelMetadata(
             family="krea2",
@@ -483,7 +483,7 @@ IMAGE_PROFILES: tuple[ModelProfile, ...] = (
         display_name="Flux 2 Klein 4B",
         media_type="image",
         visible=True,
-        status="experimental",
+        status="stable",
         wangp_model_type="flux2_klein_4b",
         wangp_metadata=WanGPModelMetadata(
             family="flux2",
@@ -639,7 +639,7 @@ IMAGE_PROFILES: tuple[ModelProfile, ...] = (
         display_name="HiDream O1",
         media_type="image",
         visible=True,
-        status="experimental",
+        status="stable",
         wangp_model_type="hidream_o1_dev",
         wangp_metadata=WanGPModelMetadata(
             family="hidream",
@@ -930,7 +930,7 @@ VIDEO_PROFILES: tuple[ModelProfile, ...] = (
         ),
         default_aspect_ratio="16:9",
         default_resolution_tier="540p",
-        allowed_aspect_ratios=("16:9", "9:16"),
+        allowed_aspect_ratios=("1:1", "16:9", "9:16"),
         allowed_resolution_tiers=("540p", "720p", "1080p"),
     ),
 )

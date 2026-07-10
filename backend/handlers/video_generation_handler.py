@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import math
 import os
 import tempfile
 import time
@@ -10,7 +11,7 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 from threading import RLock
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from PIL import Image
 
@@ -20,9 +21,11 @@ from handlers.base import StateHandlerBase
 from handlers.generation_handler import GenerationHandler
 from handlers.pipelines_handler import PipelinesHandler
 from handlers.text_handler import TextHandler
-from model_profiles import get_video_profile
-from model_profiles.profiles import ModelProfile
+from model_profiles import get_video_profile, is_combination_supported, resolve_resolution
+from model_profiles.profiles import AspectRatio, ModelProfile, ResolutionTier
 from services.wangp_bridge import WanGPBridge
+from services.reframe_wangp_mapping import ReframePadding, map_reframe_to_wangp
+from services.video_clip import extract_audio_clip, extract_video_clip, probe_video_metadata
 from server_utils.media_validation import (
     normalize_optional_path,
     validate_audio_file,
@@ -42,13 +45,15 @@ FORCED_API_MODEL_MAP: dict[str, str] = {
     "pro": "ltx-2-3-pro",
 }
 FORCED_API_RESOLUTION_MAP: dict[str, dict[str, str]] = {
-    "1080p": {"16:9": "1920x1080", "9:16": "1080x1920"},
-    "1440p": {"16:9": "2560x1440", "9:16": "1440x2560"},
-    "2160p": {"16:9": "3840x2160", "9:16": "2160x3840"},
+    "1080p": {"16:9": "1920x1080", "1:1": "1080x1080", "9:16": "1080x1920"},
+    "1440p": {"16:9": "2560x1440", "1:1": "1440x1440", "9:16": "1440x2560"},
+    "2160p": {"16:9": "3840x2160", "1:1": "2160x2160", "9:16": "2160x3840"},
 }
 A2V_FORCED_API_RESOLUTION = "1920x1080"
-FORCED_API_ALLOWED_ASPECT_RATIOS = {"16:9", "9:16"}
+FORCED_API_ALLOWED_ASPECT_RATIOS = {"16:9", "1:1", "9:16"}
 FORCED_API_ALLOWED_FPS = {24, 25, 48, 50}
+MULTI_SHOT_LORA_FILENAME = "LTX-2.3_Cinematic_hardcut.safetensors"
+MULTI_SHOT_LORA_STRENGTH = "1.0"
 
 
 def _get_allowed_durations(model_id: str, resolution_label: str, fps: int) -> set[int]:
@@ -475,18 +480,32 @@ class VideoGenerationHandler(StateHandlerBase):
 
         duration = self._parse_forced_numeric_field(req.duration, "INVALID_DURATION")
         fps = self._parse_forced_numeric_field(req.fps, "INVALID_FPS")
-        if not req.prompt.strip() and not req.shotPrompts:
+        is_reframe = req.reframe is not None
+        looks_like_reframe = (
+            req.prompt.strip().lower() == "outpaint" and any(
+                media.role == "control_video" for media in req.inputMedia
+            )
+        )
+        if looks_like_reframe and not is_reframe:
+            raise HTTPError(400, "REFRAME_OPTIONS_REQUIRED")
+        if not req.prompt.strip() and not req.shotPrompts and not is_reframe:
             raise HTTPError(400, "PROMPT_REQUIRED")
-        wangp_prompt, duration = self._resolve_prompt_and_duration(req, duration)
+        if is_reframe:
+            reframe = req.reframe
+            assert reframe is not None
+            duration = max(2, int(math.ceil(reframe.controlVideoDuration)))
+            wangp_prompt = req.prompt.strip() or "outpaint"
+        else:
+            wangp_prompt, duration = self._resolve_prompt_and_duration(req, duration)
 
         start_image_path = None
         end_image_path = None
         control_video_path = None
         audio_path = normalize_optional_path(req.audioPath)
 
-        video_prompt_type = req.videoPromptType
+        video_prompt_type = "VG" if is_reframe else req.videoPromptType
         image_prompt_type = None
-        audio_prompt_type = None
+        audio_prompt_type = "K" if is_reframe else None
 
         legacy_image = normalize_optional_path(req.imagePath)
         if legacy_image:
@@ -554,8 +573,35 @@ class VideoGenerationHandler(StateHandlerBase):
                 audio_path = media_path
                 audio_prompt_type = "A1OF"
 
+        if is_reframe:
+            reframe = req.reframe
+            assert reframe is not None
+            if not control_video_path:
+                for media in req.inputMedia:
+                    if media.role == "control_video":
+                        control_video_path = normalize_optional_path(media.path)
+                        break
+            if not control_video_path:
+                raise HTTPError(400, "REFRAME_CONTROL_VIDEO_REQUIRED")
+
+        temp_clip_path: Path | None = None
+        temp_media_paths: list[Path] = []
+        video_guide_outpainting: str | None = None
+        video_guide_outpainting_ratio: str | None = None
+        output_aspect_ratio = req.aspectRatio
+        source_video_frame_count: int | None = None
+        input_media_duration: float | None = None
+
         try:
             profile = self._resolve_video_profile(req)
+            if is_reframe:
+                reframe = req.reframe
+                assert reframe is not None
+                if not profile.control_video:
+                    raise HTTPError(400, "REFRAME_NOT_SUPPORTED")
+                if not profile.wangp_metadata.capabilities.get("outpainting", False):
+                    raise HTTPError(400, "REFRAME_NOT_SUPPORTED")
+
             self._validate_video_profile_request(
                 profile,
                 req,
@@ -564,12 +610,63 @@ class VideoGenerationHandler(StateHandlerBase):
                 control_video_path=control_video_path,
                 audio_path=audio_path,
             )
+            resolution_tier = cast(ResolutionTier, req.resolution)
+            request_aspect_ratio: AspectRatio = req.aspectRatio
+            if is_reframe:
+                reframe = req.reframe
+                assert reframe is not None
+                request_aspect_ratio = reframe.aspectMode if reframe.aspectMode != "custom" else req.aspectRatio
+            resolved_width, resolved_height = resolve_resolution(
+                profile,
+                resolution_tier,
+                request_aspect_ratio,
+            )
+            resolved_resolution_label = f"{resolved_width}x{resolved_height}"
+
+            trimmed_media_paths: dict[str, str] = {}
+            for media in req.inputMedia:
+                media_path = normalize_optional_path(media.path)
+                if not media_path or media.trimDuration is None:
+                    continue
+                if media.type == "audio":
+                    trimmed_path = extract_audio_clip(
+                        media_path,
+                        start_time=media.trimStartTime or 0.0,
+                        duration=media.trimDuration,
+                        output_dir=self._outputs_dir,
+                    )
+                else:
+                    trimmed_path = extract_video_clip(
+                        media_path,
+                        start_time=media.trimStartTime or 0.0,
+                        duration=media.trimDuration,
+                        output_dir=self._outputs_dir,
+                    )
+                temp_media_paths.append(trimmed_path)
+                trimmed_media_paths[media_path] = str(trimmed_path)
+                input_media_duration = media.trimDuration
+
+            if trimmed_media_paths:
+                if start_image_path in trimmed_media_paths:
+                    start_image_path = trimmed_media_paths[start_image_path]
+                if control_video_path in trimmed_media_paths:
+                    control_video_path = trimmed_media_paths[control_video_path]
+                if audio_path in trimmed_media_paths:
+                    audio_path = trimmed_media_paths[audio_path]
+
+            if input_media_duration is not None and not is_reframe and not req.shotPrompts:
+                duration = max(2, int(math.ceil(input_media_duration)))
 
             # continue_video holds a video in start_image_path, so validate as video
             is_start_video = False
             if start_image_path:
                 for media in req.inputMedia:
-                    if media.role == "continue_video" and normalize_optional_path(media.path) == start_image_path:
+                    original_media_path = normalize_optional_path(media.path)
+                    effective_media_path = trimmed_media_paths.get(
+                        original_media_path or "",
+                        original_media_path,
+                    )
+                    if media.role == "continue_video" and effective_media_path == start_image_path:
                         is_start_video = True
                         break
 
@@ -580,9 +677,72 @@ class VideoGenerationHandler(StateHandlerBase):
 
             validated_end_image_path = str(validate_image_file(end_image_path)) if end_image_path else None
             validated_control_video_path = str(validate_video_file(control_video_path)) if control_video_path else None
+
+            if is_reframe:
+                reframe = req.reframe
+                assert reframe is not None
+                if validated_control_video_path is None:
+                    raise HTTPError(400, "REFRAME_SOURCE_REQUIRED")
+                source_path = Path(validated_control_video_path)
+                temp_clip_path = extract_video_clip(
+                    source_path,
+                    start_time=reframe.controlVideoStartTime,
+                    duration=reframe.controlVideoDuration,
+                    output_dir=self._outputs_dir,
+                )
+                validated_control_video_path = str(temp_clip_path)
+
+                padding = ReframePadding(
+                    top=reframe.padding.top,
+                    bottom=reframe.padding.bottom,
+                    left=reframe.padding.left,
+                    right=reframe.padding.right,
+                )
+                outpaint = map_reframe_to_wangp(
+                    reframe.aspectMode,
+                    padding,
+                )
+                video_guide_outpainting = outpaint.video_guide_outpainting
+                video_guide_outpainting_ratio = outpaint.video_guide_outpainting_ratio
+                output_aspect_ratio = outpaint.output_aspect_ratio
+                logger.info(
+                    "Reframe outpaint mapping: padding=%s outpainting=%r ratio=%r",
+                    padding,
+                    video_guide_outpainting,
+                    video_guide_outpainting_ratio,
+                )
+
+            if validated_control_video_path is not None:
+                source_metadata = probe_video_metadata(validated_control_video_path)
+                if source_metadata is not None:
+                    source_video_frame_count = source_metadata.frame_count
+                    logger.info(
+                        "Using source video frame count for WanGP video_length: frames=%s duration=%.3fs",
+                        source_metadata.frame_count,
+                        source_metadata.duration_seconds,
+                    )
+            if source_video_frame_count is None and is_start_video and validated_start_image_path is not None:
+                source_metadata = probe_video_metadata(validated_start_image_path)
+                if source_metadata is not None:
+                    source_video_frame_count = source_metadata.frame_count
+                    logger.info(
+                        "Using continue-video frame count for WanGP video_length: frames=%s duration=%.3fs",
+                        source_metadata.frame_count,
+                        source_metadata.duration_seconds,
+                    )
+
             is_audio_video = False
             if audio_path:
-                if any(media.role in {"human_motion", "human_motion_pose", "depth", "canny_edges", "sdr_to_hdr", "control_video"} for media in req.inputMedia if normalize_optional_path(media.path) == audio_path):
+                if any(
+                    media.role
+                    in {"human_motion", "human_motion_pose", "depth", "canny_edges", "sdr_to_hdr", "control_video"}
+                    for media in req.inputMedia
+                    if trimmed_media_paths.get(
+                        normalize_optional_path(media.path) or "",
+                        normalize_optional_path(media.path),
+                    )
+                    == audio_path
+                ):
                     is_audio_video = True
 
             if audio_path:
@@ -600,11 +760,33 @@ class VideoGenerationHandler(StateHandlerBase):
             else:
                 steps = 8 if req.model.strip().lower() == "fast" else max(1, settings.pro_model.steps)
             seed = self._resolve_seed()
+            default_settings = dict(profile.wangp_default_settings)
+            output_settings = settings.output_settings
+            default_settings.update(
+                {
+                    "video_output_codec": output_settings.video_codec,
+                    "video_container": output_settings.video_container,
+                    "audio_output_codec": output_settings.audio_codec,
+                    "image_output_codec": f"{output_settings.image_codec}_{output_settings.image_quality}"
+                    if output_settings.image_codec in {"jpeg", "webp"}
+                    else output_settings.image_codec,
+                    "metadata_type": output_settings.metadata_mode,
+                    "keep_intermediate_sliding_windows": 1
+                    if output_settings.keep_intermediate_sliding_windows
+                    else 0,
+                }
+            )
+            if req.shotPrompts:
+                default_settings["activated_loras"] = [MULTI_SHOT_LORA_FILENAME]
+                default_settings["loras_multipliers"] = MULTI_SHOT_LORA_STRENGTH
+            if is_reframe:
+                default_settings["force_fps"] = "auto"
+                default_settings["sliding_window_overlap"] = 33
 
             output_path = self._wangp_bridge.generate_video(
                 prompt=wangp_prompt,
-                resolution_label=req.resolution,
-                aspect_ratio=req.aspectRatio,
+                resolution_label=resolved_resolution_label,
+                aspect_ratio=output_aspect_ratio,
                 duration_seconds=duration,
                 fps=fps,
                 steps=steps,
@@ -616,13 +798,16 @@ class VideoGenerationHandler(StateHandlerBase):
                 on_progress=self._generation.update_progress,
                 is_cancelled=self._generation.is_generation_cancelled,
                 model_type=profile.wangp_model_type,
-                default_settings=profile.wangp_default_settings,
+                default_settings=default_settings,
                 start_image_path=validated_start_image_path,
                 end_image_path=validated_end_image_path,
                 control_video_path=validated_control_video_path,
                 video_prompt_type=video_prompt_type,
                 image_prompt_type=image_prompt_type,
                 audio_prompt_type=audio_prompt_type,
+                video_guide_outpainting=video_guide_outpainting,
+                video_guide_outpainting_ratio=video_guide_outpainting_ratio,
+                video_length_frames=source_video_frame_count,
             )
 
             self._generation.complete_generation(output_path)
@@ -639,6 +824,19 @@ class VideoGenerationHandler(StateHandlerBase):
                 logger.info("WanGP generation cancelled by user")
                 return GenerateVideoResponse(status="cancelled")
             raise HTTPError(500, str(e)) from e
+        finally:
+            if temp_clip_path is not None and temp_clip_path.exists():
+                try:
+                    temp_clip_path.unlink()
+                except OSError:
+                    logger.warning("Could not remove temporary reframe clip: %s", temp_clip_path)
+            for media_path in temp_media_paths:
+                if not media_path.exists():
+                    continue
+                try:
+                    media_path.unlink()
+                except OSError:
+                    logger.warning("Could not remove temporary input clip: %s", media_path)
 
     @staticmethod
     def _resolve_video_profile(req: GenerateVideoRequest) -> ModelProfile:
@@ -686,6 +884,8 @@ class VideoGenerationHandler(StateHandlerBase):
             raise HTTPError(400, "UNSUPPORTED_VIDEO_RESOLUTION_TIER")
         if req.aspectRatio not in profile.allowed_aspect_ratios:
             raise HTTPError(400, "UNSUPPORTED_VIDEO_ASPECT_RATIO")
+        if not is_combination_supported(profile, req.resolution, req.aspectRatio):
+            raise HTTPError(400, "NO_CURATED_VIDEO_RESOLUTION")
 
         if req.inputMedia and profile.input_media and profile.input_media.supports_image_inputs:
             allowed_roles = {role_def.role for role_def in profile.input_media.roles}

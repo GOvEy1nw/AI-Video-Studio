@@ -6,6 +6,8 @@ import { logger } from '../logger'
 import { getMainWindow } from '../window'
 import { validatePath, approvePath } from '../path-validation'
 import { getProjectAssetsPath, setProjectAssetsPath } from '../app-state'
+import { importProjectAsset, projectAssetCategoryDir, type DuplicateStrategy } from '../lib/project-asset-import'
+import { deleteProjectAssetFiles } from '../lib/project-asset-delete'
 
 const MIME_TYPES: Record<string, string> = {
   '.png': 'image/png',
@@ -180,17 +182,76 @@ export function registerFileHandlers(): void {
     try {
       const resolvedSrc = validatePath(srcPath, getAllowedRoots())
       const assetsRoot = getProjectAssetsPath()
-      const destDir = path.join(assetsRoot, projectId)
-      fs.mkdirSync(destDir, { recursive: true })
-      const fileName = path.basename(resolvedSrc)
-      const destPath = path.join(destDir, fileName)
-      fs.copyFileSync(resolvedSrc, destPath)
-      const normalized = destPath.replace(/\\/g, '/')
-      const fileUrl = normalized.startsWith('/') ? `file://${normalized}` : `file:///${normalized}`
-      return { success: true, path: destPath, url: fileUrl }
+      const destDir = projectAssetCategoryDir(assetsRoot, projectId, 'generated')
+      const imported = importProjectAsset(resolvedSrc, destDir, 'overwrite', 'move')
+      return {
+        success: true,
+        path: imported.destPath,
+        url: imported.url,
+        fileName: imported.fileName,
+        alreadyExisted: imported.alreadyExisted,
+        reusedExisting: imported.reusedExisting,
+        needsDuplicateChoice: imported.needsDuplicateChoice,
+      }
     } catch (error) {
       logger.error(`Error copying to project assets: ${error}`)
       return { success: false, error: String(error) }
+    }
+  })
+
+  ipcMain.handle('import-to-project-assets', async (_event, options: {
+    srcPath: string
+    projectId: string
+    onDuplicate?: DuplicateStrategy
+  }) => {
+    try {
+      const resolvedSrc = validatePath(options.srcPath, getAllowedRoots())
+      const assetsRoot = getProjectAssetsPath()
+      const destDir = projectAssetCategoryDir(assetsRoot, options.projectId, 'uploads')
+      const strategy: DuplicateStrategy = options.onDuplicate ?? 'suffix'
+      const imported = importProjectAsset(resolvedSrc, destDir, strategy, 'copy')
+      return {
+        success: true,
+        path: imported.destPath,
+        url: imported.url,
+        fileName: imported.fileName,
+        alreadyExisted: imported.alreadyExisted,
+        reusedExisting: imported.reusedExisting,
+        needsDuplicateChoice: imported.needsDuplicateChoice,
+      }
+    } catch (error) {
+      logger.error(`Error importing to project assets: ${error}`)
+      return { success: false, error: String(error) }
+    }
+  })
+
+  ipcMain.handle('delete-project-asset-files', async (_event, options: {
+    projectId: string
+    filePaths: string[]
+  }) => {
+    try {
+      const assetsRoot = getProjectAssetsPath()
+      const validatedPaths: string[] = []
+      for (const filePath of options.filePaths) {
+        try {
+          validatedPaths.push(validatePath(filePath, getAllowedRoots()))
+        } catch (error) {
+          logger.warn(`Skipping delete for disallowed path ${filePath}: ${error}`)
+        }
+      }
+      const result = await deleteProjectAssetFiles(assetsRoot, options.projectId, validatedPaths)
+      return {
+        success: result.failed.length === 0,
+        ...result,
+      }
+    } catch (error) {
+      logger.error(`Error deleting project asset files: ${error}`)
+      return {
+        success: false,
+        deleted: [],
+        skipped: [],
+        failed: [{ path: '', error: String(error) }],
+      }
     }
   })
 

@@ -28,6 +28,8 @@ def route_post_settings(
 ) -> StatusResponse:
     _, _after, changed_paths = handler.settings.update_settings(req)
     changed_roots = {path.split(".", 1)[0] for path in changed_paths}
+    if "use_torch_compile" in changed_paths:
+        handler.wangp_bridge.set_compile_enabled(_after.use_torch_compile)
 
     logger.info(
         "Applied settings patch (changed=%s)",

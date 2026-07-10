@@ -108,6 +108,15 @@ class GenerationProgressResponse(BaseModel):
     progress: int
     currentStep: int | None
     totalSteps: int | None
+    phaseIndex: int | None = None
+    phaseCount: int | None = None
+    sectionIndex: int | None = None
+    sectionCount: int | None = None
+    statusDetail: str | None = None
+    previewUrl: str | None = None
+    downloadCurrentFile: str | None = None
+    downloadCurrentFileProgress: int | None = None
+    downloadTotalProgress: int | None = None
 
 
 class ModelInfo(BaseModel):
@@ -329,6 +338,8 @@ class GenerateVideoInputMedia(BaseModel):
     id: str | None = None
     type: Literal["image", "video", "audio"] = "image"
     path: str
+    trimStartTime: float | None = Field(default=None, ge=0)
+    trimDuration: float | None = Field(default=None, gt=0)
     role: Literal[
         "start_image",
         "end_image",
@@ -358,6 +369,20 @@ def _default_video_shot_prompts() -> list[GenerateVideoShotPrompt]:
     return []
 
 
+class ReframePadding(BaseModel):
+    top: int = Field(ge=0, le=200)
+    bottom: int = Field(ge=0, le=200)
+    left: int = Field(ge=0, le=200)
+    right: int = Field(ge=0, le=200)
+
+
+class ReframeOptions(BaseModel):
+    aspectMode: Literal["1:1", "16:9", "9:16", "custom"]
+    padding: ReframePadding
+    controlVideoStartTime: float = Field(ge=0)
+    controlVideoDuration: float = Field(gt=0)
+
+
 class GenerateVideoRequest(BaseModel):
     prompt: str = ""
     resolution: str = "540p"
@@ -370,16 +395,17 @@ class GenerateVideoRequest(BaseModel):
     audio: str = "false"
     imagePath: str | None = None
     audioPath: str | None = None
-    aspectRatio: Literal["16:9", "9:16"] = "16:9"
+    aspectRatio: Literal["1:1", "16:9", "9:16"] = "16:9"
     inputMedia: list[GenerateVideoInputMedia] = Field(default_factory=_default_video_input_media)
     videoPromptType: str | None = None
     useAudioTrack: bool = True
     shotPrompts: list[GenerateVideoShotPrompt] = Field(default_factory=_default_video_shot_prompts)
+    reframe: ReframeOptions | None = None
 
     @model_validator(mode="after")
     def validate_prompt_or_shots(self) -> "GenerateVideoRequest":
-        if not self.prompt.strip() and not self.shotPrompts:
-            raise ValueError("prompt is required unless shotPrompts are provided")
+        if not self.prompt.strip() and not self.shotPrompts and self.reframe is None:
+            raise ValueError("prompt is required unless shotPrompts or reframe are provided")
         return self
 
 

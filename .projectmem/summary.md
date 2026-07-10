@@ -1,191 +1,74 @@
-# projectmem - AI Video Studio
+# projectmem - AI-Video-Studio
 
-_Last updated: 2026-07-08_
+_Last updated: 2026-07-09_
 
 ## Project purpose
-
 AI Video Studio (AiVS) is a local-first desktop app for AI image, video, and future audio/TTS generation. It is forked from `deepbeepmeep/LTX-Desktop-WanGP` and is being reshaped into a Freepik/Higgsfield-style creative studio powered by WanGP / Wan2GP. The project is community-focused, not commercial.
 
-## Current product direction
+## Recent issues
+- [DONE] #0011 Guide remove still needs second click while trim editor is open despite pointer/mouse remove handler [frontend/views/GenSpace.tsx] -> Late trim editor updates no longer re-add removed guide video, so first remove click persists while trim UI is open [frontend/views/GenSpace.tsx] (fixed)
+- [DONE] #0010 Remove still takes two clicks when normal guide trim UI is open [frontend/views/GenSpace.tsx] -> Remove now clears guide trim/menu state and removes the guide media through a functional update on first activation [frontend/views/GenSpace.tsx] (fixed)
+- [DONE] #0009 Remove action still only closes trim editor, and media inputs collapse on mode changes [frontend/views/GenSpace.tsx] -> Remove now deletes guide media during first pointer activation, and media input expansion persists across mode/profile changes [frontend/views/GenSpace.tsx] (fixed)
+- [DONE] #0008 Normal guide video remove closes trim editor first, and video input leaks into image mode [frontend/views/GenSpace.tsx] -> Remove now completes on first click, and switching to image mode drops video/audio guide inputs [frontend/views/GenSpace.tsx] (fixed)
+- [DONE] #0007 Guide trim regressed: duration remains zero so timeline hides, and preview still appears left aligned [frontend/views/GenSpace.tsx; frontend/components/VideoTrimPanel.tsx] -> Fixed guide trim duration regression and centered video frame sizing [frontend/views/GenSpace.tsx] (fixed)
+  - Failed attempt: Combined duration and centering patch did not apply because current class text differed; no files changed [frontend/views/GenSpace.tsx]
+- [DONE] #0006 Normal guide trim layout needs centered preview, trim before media slots, and outside-click closure for media role menus [frontend/views/GenSpace.tsx] -> Confirmed trim preview/layout and media role menu interaction refinements [frontend/views/GenSpace.tsx] (fixed)
+- [DONE] #0005 Normal guide trim duration path should mirror Retake/Reframe local videoRef state instead of parent mediaDuration synchronization [frontend/views/GenSpace.tsx] -> Normal guide trim now mirrors Retake/Reframe duration ownership and loadedmetadata handling exactly [frontend/views/GenSpace.tsx] (fixed)
+- [DONE] #0004 Visible normal-guide preview renders but media duration stays zero, hiding trim filmstrip and leaving time display 00:00 [frontend/views/GenSpace.tsx; frontend/components/VideoTrimPanel.tsx] -> Fixed zero-duration guide trim by probing media immediately and on all duration readiness events, allowing VideoTrimPanel to render filmstrip and range [frontend/views/GenSpace.tsx] (fixed)
+- [DONE] #0003 Normal video-guide trim renders empty header because metadata is unavailable; UI needs Retake-style preview and filmstrip [frontend/views/GenSpace.tsx; frontend/components/VideoTrimPanel.tsx] -> Confirmed normal guide trim renders visible media preview, playback controls, five-second default range, and shared Retake-style filmstrip before Confirm [frontend/views/GenSpace.tsx] (fixed)
+  - Failed attempt: First visible trim UI compile exposed missing Play/Pause imports after adding Retake-style playback controls [frontend/views/GenSpace.tsx]
+  - Failed attempt: Visual Vite launch failed in sandbox because esbuild could not read parent directory/config; static TypeScript check remained clean [frontend/views/GenSpace.tsx]
+- [DONE] #0002 Regression: reframe zoom disabled for every aspect, normal video-guide trim and auto duration fail, previews stop updating [frontend/components/ReframePanel.tsx; frontend/views/GenSpace.tsx; frontend/hooks/use-generation.ts] -> Confirmed fixes: fit-based reframe zoom guard, committed normal guide trim with Trim action and auto duration, cache-busted WanGP preview updates [frontend/components/ReframePanel.tsx; frontend/views/GenSpace.tsx; backend/services/wangp_bridge.py] (fixed)
+  - Failed attempt: Initial TypeScript check command was quoted for nested PowerShell and never invoked tsc; backend focused tests passed [frontend/components/ReframePanel.tsx]
+  - Failed attempt: Second TypeScript check hit bundled pnpm dependency-layout repair and offline registry failure before compiling [frontend/components/ReframePanel.tsx]
+- [DONE] #0001 Sliding-window WanGP video generation persists first/intermediate output instead of final combined output in gallery [backend/services/wangp_bridge.py] -> WanGP sliding-window gallery output now uses final/newest generated media path; verified by test_select_final_output_prefers_newest_combined_file plus full backend pytest. [backend/services/wangp_bridge.py] (fixed)
 
-- Preserve inherited LTX-Desktop-WanGP foundations: Electron shell, React renderer, FastAPI backend, project system, gallery, metadata, output flow, and video editor.
-- Normal generation must route through WanGP. Do not expose cloud/API generation as normal product functionality.
-- QuickGen comes first: image generation, then video, then audio/TTS, then Production.
-- Curated model profiles are the source of truth for UI-visible models and controls. WanGP tells us what can exist; AiVS decides what should be visible.
-- Keep QuickGen simple: model, prompt, aspect ratio, resolution, supported media inputs, seed/variations, generate/cancel/progress.
+## Decisions
+- Multi-shot video generation auto-injects LTX-2.3_Cinematic_hardcut.safetensors at strength 1.0 via WanGP activated_loras/loras_multipliers in video_generation_handler when shotPrompts present; no frontend changes needed.
+- Media library plan: GenSpace copies uploads into project assets for generation reuse; video editor keeps in-place references for heavy imports. Shared importMediaAsset helper bridges both paths.
+- Media library plan phases A–D complete in GenSpace (drag inputs, import/dedup, filters, bins, list view). Phase E mini picker cancelled — bins + filter chips + gallery drag/drop cover input picking for v1. [docs/MEDIA_LIBRARY_PLAN.md]
+- GenSpace seed control: per-project genSpaceSeedLocked/genSpaceLockedSeed on Project, SeedControl popover (dice/lock icons) beside Enhance, syncs to backend app settings on change and project switch.
+- Reframe padding limits: MAX_PADDING_UI=100 for zoom and custom edge expand; MAX_PADDING_INTERNAL=200 for pan redistribution only (e.g. 0/200 when total horizontal is 200). Zoom never introduces >100% per edge; pan is the only path above 100%. [frontend/lib/reframe-outpaint.ts]
+- Reframe overlay UX: aspect-locked modes (1:1/16:9/9:16) use zoom slider (0=fit, 100=aspect-correct max from computeMaxAspectZoomPadding) plus pan; custom mode uses mirrored edge drag (both sides on axis) plus pan; refresh button resets zoom+padding for current mode without switching aspect. [frontend/components/OutpaintFrameOverlay.tsx]
+- Reframe mode uses WanGP video_prompt_type `VG` (not `VG|`), `audio_prompt_type=K`, optional user prompt with blank fallback `outpaint`, and reframe-only defaults `force_fps=auto` plus `sliding_window_overlap=33`. [backend/handlers/video_generation_handler.py]
+- Input-video WanGP generations may pass source `video_length_frames`; bridge normalizes this to WanGP `8n+1` video_length so reframe/control-video output length follows source clip frames instead of request FPS. [backend/services/wangp_bridge.py]
+- Supersedes earlier Reframe `VG|` decision: Reframe now lives under Video process mode, renders inside the prompt bar with optional prompt field, and sends `VG` plus blank-prompt fallback `outpaint`. [frontend/views/GenSpace.tsx]
+- Supersedes earlier Reframe backend `VG|` decision: backend uses `video_prompt_type=VG`, `audio_prompt_type=K`, explicit padding outpaint fields, `force_fps=auto`, `sliding_window_overlap=33`, and source-frame video_length where available. [backend/handlers/video_generation_handler.py]
+- WanGP Outputs settings are persisted under AppSettings.output_settings and mapped into WanGP server_config/default manifest keys: video/audio/image codec, container, metadata mode, and sliding-window retention. [backend/state/app_settings.py]
 
-## Completed phases
-
-### Phase 0 - Fork audit
-
-- Completed full inherited-code audit at `docs/PHASE0_AUDIT.md`.
-- Identified keep/remove/extend map.
-- Confirmed inherited project/gallery/editor/backend foundations should be preserved.
-
-### Phase 1 - Local-only shell
-
-- Rebranded app to AiVS.
-- Removed visible cloud/API provider UI and Gemini prompt suggestion path.
-- Removed telemetry integration from active app code.
-- Updated app data naming to AiVS.
-
-### Phase 2 - WanGP-only enforcement
-
-- Image/video generation handlers now require WanGP for normal generation.
-- Retake remains disabled until a WanGP route exists.
-- Cloud text encoding path disabled; local encoder is required where text encoding is used.
-- Tests were reworked around a `FakeWanGPBridge` instead of dead cloud/API paths.
-
-### Phase 3 - QuickGen image baseline
-
-- Verified local Z-Image Turbo generation end to end through WanGP.
-- Output saves into AiVS outputs and appears in inherited gallery/project flow.
-
-### Phase 4 - Curated model profiles
-
-- Backend-owned `backend/model_profiles/` registry added.
-- `GET /api/model-profiles` exposes curated image/video profiles plus raw `wangpMetadata`.
-- Frontend model selectors now fetch profiles instead of hardcoding model options.
-- Backend validates profile id, resolution tier, aspect ratio, and curated resolution before calling WanGP.
-- `WanGPBridge.generate_images()` and `generate_video()` accept per-request model type/default settings.
-
-### Phase 4.3 - Combined guide & connection management
-
-- Merged video and audio guide slots into a single dynamic slot with context-aware role selection.
-- Handled file validation, request routing, and payload building to route the guides to the WanGP engine manifest.
-- Re-routed startup flow to launch the UI instantly, executing backend loading in the background.
-- Preloads the WanGP session/runtime at startup without directly calling `wgp.load_models()`, avoiding stuck model loading while keeping first generation snappier.
-- Replaced the connection dropdown with a simplified status indicator badge governed by a two-step bridge/WanGP readiness state machine and a 60-second backend connection timeout.
-- Connection indicator now shows `Connecting 0/2`, `Connecting 1/2`, `Ready`, or `Disconnected`, and manual backend reconnect forces it back through connecting states until WanGP is ready again.
-- Exposed a manual backend restart/reconnect icon button that kills and restarts the Python FastAPI subprocess.
-
-### Phase 4.41 - Prompt enhancement
-
-- Added prompt enhancement for image and video modes through WanGP.
-- Prompt enhancement uses the text-only WanGP setting when no start image exists and the text+start-image setting when an input image exists.
-- Image/video generation now sends prompts to WanGP as `All the Lines are Part of the Same Prompt`.
-- Frontend prompt area shows an enhance icon and swaps to a loading spinner while enhancement is running.
-
-### Phase 4.42 - Video multi-shot prompts
-
-- Added video-only Multi-shot mode in GenSpace.
-- Multi-shot mode replaces the normal prompt area with an optional `Global` row plus timed shot rows.
-- Shot rows include numbered indicators, two-digit second selectors (`01s`, `02s`, etc.), prompt inputs, and add/remove behavior capped at 20 total seconds.
-- Video duration control becomes disabled `auto` while multi-shot mode is active and uses the total shot duration.
-- Backend formats multi-shot requests as WanGP relayed prompts using second ranges, with the global prompt before timed ranges when supplied.
-
-## Current model profiles
-
-### Image profiles
-
-- `z_image_turbo` - Z-Image Turbo, stable.
-- `krea2_turbo` - Krea 2 Turbo, experimental.
-- `flux2_klein_4b` - Flux 2 Klein 4B, experimental.
-- `hidream_o1_dev` - HiDream O1, experimental.
-
-Image profile behavior:
-
-- Curated aspect ratios: `1:1`, `16:9`, `9:16`.
-- Curated resolution tiers start at `540p`.
-- No 4K/2160p by default.
-- Backend resolves tier/aspect to exact WanGP `WxH`.
-- Z-Image Turbo can route to hidden `z_image_control2_1` when a control input image is supplied.
-- Flux and HiDream support multiple image inputs up to 5.
-- Image input roles: subject/scene reference, people/object reference, raw control image, pose, depth, canny.
-- UI shows horizontal image input drop zones above prompt for image mode when supported.
-- Clicking an image input opens a role selector above thumbnail with remove action.
-- File input state resets on removal so the same image can be re-added.
-
-### Video profiles
-
-- `ltx2_22b_distilled` - displayed as LTX 2.3 Fast, routed to WanGP model `ltx2_22B_distilled_1_1`.
-
-Video profile behavior:
-
-- Video model dropdown is profile-driven.
-- Backend accepts `modelProfileId` on `POST /api/generate`.
-- Legacy `model: fast` still maps to the curated LTX2 profile for compatibility.
-- Current exposed controls remain simple: duration, resolution tier, aspect ratio, input image, input audio.
-- Raw metadata records future capabilities such as start image, end image, control video, continuation, audio, inpainting, outpainting, injected frames, and sliding window.
-- UI for end frame/control video/source video is intentionally deferred.
-
-## Recent bug fixes
-
-- Fixed startup/model loading regression where direct WanGP `load_models()` preload could leave model options stuck on "Loading models"; profile fetching now retries while backend/WanGP come up.
-- Fixed image generation 540p/720p failure by skipping legacy frontend dimension mapping when `imageProfileId` is set.
-- Fixed HTTPError masking in image/video WanGP generation handlers so intentional 400/409 errors are not wrapped as 500s.
-- Fixed runaway gallery persistence after image generation by guarding repeated completion effects with a persisted image key, resetting generation state after persistence, and checking duplicate URL/path.
-- Fixed same-file image re-add after removal by resetting the hidden file input.
-- Switched default video WanGP model from `ltx2_22B_distilled` to `ltx2_22B_distilled_1_1` for higher quality.
-
-## Runtime and dependency state
-
-- Python pinned to 3.11.9 via `.python-version`.
-- Backend package: `backend/pyproject.toml`.
-- Windows GPU stack installer:
-  - `scripts/install-wangp-stack.ps1`
-  - `scripts/wangp-stacks.json`
-- Stack installer detects NVIDIA GPU generation and selects cu130/cu128 stack.
-- Canonical Windows path uses curated wheels for torch, sageattention, sparge/flash/gguf/nunchaku/triton/lightx2v where supported.
-- `setup-dev.ps1` calls the stack installer.
-- Setup scripts and `pnpm backend:test` use `uv sync --inexact` so uv updates declared backend dependencies without pruning WanGP requirements/performance wheels installed into the same venv.
-- `WANGP_VIDEO_MODEL_TYPE` default is now `ltx2_22B_distilled_1_1`.
-
-## Tooling notes
-
-- Backend tests use `enable_wangp` fixture and `FakeWanGPBridge`.
-- Full backend suite currently passes: 214 tests.
-- Pyright strict mode passes.
-- Frontend TypeScript check and frontend build pass.
-- The Codex-provided `pnpm` wrapper may try to recreate `node_modules` in non-TTY mode. If `node_modules` is partially rebuilt, invoke the project package manager directly:
-
-```powershell
-C:\Users\rais\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe C:\Users\rais\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\node_modules\pnpm\bin\pnpm.mjs install --force --offline --frozen-lockfile
-```
-
-Then run:
-
-```powershell
-C:\Users\rais\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe C:\Users\rais\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\node_modules\pnpm\bin\pnpm.mjs run typecheck:ts
-```
-
-The workspace-local `.pnpm-store/` may appear because pnpm store path is configured inside the repo.
+## Notes
+- gallery-filters.ts: filterGalleryAssets (type+source), collectGalleryBins, filterGalleryAssetsByBin, getAssetDisplayFileName, inferAssetSource. GenSpace pipeline: type/source filter → bin filter → favorites. [frontend/lib/gallery-filters.ts]
+- Media import (B1–B4): importMediaAsset copy-into-project for GenSpace; uploads/ vs generated/ on disk; ensureGalleryAssetForInputFile syncs inputs to gallery; DuplicateFilenameDialog on basename collision. Test: pnpm test:media-import. [frontend/lib/media-import.ts]
+- Gallery delete: remove asset from project JSON then waitForMediaFileHandlesReleased before shell.trashItem (Windows file locks). Only paths under {projectId}/ trashed. Do not video.removeAttribute(src) on AssetCard unmount — breaks thumbnails. [frontend/lib/asset-delete.ts]
+- GenSpace gallery Apply prompt (ClipboardPaste icon): restores generationParams to prompt bar — mode, prompt, settings, image/audio inputs. Grid hover next to Create video/Retake; list view action column. Helper: frontend/lib/apply-generation-params.ts.
+- Apply prompt input media fix: deferred restore after PromptBar profile normalization; buildImageInputsFromParams merges inputAudioUrl; expand media strip; add control_video/audio_guide to video input roles.
+- Legacy apply-prompt media: generationParams now stores input paths; recoverGenerationParamsMedia on project load resolves stale blob URLs via project asset paths; buildImageInputsFromParams resolves against gallery assets at apply time.
+- gotcha: ReframePadding per-edge le must be 200 not 100 — pan values >100 caused Pydantic to reject entire reframe payload so WanGP never received video_guide_outpainting fields despite prompt outpaint + VG| being sent. Frontend normalizeReframeForApi in use-generation.ts clamps 0–200. [backend/api_types.py]
+- Reframe math module: computeFitPadding, computeMaxAspectZoomPadding, paddingForAspectZoom (lerp fit→max preserving aspect), applyPanPadding (pixel gaps, preserves totals), applyZoomPreservingPan, applyMirroredEdgeExpand (custom), computeFrameLayout (two-phase hug-then-shrink). Used by OutpaintFrameOverlay + ReframePanel. [frontend/lib/reframe-outpaint.ts]
+- GenSpace reframe mode: ReframePanel (trim + overlay), reframeInput state, generate with reframe body; gallery Apply prompt restores aspectMode/padding via apply-generation-params.ts; asset metadata stores reframe fields on generationParams. [frontend/views/GenSpace.tsx]
+- Reframe tests: test_reframe_wangp_mapping.py (padding→WanGP outpaint mapping), test_generation.py reframe branches (internal padding up to 200, requires options payload). Run: cd backend && uv run pytest tests/test_reframe_wangp_mapping.py tests/test_generation.py -v --tb=short [backend/tests/test_reframe_wangp_mapping.py]
 
 ## Key files
-
-- `README.md`
-- `AGENTS.md`
-- `AGENTS_PRD.md`
-- `docs/PHASE0_AUDIT.md`
-- `docs/PHASE4_DETAILS.md`
-- `backend/ltx2_server.py`
-- `backend/app_handler.py`
-- `backend/api_types.py`
-- `backend/handlers/image_generation_handler.py`
-- `backend/handlers/video_generation_handler.py`
-- `backend/handlers/prompt_enhancement_handler.py`
-- `backend/handlers/model_profiles_handler.py`
-- `backend/model_profiles/profiles.py`
-- `backend/model_profiles/resolution_resolver.py`
-- `backend/services/wangp_bridge.py`
-- `backend/tests/fakes/fake_wangp_bridge.py`
-- `frontend/views/GenSpace.tsx`
-- `frontend/hooks/use-generation.ts`
-- `frontend/hooks/use-image-profiles.ts`
-- `frontend/types/model-profiles.ts`
-- `frontend/types/project.ts`
-- `scripts/install-wangp-stack.ps1`
-- `scripts/wangp-stacks.json`
-
-## Next likely work
-
-- Test and polish multi-shot video prompt behavior against real WanGP output.
-- Add start image and end image video guides.
-- Add LoRA MVP.
-- Improve model availability/download UX.
-- Keep Production deferred until QuickGen image/video are stable.
+- `LTX-2.3_Cinematic_hardcut.safetensors`
+- `1.0`
+- `docs/MEDIA_LIBRARY_PLAN.md`
+- `frontend/lib/media-import.ts`
+- `electron/lib/project-asset-import.ts`
+- `asset.path`
+- `gallery-filters.ts`
+- `Asset.bin`
+- `shell.trashItem`
+- `video.removeAttribute`
+- `frontend/lib/apply-generation-params.ts`
+- `e.g`
+- `reframe_wangp_mapping.py`
+- `use-generation.ts`
+- `apply-generation-params.ts`
+- `test_reframe_wangp_mapping.py`
+- `test_generation.py`
+- `tests/test_reframe_wangp_mapping.py`
+- `tests/test_generation.py`
+- `AppSettings.output`
 
 ## Open questions
-
-- Exact UX for video start/end/control inputs.
-- Exact LoRA compatibility and metadata UX per WanGP model family.
+- None logged yet.

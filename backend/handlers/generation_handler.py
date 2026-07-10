@@ -90,6 +90,15 @@ class GenerationHandler(StateHandlerBase):
         progress: int,
         current_step: int | None = None,
         total_steps: int | None = None,
+        phase_index: int | None = None,
+        phase_count: int | None = None,
+        section_index: int | None = None,
+        section_count: int | None = None,
+        status_detail: str | None = None,
+        preview_url: str | None = None,
+        download_current_file: str | None = None,
+        download_current_file_progress: int | None = None,
+        download_total_progress: int | None = None,
     ) -> None:
         match self._running_slot():
             case "gpu":
@@ -99,6 +108,15 @@ class GenerationHandler(StateHandlerBase):
                         running.progress.progress = progress
                         running.progress.current_step = current_step
                         running.progress.total_steps = total_steps
+                        running.progress.phase_index = phase_index
+                        running.progress.phase_count = phase_count
+                        running.progress.section_index = section_index
+                        running.progress.section_count = section_count
+                        running.progress.status_detail = status_detail
+                        running.progress.preview_url = preview_url or running.progress.preview_url
+                        running.progress.download_current_file = download_current_file
+                        running.progress.download_current_file_progress = download_current_file_progress
+                        running.progress.download_total_progress = download_total_progress
                     case _:
                         return
             case "api":
@@ -108,6 +126,15 @@ class GenerationHandler(StateHandlerBase):
                         running.progress.progress = progress
                         running.progress.current_step = current_step
                         running.progress.total_steps = total_steps
+                        running.progress.phase_index = phase_index
+                        running.progress.phase_count = phase_count
+                        running.progress.section_index = section_index
+                        running.progress.section_count = section_count
+                        running.progress.status_detail = status_detail
+                        running.progress.preview_url = preview_url or running.progress.preview_url
+                        running.progress.download_current_file = download_current_file
+                        running.progress.download_current_file_progress = download_current_file_progress
+                        running.progress.download_total_progress = download_total_progress
                     case _:
                         return
             case _:
@@ -206,6 +233,15 @@ class GenerationHandler(StateHandlerBase):
                     progress=int(progress.progress),
                     currentStep=progress.current_step,
                     totalSteps=progress.total_steps,
+                    phaseIndex=progress.phase_index,
+                    phaseCount=progress.phase_count,
+                    sectionIndex=progress.section_index,
+                    sectionCount=progress.section_count,
+                    statusDetail=progress.status_detail,
+                    previewUrl=progress.preview_url,
+                    downloadCurrentFile=progress.download_current_file,
+                    downloadCurrentFileProgress=progress.download_current_file_progress,
+                    downloadTotalProgress=progress.download_total_progress,
                 )
             case GenerationComplete():
                 return GenerationProgressResponse(

@@ -3,7 +3,7 @@ export const FORCED_API_VIDEO_DURATIONS_STANDARD = [6, 8, 10] as const
 export const FORCED_API_VIDEO_DURATIONS_EXTENDED = [6, 8, 10, 12, 14, 16, 18, 20] as const
 export const FORCED_API_VIDEO_FPS = [24, 25, 48, 50] as const
 export const FORCED_API_VIDEO_MODELS = ['fast', 'pro'] as const
-export const FORCED_API_VIDEO_ASPECT_RATIOS = ['16:9', '9:16'] as const
+export const FORCED_API_VIDEO_ASPECT_RATIOS = ['16:9', '1:1', '9:16'] as const
 
 export type ForcedApiVideoResolution = (typeof FORCED_API_VIDEO_RESOLUTIONS)[number]
 export type ForcedApiVideoFps = (typeof FORCED_API_VIDEO_FPS)[number]

@@ -2,7 +2,7 @@
 
 // Parameters needed to regenerate a shot
 export interface GenerationParams {
-  mode: 'text-to-video' | 'image-to-video' | 'audio-to-video' | 'text-to-image' | 'retake'
+  mode: 'text-to-video' | 'image-to-video' | 'audio-to-video' | 'text-to-image' | 'retake' | 'reframe'
   prompt: string
   model: string
   duration: number
@@ -15,13 +15,28 @@ export interface GenerationParams {
   videoProfileId?: string  // Curated AiVS video model profile id
   imageProfileId?: string  // Phase 4 curated AiVS model profile id
   inputImageUrl?: string // For I2V: the input image used
+  inputImagePath?: string
   imageInputRole?: string
-  imageInputMedia?: { url: string; role: string }[]
+  imageInputMedia?: {
+    url: string
+    role: string
+    path?: string
+    type?: 'image' | 'video' | 'audio'
+    trimStartTime?: number
+    trimDuration?: number
+    mediaDuration?: number
+  }[]
   inputAudioUrl?: string // For A2V: the input audio used
+  inputAudioPath?: string
   retakeVideoPath?: string
   retakeStartTime?: number
   retakeDuration?: number
   retakeMode?: string
+  reframeAspectMode?: '1:1' | '16:9' | '9:16' | 'custom'
+  reframePadding?: { top: number; bottom: number; left: number; right: number }
+  reframeStartTime?: number
+  reframeDuration?: number
+  reframeVideoPath?: string
 }
 
 // A single "take" (version) of a generated asset
@@ -44,6 +59,7 @@ export interface Asset {
   thumbnail?: string
   favorite?: boolean
   bin?: string // Bin/folder name for organization (undefined = no bin)
+  source?: 'generated' | 'uploaded' // explicit; infer from generationParams if missing
   // Regeneration support
   generationParams?: GenerationParams
   takes?: AssetTake[] // All takes (index 0 = original). If undefined, the asset itself is the only take.
@@ -411,6 +427,17 @@ export interface Project {
   thumbnail?: string
   timelines: Timeline[]
   activeTimelineId?: string
+  /** GenSpace seed lock persists per project until changed. */
+  genSpaceSeedLocked?: boolean
+  genSpaceLockedSeed?: number
+}
+
+export const DEFAULT_GENSPACE_LOCKED_SEED = 42
+export const MAX_GENSPACE_SEED = 2_147_483_647
+
+export function clampGenSpaceSeed(value: number): number {
+  if (!Number.isFinite(value)) return DEFAULT_GENSPACE_LOCKED_SEED
+  return Math.min(MAX_GENSPACE_SEED, Math.max(0, Math.floor(value)))
 }
 
 export type ViewType = 'home' | 'project' | 'playground'

@@ -12,11 +12,11 @@ from collections import deque
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
-ProgressCallback = Callable[[str, int, int | None, int | None], None]
+ProgressCallback = Callable[..., None]
 CancelledCallback = Callable[[], bool]
 
 _VIDEO_RESOLUTION_MAP: dict[str, dict[str, str]] = {
@@ -36,6 +36,7 @@ _QWEN_IMAGE_RESOLUTIONS: tuple[tuple[int, int], ...] = (
     (1140, 1472),
 )
 _TQDM_PROGRESS_RE = re.compile(r"(?:(?P<label>.*?):\s+)?(?P<percent>\d{1,3})%\|[^|]*\|\s*(?P<current>\d+)/(?P<total>\d+)")
+_SECTION_RE = re.compile(r"(?:sliding\s+window|window|section)\D+(?P<current>\d+)\D+(?:of|/)\D*(?P<total>\d+)", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -73,6 +74,17 @@ class WanGPBridge:
         self._session = None
         self._submitted_manifest_once = False
         self._session_lock = threading.Lock()
+
+    def set_compile_enabled(self, enabled: bool) -> None:
+        with self._session_lock:
+            args = [arg for arg in self._extra_args if arg != "--compile"]
+            if enabled:
+                args.append("--compile")
+            self._extra_args = tuple(args)
+
+    @property
+    def has_session(self) -> bool:
+        return self._session is not None
 
     def _resolve_session_config_path(self) -> Path:
         if self._root is not None:
@@ -165,11 +177,17 @@ class WanGPBridge:
         video_prompt_type: str | None = None,
         image_prompt_type: str | None = None,
         audio_prompt_type: str | None = None,
+        video_guide_outpainting: str | None = None,
+        video_guide_outpainting_ratio: str | None = None,
+        video_length_frames: int | None = None,
     ) -> str:
         active_model_type = model_type if model_type is not None else self._video_model_type
         resolution = self._map_video_resolution(resolution_label, aspect_ratio)
         merged_prompt = prompt + self._camera_motion_prompts.get(camera_motion, "")
-        video_length = self.compute_num_frames(duration_seconds, fps)
+        if video_length_frames is not None:
+            video_length = self.normalize_video_frame_count(video_length_frames)
+        else:
+            video_length = self.compute_num_frames(duration_seconds, fps)
 
         settings: dict[str, object] = {
             "model_type": active_model_type,
@@ -184,8 +202,10 @@ class WanGPBridge:
         if default_settings:
             for key, value in default_settings.items():
                 settings.setdefault(key, value)
+            if "force_fps" in default_settings:
+                settings["force_fps"] = default_settings["force_fps"]
         if active_model_type.startswith("ltx2_"):
-            settings["sliding_window_size"] = video_length
+            settings["sliding_window_size"] = 481
         if negative_prompt.strip():
             settings["negative_prompt"] = negative_prompt.strip()
         if seed is not None:
@@ -216,6 +236,11 @@ class WanGPBridge:
             settings["video_guide"] = str(Path(control_video_path).resolve())
             settings["video_prompt_type"] = video_prompt_type or "VG"
 
+        if video_guide_outpainting is not None:
+            settings["video_guide_outpainting"] = video_guide_outpainting
+        if video_guide_outpainting_ratio is not None:
+            settings["video_guide_outpainting_ratio"] = video_guide_outpainting_ratio
+
         if audio_path:
             settings["audio_guide"] = str(Path(audio_path).resolve())
             settings["audio_prompt_type"] = audio_prompt_type or ("K" if control_video_path else "A")
@@ -230,7 +255,7 @@ class WanGPBridge:
         )
         if not outputs:
             raise RuntimeError("WanGP completed without producing a video")
-        return outputs[0]
+        return self._select_final_output(outputs)
 
     def generate_images(
         self,
@@ -327,7 +352,13 @@ class WanGPBridge:
     def compute_num_frames(duration_seconds: int, fps: int) -> int:
         return max(((duration_seconds * fps) // 8) * 8 + 1, 9)
 
+    @staticmethod
+    def normalize_video_frame_count(frame_count: int) -> int:
+        return max((max(1, frame_count) // 8) * 8 + 1, 9)
+
     def _map_video_resolution(self, resolution_label: str, aspect_ratio: str) -> str:
+        if re.fullmatch(r"\d+x\d+", resolution_label):
+            return resolution_label
         per_aspect = _VIDEO_RESOLUTION_MAP.get(resolution_label)
         if per_aspect is None:
             raise RuntimeError(f"Unsupported WanGP video resolution: {resolution_label}")
@@ -424,6 +455,7 @@ class WanGPBridge:
         self._submitted_manifest_once = True
         on_progress(startup_phase, 2, None, None)
         import json
+        self._apply_output_settings(session, manifest)
         logger.info("Submitting WanGP manifest: %s", json.dumps(manifest, indent=2))
         job = session.submit_manifest(manifest)
         error_lines: deque[str] = deque(maxlen=40)
@@ -489,25 +521,54 @@ class WanGPBridge:
                     line,
                 )
             if stream_phase is not None:
-                on_progress(stream_phase, self._estimate_progress(stream_phase, None, None), None, None)
+                detail = self._parse_progress_detail(line, stream_phase)
+                on_progress(
+                    stream_phase,
+                    self._estimate_progress(stream_phase, None, None),
+                    None,
+                    None,
+                    detail["phase_index"],
+                    detail["phase_count"],
+                    detail["section_index"],
+                    detail["section_count"],
+                    line,
+                )
             if self._should_capture_error_line(stream_name, line):
                 error_lines.append(line)
             return
 
         if kind == "progress":
             phase = str(getattr(data, "phase", "inference"))
-            progress = int(getattr(data, "progress", 0))
+            raw_progress = int(getattr(data, "progress", 0))
             current_step = getattr(data, "current_step", None)
             total_steps = getattr(data, "total_steps", None)
+            status_text = str(getattr(data, "status", "")).strip()
+            progress = self._scale_phase_progress(
+                phase,
+                raw_progress,
+                current_step if isinstance(current_step, int) else None,
+                total_steps if isinstance(total_steps, int) else None,
+            )
+            detail = self._parse_progress_detail(status_text, phase)
             self._emit_console_progress(
                 console_progress,
                 phase,
                 progress,
                 current_step if isinstance(current_step, int) else None,
                 total_steps if isinstance(total_steps, int) else None,
-                str(getattr(data, "status", "")).strip(),
+                status_text,
             )
-            on_progress(phase, progress, current_step, total_steps)
+            on_progress(
+                phase,
+                progress,
+                current_step,
+                total_steps,
+                detail["phase_index"],
+                detail["phase_count"],
+                detail["section_index"],
+                detail["section_count"],
+                status_text or None,
+            )
             return
 
         if kind == "status":
@@ -517,8 +578,46 @@ class WanGPBridge:
             logger.info("[WanGP status] %s", text)
             phase = self._classify_phase(text)
             progress = self._estimate_progress(phase, None, None)
+            detail = self._parse_progress_detail(text, phase)
             self._emit_console_progress(console_progress, phase, progress, None, None, text, force=True)
-            on_progress(phase, progress, None, None)
+            on_progress(
+                phase,
+                progress,
+                None,
+                None,
+                detail["phase_index"],
+                detail["phase_count"],
+                detail["section_index"],
+                detail["section_count"],
+                text,
+            )
+            return
+
+        if kind == "preview":
+            phase = str(getattr(data, "phase", "inference"))
+            status_text = str(getattr(data, "status", "")).strip()
+            progress = int(getattr(data, "progress", 0))
+            current_step = getattr(data, "current_step", None)
+            total_steps = getattr(data, "total_steps", None)
+            preview_url = self._write_preview_image(getattr(data, "image", None))
+            detail = self._parse_progress_detail(status_text, phase)
+            on_progress(
+                phase,
+                self._scale_phase_progress(
+                    phase,
+                    progress,
+                    current_step if isinstance(current_step, int) else None,
+                    total_steps if isinstance(total_steps, int) else None,
+                ),
+                current_step if isinstance(current_step, int) else None,
+                total_steps if isinstance(total_steps, int) else None,
+                detail["phase_index"],
+                detail["phase_count"],
+                detail["section_index"],
+                detail["section_count"],
+                status_text or None,
+                preview_url,
+            )
             return
 
         if kind == "info":
@@ -606,6 +705,53 @@ class WanGPBridge:
         if phase == "cancelled":
             return 0
         return min(90, 20 + int(ratio * 65))
+
+    @staticmethod
+    def _scale_phase_progress(phase: str, raw_progress: int, current_step: int | None, total_steps: int | None) -> int:
+        if total_steps is not None and total_steps > 0 and current_step is not None:
+            return WanGPBridge._estimate_progress(phase, current_step, total_steps)
+
+        ratio = max(0.0, min(1.0, raw_progress / 100))
+        ranges = {
+            "preparing_model": (2, 6),
+            "downloading_model": (3, 9),
+            "loading_model": (5, 15),
+            "encoding_text": (12, 22),
+            "inference": (20, 90),
+            "inference_stage_1": (20, 68),
+            "inference_stage_2": (68, 88),
+            "inference_stage_3": (80, 89),
+            "decoding": (85, 95),
+            "downloading_output": (92, 98),
+        }
+        start, end = ranges.get(phase, (15, 90))
+        return min(end, start + int((end - start) * ratio))
+
+    @staticmethod
+    def _parse_progress_detail(status_text: str, phase: str) -> dict[str, int | None]:
+        lowered = status_text.lower()
+        phase_index: int | None = None
+        phase_count: int | None = None
+        if phase == "inference_stage_1" or "first pass" in lowered or "1st pass" in lowered:
+            phase_index, phase_count = 1, 2
+        elif phase == "inference_stage_2" or "second pass" in lowered or "2nd pass" in lowered:
+            phase_index, phase_count = 2, 2
+        elif phase == "inference_stage_3" or "third pass" in lowered or "3rd pass" in lowered:
+            phase_index, phase_count = 3, 3
+
+        section_index: int | None = None
+        section_count: int | None = None
+        match = _SECTION_RE.search(status_text)
+        if match is not None:
+            section_index = int(match.group("current"))
+            section_count = int(match.group("total"))
+
+        return {
+            "phase_index": phase_index,
+            "phase_count": phase_count,
+            "section_index": section_index,
+            "section_count": section_count,
+        }
 
     @staticmethod
     def _classify_stream_phase(line: str) -> str | None:
@@ -700,3 +846,66 @@ class WanGPBridge:
             seen.add(value)
             ordered.append(value)
         return ordered
+
+    def _write_preview_image(self, image: object) -> str | None:
+        save = getattr(image, "save", None)
+        if not callable(save):
+            return None
+        try:
+            preview_path = self._output_dir / "_wangp_preview_latest.jpg"
+            self._output_dir.mkdir(parents=True, exist_ok=True)
+            save(preview_path, format="JPEG", quality=85)
+            normalized = str(preview_path.resolve()).replace("\\", "/")
+            file_url = (
+                f"file:///{normalized}"
+                if not normalized.startswith("/")
+                else f"file://{normalized}"
+            )
+            # WanGP reuses one preview filename; query version prevents Electron/browser cache reuse.
+            return f"{file_url}?v={time.time_ns()}"
+        except Exception:
+            logger.debug("Could not write WanGP preview image", exc_info=True)
+            return None
+
+    @staticmethod
+    def _apply_output_settings(session: object, manifest: list[dict[str, object]]) -> None:
+        if not manifest:
+            return
+        params = manifest[0].get("params")
+        if not isinstance(params, dict):
+            return
+        output_keys = {
+            "video_output_codec",
+            "video_container",
+            "image_output_codec",
+            "audio_output_codec",
+            "metadata_type",
+            "keep_intermediate_sliding_windows",
+        }
+        patch: dict[str, object] = {}
+        for key in output_keys:
+            if key in params:
+                patch[key] = params[key]
+        if not patch:
+            return
+        try:
+            ensure_runtime = getattr(session, "_ensure_runtime")
+            runtime = ensure_runtime()
+            server_config = getattr(runtime.module, "server_config", None)
+            if isinstance(server_config, dict):
+                cast(dict[str, object], server_config).update(patch)
+        except Exception:
+            logger.debug("Could not apply WanGP output settings", exc_info=True)
+
+    @staticmethod
+    def _select_final_output(outputs: list[str]) -> str:
+        if len(outputs) == 1:
+            return outputs[0]
+
+        def sort_key(path_text: str) -> tuple[float, int]:
+            try:
+                return (Path(path_text).stat().st_mtime, len(Path(path_text).name))
+            except OSError:
+                return (0.0, len(path_text))
+
+        return max(outputs, key=sort_key)

@@ -32,8 +32,31 @@ interface Window {
     getResourcePath: () => Promise<string | null>
     getDownloadsPath: () => Promise<string>
     copyToProjectAssets: (srcPath: string, projectId: string) => Promise<{ success: boolean; path?: string; url?: string; error?: string }>
+    importToProjectAssets: (options: {
+      srcPath: string
+      projectId: string
+      onDuplicate?: 'reuse' | 'suffix' | 'overwrite' | 'prompt'
+    }) => Promise<{
+      success: boolean
+      path?: string
+      url?: string
+      fileName?: string
+      alreadyExisted?: boolean
+      reusedExisting?: boolean
+      needsDuplicateChoice?: boolean
+      error?: string
+    }>
     getProjectAssetsPath: () => Promise<string>
     setProjectAssetsPath: (newPath: string) => Promise<{ success: boolean; error?: string }>
+    deleteProjectAssetFiles: (options: {
+      projectId: string
+      filePaths: string[]
+    }) => Promise<{
+      success: boolean
+      deleted: string[]
+      skipped: string[]
+      failed: { path: string; error: string }[]
+    }>
     showSaveDialog: (options: { title?: string; defaultPath?: string; filters?: { name: string; extensions: string[] }[] }) => Promise<string | null>
     saveFile: (filePath: string, data: string, encoding?: string) => Promise<{ success: boolean; path?: string; error?: string }>
     saveBinaryFile: (filePath: string, data: ArrayBuffer) => Promise<{ success: boolean; path?: string; error?: string }>
