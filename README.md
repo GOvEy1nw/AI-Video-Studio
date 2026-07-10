@@ -4,8 +4,9 @@
 
 <p align="center"><img src="https://github.com/GOvEy1nw/AI-Video-Studio/blob/main/images/GenSpace.png" width="80%"></p>
 
+This WIP project is a fork `deepbeepmeep/LTX-Desktop-WanGP`.
 
-This WIP project is a fork `deepbeepmeep/LTX-Desktop-WanGP` and keeps the inherited Electron, React, FastAPI, project, gallery, and editor foundations.
+Note: I'm more of a Solutions Architect than a coder, so I'm up-front clarifying that this is heavily coded by AI. But I have a vision of what this should be (essentially the ease-of-use of online AI Platforms, Magnific/Higgsfield etc, with the beauty of OSS and local-only AI Gen, and the power of WanGP behind it!) I can't guarantee it'll work great for everyone, so far I've only tested this on one of my systems (128gb ram - RTX 4070Ti Super) and its working great there, will try to test on other systems in due course.
 
 # Product Principles
 
