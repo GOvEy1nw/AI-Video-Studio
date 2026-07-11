@@ -60,14 +60,14 @@ def test_websocket_with_token_query_param(test_state):
     with TestClient(app) as client:
         # WebSocket upgrade without token should fail with 401
         response = client.get(
-            "/ws/download/test",
+            "/ws/generation/test",
             headers={"upgrade": "websocket", "connection": "upgrade"},
         )
         assert response.status_code == 401
 
         # WebSocket upgrade with correct token query param
         response = client.get(
-            "/ws/download/test?token=test-secret",
+            "/ws/generation/test?token=test-secret",
             headers={"upgrade": "websocket", "connection": "upgrade"},
         )
         # The route may not exist, but auth should pass (not 401)

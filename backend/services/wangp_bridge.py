@@ -37,6 +37,7 @@ _QWEN_IMAGE_RESOLUTIONS: tuple[tuple[int, int], ...] = (
 )
 _TQDM_PROGRESS_RE = re.compile(r"(?:(?P<label>.*?):\s+)?(?P<percent>\d{1,3})%\|[^|]*\|\s*(?P<current>\d+)/(?P<total>\d+)")
 _SECTION_RE = re.compile(r"(?:sliding\s+window|window|section)\D+(?P<current>\d+)\D+(?:of|/)\D*(?P<total>\d+)", re.IGNORECASE)
+_PREVIEW_WRITE_INTERVAL_SECONDS = 0.5
 
 
 @dataclass(frozen=True)
@@ -74,6 +75,7 @@ class WanGPBridge:
         self._session = None
         self._submitted_manifest_once = False
         self._session_lock = threading.Lock()
+        self._last_preview_write_at = 0.0
 
     def set_compile_enabled(self, enabled: bool) -> None:
         with self._session_lock:
@@ -458,6 +460,7 @@ class WanGPBridge:
         self._apply_output_settings(session, manifest)
         logger.info("Submitting WanGP manifest: %s", json.dumps(manifest, indent=2))
         job = session.submit_manifest(manifest)
+        self._last_preview_write_at = 0.0
         error_lines: deque[str] = deque(maxlen=40)
         cancel_requested = False
         console_progress: dict[str, object] = {"phase": "", "progress": -1, "logged_at": 0.0}
@@ -851,6 +854,9 @@ class WanGPBridge:
         save = getattr(image, "save", None)
         if not callable(save):
             return None
+        now = time.monotonic()
+        if now - self._last_preview_write_at < _PREVIEW_WRITE_INTERVAL_SECONDS:
+            return None
         try:
             preview_path = self._output_dir / "_wangp_preview_latest.jpg"
             self._output_dir.mkdir(parents=True, exist_ok=True)
@@ -862,6 +868,7 @@ class WanGPBridge:
                 else f"file://{normalized}"
             )
             # WanGP reuses one preview filename; query version prevents Electron/browser cache reuse.
+            self._last_preview_write_at = now
             return f"{file_url}?v={time.time_ns()}"
         except Exception:
             logger.debug("Could not write WanGP preview image", exc_info=True)

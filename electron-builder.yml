@@ -23,6 +23,8 @@ extraResources:
     filter:
       - "**/*.py"
       - pyproject.toml
+      - uv.lock
+      - .python-version
       - "!**/__pycache__/**"
       - "!**/*.pyc"
       - "!.venv/**"
@@ -34,14 +36,25 @@ extraResources:
     filter:
       - "**/*"
       - "!**/.git/**"
+      - "!docs/**"
       - "!**/.venv/**"
       - "!**/__pycache__/**"
       - "!**/*.pyc"
+      - "!**/.codegraph/**"
       - "!ckpts/**"
+      - "!loras/**"
       - "!outputs/**"
       - "!release/**"
-  - from: python-deps-hash.txt
-    to: python-deps-hash.txt
+  - from: python-bootstrap
+    to: python-bootstrap
+  - from: scripts
+    to: scripts
+    filter:
+      - install-python-dependencies.ps1
+      - install-wangp-stack.ps1
+      - wangp-stacks.json
+  - from: resources/vc_redist.x64.exe
+    to: vc_redist.x64.exe
 
 win:
   target:
@@ -83,4 +96,5 @@ dmg:
 
 publish:
   provider: github
+  owner: GOvEy1nw
   repo: AI-Video-Studio

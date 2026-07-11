@@ -39,7 +39,7 @@ esac
 PBS_URL="https://github.com/astral-sh/python-build-standalone/releases/download/${PBS_TAG}/cpython-${PYTHON_VERSION}+${PBS_TAG}-${PBS_ARCH}-apple-darwin-install_only_stripped.tar.gz"
 
 echo "========================================"
-echo "  LTX Video - Python Environment Setup"
+echo "  AiVS - Python Environment Setup"
 echo "  Platform: macOS ($ARCH)"
 echo "  Python: $PYTHON_VERSION"
 echo "========================================"

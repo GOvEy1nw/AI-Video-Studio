@@ -163,7 +163,7 @@ function recoverAssetUrls(project: Project): Project {
   }
 }
 
-// Load initial projects from localStorage synchronously
+// Load the legacy library only when migrating into Electron project storage.
 function loadProjectsFromStorage(): Project[] {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
@@ -189,27 +189,110 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const [genSpaceAudioUrl, setGenSpaceAudioUrl] = useState<string | null>(null)
   const [genSpaceRetakeSource, setGenSpaceRetakeSource] = useState<GenSpaceRetakeSource | null>(null)
   const [pendingRetakeUpdate, setPendingRetakeUpdate] = useState<PendingRetakeUpdate | null>(null)
-  // Initialize with data from localStorage
-  const [projects, setProjects] = useState<Project[]>(() => loadProjectsFromStorage())
-  const isInitializedRef = useRef(false)
-  
-  // Mark as initialized after first render
-  useEffect(() => {
-    isInitializedRef.current = true
-  }, [])
-  
-  // Save projects to localStorage when changed (but not on initial load)
-  useEffect(() => {
-    // Skip saving on initial render to avoid overwriting with stale data
-    if (!isInitializedRef.current) return
-    
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(projects))
-      logger.info(`Projects saved: ${projects.length}`)
-    } catch (e) {
-      logger.error(`Failed to save projects: ${e}`)
+  const [projects, setProjects] = useState<Project[]>([])
+  const storageReadyRef = useRef(false)
+  const persistedProjectsRef = useRef<Map<string, Project>>(new Map())
+  const pendingProjectIdsRef = useRef(new Set<string>())
+  const pendingDeletedProjectIdsRef = useRef(new Set<string>())
+  const approvedPathsRef = useRef(new Set<string>())
+  const approvingPathsRef = useRef(new Set<string>())
+  const persistenceFailureReportedRef = useRef(false)
+
+  const reportPersistenceFailure = useCallback((error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error)
+    logger.error(`Project storage failed: ${message}`)
+    if (!persistenceFailureReportedRef.current) {
+      persistenceFailureReportedRef.current = true
+      window.alert(`AiVS could not save project changes. ${message}`)
     }
-  }, [projects])
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadProjects = async () => {
+      try {
+        if (!window.electronAPI?.loadProjects) {
+          const legacyProjects = loadProjectsFromStorage()
+          persistedProjectsRef.current = new Map(legacyProjects.map((project) => [project.id, project]))
+          if (!cancelled) setProjects(legacyProjects)
+          return
+        }
+
+        let storedProjects = await window.electronAPI.loadProjects() as Project[]
+        if (storedProjects.length === 0) {
+          const legacyProjects = loadProjectsFromStorage()
+          if (legacyProjects.length > 0) {
+            storedProjects = await window.electronAPI.migrateProjectsFromLocalStorage(legacyProjects) as Project[]
+          }
+        }
+
+        const recoveredProjects = storedProjects.map(migrateProject).map(recoverAssetUrls)
+        persistedProjectsRef.current = new Map(recoveredProjects.map((project) => [project.id, project]))
+        if (!cancelled) {
+          setProjects((currentProjects) => currentProjects.length === 0
+            ? recoveredProjects
+            : [
+                ...currentProjects,
+                ...recoveredProjects.filter((project) => !currentProjects.some((current) => current.id === project.id)),
+              ])
+        }
+      } catch (error) {
+        reportPersistenceFailure(error)
+      } finally {
+        storageReadyRef.current = true
+      }
+    }
+
+    void loadProjects()
+    return () => { cancelled = true }
+  }, [reportPersistenceFailure])
+
+  useEffect(() => {
+    if (!storageReadyRef.current) return
+
+    const previousProjects = persistedProjectsRef.current
+    const currentProjects = new Map(projects.map((project) => [project.id, project]))
+    for (const project of projects) {
+      if (previousProjects.get(project.id) !== project) {
+        pendingProjectIdsRef.current.add(project.id)
+      }
+    }
+    for (const id of previousProjects.keys()) {
+      if (!currentProjects.has(id)) {
+        pendingDeletedProjectIdsRef.current.add(id)
+      }
+    }
+    persistedProjectsRef.current = currentProjects
+
+    if (pendingProjectIdsRef.current.size === 0 && pendingDeletedProjectIdsRef.current.size === 0) return
+
+    const saveTimer = window.setTimeout(() => {
+      const projectsById = new Map(projects.map((project) => [project.id, project]))
+      const changedIds = [...pendingProjectIdsRef.current]
+      const deletedIds = [...pendingDeletedProjectIdsRef.current]
+      pendingProjectIdsRef.current.clear()
+      pendingDeletedProjectIdsRef.current.clear()
+
+      void (async () => {
+        try {
+          if (!window.electronAPI?.saveProject) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(projects))
+            return
+          }
+          await Promise.all(deletedIds.map((id) => window.electronAPI.deleteProject(id)))
+          await Promise.all(changedIds.flatMap((id) => {
+            const project = projectsById.get(id)
+            return project ? [window.electronAPI.saveProject(project, projects.indexOf(project))] : []
+          }))
+        } catch (error) {
+          reportPersistenceFailure(error)
+        }
+      })()
+    }, 500)
+
+    return () => window.clearTimeout(saveTimer)
+  }, [projects, reportPersistenceFailure])
 
   useEffect(() => {
     const approveProjectPaths = async () => {
@@ -226,13 +309,20 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
           }
         }
       }
-      for (const filePath of paths) {
+      const newPaths = [...paths].filter((filePath) => (
+        !approvedPathsRef.current.has(filePath) && !approvingPathsRef.current.has(filePath)
+      ))
+      await Promise.all(newPaths.map(async (filePath) => {
+        approvingPathsRef.current.add(filePath)
         try {
           await window.electronAPI?.approveLocalPath?.(filePath)
+          approvedPathsRef.current.add(filePath)
         } catch (e) {
           logger.warn(`Failed to approve stored asset path: ${filePath} ${e}`)
+        } finally {
+          approvingPathsRef.current.delete(filePath)
         }
-      }
+      }))
     }
     void approveProjectPaths()
   }, [projects])

@@ -257,8 +257,8 @@ Then run scripts through the same direct pnpm entry if needed.
 | Media A–D  | GenSpace media library: import, gallery filters, bins, list view (`docs/MEDIA_LIBRARY_PLAN.md`)                                 | Complete |
 | Reframe    | Outpaint reframe mode: trim, aspect/zoom/pan UI, backend WanGP outpaint mapping                                                 | Complete |
 | Phase 5    | LoRA MVP                                                                                                                        | Pending  |
-| Phase 6    | QuickGen image polish                                                                                                           | Pending  |
-| Phase 7    | Video input capabilities (start/end/control/source video)                                                                       | Pending  |
+| Phase 6    | QuickGen image polish                                                                                                           | Complete |
+| Phase 7    | Video input capabilities (start/end/control/source video)                                                                       | Complete |
 | Phase 8    | QuickGen audio/TTS                                                                                                              | Pending  |
 | Phase 9    | Production planning                                                                                                             | Pending  |
 

@@ -15,21 +15,18 @@ param(
 $ErrorActionPreference = "Stop"
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  LTX Video - Python Environment Setup" -ForegroundColor Cyan
+Write-Host "  AiVS - Python Environment Setup" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ProjectDir = Split-Path -Parent $ScriptDir
 $BackendDir = Join-Path $ProjectDir "backend"
 $OutputPath = Join-Path $ProjectDir $OutputDir
-$TempDir = Join-Path $env:TEMP "ltx-python-build"
+$TempDir = Join-Path $env:TEMP "aivs-python-build"
 
 # Python embed URL
 $PythonUrl = "https://www.python.org/ftp/python/$PythonVersion/python-$PythonVersion-embed-amd64.zip"
 $GetPipUrl = "https://bootstrap.pypa.io/get-pip.py"
-
-# PyTorch CUDA index (must match the index in pyproject.toml)
-$PyTorchIndex = "https://download.pytorch.org/whl/cu128"
 
 # ============================================================
 # Step 1: Verify prerequisites
@@ -62,7 +59,8 @@ if ($LASTEXITCODE -ne 0) {
 # ============================================================
 Write-Host "`nStep 2: Generating requirements.txt from uv.lock..." -ForegroundColor Yellow
 
-$RequirementsFile = Join-Path $BackendDir "requirements-dist.txt"
+$ExportedRequirementsFile = Join-Path $BackendDir "requirements-dist.txt"
+$RequirementsFile = $ExportedRequirementsFile
 
 # Export pinned deps, excluding the project itself (--no-emit-project)
 & uv export --frozen --no-hashes --no-editable --no-emit-project `
@@ -77,6 +75,13 @@ if ($LASTEXITCODE -ne 0) {
 
 $DepCount = (Get-Content $RequirementsFile | Where-Object { $_ -match "^\S" }).Count
 Write-Host "Exported $DepCount dependencies from uv.lock" -ForegroundColor Green
+
+# The curated GPU stack owns these CUDA wheels and their index URL. Remove
+# them from the generic export so uv does not try to resolve them from PyPI.
+$FilteredRequirementsFile = Join-Path $BackendDir "requirements-dist-no-torch.txt"
+Get-Content $RequirementsFile | Where-Object { $_ -notmatch "^(torch|torchvision|torchaudio)(\[.*\])?\s*[=<>!~]" } |
+    Set-Content -Path $FilteredRequirementsFile -Encoding utf8
+$RequirementsFile = $FilteredRequirementsFile
 
 # ============================================================
 # Step 3: Prepare directories
@@ -137,17 +142,22 @@ Write-Host "setuptools and wheel installed" -ForegroundColor Green
 # ============================================================
 Write-Host "`nStep 6: Installing dependencies from requirements.txt..." -ForegroundColor Yellow
 
-# Use uv for installation — it natively handles uv_build backends and is faster.
-# Falls back to pip if uv is not available (local dev without uv).
+# Install the curated GPU stack before packages which depend on Torch.
+Write-Host "Installing tested WanGP GPU stack..." -ForegroundColor Yellow
+& "$ScriptDir\install-wangp-stack.ps1" -PythonExe $PythonExe
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "ERROR: WanGP GPU stack install failed!" -ForegroundColor Red
+    exit 1
+}
+Write-Host "WanGP GPU stack installed" -ForegroundColor Green
+
+# Use uv for the remaining dependencies — it natively handles uv_build
+# backends and is faster. Falls back to pip if uv is not available.
 $UvAvailable = Get-Command uv -ErrorAction SilentlyContinue
 if ($UvAvailable) {
-    & uv pip install -r $RequirementsFile `
-        --extra-index-url $PyTorchIndex `
-        --index-strategy unsafe-best-match `
-        --python $PythonExe
+    & uv pip install -r $RequirementsFile --index-strategy unsafe-best-match --python $PythonExe
 } else {
     & $PythonExe -m pip install -r $RequirementsFile `
-        --extra-index-url $PyTorchIndex `
         --no-warn-script-location --quiet
 }
 
@@ -156,14 +166,6 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 Write-Host "All dependencies installed" -ForegroundColor Green
-
-Write-Host "`nInstalling Wan2GP dependencies..." -ForegroundColor Yellow
-& "$ScriptDir\ensure-wan2gp.ps1" -InstallPythonDeps -PythonExe $PythonExe
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "ERROR: Wan2GP dependency install failed!" -ForegroundColor Red
-    exit 1
-}
-Write-Host "Wan2GP dependencies installed" -ForegroundColor Green
 
 # ============================================================
 # Step 7: Copy Python headers for Triton/SageAttention JIT
@@ -228,7 +230,7 @@ Get-ChildItem -Path $OutputPath -Filter "*.pyc" | Remove-Item -Force
 
 # Clean up temp directory and generated requirements file
 Remove-Item -Recurse -Force $TempDir
-Remove-Item -Force $RequirementsFile -ErrorAction SilentlyContinue
+Remove-Item -Force $ExportedRequirementsFile, $FilteredRequirementsFile -ErrorAction SilentlyContinue
 
 # ============================================================
 # Step 9: Verify

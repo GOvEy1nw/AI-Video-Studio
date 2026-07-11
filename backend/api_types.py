@@ -98,10 +98,6 @@ class GpuInfoResponse(BaseModel):
     gpu_info: GpuTelemetry
 
 
-class RuntimePolicyResponse(BaseModel):
-    force_api_generations: bool
-
-
 class GenerationProgressResponse(BaseModel):
     status: str
     phase: str
@@ -117,56 +113,6 @@ class GenerationProgressResponse(BaseModel):
     downloadCurrentFile: str | None = None
     downloadCurrentFileProgress: int | None = None
     downloadTotalProgress: int | None = None
-
-
-class ModelInfo(BaseModel):
-    id: str
-    name: str
-    description: str
-
-
-class ModelFileStatus(BaseModel):
-    name: str
-    description: str
-    downloaded: bool
-    size: int
-    expected_size: int
-    required: bool = True
-    is_folder: bool = False
-    optional_reason: str | None = None
-
-
-class TextEncoderStatus(BaseModel):
-    downloaded: bool
-    size_bytes: int
-    size_gb: float
-    expected_size_gb: float
-
-
-class ModelsStatusResponse(BaseModel):
-    models: list[ModelFileStatus]
-    all_downloaded: bool
-    total_size: int
-    downloaded_size: int
-    total_size_gb: float
-    downloaded_size_gb: float
-    models_path: str
-    has_api_key: bool
-    text_encoder_status: TextEncoderStatus
-    use_local_text_encoder: bool
-
-
-class DownloadProgressResponse(BaseModel):
-    status: str
-    currentFile: str
-    currentFileProgress: int
-    totalProgress: int
-    downloadedBytes: int
-    totalBytes: int
-    filesCompleted: int
-    totalFiles: int
-    error: str | None
-    speedMbps: int
 
 
 class IcLoraModel(BaseModel):
@@ -235,17 +181,6 @@ class IcLoraDownloadResponse(BaseModel):
 class IcLoraGenerateResponse(BaseModel):
     status: str
     video_path: str | None = None
-
-
-class ModelDownloadStartResponse(BaseModel):
-    status: str
-    message: str | None = None
-    skippingTextEncoder: bool | None = None
-
-
-class TextEncoderDownloadResponse(BaseModel):
-    status: str
-    message: str | None = None
 
 
 class StatusResponse(BaseModel):
@@ -442,10 +377,6 @@ class GenerateImageRequest(BaseModel):
     aspectRatio: Literal["1:1", "16:9", "9:16"] | None = None
     resolutionTier: Literal["540p", "720p", "1080p", "1440p", "2160p"] | None = None
     inputMedia: list[GenerateImageInputMedia] = Field(default_factory=_default_image_input_media)
-
-
-class ModelDownloadRequest(BaseModel):
-    skipTextEncoder: bool = False
 
 
 class SuggestGapPromptRequest(BaseModel):

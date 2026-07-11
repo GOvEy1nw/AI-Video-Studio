@@ -754,6 +754,8 @@ A compatible LoRA can be selected and used in a WanGP image generation.
 
 ### Phase 6 — QuickGen image polish
 
+**Status: Complete.**
+
 Goal:
 
 Make image generation genuinely useful for creative iteration.
@@ -773,6 +775,8 @@ QuickGen image feels practical for real creative exploration.
 ```
 
 ### Phase 7 — QuickGen video
+
+**Status: Complete.**
 
 Goal:
 

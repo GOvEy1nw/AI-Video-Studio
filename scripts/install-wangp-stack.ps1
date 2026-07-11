@@ -2,7 +2,9 @@ param(
     [string]$Stack = "",                  # cu130 | cu128 | "" (auto-detect)
     [string]$GpuGeneration = "",          # RTX_50 | RTX_40 | RTX_30 | RTX_20 | GTX_10 | "" (auto-detect)
     [string]$PythonExe = "",              # backend venv python; defaults to backend\.venv\Scripts\python.exe
+    [string]$UvExe = "",                  # bundled uv.exe; defaults to PATH
     [switch]$SkipWan2gpRequirements,      # skip Wan2GP/requirements.txt (debug only)
+    [switch]$SkipWan2gpCheckout,           # use an already-packaged Wan2GP directory
     [switch]$List                          # print detected stack and exit
 )
 
@@ -27,6 +29,17 @@ if (-not $PythonExe) {
 }
 if (-not $List -and -not (Test-Path $PythonExe)) {
     throw "Backend Python venv not found at $PythonExe. Run pnpm setup:dev:win first to create the venv."
+}
+
+if (-not $UvExe) {
+    $UvCommand = Get-Command uv -ErrorAction SilentlyContinue
+    if (-not $UvCommand) {
+        throw "uv not found. Provide -UvExe or install uv."
+    }
+    $UvExe = $UvCommand.Source
+}
+if (-not $List -and -not (Test-Path $UvExe)) {
+    throw "uv executable not found at $UvExe"
 }
 
 # ---------------------------------------------------------------------------
@@ -121,7 +134,7 @@ $torchArgs = $StackDef.torch -split ' '
 # version `uv sync` pulled in from pyproject.toml (e.g. switching from
 # cu130 to cu128 on older GPUs requires downgrading torch).
 $uvArgs = @("pip", "install", "--python", $PythonExe, "--force-reinstall") + $torchArgs
-& uv @uvArgs
+& $UvExe @uvArgs
 if ($LASTEXITCODE -ne 0) {
     throw "Failed to install torch stack."
 }
@@ -142,10 +155,10 @@ foreach ($kernel in $kernels) {
 
     Write-Host "Installing kernel '$kernel'..." -ForegroundColor Yellow
     if ($spec -like "http*") {
-        & uv pip install --python $PythonExe $spec
+        & $UvExe pip install --python $PythonExe $spec
     } else {
         $parts = $spec -split ' '
-        & uv pip install --python $PythonExe @parts
+        & $UvExe pip install --python $PythonExe @parts
     }
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to install kernel '$kernel' ($spec)."
@@ -158,7 +171,7 @@ foreach ($kernel in $kernels) {
 # ---------------------------------------------------------------------------
 if ($StackDef.bitsandbytes) {
     Write-Host "Installing bitsandbytes..." -ForegroundColor Yellow
-    & uv pip install --python $PythonExe $StackDef.bitsandbytes
+    & $UvExe pip install --python $PythonExe $StackDef.bitsandbytes
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to install bitsandbytes."
     }
@@ -170,16 +183,18 @@ if ($StackDef.bitsandbytes) {
 # ---------------------------------------------------------------------------
 if (-not $SkipWan2gpRequirements) {
     # Ensure the Wan2GP checkout exists (idempotent - skips clone if present).
-    & (Join-Path $ScriptDir "ensure-wan2gp.ps1")
-    if ($LASTEXITCODE -ne 0) {
-        throw "ensure-wan2gp.ps1 failed; cannot install Wan2GP requirements."
+    if (-not $SkipWan2gpCheckout) {
+        & (Join-Path $ScriptDir "ensure-wan2gp.ps1")
+        if ($LASTEXITCODE -ne 0) {
+            throw "ensure-wan2gp.ps1 failed; cannot install Wan2GP requirements."
+        }
     }
     $LocalWan2GPDir = Join-Path $ProjectDir "Wan2GP"
     if (Test-Path $LocalWan2GPDir) {
         $RequirementsFile = Join-Path (Resolve-Path $LocalWan2GPDir) "requirements.txt"
         if (Test-Path $RequirementsFile) {
             Write-Host "Installing Wan2GP requirements.txt..." -ForegroundColor Yellow
-            & uv pip install --python $PythonExe -r $RequirementsFile
+            & $UvExe pip install --python $PythonExe -r $RequirementsFile
             if ($LASTEXITCODE -ne 0) {
                 throw "Failed to install Wan2GP requirements.txt."
             }

@@ -16,9 +16,3 @@ export async function backendFetch(path: string, init?: RequestInit): Promise<Re
   return fetch(`${url}${path}`, { ...init, headers })
 }
 
-export async function backendWsUrl(path: string): Promise<string> {
-  const { url, token } = await getBackendCredentials()
-  const ws = url.replace('http://', 'ws://')
-  const sep = path.includes('?') ? '&' : '?'
-  return `${ws}${path}${sep}token=${token}`
-}

@@ -107,12 +107,12 @@ if [ "$UNPACK" = true ]; then
     mac)
       echo ""
       echo "Unpacked app ready!"
-      echo "Run: open \"$RELEASE_DIR/mac-arm64/LTX Desktop.app\""
+      echo "Run: open \"$RELEASE_DIR/mac-arm64/AiVS.app\""
       ;;
     win)
       echo ""
       echo "Unpacked app ready!"
-      echo "Run: $RELEASE_DIR/win-unpacked/LTX Desktop.exe"
+      echo "Run: $RELEASE_DIR/win-unpacked/AiVS.exe"
       ;;
   esac
 else

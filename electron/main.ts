@@ -6,6 +6,7 @@ import { stopExportProcess } from './export/ffmpeg-utils'
 import { registerAppHandlers } from './ipc/app-handlers'
 import { registerFileHandlers } from './ipc/file-handlers'
 import { registerLogHandlers } from './ipc/log-handlers'
+import { registerProjectStorageHandlers } from './ipc/project-storage-handlers'
 import { registerVideoProcessingHandlers } from './ipc/video-processing-handlers'
 import { initSessionLog } from './logging-management'
 import { stopPythonBackend } from './python-backend'
@@ -22,6 +23,7 @@ if (!gotLock) {
   registerAppHandlers()
   registerFileHandlers()
   registerLogHandlers()
+  registerProjectStorageHandlers()
   registerExportHandlers()
   registerVideoProcessingHandlers()
 

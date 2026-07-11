@@ -11,7 +11,6 @@ from state.app_settings import AppSettings
 from app_factory import create_app
 from state import RuntimeConfig, build_initial_state, set_state_service_for_tests
 from app_handler import AppHandler, ServiceBundle
-from runtime_config.model_download_specs import DEFAULT_MODEL_DOWNLOAD_SPECS, DEFAULT_REQUIRED_MODEL_TYPES
 from tests.fakes.fake_wangp_bridge import build_fake_wangp_bridge
 from tests.fakes.services import FakeServices
 
@@ -44,23 +43,15 @@ def fake_services() -> FakeServices:
 def test_state(tmp_path: Path, fake_services: FakeServices):
     """Provide a fresh AppHandler per test and register it in DI."""
     app_data = tmp_path / "app_data"
-    models_dir = app_data / "models"
     outputs_dir = tmp_path / "outputs"
-    ic_lora_dir = models_dir / "ic-loras"
 
-    for directory in (models_dir, outputs_dir, ic_lora_dir, app_data):
+    for directory in (outputs_dir, app_data):
         directory.mkdir(parents=True, exist_ok=True)
 
     config = RuntimeConfig(
         device="cpu",
-        models_dir=models_dir,
-        model_download_specs=DEFAULT_MODEL_DOWNLOAD_SPECS,
-        required_model_types=DEFAULT_REQUIRED_MODEL_TYPES,
         outputs_dir=outputs_dir,
-        ic_lora_dir=ic_lora_dir,
         settings_file=app_data / "settings.json",
-        ltx_api_base_url="https://api.ltx.video",
-        force_api_generations=False,
         use_sage_attention=False,
         camera_motion_prompts=CAMERA_MOTION_PROMPTS,
         default_negative_prompt=DEFAULT_NEGATIVE_PROMPT,
@@ -74,21 +65,7 @@ def test_state(tmp_path: Path, fake_services: FakeServices):
     )
 
     bundle = ServiceBundle(
-        http=fake_services.http,
-        gpu_cleaner=fake_services.gpu_cleaner,
-        model_downloader=fake_services.model_downloader,
         gpu_info=fake_services.gpu_info,
-        video_processor=fake_services.video_processor,
-        text_encoder=fake_services.text_encoder,
-        task_runner=fake_services.task_runner,
-        ltx_api_client=fake_services.ltx_api_client,
-        zit_api_client=fake_services.zit_api_client,
-        fast_video_pipeline_class=type(fake_services.fast_video_pipeline),
-        image_generation_pipeline_class=type(fake_services.image_generation_pipeline),
-        ic_lora_pipeline_class=type(fake_services.ic_lora_pipeline),
-        a2v_pipeline_class=type(fake_services.a2v_pipeline),
-        retake_pipeline_class=type(fake_services.retake_pipeline),
-        ic_lora_model_downloader=fake_services.ic_lora_model_downloader,
     )
 
     handler = build_initial_state(
@@ -102,7 +79,6 @@ def test_state(tmp_path: Path, fake_services: FakeServices):
     handler.image_generation._wangp_bridge = fake_wangp_bridge  # type: ignore[attr-defined]
     handler.prompt_enhancement._wangp_bridge = fake_wangp_bridge  # type: ignore[attr-defined]
     handler.health._wangp_bridge = fake_wangp_bridge  # type: ignore[attr-defined]
-    handler.models._wangp_bridge = fake_wangp_bridge  # type: ignore[attr-defined]
     handler.model_profiles._wangp_bridge = fake_wangp_bridge  # type: ignore[attr-defined]
     set_state_service_for_tests(handler)
     yield handler
@@ -150,40 +126,6 @@ def enable_wangp(test_state, wangp_bridge):
 @pytest.fixture
 def default_app_settings() -> AppSettings:
     return DEFAULT_APP_SETTINGS.model_copy(deep=True)
-
-
-@pytest.fixture
-def create_fake_model_files(test_state):
-    def _create(include_zit: bool = False):
-        for path in (
-            test_state.config.model_path("checkpoint"),
-            test_state.config.model_path("upsampler"),
-        ):
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(b"\x00" * 1024)
-
-        te_dir = test_state.config.model_path("text_encoder")
-        te_dir.mkdir(parents=True, exist_ok=True)
-        (te_dir / "model.safetensors").write_bytes(b"\x00" * 1024)
-        (te_dir / "tokenizer.model").write_bytes(b"\x00" * 1024)
-
-        if include_zit:
-            zit_dir = test_state.config.model_path("zit")
-            zit_dir.mkdir(parents=True, exist_ok=True)
-            (zit_dir / "model.safetensors").write_bytes(b"\x00" * 1024)
-
-    return _create
-
-
-@pytest.fixture
-def create_fake_ic_lora_files(test_state):
-    def _create(names: list[str]):
-        for name in names:
-            path = test_state.config.ic_lora_dir / f"{name}.safetensors"
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(b"\x00" * 1024)
-
-    return _create
 
 
 @pytest.fixture

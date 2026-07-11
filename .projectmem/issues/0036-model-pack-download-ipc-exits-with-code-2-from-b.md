@@ -1,0 +1,6 @@
+# #0036 Model-pack download IPC exits with code 2 from both first-run and Settings; pack runner argument forwarding must be corrected and pack cards should show approximate download sizes.
+
+- 2026-07-10T21:09:21Z `issue`: Model-pack download IPC exits with code 2 from both first-run and Settings; pack runner argument forwarding must be corrected and pack cards should show approximate download sizes. [electron/python-setup.ts; backend/wangp_model_packs.py; frontend/components/ModelPackManager.tsx]
+- 2026-07-10T21:10:42Z `attempt`: CLI isolation removed argparse exit 2, but smoke import then failed because WanGP resolves models/_settings.json relative to its checkout. Runner must use Wan2GP as its working directory. [backend/wangp_model_packs.py] (failed)
+- 2026-07-10T21:12:14Z `attempt`: Fixed WanGP import argument isolation and checkout working directory; real runner smoke with --download and no selected packs exits 0. TypeScript/Vite, Pyright, and 150 pytest tests pass. Added approximate pack-size labels. [backend/wangp_model_packs.py] (worked)
+- 2026-07-10T21:13:21Z `attempt`: Built replacement installer and verified packaged runner contains CLI isolation fix plus model-pack resources. Copied release/AiVS-Setup-model-packs-fix.exe for retest. [electron-builder.yml] (worked)

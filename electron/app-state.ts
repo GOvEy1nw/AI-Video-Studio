@@ -36,7 +36,7 @@ export function getProjectAssetsPath(): string {
     cachedProjectAssetsPath = state.projectAssetsPath
     return cachedProjectAssetsPath
   }
-  const defaultPath = path.join(app.getPath('downloads'), 'AiVS Assets')
+  const defaultPath = path.join(app.getPath('documents'), 'AiVS')
   cachedProjectAssetsPath = defaultPath
   return defaultPath
 }

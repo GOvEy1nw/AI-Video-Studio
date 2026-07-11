@@ -90,16 +90,12 @@ class OutputSettings(SettingsBaseModel):
 class AppSettings(SettingsBaseModel):
     use_torch_compile: bool = False
     load_on_startup: bool = False
-    ltx_api_key: str = ""
-    user_prefers_ltx_api_video_generations: bool = False
-    fal_api_key: str = ""
     use_local_text_encoder: bool = False
     fast_model: FastModelSettings = Field(default_factory=FastModelSettings)
     pro_model: ProModelSettings = Field(default_factory=ProModelSettings)
     prompt_cache_size: int = 100
     prompt_enhancer_enabled_t2v: bool = True
     prompt_enhancer_enabled_i2v: bool = False
-    gemini_api_key: str = ""
     seed_locked: bool = False
     locked_seed: int = 42
     output_settings: OutputSettings = Field(default_factory=OutputSettings)
@@ -162,34 +158,17 @@ UpdateSettingsRequest = AppSettingsPatch
 class SettingsResponse(SettingsBaseModel):
     use_torch_compile: bool = False
     load_on_startup: bool = False
-    has_ltx_api_key: bool = False
-    user_prefers_ltx_api_video_generations: bool = False
-    has_fal_api_key: bool = False
     use_local_text_encoder: bool = False
     fast_model: FastModelSettings = Field(default_factory=FastModelSettings)
     pro_model: ProModelSettings = Field(default_factory=ProModelSettings)
     prompt_cache_size: int = 100
     prompt_enhancer_enabled_t2v: bool = True
     prompt_enhancer_enabled_i2v: bool = False
-    has_gemini_api_key: bool = False
     seed_locked: bool = False
     locked_seed: int = 42
     output_settings: OutputSettings = Field(default_factory=OutputSettings)
 
 
 def to_settings_response(settings: AppSettings) -> SettingsResponse:
-    data = settings.model_dump(by_alias=False)
-    ltx_key = data.pop("ltx_api_key", "")
-    fal_key = data.pop("fal_api_key", "")
-    gemini_key = data.pop("gemini_api_key", "")
-    data["has_ltx_api_key"] = bool(ltx_key)
-    data["has_fal_api_key"] = bool(fal_key)
-    data["has_gemini_api_key"] = bool(gemini_key)
-    return SettingsResponse.model_validate(data)
+    return SettingsResponse.model_validate(settings.model_dump(by_alias=False))
 
-
-def should_video_generate_with_ltx_api(*, force_api_generations: bool, settings: AppSettings) -> bool:
-    has_ltx_api_key = bool(settings.ltx_api_key.strip())
-    return force_api_generations or (
-        settings.user_prefers_ltx_api_video_generations and has_ltx_api_key
-    )

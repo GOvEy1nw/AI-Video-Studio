@@ -85,4 +85,15 @@ def migrate_legacy_settings(raw: Mapping[str, JSONValue]) -> JSONObject:
         migrated.setdefault("prompt_enhancer_enabled_i2v", legacy_value)
 
     migrated.pop("prompt_enhancer_enabled", None)
+    for key in (
+        "ltx_api_key",
+        "ltxApiKey",
+        "fal_api_key",
+        "falApiKey",
+        "gemini_api_key",
+        "geminiApiKey",
+        "user_prefers_ltx_api_video_generations",
+        "userPrefersLtxApiVideoGenerations",
+    ):
+        migrated.pop(key, None)
     return migrated

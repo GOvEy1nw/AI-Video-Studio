@@ -1,4 +1,4 @@
-# Contributing to LTX Desktop
+# Contributing to AI Video Studio
 
 Thanks for taking the time to contribute!
 
@@ -24,7 +24,7 @@ pnpm -v
 ```
 
 - `uv` (Python package manager)
-- Python 3.12+
+- Python 3.11.9 (pinned in `.python-version`)
 - Git
 
 Setup:

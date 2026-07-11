@@ -78,6 +78,14 @@ python-embed/
 
 # Downloaded during CI for Windows NSIS installer
 resources/vc_redist.x64.exe
+python-bootstrap/
+backend/requirements-dist.txt
+
+# Wan2GP checkout: source is bundled; local models and generated indexes are not
+Wan2GP/.codegraph/
+Wan2GP/chkpts/
+Wan2GP/docs/
+Wan2GP/loras/
 
 .projectmem/events.jsonl
 .projectmem/watch.pid

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# macOS / Linux development setup for LTX Desktop
+# macOS / Linux development setup for AI Video Studio
 set -euo pipefail
 
 RED='\033[0;31m'

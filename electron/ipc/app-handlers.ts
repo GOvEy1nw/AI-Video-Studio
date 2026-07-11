@@ -2,7 +2,7 @@ import { app, ipcMain } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import { checkGPU } from '../gpu'
-import { isPythonReady, downloadPythonEmbed } from '../python-setup'
+import { cancelModelPackDownload, downloadModelPacks, getModelPacks, isPythonReady, downloadPythonEmbed } from '../python-setup'
 import { getBackendHealthStatus, getBackendUrl, getAuthToken, startPythonBackend, restartPythonBackend } from '../python-backend'
 import { getMainWindow } from '../window'
 
@@ -136,6 +136,18 @@ export function registerAppHandlers(): void {
     await downloadPythonEmbed((progress) => {
       getMainWindow()?.webContents.send('python-setup-progress', progress)
     })
+  })
+
+  ipcMain.handle('get-model-packs', () => getModelPacks())
+
+  ipcMain.handle('download-model-packs', async (_event, ids: string[]) => {
+    return await downloadModelPacks(ids, (progress) => {
+      getMainWindow()?.webContents.send('model-pack-progress', progress)
+    })
+  })
+
+  ipcMain.handle('cancel-model-pack-download', () => {
+    cancelModelPackDownload()
   })
 
   ipcMain.handle('start-python-backend', async () => {

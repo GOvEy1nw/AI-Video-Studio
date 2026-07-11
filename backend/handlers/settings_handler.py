@@ -63,10 +63,6 @@ class SettingsHandler(StateHandlerBase):
     def update_settings(self, patch: UpdateSettingsRequest) -> tuple[AppSettings, AppSettings, set[str]]:
         patch_payload = strip_none_values(ensure_json_object(patch.model_dump(by_alias=False, exclude_unset=True)))
 
-        for key_field in ("ltx_api_key", "gemini_api_key", "fal_api_key"):
-            if key_field in patch_payload and patch_payload[key_field] == "":
-                del patch_payload[key_field]
-
         before = self.state.app_settings.model_copy(deep=True)
         before_payload = ensure_json_object(before.model_dump(by_alias=False))
 
@@ -77,19 +73,7 @@ class SettingsHandler(StateHandlerBase):
         after = self.state.app_settings.model_copy(deep=True)
         after_payload = ensure_json_object(after.model_dump(by_alias=False))
 
-        if "prompt_cache_size" in patch_payload and self.state.text_encoder is not None:
-            self._trim_prompt_cache()
-
         changed_paths = collect_changed_paths(before_payload, after_payload)
         self.save_settings()
         return before, after, changed_paths
 
-    def _trim_prompt_cache(self) -> None:
-        te = self.state.text_encoder
-        if te is None:
-            return
-
-        max_size = self.state.app_settings.prompt_cache_size
-        while len(te.prompt_cache) > max_size:
-            oldest = next(iter(te.prompt_cache))
-            del te.prompt_cache[oldest]

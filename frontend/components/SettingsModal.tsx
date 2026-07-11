@@ -1,10 +1,11 @@
-import { Folder, Info, Settings, X } from "lucide-react";
+import { Folder, HardDriveDownload, Info, Settings, X } from "lucide-react";
 
 import { useEffect, useState } from "react";
 import { Button } from "./ui/button";
 import { logger } from "../lib/logger";
 import { useAppSettings } from "../contexts/AppSettingsContext";
 import { AivsLogo } from "./AivsLogo";
+import { ModelPackManager } from "./ModelPackManager";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -12,7 +13,7 @@ interface SettingsModalProps {
   initialTab?: TabId;
 }
 
-type TabId = "general" | "outputs" | "about";
+type TabId = "general" | "models" | "outputs" | "about";
 
 export function SettingsModal({
   isOpen,
@@ -80,6 +81,7 @@ export function SettingsModal({
 
   const tabs = [
     { id: "general" as TabId, label: "General", icon: Settings },
+    { id: "models" as TabId, label: "Models", icon: HardDriveDownload },
     { id: "outputs" as TabId, label: "Outputs", icon: Folder },
     { id: "about" as TabId, label: "About", icon: Info },
   ];
@@ -389,6 +391,8 @@ export function SettingsModal({
               </div>
             </div>
           )}
+
+          {activeTab === "models" && <ModelPackManager />}
 
           {activeTab === "about" && (
             <>

@@ -1,0 +1,6 @@
+# #0037 Model-pack progress UI remains at 0 then 100 because WanGP/Hugging Face transfer output is not captured as progress; first-run needs project storage selection with Documents\\AiVS default.
+
+- 2026-07-11T07:57:52Z `issue`: Model-pack progress UI remains at 0 then 100 because WanGP/Hugging Face transfer output is not captured as progress; first-run needs project storage selection with Documents\\AiVS default. [electron/python-setup.ts; frontend/components/ModelPackManager.tsx; frontend/components/PythonSetup.tsx]
+- 2026-07-11T08:26:05Z `attempt`: Added checkpoint-growth progress events (validated by temporary-file smoke test), project storage final step with Documents\\AiVS default, and size display. TypeScript, Pyright, Vite, and 150 backend tests pass. [backend/wangp_model_packs.py; frontend/components/PythonSetup.tsx] (worked)
+- 2026-07-11T08:27:33Z `attempt`: Installer file appeared before NSIS finished writing; initial copied retest was only 361 KB. Waiting for final archive size before replacing it. [electron-builder.yml] (failed)
+- 2026-07-11T08:28:25Z `attempt`: Built complete 305,865,205-byte NSIS installer after waiting for archive finalization; verified packaged progress monitor and copied release/AiVS-Setup-progress-projects-retest.exe. [electron-builder.yml] (worked)

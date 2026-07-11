@@ -111,6 +111,8 @@ import {
 type GenSpaceMode = "image" | "video";
 type VideoProcessMode = "generate" | "reframe" | "retake";
 
+const RETAKE_AVAILABLE = false;
+
 type ImageInputItem = {
   id: string;
   url: string;
@@ -152,13 +154,6 @@ function createMultiShotRow(seconds = 4): MultiShotRow {
     seconds,
     prompt: "",
   };
-}
-
-function formatAutoDuration(seconds: number | undefined): string {
-  if (seconds === undefined || !Number.isFinite(seconds) || seconds <= 0) {
-    return "auto";
-  }
-  return `${seconds.toFixed(seconds < 10 ? 1 : 0)}s auto`;
 }
 
 function MediaInputTrimEditor({
@@ -358,6 +353,7 @@ function AssetCard({
   onDragStart,
   onCreateVideo,
   onRetake,
+  retakeDisabled = false,
   onReframe,
   onApplyPrompt,
   onToggleFavorite,
@@ -369,6 +365,7 @@ function AssetCard({
   onDragStart: (e: React.DragEvent, asset: Asset) => void;
   onCreateVideo?: (asset: Asset) => void;
   onRetake?: (asset: Asset) => void;
+  retakeDisabled?: boolean;
   onReframe?: (asset: Asset) => void;
   onApplyPrompt?: (asset: Asset) => void;
   onToggleFavorite?: () => void;
@@ -556,14 +553,16 @@ function AssetCard({
               {asset.type === "video" && (
                 <>
                   <button
+                    disabled={retakeDisabled || !onRetake}
                     onClick={(e) => {
                       e.stopPropagation();
                       onRetake?.(asset);
                     }}
-                    className="px-2.5 py-1.5 rounded-lg bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-colors flex items-center gap-1.5 text-xs font-medium whitespace-nowrap"
+                    className="px-2.5 py-1.5 rounded-lg bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-colors flex items-center gap-1.5 text-xs font-medium whitespace-nowrap disabled:cursor-not-allowed disabled:text-zinc-500 disabled:hover:bg-black/40"
+                    title={retakeDisabled ? "Retake is coming soon" : undefined}
                   >
                     <Scissors className="h-3 w-3" />
-                    Retake
+                    Retake{retakeDisabled ? " (soon)" : ""}
                   </button>
                   <button
                     onClick={(e) => {
@@ -2628,8 +2627,10 @@ function PromptBar({
               },
               {
                 value: "retake",
-                label: "Retake",
+                label: "Retake (soon)",
                 icon: <Scissors className="h-4 w-4" />,
+                disabled: !RETAKE_AVAILABLE,
+                tooltip: "Retake is not yet compatible with WanGP",
               },
             ]}
             trigger={
@@ -3119,17 +3120,8 @@ export function GenSpace() {
 
   useEffect(() => {
     if (!genSpaceRetakeSource) return;
-    setMode("video");
-    setVideoMode("retake");
-    setPrompt("");
-    setActiveRetakeSource(genSpaceRetakeSource);
-    setRetakeInitial({
-      videoUrl: genSpaceRetakeSource.videoUrl,
-      videoPath: genSpaceRetakeSource.videoPath,
-      duration: genSpaceRetakeSource.duration,
-    });
-    setRetakePanelKey((prev) => prev + 1);
     setGenSpaceRetakeSource(null);
+    setLocalError("Retake is coming soon and is not yet compatible with WanGP.");
   }, [genSpaceRetakeSource, setGenSpaceRetakeSource]);
 
   useEffect(() => {
@@ -3943,6 +3935,7 @@ export function GenSpace() {
   }, []);
 
   const handleVideoModeChange = useCallback((nextMode: VideoProcessMode) => {
+    if (nextMode === "retake") return;
     setVideoMode(nextMode);
     if (nextMode !== "generate") {
       setMultiShotEnabled(false);
@@ -3978,26 +3971,11 @@ export function GenSpace() {
       setInputImage(null);
       setInputAudio(null);
       setMode(nextMode === "image" ? "image" : "video");
-      setVideoMode(
-        nextMode === "retake"
-          ? "retake"
-          : nextMode === "reframe"
-            ? "reframe"
-            : "generate",
-      );
+      setVideoMode(nextMode === "reframe" ? "reframe" : "generate");
       setPrompt(params.prompt);
       setSettings((prev) => settingsPatchFromGenerationParams(params, prev));
       setInputRestoreVersion((version) => version + 1);
 
-      if (nextMode === "retake") {
-        setActiveRetakeSource(null);
-        setRetakeInitial({
-          videoUrl: asset.url,
-          videoPath: asset.path,
-          duration: asset.duration ?? params.retakeDuration,
-        });
-        setRetakePanelKey((prev) => prev + 1);
-      }
       if (nextMode === "reframe") {
         setReframeInitial({
           videoUrl: asset.url,
@@ -4637,6 +4615,7 @@ export function GenSpace() {
                     onContextMenu={handleAssetContextMenu}
                     onCreateVideo={handleCreateVideo}
                     onRetake={handleRetake}
+                    retakeDisabled={!RETAKE_AVAILABLE}
                     onReframe={handleReframe}
                     onApplyPrompt={handleApplyPrompt}
                     onToggleFavorite={() =>

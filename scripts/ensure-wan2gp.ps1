@@ -11,6 +11,15 @@ $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ProjectDir = Split-Path -Parent $ScriptDir
 $LocalWan2GPDir = Join-Path $ProjectDir $CloneDir
+$RevisionFile = Join-Path $ScriptDir "wangp-revision.txt"
+
+if (-not (Test-Path $RevisionFile)) {
+    throw "WanGP revision file not found: $RevisionFile"
+}
+$ExpectedRevision = (Get-Content $RevisionFile -Raw).Trim()
+if ($ExpectedRevision -notmatch "^[0-9a-f]{40}$") {
+    throw "WanGP revision must be a full 40-character Git SHA."
+}
 
 function Resolve-Wan2GPDir {
     param(
@@ -67,7 +76,7 @@ if (-not $Wan2GPDir) {
         throw "git not found. Install Git before running setup, or set WANGP_ROOT to an existing Wan2GP checkout."
     }
     Write-Host "Cloning Wan2GP into $LocalWan2GPDir..." -ForegroundColor Yellow
-    git clone --depth 1 $RepoUrl $LocalWan2GPDir
+    git clone --filter=blob:none $RepoUrl $LocalWan2GPDir
     if ($LASTEXITCODE -ne 0) {
         throw "git clone failed for Wan2GP."
     }
@@ -78,6 +87,27 @@ if (-not $Wan2GPDir) {
 } else {
     Write-Host "Using external Wan2GP checkout at $Wan2GPDir" -ForegroundColor Green
 }
+
+$IsLocalCheckout = $ResolvedLocalWan2GPDir -and ((Resolve-Path $Wan2GPDir).Path -eq $ResolvedLocalWan2GPDir)
+if ($IsLocalCheckout) {
+    $CurrentRevision = (git -c "safe.directory=$Wan2GPDir" -C $Wan2GPDir rev-parse HEAD).Trim()
+    if ($LASTEXITCODE -ne 0 -or $CurrentRevision -ne $ExpectedRevision) {
+        git -c "safe.directory=$Wan2GPDir" -C $Wan2GPDir fetch origin $ExpectedRevision --depth 1
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to fetch pinned WanGP revision $ExpectedRevision."
+        }
+        git -c "safe.directory=$Wan2GPDir" -C $Wan2GPDir checkout --detach $ExpectedRevision
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to check out pinned WanGP revision $ExpectedRevision."
+        }
+    }
+}
+
+$ActualRevision = (git -c "safe.directory=$Wan2GPDir" -C $Wan2GPDir rev-parse HEAD).Trim()
+if ($LASTEXITCODE -ne 0 -or $ActualRevision -ne $ExpectedRevision) {
+    throw "WanGP revision mismatch. Expected $ExpectedRevision, found $ActualRevision."
+}
+Write-Host "WanGP revision: $ActualRevision" -ForegroundColor Green
 
 $ApiFile = Join-Path $Wan2GPDir "shared\api.py"
 $RequirementsFile = Join-Path $Wan2GPDir "requirements.txt"

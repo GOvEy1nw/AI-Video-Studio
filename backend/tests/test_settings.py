@@ -19,16 +19,12 @@ class TestGetSettings:
         data = r.json()
         assert data["useTorchCompile"] is False
         assert data["loadOnStartup"] is False
-        assert data["hasLtxApiKey"] is False
-        assert data["userPrefersLtxApiVideoGenerations"] is False
-        assert data["hasFalApiKey"] is False
         assert data["useLocalTextEncoder"] is False
         assert data["fastModel"] == {"useUpscaler": True}
         assert data["proModel"] == {"steps": 20, "useUpscaler": True}
         assert data["promptCacheSize"] == 100
         assert data["promptEnhancerEnabledT2V"] is True
         assert data["promptEnhancerEnabledI2V"] is False
-        assert data["hasGeminiApiKey"] is False
         assert data["seedLocked"] is False
         assert data["lockedSeed"] == 42
         assert data["outputSettings"]["videoContainer"] == "mp4"
@@ -45,14 +41,6 @@ class TestGetSettings:
         test_state.state.app_settings.use_torch_compile = True
         r = client.get("/api/settings")
         assert r.json()["useTorchCompile"] is True
-
-    def test_has_api_key_true_when_set(self, client, test_state):
-        test_state.state.app_settings.ltx_api_key = "test-key-123"
-        r = client.get("/api/settings")
-        data = r.json()
-        assert data["hasLtxApiKey"] is True
-        assert "ltxApiKey" not in data
-
 
 class TestPostSettings:
     def test_update_single_field(self, client, test_state):
@@ -99,49 +87,6 @@ class TestPostSettings:
         assert r.status_code == 200
         assert test_state.state.app_settings.locked_seed == 2_147_483_647
 
-    def test_prompt_cache_shrinks_cache(self, client, test_state):
-        te = test_state.state.text_encoder
-        assert te is not None
-        for i in range(5):
-            te.prompt_cache[(f"key_{i}", False)] = f"value_{i}"  # type: ignore[assignment]
-
-        r = client.post("/api/settings", json={"promptCacheSize": 2})
-        assert r.status_code == 200
-        assert len(te.prompt_cache) <= 2
-
-    def test_update_api_keys(self, client, test_state):
-        r = client.post(
-            "/api/settings",
-            json={
-                "ltxApiKey": "ltx-key-abc",
-                "geminiApiKey": "gemini-key-xyz",
-                "falApiKey": "fal-key-123",
-            },
-        )
-        assert r.status_code == 200
-        assert test_state.state.app_settings.ltx_api_key == "ltx-key-abc"
-        assert test_state.state.app_settings.gemini_api_key == "gemini-key-xyz"
-        assert test_state.state.app_settings.fal_api_key == "fal-key-123"
-
-    def test_update_user_prefers_api_video_generations(self, client, test_state):
-        r = client.post("/api/settings", json={"userPrefersLtxApiVideoGenerations": True})
-        assert r.status_code == 200
-        assert test_state.state.app_settings.user_prefers_ltx_api_video_generations is True
-
-    def test_empty_string_does_not_erase_key(self, client, test_state):
-        test_state.state.app_settings.ltx_api_key = "real-key"
-        test_state.state.app_settings.fal_api_key = "fal-key"
-        r = client.post("/api/settings", json={"ltxApiKey": "", "falApiKey": ""})
-        assert r.status_code == 200
-        assert test_state.state.app_settings.ltx_api_key == "real-key"
-        assert test_state.state.app_settings.fal_api_key == "fal-key"
-
-    def test_omitted_key_does_not_erase_key(self, client, test_state):
-        test_state.state.app_settings.ltx_api_key = "real-key"
-        r = client.post("/api/settings", json={"useTorchCompile": True})
-        assert r.status_code == 200
-        assert test_state.state.app_settings.ltx_api_key == "real-key"
-
     def test_unknown_field_rejected(self, client):
         r = client.post("/api/settings", json={"unknownSetting": True})
         assert r.status_code == 422
@@ -181,21 +126,7 @@ class TestSettingsPersistence:
     def _new_state(self, test_state, default_app_settings):
         fake_services = FakeServices()
         bundle = ServiceBundle(
-            http=fake_services.http,
-            gpu_cleaner=fake_services.gpu_cleaner,
-            model_downloader=fake_services.model_downloader,
             gpu_info=fake_services.gpu_info,
-            video_processor=fake_services.video_processor,
-            text_encoder=fake_services.text_encoder,
-            task_runner=fake_services.task_runner,
-            ltx_api_client=fake_services.ltx_api_client,
-            zit_api_client=fake_services.zit_api_client,
-            fast_video_pipeline_class=type(fake_services.fast_video_pipeline),
-            image_generation_pipeline_class=type(fake_services.image_generation_pipeline),
-            ic_lora_pipeline_class=type(fake_services.ic_lora_pipeline),
-            a2v_pipeline_class=type(fake_services.a2v_pipeline),
-            retake_pipeline_class=type(fake_services.retake_pipeline),
-            ic_lora_model_downloader=fake_services.ic_lora_model_downloader,
         )
         return build_initial_state(test_state.config, default_app_settings.model_copy(deep=True), service_bundle=bundle)
 
@@ -226,13 +157,28 @@ class TestSettingsPersistence:
         assert loaded.state.app_settings.prompt_enhancer_enabled_t2v is False
         assert loaded.state.app_settings.prompt_enhancer_enabled_i2v is False
 
-    def test_user_prefers_api_video_generations_persists(self, client, test_state, default_app_settings):
-        r = client.post("/api/settings", json={"userPrefersLtxApiVideoGenerations": True})
-        assert r.status_code == 200
-        assert test_state.state.app_settings.user_prefers_ltx_api_video_generations is True
+    def test_legacy_api_secrets_are_removed_on_save(self, test_state, default_app_settings):
+        test_state.config.settings_file.write_text(
+            json.dumps(
+                {
+                    "ltxApiKey": "secret",
+                    "fal_api_key": "secret",
+                    "geminiApiKey": "secret",
+                    "userPrefersLtxApiVideoGenerations": True,
+                    "seed_locked": True,
+                }
+            ),
+            encoding="utf-8",
+        )
 
         loaded = self._new_state(test_state, default_app_settings)
-        assert loaded.state.app_settings.user_prefers_ltx_api_video_generations is True
+        loaded.settings.save_settings()
+        saved = json.loads(test_state.config.settings_file.read_text(encoding="utf-8"))
+        assert "ltx_api_key" not in saved
+        assert "fal_api_key" not in saved
+        assert "gemini_api_key" not in saved
+        assert "user_prefers_ltx_api_video_generations" not in saved
+        assert saved["seed_locked"] is True
 
 
 class TestSettingsSchemaDrift:

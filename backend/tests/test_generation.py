@@ -11,10 +11,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from state.app_state_types import GpuSlot, VideoPipelineState, VideoPipelineWarmth
 from services.video_clip import VideoMetadata
 from tests.fakes.fake_wangp_bridge import FakeWanGPBridge
-from tests.fakes.services import FakeFastVideoPipeline
 
 _T2V_JSON = {
     "prompt": "test",
@@ -26,15 +24,6 @@ _T2V_JSON = {
 
 
 def _fake_running_generation_state(test_state) -> None:
-    pipeline = FakeFastVideoPipeline()
-    test_state.state.gpu_slot = GpuSlot(
-        active_pipeline=VideoPipelineState(
-            pipeline=pipeline,
-            warmth=VideoPipelineWarmth.COLD,
-            is_compiled=False,
-        ),
-        generation=None,
-    )
     test_state.generation.start_generation("running")
 
 
@@ -344,6 +333,40 @@ class TestGenerate:
         assert call.control_video_path == str(clipped)
         assert call.video_length_frames == 97
 
+    def test_retake_routes_through_wangp_control_video(
+        self, client, enable_wangp: FakeWanGPBridge, tmp_path: Path, monkeypatch
+    ):
+        video = tmp_path / "source.mp4"
+        clipped = tmp_path / "retake.mp4"
+        video.write_bytes(b"source")
+        clipped.write_bytes(b"clip")
+
+        monkeypatch.setattr(
+            "handlers.video_generation_handler.extract_video_clip",
+            lambda source_path, start_time, duration, output_dir: clipped,
+        )
+        monkeypatch.setattr(
+            "handlers.video_generation_handler.probe_video_metadata",
+            lambda path: VideoMetadata(frame_count=97, duration_seconds=4.0),
+        )
+
+        response = client.post(
+            "/api/retake",
+            json={
+                "video_path": str(video),
+                "start_time": 1.5,
+                "duration": 4,
+                "prompt": "Make the movement dramatic",
+                "mode": "replace_audio_and_video",
+            },
+        )
+
+        assert response.status_code == 200
+        call = enable_wangp.video_calls[0]
+        assert call.prompt == "Make the movement dramatic"
+        assert call.control_video_path == str(clipped)
+        assert call.duration_seconds == 4
+
     def test_audio_input_trim_passes_clipped_path_and_duration(
         self, client, enable_wangp: FakeWanGPBridge, tmp_path: Path, monkeypatch
     ):
@@ -639,7 +662,7 @@ class TestGenerationProgress:
         assert data["totalSteps"] == 8
 
     def test_running_from_api_generation_state(self, client, test_state):
-        test_state.generation.start_api_generation("api-running")
+        test_state.generation.start_generation_job("api-running")
         test_state.generation.update_progress("inference", 35)
 
         r = client.get("/api/generation/progress")
@@ -695,10 +718,10 @@ class TestGenerateImage:
         )
         assert r.status_code == 200
 
-        # The handler clamps num_images to the 1..12 range before invoking
-        # the bridge; the fake bridge writes one file per requested image.
-        call = enable_wangp.image_calls[0]
-        assert call.num_images == 12
+        # Low-VRAM profiles generate variation chunks sequentially.
+        assert len(enable_wangp.image_calls) == 12
+        assert all(call.num_images == 1 for call in enable_wangp.image_calls)
+        assert [call.seed for call in enable_wangp.image_calls] == list(range(enable_wangp.image_calls[0].seed, enable_wangp.image_calls[0].seed + 12))
         assert len(r.json()["image_paths"]) == 12
 
     def test_error(self, client, enable_wangp: FakeWanGPBridge):

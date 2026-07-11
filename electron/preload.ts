@@ -76,6 +76,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     skipped: string[]
     failed: { path: string; error: string }[]
   }> => ipcRenderer.invoke('delete-project-asset-files', options),
+  loadProjects: (): Promise<unknown[]> => ipcRenderer.invoke('projects-load'),
+  saveProject: (project: unknown, position?: number): Promise<void> =>
+    ipcRenderer.invoke('projects-save', project, position),
+  deleteProject: (id: string): Promise<void> => ipcRenderer.invoke('projects-delete', id),
+  migrateProjectsFromLocalStorage: (projects: unknown[]): Promise<unknown[]> =>
+    ipcRenderer.invoke('projects-migrate-local-storage', projects),
 
   // File save/export
   showSaveDialog: (options: { title?: string; defaultPath?: string; filters?: { name: string; extensions: string[] }[] }): Promise<string | null> =>
@@ -110,6 +116,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Python setup (Windows first-launch download)
   checkPythonReady: (): Promise<{ ready: boolean }> => ipcRenderer.invoke('check-python-ready'),
   startPythonSetup: (): Promise<void> => ipcRenderer.invoke('start-python-setup'),
+  getModelPacks: (): Promise<unknown[]> => ipcRenderer.invoke('get-model-packs'),
+  downloadModelPacks: (ids: string[]): Promise<boolean> => ipcRenderer.invoke('download-model-packs', ids),
+  cancelModelPackDownload: (): Promise<void> => ipcRenderer.invoke('cancel-model-pack-download'),
   startPythonBackend: (): Promise<void> => ipcRenderer.invoke('start-python-backend'),
   restartPythonBackend: (): Promise<void> => ipcRenderer.invoke('restart-python-backend'),
   getBackendHealthStatus: (): Promise<BackendHealthStatus | null> => ipcRenderer.invoke('get-backend-health-status'),
@@ -118,6 +127,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   removePythonSetupProgress: () => {
     ipcRenderer.removeAllListeners('python-setup-progress')
+  },
+  onModelPackProgress: (cb: (data: unknown) => void) => {
+    ipcRenderer.on('model-pack-progress', (_: unknown, data: unknown) => cb(data))
+  },
+  removeModelPackProgress: () => {
+    ipcRenderer.removeAllListeners('model-pack-progress')
   },
   onBackendHealthStatus: (cb: (data: BackendHealthStatus) => void) => {
     const listener = (_: unknown, data: BackendHealthStatus) => cb(data)
@@ -165,7 +180,6 @@ declare global {
       completeSetup: () => Promise<boolean>
       fetchLicenseText: () => Promise<string>
       getNoticesText: () => Promise<string>
-      openLtxApiKeyPage: () => Promise<boolean>
       openParentFolderOfFile: (filePath: string) => Promise<void>
       showItemInFolder: (filePath: string) => Promise<void>
       getLogs: () => Promise<LogsResponse>
@@ -199,6 +213,10 @@ declare global {
         skipped: string[]
         failed: { path: string; error: string }[]
       }>
+      loadProjects: () => Promise<unknown[]>
+      saveProject: (project: unknown, position?: number) => Promise<void>
+      deleteProject: (id: string) => Promise<void>
+      migrateProjectsFromLocalStorage: (projects: unknown[]) => Promise<unknown[]>
       showSaveDialog: (options: { title?: string; defaultPath?: string; filters?: { name: string; extensions: string[] }[] }) => Promise<string | null>
       saveFile: (filePath: string, data: string, encoding?: string) => Promise<{ success: boolean; path?: string; error?: string }>
       saveBinaryFile: (filePath: string, data: ArrayBuffer) => Promise<{ success: boolean; path?: string; error?: string }>
@@ -215,11 +233,16 @@ declare global {
       exportCancel: (sessionId: string) => Promise<{ ok?: boolean }>
       checkPythonReady: () => Promise<{ ready: boolean }>
       startPythonSetup: () => Promise<void>
+      getModelPacks: () => Promise<unknown[]>
+      downloadModelPacks: (ids: string[]) => Promise<boolean>
+      cancelModelPackDownload: () => Promise<void>
       startPythonBackend: () => Promise<void>
       restartPythonBackend: () => Promise<void>
       getBackendHealthStatus: () => Promise<BackendHealthStatus | null>
       onPythonSetupProgress: (cb: (data: unknown) => void) => void
       removePythonSetupProgress: () => void
+      onModelPackProgress: (cb: (data: unknown) => void) => void
+      removeModelPackProgress: () => void
       onBackendHealthStatus: (cb: (data: BackendHealthStatus) => void) => (() => void)
       extractVideoFrame: (videoUrl: string, seekTime: number, width?: number, quality?: number) => Promise<{ path: string; url: string }>
       writeLog: (level: string, message: string) => Promise<void>

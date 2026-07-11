@@ -1,7 +1,10 @@
 # Third-Party Notices
 
 This file contains the licenses and notices for third-party software and models
-used by LTX Desktop.
+used by AI Video Studio (AiVS).
+
+AiVS is derived from deepbeepmeep/LTX-Desktop-WanGP, itself derived from
+Lightricks LTX Desktop. Their applicable notices remain below.
 
 ---
 

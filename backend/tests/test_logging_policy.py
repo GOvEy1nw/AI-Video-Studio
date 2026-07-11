@@ -4,9 +4,6 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from threading import Event
-
-from services.task_runner.threading_runner import ThreadingRunner
 
 
 def _policy_records(caplog, *, contains: str) -> list[logging.LogRecord]:
@@ -65,41 +62,9 @@ def test_unhandled_exception_logs_single_traceback(caplog, test_state, monkeypat
     assert records[0].exc_info is not None
 
 
-def test_background_runner_logs_once_and_calls_error_callback(caplog) -> None:
-    caplog.set_level(logging.ERROR)
-    runner = ThreadingRunner()
-    callback_done = Event()
-    callback_errors: list[Exception] = []
-
-    def _worker() -> None:
-        raise RuntimeError("background boom")
-
-    def _on_error(exc: Exception) -> None:
-        callback_errors.append(exc)
-        callback_done.set()
-
-    runner.run_background(
-        _worker,
-        task_name="test-background-task",
-        on_error=_on_error,
-        daemon=True,
-    )
-
-    assert callback_done.wait(timeout=1.0)
-    assert len(callback_errors) == 1
-    assert isinstance(callback_errors[0], RuntimeError)
-
-    records = _policy_records(caplog, contains="Unhandled background error in task 'test-background-task'")
-    traceback_records = [record for record in records if record.exc_info is not None]
-    assert len(traceback_records) == 1
-
-
 def test_logger_exception_usage_is_restricted_to_boundaries() -> None:
     backend_dir = Path(__file__).resolve().parents[1]
-    allowed = {
-        Path("app_factory.py"),
-        Path("services/task_runner/threading_runner.py"),
-    }
+    allowed = {Path("app_factory.py")}
 
     for path in backend_dir.rglob("*.py"):
         if "tests" in path.parts or ".venv" in path.parts:

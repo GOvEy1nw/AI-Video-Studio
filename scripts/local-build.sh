@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # local-build.sh
-# All-in-one local build script for creating the LTX Desktop installer.
+# All-in-one local build script for creating the AiVS installer.
 # Prepares the Python environment, installs pnpm deps, builds the frontend,
 # then packages with electron-builder via create-installer.sh.
 #

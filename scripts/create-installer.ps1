@@ -15,8 +15,17 @@ $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ProjectDir = Split-Path -Parent $ScriptDir
 $ReleaseDir = Join-Path $ProjectDir "release"
+$VcRedistPath = Join-Path $ProjectDir "resources\vc_redist.x64.exe"
+$VcRedistUrl = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
+$ElectronBuilder = Join-Path $ProjectDir "node_modules\.bin\electron-builder.cmd"
 
 Set-Location $ProjectDir
+
+& "$ScriptDir\ensure-wan2gp.ps1"
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "ERROR: Pinned Wan2GP checkout is unavailable." -ForegroundColor Red
+    exit 1
+}
 
 # Verify prerequisites
 if (-not (Test-Path "dist") -or -not (Test-Path "dist-electron")) {
@@ -24,22 +33,40 @@ if (-not (Test-Path "dist") -or -not (Test-Path "dist-electron")) {
     exit 1
 }
 
-if (-not (Test-Path "python-embed")) {
-    Write-Host "ERROR: Python environment not found. Run local-build.ps1 or prepare-python.ps1 first." -ForegroundColor Red
+if (-not (Test-Path "python-bootstrap\python.exe")) {
+    Write-Host "ERROR: Python bootstrap not found. Run prepare-python-bootstrap.ps1 first." -ForegroundColor Red
     exit 1
+}
+
+if (-not (Test-Path $ElectronBuilder)) {
+    Write-Host "ERROR: electron-builder is not installed. Run pnpm install first." -ForegroundColor Red
+    exit 1
+}
+
+if (-not (Test-Path $VcRedistPath)) {
+    Write-Host "Downloading Visual C++ Redistributable..." -ForegroundColor Yellow
+    Invoke-WebRequest -Uri $VcRedistUrl -OutFile $VcRedistPath
+}
+
+$VcRedistSignature = Get-AuthenticodeSignature $VcRedistPath
+if (
+    $VcRedistSignature.Status -ne "Valid" -or
+    $VcRedistSignature.SignerCertificate.Subject -notmatch "Microsoft Corporation"
+) {
+    throw "Visual C++ Redistributable signature verification failed: $($VcRedistSignature.Status)"
 }
 
 # Build with electron-builder
 if ($Unpack) {
     Write-Host "Packaging unpacked app (fast mode)..." -ForegroundColor Yellow
-    pnpm exec electron-builder --win --dir
+    & $ElectronBuilder --win --dir
 } else {
     Write-Host "Packaging installer..." -ForegroundColor Yellow
     $PublishArgs = @()
     if ($Publish -ne "") {
         $PublishArgs = @("--publish", $Publish)
     }
-    pnpm exec electron-builder --win @PublishArgs
+    & $ElectronBuilder --win @PublishArgs
 }
 
 if ($LASTEXITCODE -ne 0) {
@@ -54,7 +81,7 @@ Write-Host "========================================" -ForegroundColor Green
 
 if ($Unpack) {
     $UnpackedDir = Join-Path $ReleaseDir "win-unpacked"
-    $ExePath = Join-Path $UnpackedDir "LTX Desktop.exe"
+    $ExePath = Join-Path $UnpackedDir "AiVS.exe"
     Write-Host "`nUnpacked app ready!" -ForegroundColor Cyan
     Write-Host "Run: $ExePath" -ForegroundColor Cyan
     Write-Host "`nTip: Just restart the app after code changes - no rebuild needed!" -ForegroundColor Green

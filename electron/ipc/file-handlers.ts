@@ -67,18 +67,6 @@ function searchDirectoryForFiles(dir: string, filenames: string[]): Record<strin
 
 
 export function registerFileHandlers(): void {
-  ipcMain.handle('open-ltx-api-key-page', async () => {
-    const { shell } = await import('electron')
-    await shell.openExternal('https://console.ltx.video/api-keys/')
-    return true
-  })
-
-  ipcMain.handle('open-fal-api-key-page', async () => {
-    const { shell } = await import('electron')
-    await shell.openExternal('https://fal.ai/dashboard/keys')
-    return true
-  })
-
   ipcMain.handle('open-parent-folder-of-file', async (_event, filePath: string) => {
     const { shell } = await import('electron')
     const normalizedPath = validatePath(filePath, getAllowedRoots())

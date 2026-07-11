@@ -2,7 +2,6 @@
 import os
 import sys
 import shlex
-from typing import Any, cast
 
 if os.environ.get("BACKEND_DEBUG") == "1":
     try:
@@ -43,58 +42,9 @@ console_handler.setLevel(logging.INFO)
 logging.basicConfig(level=logging.INFO, handlers=[console_handler])
 logger = logging.getLogger(__name__)
 
-# ============================================================
-# SageAttention Integration
-# ============================================================
-use_sage_attention = os.environ.get("USE_SAGE_ATTENTION", "1") == "1"
-_sageattention_runtime_fallback_logged = False
-
-if use_sage_attention:
-    try:
-        from sageattention import sageattn  # type: ignore[reportMissingImports]
-        import torch.nn.functional as F
-
-        _original_sdpa = F.scaled_dot_product_attention
-
-        _SAGE_SUPPORTED_HEADDIMS = {64, 96, 128}
-
-        def patched_sdpa(
-            query: torch.Tensor,
-            key: torch.Tensor,
-            value: torch.Tensor,
-            attn_mask: torch.Tensor | None = None,
-            dropout_p: float = 0.0,
-            is_causal: bool = False,
-            scale: float | None = None,
-            **kwargs: Any,
-        ) -> torch.Tensor:
-            global _sageattention_runtime_fallback_logged
-            try:
-                if (
-                    query.dim() == 4
-                    and attn_mask is None
-                    and dropout_p == 0.0
-                    and query.shape[-1] in _SAGE_SUPPORTED_HEADDIMS
-                ):
-                    return cast(torch.Tensor, sageattn(query, key, value, is_causal=is_causal, tensor_layout="HND"))  # type: ignore[reportUnnecessaryCast]
-                else:
-                    return _original_sdpa(query, key, value, attn_mask=attn_mask,
-                                         dropout_p=dropout_p, is_causal=is_causal, scale=scale, **kwargs)
-            except Exception:
-                if not _sageattention_runtime_fallback_logged:
-                    logger.warning("SageAttention failed during runtime; falling back to default attention", exc_info=True)
-                    _sageattention_runtime_fallback_logged = True
-                return _original_sdpa(query, key, value, attn_mask=attn_mask,
-                                     dropout_p=dropout_p, is_causal=is_causal, scale=scale, **kwargs)
-
-        F.scaled_dot_product_attention = patched_sdpa
-        logger.info("SageAttention enabled - attention operations will be faster")
-    except ImportError:
-        logger.warning("SageAttention not installed - using default attention")
-        use_sage_attention = False
-    except Exception:
-        logger.warning("Failed to enable SageAttention", exc_info=True)
-        use_sage_attention = False
+# WanGP selects compatible attention kernels per model. AiVS must not replace
+# torch's global SDPA function because that can override WanGP's own choice.
+use_sage_attention = False
 
 # ============================================================
 # Constants & Paths
@@ -115,10 +65,10 @@ DEVICE = _get_device()
 DTYPE = torch.bfloat16
 
 def _resolve_app_data_dir() -> Path:
-    env_path = os.environ.get("LTX_APP_DATA_DIR")
+    env_path = os.environ.get("AIVS_APP_DATA_DIR") or os.environ.get("LTX_APP_DATA_DIR")
     if not env_path:
         raise RuntimeError(
-            "LTX_APP_DATA_DIR environment variable must be set. "
+            "AIVS_APP_DATA_DIR environment variable must be set. "
             "When running standalone, set it to the desired data directory."
         )
     candidate = Path(env_path)
@@ -128,16 +78,9 @@ def _resolve_app_data_dir() -> Path:
 
 APP_DATA_DIR = _resolve_app_data_dir()
 
-MODELS_DIR = APP_DATA_DIR / "models"
-MODELS_DIR.mkdir(parents=True, exist_ok=True)
-
 PROJECT_ROOT = Path(__file__).parent.parent
 OUTPUTS_DIR = APP_DATA_DIR / "outputs"
 OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
-
-logger.info(f"Models directory: {MODELS_DIR}")
-
-IC_LORA_DIR = MODELS_DIR / "ic-loras"
 
 
 def _resolve_wangp_root() -> Path | None:
@@ -208,16 +151,8 @@ DEFAULT_APP_SETTINGS = AppSettings()
 
 from app_factory import DEFAULT_ALLOWED_ORIGINS, create_app
 from state import RuntimeConfig, build_initial_state
-from runtime_config.model_download_specs import DEFAULT_MODEL_DOWNLOAD_SPECS, DEFAULT_REQUIRED_MODEL_TYPES
-from runtime_config.runtime_policy import decide_force_api_generations
-from state.app_state_types import ModelFileType
-from server_utils.model_layout_migration import migrate_legacy_models_layout
 from services.gpu_info.gpu_info_impl import GpuInfoImpl
 
-migrate_legacy_models_layout(APP_DATA_DIR)
-IC_LORA_DIR.mkdir(parents=True, exist_ok=True)
-
-LTX_API_BASE_URL = "https://api.ltx.video"
 WANGP_ROOT = _resolve_wangp_root()
 WANGP_ENABLED = platform.system() in ("Windows", "Linux") and WANGP_ROOT is not None
 WANGP_PYTHON = _resolve_wangp_python(WANGP_ROOT) if WANGP_ENABLED else None
@@ -226,37 +161,6 @@ WANGP_VIDEO_MODEL_TYPE = os.environ.get("WANGP_VIDEO_MODEL_TYPE", "ltx2_22B_dist
 WANGP_IMAGE_MODEL_TYPE = os.environ.get("WANGP_IMAGE_MODEL_TYPE", "z_image")
 WANGP_EXTRA_ARGS = _resolve_wangp_extra_args()
 
-
-def _resolve_force_api_generations() -> bool:
-    if WANGP_ENABLED:
-        logger.info("WanGP bridge detected at %s; disabling API-only runtime policy", WANGP_ROOT)
-        return False
-
-    gpu_info = GpuInfoImpl()
-    system = platform.system()
-    cuda_available = gpu_info.get_cuda_available()
-    vram_gb = gpu_info.get_vram_total_gb()
-
-    # Server-owned source of truth for mode selection.
-    force_api_generations = decide_force_api_generations(
-        system=system,
-        cuda_available=cuda_available,
-        vram_gb=vram_gb,
-    )
-    logger.info(
-        "Runtime policy force_api_generations=%s (system=%s cuda_available=%s vram_gb=%s)",
-        force_api_generations,
-        system,
-        cuda_available,
-        vram_gb,
-    )
-    return force_api_generations
-
-
-FORCE_API_GENERATIONS = _resolve_force_api_generations()
-REQUIRED_MODEL_TYPES: frozenset[ModelFileType] = (
-    frozenset() if (FORCE_API_GENERATIONS or WANGP_ENABLED) else DEFAULT_REQUIRED_MODEL_TYPES
-)
 
 CAMERA_MOTION_PROMPTS = {
     "none": "",
@@ -274,14 +178,8 @@ DEFAULT_NEGATIVE_PROMPT = """blurry, out of focus, overexposed, underexposed, lo
 
 runtime_config = RuntimeConfig(
     device=DEVICE,
-    models_dir=MODELS_DIR,
-    model_download_specs=DEFAULT_MODEL_DOWNLOAD_SPECS,
-    required_model_types=REQUIRED_MODEL_TYPES,
     outputs_dir=OUTPUTS_DIR,
-    ic_lora_dir=IC_LORA_DIR,
     settings_file=SETTINGS_FILE,
-    ltx_api_base_url=LTX_API_BASE_URL,
-    force_api_generations=FORCE_API_GENERATIONS,
     use_sage_attention=use_sage_attention,
     camera_motion_prompts=CAMERA_MOTION_PROMPTS,
     default_negative_prompt=DEFAULT_NEGATIVE_PROMPT,
@@ -296,7 +194,7 @@ runtime_config = RuntimeConfig(
 
 handler = build_initial_state(runtime_config, DEFAULT_APP_SETTINGS)
 
-auth_token = os.environ.get("LTX_AUTH_TOKEN", "")
+auth_token = os.environ.get("AIVS_AUTH_TOKEN") or os.environ.get("LTX_AUTH_TOKEN", "")
 
 app = create_app(handler=handler, allowed_origins=DEFAULT_ALLOWED_ORIGINS, auth_token=auth_token)
 
@@ -343,7 +241,7 @@ if __name__ == "__main__":
     import asyncio
     import uvicorn
 
-    port = int(os.environ.get("LTX_PORT", "") or PORT)
+    port = int(os.environ.get("AIVS_PORT") or os.environ.get("LTX_PORT", "") or PORT)
     logger.info("=" * 60)
     logger.info("LTX-2 Video Generation Server (FastAPI + Uvicorn)")
     log_hardware_info()

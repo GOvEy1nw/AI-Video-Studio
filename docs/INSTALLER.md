@@ -1,6 +1,6 @@
-# LTX Desktop - Installer Build Guide
+# AI Video Studio - Installer Build Guide
 
-This guide explains how to build a distributable installer for **LTX Desktop**.
+This guide explains how to build a distributable installer for **AI Video Studio (AiVS)**.
 
 - For running from source and debugging: see [`README.md`](../README.md) and [`CONTRIBUTING.md`](CONTRIBUTING.md).
 - For end-user requirements and first-run behavior: see [`README.md`](../README.md).
@@ -9,19 +9,16 @@ This guide explains how to build a distributable installer for **LTX Desktop**.
 
 The installer includes:
 - **Electron app** (React frontend + Electron shell)
-- **Embedded Python** (version from [`backend/.python-version`](../backend/.python-version)) with all dependencies pre-installed:
-  - PyTorch (CUDA on Windows, MPS on macOS)
-  - FastAPI, Diffusers, Transformers
-  - LTX-2 inference packages
-  - Wan2GP runtime deps on Windows
-  - All other required libraries
 - **Backend Python code**
 - **Wan2GP source checkout** in `resources/Wan2GP` for Windows local generation
+- **Embedded Python bootstrap** with `pip`, `uv`, and Python headers/import libraries for native WanGP kernels
 
-**NOT bundled** (downloaded at runtime):
-- Model weights (downloaded on first run; can be large) from Hugging Face
+**Downloaded automatically on first run on Windows:**
+- Pinned, GPU-matched WanGP Python dependencies (including Torch and CUDA kernels)
+- Model weights through Wan2GP
 
-The embedded Python is **fully isolated** from the target system's Python — it lives inside `{install_dir}/resources/python/` and never modifies system settings.
+The runtime is **fully isolated** from the target system's Python — it lives inside
+the app data directory and never modifies system settings.
 
 ## Prerequisites
 
@@ -51,10 +48,10 @@ pnpm build:win
 ```
 
 This will:
-1. Download a standalone Python distribution (version from [`backend/.python-version`](../backend/.python-version))
-2. Install all Python dependencies (~10GB on Windows with CUDA, ~2-3GB on macOS with MPS)
-3. Ensure a `Wan2GP/` checkout exists in the repo root
-4. Build the frontend
+1. Build an embedded Python bootstrap with `pip`, `uv`, and native-kernel headers
+2. Ensure a `Wan2GP/` checkout exists in the repo root
+3. Build the frontend
+4. Download and signature-check the current Microsoft Visual C++ Redistributable required by PyTorch/CUDA
 5. Package everything with electron-builder
 6. Create a DMG (macOS) or NSIS installer (Windows) in the `release/` folder
 
@@ -108,13 +105,13 @@ The `local-build.sh` script accepts:
 ### macOS
 ```
 release/
-  └── LTX Desktop-<version>-arm64.dmg
+  └── AiVS-<version>-arm64.dmg
 ```
 
 ### Windows
 ```
 release/
-  └── LTX Desktop-<version>-Setup.exe
+  └── AiVS-Setup.exe
 ```
 
 ## Application Icon
@@ -137,10 +134,10 @@ On unsigned builds, macOS Gatekeeper may block the app. Right-click the app and 
 xattr -dr com.apple.quarantine /Applications/LTX\ Desktop.app
 ```
 
-### Installer is too large
-Expected sizes:
-- **Windows**: ~10GB (PyTorch CUDA ~2.5GB + ML libraries ~5GB + Python ~200MB + Electron ~100MB)
-- **macOS**: ~2-3GB (PyTorch MPS is much smaller than CUDA variant)
+### First run takes a while
+Windows installs the pinned GPU runtime on first run. This needs an internet
+connection and can download several GB, but requires no manual Python, pip, uv,
+CUDA, or model setup.
 
 ### Runtime / first-run issues
 End-user topics like system requirements, first-run setup, and model download behavior are documented in [`README.md`](../README.md).
@@ -167,8 +164,8 @@ npx electron-builder --mac --dir
 
 ### Windows
 ```powershell
-# 1. Prepare Python environment
-./scripts/prepare-python.ps1
+# 1. Prepare embedded Python bootstrap
+./scripts/prepare-python-bootstrap.ps1
 
 # 2. Install dependencies
 pnpm install

@@ -132,6 +132,8 @@ class ModelProfile:
     min_resolution_tier: ResolutionTier | None = None
     max_resolution_tier: ResolutionTier | None = None
     wangp_resolution_categories: tuple[str, ...] = ()
+    max_parallel_images: int = 1
+    max_total_variations: int = 12
 
 
 REFERENCE_SUBJECT_ROLE = InputMediaRole(

@@ -140,13 +140,13 @@ function startOwnershipTakeover(): void {
 }
 
 export function getPythonPath(): string {
-  const overridePython = process.env.LTX_BACKEND_PYTHON?.trim()
+  const overridePython = (process.env.AIVS_BACKEND_PYTHON || process.env.LTX_BACKEND_PYTHON)?.trim()
   if (overridePython) {
     if (fs.existsSync(overridePython)) {
-      logger.info(`Using override Python from LTX_BACKEND_PYTHON: ${overridePython}`)
+      logger.info(`Using override Python from AIVS_BACKEND_PYTHON: ${overridePython}`)
       return overridePython
     }
-    logger.warning(`LTX_BACKEND_PYTHON does not exist: ${overridePython}`)
+    logger.warning(`AIVS_BACKEND_PYTHON does not exist: ${overridePython}`)
   }
 
   // In production, use bundled/downloaded Python first
@@ -251,11 +251,11 @@ export async function startPythonBackend(): Promise<void> {
         ...process.env,
         PYTHONUNBUFFERED: '1',
         PYTHONNOUSERSITE: '1',
-        // Only pass LTX_PORT when the developer explicitly set it
-        ...(process.env.LTX_PORT ? { LTX_PORT: process.env.LTX_PORT } : {}),
-        LTX_AUTH_TOKEN: authToken,
-        LTX_LOG_FILE: getCurrentLogFilename(),
-        LTX_APP_DATA_DIR: getAppDataDir(),
+        // AIVS_* is canonical; LTX_* is only read for one compatibility period.
+        ...((process.env.AIVS_PORT || process.env.LTX_PORT) ? { AIVS_PORT: process.env.AIVS_PORT || process.env.LTX_PORT } : {}),
+        AIVS_AUTH_TOKEN: authToken,
+        AIVS_LOG_FILE: getCurrentLogFilename(),
+        AIVS_APP_DATA_DIR: getAppDataDir(),
         PYTORCH_ENABLE_MPS_FALLBACK: '1',
         // Set PYTHONHOME for bundled Python on macOS so it finds its stdlib
         ...(!isDev && process.platform !== 'win32' ? {
@@ -479,8 +479,8 @@ export async function startPythonBackend(): Promise<void> {
           return
         }
 
-        if (sawPortConflict && process.env.LTX_PORT) {
-          const explicitUrl = `http://127.0.0.1:${process.env.LTX_PORT}`
+        if (sawPortConflict && (process.env.AIVS_PORT || process.env.LTX_PORT)) {
+          const explicitUrl = `http://127.0.0.1:${process.env.AIVS_PORT || process.env.LTX_PORT}`
           const healthyExistingBackend = await probeBackendHealth(1500, explicitUrl)
           if (healthyExistingBackend) {
             backendUrl = explicitUrl

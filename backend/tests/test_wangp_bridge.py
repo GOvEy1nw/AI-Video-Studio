@@ -286,7 +286,7 @@ class WanGPSession:
             video_model_type="ltx2_22B_distilled_1_1",
             image_model_type="z_image",
             camera_motion_prompts={},
-            extra_args=(),
+                extra_args=(),
         )
 
         bridge.preload_session()
@@ -300,3 +300,4 @@ class WanGPSession:
                 sys.modules.pop(name, None)
             else:
                 sys.modules[name] = module
+

@@ -1,630 +1,361 @@
-import { execFile } from 'child_process'
+import { spawn, type ChildProcess } from 'child_process'
+import crypto from 'crypto'
 import { app } from 'electron'
 import fs from 'fs'
-import http from 'http'
-import https from 'https'
-import { load as loadYaml } from 'js-yaml'
 import path from 'path'
 import { isDev } from './config'
 import { logger } from './logger'
 
 export interface PythonSetupProgress {
-  status: 'downloading' | 'extracting' | 'complete' | 'error'
+  status: 'downloading' | 'extracting' | 'installing' | 'complete' | 'error'
   percent: number
   downloadedBytes: number
   totalBytes: number
   speed: number
+  message?: string
+  detail?: string
 }
 
-interface ArchiveManifest {
-  parts: { name: string; size: number }[]
-  totalSize: number
+export interface ModelPack {
+  id: string
+  name: string
+  description: string
+  estimatedSize: string
+  installed: boolean
 }
 
-// ── GitHub private repo authentication ────────────────────────────────
-// Mirrors electron-updater: only sends GH_TOKEN when `private: true` is set
-// in the publish config (app-update.yml). This prevents accidental token leaks
-// for public repos.
+export interface ModelPackProgress {
+  status: 'downloading' | 'complete' | 'cancelled' | 'error'
+  packId?: string
+  packName?: string
+  file?: string
+  percent?: number
+  downloadedBytes?: number
+  totalBytes?: number
+  speed?: number
+}
 
-let _authHeaders: Record<string, string> | null = null
+const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
+  { id: 'utility', name: 'Utility Models', description: 'Control, pose, depth, flow, audio and face utilities.', estimatedSize: '~3 GB' },
+  { id: 'z_image_turbo', name: 'Z-Image Turbo', description: 'Default AiVS image model and its required assets.', estimatedSize: '~6 GB' },
+  { id: 'flux2_klein_4b', name: 'Flux 2 Klein 4B', description: 'Flux image model and its required assets.', estimatedSize: '~8 GB' },
+  { id: 'krea2_turbo', name: 'Krea 2 Turbo', description: 'Krea image model and its required assets.', estimatedSize: '~18 GB' },
+  { id: 'hidream_o1', name: 'HiDream O1', description: 'HiDream image model and its required assets.', estimatedSize: '~30 GB' },
+  { id: 'ltx2_turbo', name: 'LTX 2.3 Turbo 1.1', description: 'LTX video model and its required assets.', estimatedSize: '~12 GB' },
+  { id: 'prompt_enhancer', name: 'Prompt Enhancer', description: 'WanGP prompt enhancement models.', estimatedSize: '~20 GB' },
+  { id: 'ltx_lora', name: 'LTX LoRA', description: 'WanGP-provided LTX LoRA support assets.', estimatedSize: '~1 GB' },
+]
 
-function getAuthHeaders(): Record<string, string> {
-  if (_authHeaders !== null) return _authHeaders
+let activeModelPackProcess: ChildProcess | null = null
 
-  _authHeaders = {}
+function getRuntimeFiles(): string[] {
+  const root = isDev ? process.cwd() : process.resourcesPath
+  return [
+    path.join(root, 'backend', 'uv.lock'),
+    path.join(root, 'scripts', 'install-python-dependencies.ps1'),
+    path.join(root, 'scripts', 'install-wangp-stack.ps1'),
+    path.join(root, 'scripts', 'wangp-stacks.json'),
+    path.join(root, 'backend', 'wangp_model_packs.py'),
+  ]
+}
 
-  const configPath = isDev
-    ? path.join(process.cwd(), 'dev-app-update.yml')
-    : path.join(process.resourcesPath, 'app-update.yml')
-
-  let isPrivate = false
+function getRuntimeHash(): string | null {
   try {
-    const config = loadYaml(fs.readFileSync(configPath, 'utf-8')) as Record<string, unknown>
-    isPrivate = config?.private === true
-  } catch { /* no config file — public repo */ }
-
-  if (isPrivate) {
-    const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN
-    if (token) {
-      _authHeaders = { authorization: `token ${token}` }
+    const hash = crypto.createHash('sha256')
+    for (const file of getRuntimeFiles()) {
+      hash.update(fs.readFileSync(file))
     }
+    return hash.digest('hex')
+  } catch (error) {
+    logger.error(`[python-setup] Cannot calculate runtime hash: ${error}`)
+    return null
   }
-
-  return _authHeaders
-}
-
-function getBundledHashPath(): string {
-  if (isDev) {
-    return path.join(process.cwd(), 'python-deps-hash.txt')
-  }
-  return path.join(process.resourcesPath, 'python-deps-hash.txt')
 }
 
 function getInstalledHashPath(): string {
   return path.join(app.getPath('userData'), 'python', 'deps-hash.txt')
 }
 
-/** Directory where python-embed lives at runtime. */
-export function getPythonDir(): string {
-  if (process.platform === 'win32') {
-    if (isDev) {
-      return path.join(process.cwd(), 'python-embed')
-    }
-    return path.join(app.getPath('userData'), 'python')
-  }
-  // macOS: bundled in resources
-  return path.join(process.resourcesPath, 'python')
-}
-
-/**
- * Check whether the Python environment is ready to use.
- * Also promotes a staged python-next/ directory if it matches the expected hash.
- */
-export function isPythonReady(): { ready: boolean } {
-  if (process.platform !== 'win32') {
-    return { ready: true }
-  }
-
-  if (isDev) {
-    return { ready: true }
-  }
-
-  const bundledHash = readHash(getBundledHashPath())
-
-  // Check if a pre-downloaded python-next/ is waiting to be promoted
-  const nextDir = path.join(app.getPath('userData'), 'python-next')
-  const nextHash = readHash(path.join(nextDir, 'deps-hash.txt'))
-  if (bundledHash && nextHash && bundledHash === nextHash) {
-    logger.info( '[python-setup] Promoting staged python-next/ to python/')
-    try {
-      const destDir = path.join(app.getPath('userData'), 'python')
-      if (fs.existsSync(destDir)) {
-        fs.rmSync(destDir, { recursive: true, force: true })
-      }
-      fs.renameSync(nextDir, destDir)
-      return { ready: true }
-    } catch (err) {
-      logger.error( `[python-setup] Failed to promote staged python: ${err}`)
-      // Fall through to normal check
-    }
-  }
-
-  const installedHash = readHash(getInstalledHashPath())
-
-  if (!bundledHash) {
-    const pythonExe = path.join(getPythonDir(), 'python.exe')
-    return { ready: fs.existsSync(pythonExe) }
-  }
-
-  return { ready: bundledHash === installedHash }
-}
-
-/**
- * Pre-download python-embed for an upcoming app update (Windows only).
- * Downloads to userData/python-next/ so the next launch can promote it instantly.
- * Returns true if a download was performed, false if not needed.
- */
-export async function preDownloadPythonForUpdate(
-  newVersion: string,
-  onProgress?: (progress: PythonSetupProgress) => void
-): Promise<boolean> {
-  if (process.platform !== 'win32') {
-    return false
-  }
-
-  const baseUrl = (isDev && process.env.LTX_PYTHON_URL?.replace(/^["']+|["']+$/g, ''))
-    || `https://github.com/Lightricks/ltx-desktop/releases/download/v${newVersion}`
-
-  // Fetch the new version's deps hash
-  let newHash: string | null = null
-  if (isLocalPath(baseUrl)) {
-    // Local testing: read hash from the directory or the archive's extracted deps-hash.txt
-    const hashFile = baseUrl.endsWith('.tar.gz')
-      ? null // Can't read hash from a single tar.gz without extracting
-      : path.join(baseUrl, 'deps-hash.txt')
-    newHash = hashFile ? readHash(hashFile) : null
-  } else {
-    const hashUrl = `${baseUrl}/python-deps-hash.txt`
-    const hashDest = path.join(app.getPath('userData'), 'python-next-hash-check.txt')
-    try {
-      await downloadFileRaw(hashUrl, hashDest)
-      newHash = readHash(hashDest)
-    } catch (err) {
-      logger.warn( `[python-setup] Could not fetch new version deps hash: ${err}`)
-    } finally {
-      try { fs.unlinkSync(hashDest) } catch { /* ignore */ }
-    }
-  }
-
-  if (!newHash) {
-    logger.info( '[python-setup] No deps hash available for new version, skipping pre-download')
-    return false
-  }
-
-  // Compare with currently installed hash
-  const installedHash = readHash(getInstalledHashPath())
-  if (newHash === installedHash) {
-    logger.info( '[python-setup] Python deps unchanged in new version, no pre-download needed')
-    return false
-  }
-
-  logger.info( `[python-setup] Python deps changed (${installedHash} → ${newHash}), pre-downloading`)
-
-  // Download to python-next/
-  const nextDir = path.join(app.getPath('userData'), 'python-next')
-  const tempDir = path.join(app.getPath('userData'), 'python-next-tmp')
-  const archivePath = path.join(app.getPath('userData'), 'python-next.tar.gz')
-
-  try {
-    if (fs.existsSync(nextDir)) fs.rmSync(nextDir, { recursive: true, force: true })
-    if (fs.existsSync(tempDir)) fs.rmSync(tempDir, { recursive: true, force: true })
-  } catch { /* ignore */ }
-
-  fs.mkdirSync(tempDir, { recursive: true })
-
-  const cleanupFiles: string[] = []
-  const noop = () => {}
-  const progressCb = onProgress || noop
-
-  try {
-    try {
-      await acquireArchive(baseUrl, archivePath, cleanupFiles, progressCb)
-    } catch (primaryErr) {
-      const fallbackUrl = newHash ? `${FALLBACK_CDN_BASE}/python-embed-win32/${newHash}/python-embed-win32.tar.gz` : null
-      if (!fallbackUrl || isLocalPath(baseUrl)) {
-        throw primaryErr
-      }
-      logger.warn( `[python-setup] Pre-download primary failed: ${primaryErr}`)
-      logger.info( `[python-setup] Falling back to CDN: ${fallbackUrl}`)
-      try { fs.unlinkSync(archivePath) } catch { /* ignore */ }
-      for (const f of cleanupFiles) { try { fs.unlinkSync(f) } catch { /* ignore */ } }
-      cleanupFiles.length = 0
-      await acquireArchive(fallbackUrl, archivePath, cleanupFiles, progressCb)
-    }
-
-    await extractTarGz(archivePath, tempDir)
-
-    const extractedInner = path.join(tempDir, 'python-embed')
-    const extractedSource = fs.existsSync(extractedInner) ? extractedInner : tempDir
-
-    if (fs.existsSync(nextDir)) fs.rmSync(nextDir, { recursive: true, force: true })
-    fs.renameSync(extractedSource, nextDir)
-
-    // Write the new hash into python-next/ so isPythonReady can verify it on next launch
-    fs.writeFileSync(path.join(nextDir, 'deps-hash.txt'), newHash)
-
-    logger.info( '[python-setup] Pre-download complete, staged at python-next/')
-    return true
-  } catch (err) {
-    logger.error( `[python-setup] Pre-download failed: ${err}`)
-    try { fs.rmSync(nextDir, { recursive: true, force: true }) } catch { /* ignore */ }
-    return false
-  } finally {
-    try { fs.unlinkSync(archivePath) } catch { /* ignore */ }
-    for (const f of cleanupFiles) {
-      try { fs.unlinkSync(f) } catch { /* ignore */ }
-    }
-    try { if (fs.existsSync(tempDir)) fs.rmSync(tempDir, { recursive: true, force: true }) } catch { /* ignore */ }
-  }
-}
-
 function readHash(filePath: string): string | null {
   try {
-    return fs.readFileSync(filePath, 'utf-8').trim()
+    return fs.readFileSync(filePath, 'utf-8').trim() || null
   } catch {
     return null
   }
 }
 
-// ── Archive source resolution ─────────────────────────────────────────
-// Primary: GitHub Releases (multi-part, version-based)
-// Fallback: public CDN bucket (single file, deps-hash-based)
-
-const FALLBACK_CDN_BASE = 'https://storage.googleapis.com/ltx-desktop-artifacts'
-
-function getArchiveBase(): string {
-  // LTX_PYTHON_URL is a dev-only override for testing with local archives.
-  // Disabled in production to prevent code injection into a signed app.
-  if (isDev && process.env.LTX_PYTHON_URL) {
-    return process.env.LTX_PYTHON_URL.replace(/^["']+|["']+$/g, '')
+/** Directory where the first-run Python environment lives. */
+export function getPythonDir(): string {
+  if (process.platform === 'win32') {
+    return isDev ? path.join(process.cwd(), 'python-embed') : path.join(app.getPath('userData'), 'python')
   }
-  const version = app.getVersion()
-  return `https://github.com/Lightricks/ltx-desktop/releases/download/v${version}`
+  return path.join(process.resourcesPath, 'python')
 }
 
-function getFallbackArchiveUrl(): string | null {
-  const hash = readHash(getBundledHashPath())
-  if (!hash) return null
-  return `${FALLBACK_CDN_BASE}/python-embed-win32/${hash}/python-embed-win32.tar.gz`
+export function isPythonReady(): { ready: boolean } {
+  if (process.platform !== 'win32' || isDev) return { ready: true }
+  const expectedHash = getRuntimeHash()
+  return {
+    ready: Boolean(expectedHash) &&
+      expectedHash === readHash(getInstalledHashPath()) &&
+      fs.existsSync(path.join(getPythonDir(), 'python.exe')),
+  }
 }
 
-function isLocalPath(source: string): boolean {
-  return !source.startsWith('http://') && !source.startsWith('https://')
+function copyBootstrap(destDir: string): void {
+  const sourceDir = path.join(process.resourcesPath, 'python-bootstrap')
+  if (!fs.existsSync(sourceDir)) {
+    throw new Error('Bundled Python bootstrap is missing.')
+  }
+  fs.rmSync(destDir, { recursive: true, force: true })
+  fs.cpSync(sourceDir, destDir, { recursive: true })
 }
 
-/**
- * Acquire the python-embed archive from a source (local, GitHub, or CDN).
- * Returns once the archive is written to archivePath.
- */
-async function acquireArchive(
-  base: string,
-  archivePath: string,
-  cleanupFiles: string[],
-  onProgress: (progress: PythonSetupProgress) => void
+function installDependencies(
+  pythonExe: string,
+  onProgress: (progress: PythonSetupProgress) => void,
 ): Promise<void> {
-  if (isLocalPath(base) && base.endsWith('.tar.gz')) {
-    await copyFileWithProgress(base, archivePath, 0, fs.statSync(base).size, onProgress)
-  } else if (isLocalPath(base)) {
-    await acquirePartsLocal(base, archivePath, cleanupFiles, onProgress)
-  } else if (base.includes('/releases/download/')) {
-    // GitHub Releases — multi-part
-    await acquirePartsRemote(base, archivePath, cleanupFiles, onProgress)
-  } else {
-    // CDN or other URL — single file (content-length discovered from response)
-    let lastTime = Date.now()
-    let lastBytes = 0
-    let speed = 0
+  const script = path.join(process.resourcesPath, 'scripts', 'install-python-dependencies.ps1')
+  const powershell = path.join(
+    process.env.SystemRoot || 'C:\\Windows',
+    'System32',
+    'WindowsPowerShell',
+    'v1.0',
+    'powershell.exe',
+  )
 
-    await downloadFileWithGlobalProgress(base, archivePath, 0, 0, (downloaded, totalBytes) => {
-      const now = Date.now()
-      const elapsed = (now - lastTime) / 1000
-      if (elapsed >= 1) {
-        speed = (downloaded - lastBytes) / elapsed
-        lastTime = now
-        lastBytes = downloaded
-      }
+  const stages: Record<number, { percent: number; message: string }> = {
+    1: { percent: 12, message: 'Resolving pinned dependencies' },
+    2: { percent: 18, message: 'Installing GPU runtime' },
+    3: { percent: 58, message: 'Installing application dependencies' },
+    4: { percent: 76, message: 'Installing Python headers' },
+    5: { percent: 84, message: 'Verifying Python runtime' },
+  }
 
-      onProgress({
-        status: 'downloading',
-        percent: totalBytes > 0 ? Math.round((downloaded / totalBytes) * 100) : 0,
-        downloadedBytes: downloaded,
-        totalBytes,
-        speed,
-      })
+  return new Promise((resolve, reject) => {
+    let currentStage = stages[1]
+    let currentDetail = 'Starting setup'
+    let lastOutputAt = Date.now()
+    let stdoutRemainder = ''
+    let stderrRemainder = ''
+    const errorLines: string[] = []
+
+    const emitProgress = () => onProgress({
+      status: 'installing',
+      percent: currentStage.percent,
+      downloadedBytes: 0,
+      totalBytes: 0,
+      speed: 0,
+      message: currentStage.message,
+      detail: currentDetail,
     })
-  }
-}
 
-/**
- * Download (or copy) python-embed archive and extract to userData/python/.
- * Tries GitHub Releases first, falls back to CDN if available.
- */
-export async function downloadPythonEmbed(
-  onProgress: (progress: PythonSetupProgress) => void
-): Promise<void> {
-  const destDir = path.join(app.getPath('userData'), 'python')
-  const tempDir = path.join(app.getPath('userData'), 'python-tmp')
-  const archivePath = path.join(app.getPath('userData'), 'python-embed-win32.tar.gz')
-
-  try {
-    if (fs.existsSync(tempDir)) {
-      fs.rmSync(tempDir, { recursive: true, force: true })
-    }
-  } catch { /* ignore */ }
-
-  fs.mkdirSync(tempDir, { recursive: true })
-
-  const cleanupFiles: string[] = []
-
-  try {
-    const base = getArchiveBase()
-    logger.info( `[python-setup] Archive base: ${base}`)
-
-    try {
-      await acquireArchive(base, archivePath, cleanupFiles, onProgress)
-    } catch (primaryErr) {
-      // Primary source failed — try CDN fallback
-      const fallbackUrl = getFallbackArchiveUrl()
-      if (!fallbackUrl || isLocalPath(base)) {
-        throw primaryErr
-      }
-
-      logger.warn( `[python-setup] Primary download failed: ${primaryErr}`)
-      logger.info( `[python-setup] Falling back to CDN: ${fallbackUrl}`)
-
-      // Clean up any partial primary download
-      try { fs.unlinkSync(archivePath) } catch { /* ignore */ }
-      for (const f of cleanupFiles) {
-        try { fs.unlinkSync(f) } catch { /* ignore */ }
-      }
-      cleanupFiles.length = 0
-
-      await acquireArchive(fallbackUrl, archivePath, cleanupFiles, onProgress)
+    const acceptDetail = (value: string): void => {
+      const detail = value.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, '').trim()
+      if (!detail || /^(?:warning:|futurewarning:|userwarning:)/i.test(detail)) return
+      const useful = /^(?:Resolved|Installed|Using Python|Downloading Python|Building)/i.test(detail) ? detail : ''
+      if (!useful) return
+      currentDetail = useful.slice(0, 180)
+      lastOutputAt = Date.now()
+      emitProgress()
+      logger.info(`[python-setup] ${currentDetail}`)
     }
 
-    // Extract
-    onProgress({ status: 'extracting', percent: 100, downloadedBytes: 0, totalBytes: 0, speed: 0 })
-    logger.info( `[python-setup] Extracting to: ${tempDir}`)
-    await extractTarGz(archivePath, tempDir)
+    const consume = (chunk: Buffer, stream: 'stdout' | 'stderr'): void => {
+      const source = stream === 'stdout' ? stdoutRemainder : stderrRemainder
+      const parts = (source + chunk.toString()).split(/[\r\n]/)
+      const remainder = parts.pop() ?? ''
+      if (stream === 'stdout') stdoutRemainder = remainder
+      else stderrRemainder = remainder
 
-    // Move into place (archive has top-level `python-embed/` directory)
-    const extractedInner = path.join(tempDir, 'python-embed')
-    const extractedSource = fs.existsSync(extractedInner) ? extractedInner : tempDir
-
-    if (fs.existsSync(destDir)) {
-      fs.rmSync(destDir, { recursive: true, force: true })
-    }
-    fs.renameSync(extractedSource, destDir)
-
-    // Write deps hash so subsequent launches skip download
-    const bundledHash = getBundledHashPath()
-    if (fs.existsSync(bundledHash)) {
-      fs.copyFileSync(bundledHash, path.join(destDir, 'deps-hash.txt'))
-    }
-
-    onProgress({ status: 'complete', percent: 100, downloadedBytes: 0, totalBytes: 0, speed: 0 })
-    logger.info( '[python-setup] Python environment ready')
-  } catch (err) {
-    try { fs.rmSync(tempDir, { recursive: true, force: true }) } catch { /* ignore */ }
-    try { fs.rmSync(destDir, { recursive: true, force: true }) } catch { /* ignore */ }
-    throw err
-  } finally {
-    try { fs.unlinkSync(archivePath) } catch { /* ignore */ }
-    for (const f of cleanupFiles) {
-      try { fs.unlinkSync(f) } catch { /* ignore */ }
-    }
-    try { if (fs.existsSync(tempDir)) fs.rmSync(tempDir, { recursive: true, force: true }) } catch { /* ignore */ }
-  }
-}
-
-// ── Multi-part: local directory ──────────────────────────────────────
-
-async function acquirePartsLocal(
-  dirPath: string,
-  archivePath: string,
-  cleanupFiles: string[],
-  onProgress: (progress: PythonSetupProgress) => void
-): Promise<void> {
-  const manifestPath = path.join(dirPath, 'python-embed-win32.manifest.json')
-  const manifest: ArchiveManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'))
-
-  const partPaths: string[] = []
-  let bytesSoFar = 0
-
-  for (const part of manifest.parts) {
-    const src = path.join(dirPath, part.name)
-    const dest = path.join(app.getPath('userData'), part.name)
-    partPaths.push(dest)
-    cleanupFiles.push(dest)
-
-    await copyFileWithProgress(src, dest, bytesSoFar, manifest.totalSize, onProgress)
-    bytesSoFar += part.size
-  }
-
-  await concatenateParts(partPaths, archivePath)
-}
-
-// ── Multi-part: remote download ──────────────────────────────────────
-
-async function acquirePartsRemote(
-  baseUrl: string,
-  archivePath: string,
-  cleanupFiles: string[],
-  onProgress: (progress: PythonSetupProgress) => void
-): Promise<void> {
-  // Fetch manifest
-  const manifestUrl = `${baseUrl}/python-embed-win32.manifest.json`
-  const manifestDest = path.join(app.getPath('userData'), 'python-embed-win32.manifest.json')
-  cleanupFiles.push(manifestDest)
-  await downloadFileRaw(manifestUrl, manifestDest)
-  const manifest: ArchiveManifest = JSON.parse(fs.readFileSync(manifestDest, 'utf-8'))
-
-  const partPaths: string[] = []
-  let bytesSoFar = 0
-  let lastTime = Date.now()
-  let lastReportedBytes = 0
-  let speed = 0
-
-  for (const part of manifest.parts) {
-    const partUrl = `${baseUrl}/${part.name}`
-    const partDest = path.join(app.getPath('userData'), part.name)
-    partPaths.push(partDest)
-    cleanupFiles.push(partDest)
-
-    await downloadFileWithGlobalProgress(
-      partUrl,
-      partDest,
-      bytesSoFar,
-      manifest.totalSize,
-      (globalDownloaded, totalBytes) => {
-        const now = Date.now()
-        const elapsed = (now - lastTime) / 1000
-
-        if (elapsed >= 1) {
-          speed = (globalDownloaded - lastReportedBytes) / elapsed
-          lastTime = now
-          lastReportedBytes = globalDownloaded
+      for (const rawLine of parts) {
+        const line = rawLine.trim()
+        const match = /^AIVS_STEP:(\d+):(.+)$/.exec(line)
+        if (match) {
+          currentStage = stages[Number(match[1])] ?? currentStage
+          currentDetail = match[2]
+          lastOutputAt = Date.now()
+          emitProgress()
+          logger.info(`[python-setup] ${match[2]}`)
+          continue
         }
-
-        onProgress({
-          status: 'downloading',
-          percent: Math.round((globalDownloaded / totalBytes) * 100),
-          downloadedBytes: globalDownloaded,
-          totalBytes,
-          speed,
-        })
+        if (stream === 'stderr' && line) errorLines.push(line)
+        acceptDetail(line)
       }
+    }
+
+    const child = spawn(
+      powershell,
+      [
+        '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script,
+        '-PythonExe', pythonExe,
+        '-ProjectDir', process.resourcesPath,
+      ],
+      { windowsHide: true },
     )
+    const heartbeat = setInterval(() => {
+      if (Date.now() - lastOutputAt < 4_000) return
+      currentDetail = `${currentStage.message} — still working; large downloads can take several minutes`
+      emitProgress()
+    }, 4_000)
 
-    bytesSoFar += part.size
+    child.stdout.on('data', (chunk: Buffer) => consume(chunk, 'stdout'))
+    child.stderr.on('data', (chunk: Buffer) => consume(chunk, 'stderr'))
+    child.once('error', (error) => {
+      clearInterval(heartbeat)
+      reject(new Error(`Python dependency setup failed: ${error.message}`))
+    })
+    child.once('close', (code) => {
+      clearInterval(heartbeat)
+      acceptDetail(stdoutRemainder)
+      acceptDetail(stderrRemainder)
+      if (code === 0) resolve()
+      else reject(new Error(`Python dependency setup failed (exit code ${code ?? 'unknown'}): ${errorLines.slice(-3).join(' ')}`))
+    })
+    emitProgress()
+  })
+}
+
+function getModelPackStatePath(): string {
+  return path.join(app.getPath('userData'), 'model-pack-state.json')
+}
+
+function getInstalledModelPackIds(): Set<string> {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(getModelPackStatePath(), 'utf-8')) as { completed?: unknown }
+    return new Set(Array.isArray(parsed.completed) ? parsed.completed.filter((id): id is string => typeof id === 'string') : [])
+  } catch {
+    return new Set()
   }
-
-  await concatenateParts(partPaths, archivePath)
 }
 
-// ── File operations ──────────────────────────────────────────────────
+export function getModelPacks(): ModelPack[] {
+  const installed = getInstalledModelPackIds()
+  return MODEL_PACKS.map((pack) => ({ ...pack, installed: installed.has(pack.id) }))
+}
 
-function concatenateParts(parts: string[], dest: string): Promise<void> {
+function parseByteSize(value: string): number {
+  const match = /([\d.]+)\s*(B|KB|MB|GB|TB|K|M|G|T)/i.exec(value)
+  if (!match) return 0
+  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  const unit = match[2].toUpperCase()
+  const normalized = unit.length === 1 && unit !== 'B' ? `${unit}B` : unit
+  return Number(match[1]) * 1024 ** units.indexOf(normalized)
+}
+
+function parseTransferProgress(line: string): Omit<ModelPackProgress, 'status'> | null {
+  const match = /^(.+?):\s*\[[^\]]*\]\s*([\d.]+)%\s*\(([\d.]+\s*[KMGT]?B)\/([\d.]+\s*[KMGT]?B)\)(?:\s*@\s*([\d.]+\s*[KMGT]?B)\/s)?/i.exec(line.trim())
+    ?? /^(.+?):\s*([\d.]+)%\|[^|]*\|\s*([\d.]+\s*[KMGT]?B?)\/([\d.]+\s*[KMGT]?B?)(?:\s*\[[^,\]]*,\s*([\d.]+\s*[KMGT]?B?)\/s)?/i.exec(line.trim())
+  if (!match) return null
+  return {
+    file: path.basename(match[1]),
+    percent: Number(match[2]),
+    downloadedBytes: parseByteSize(match[3]),
+    totalBytes: parseByteSize(match[4]),
+    speed: match[5] ? parseByteSize(match[5]) : 0,
+  }
+}
+
+/** Run WanGP's downloader in its own process so cancelling never affects the backend. */
+export function downloadModelPacks(
+  ids: string[],
+  onProgress: (progress: ModelPackProgress) => void,
+): Promise<boolean> {
+  if (!ids.length) return Promise.resolve(true)
+  if (activeModelPackProcess) throw new Error('A model-pack download is already running.')
+  const pythonExe = path.join(getPythonDir(), 'python.exe')
+  const runner = path.join(isDev ? process.cwd() : process.resourcesPath, 'backend', 'wangp_model_packs.py')
+  const wangpRoot = path.join(isDev ? process.cwd() : process.resourcesPath, 'Wan2GP')
+
   return new Promise((resolve, reject) => {
-    const writeStream = fs.createWriteStream(dest)
-    let i = 0
-
-    function writeNext() {
-      if (i >= parts.length) {
-        writeStream.end(() => resolve())
-        return
+    let activePack: Pick<ModelPackProgress, 'packId' | 'packName'> = {}
+    let cancelled = false
+    let remainder = ''
+    const child = spawn(pythonExe, [runner, '--wangp-root', wangpRoot, '--app-data-dir', app.getPath('userData'), '--download', ...ids], { windowsHide: true })
+    activeModelPackProcess = child
+    const consume = (chunk: Buffer): void => {
+      const lines = (remainder + chunk.toString()).split(/[\r\n]/)
+      remainder = lines.pop() ?? ''
+      for (const raw of lines) {
+        const line = raw.trim()
+        const event = /^AIVS_PACK:(.+)$/.exec(line)
+        if (event) {
+          try {
+            const data = JSON.parse(event[1]) as {
+              event: string
+              id?: string
+              name?: string
+              file?: string
+              downloadedBytes?: number
+              totalBytes?: number
+              speed?: number
+            }
+            if (data.event === 'pack-start') {
+              activePack = { packId: data.id, packName: data.name }
+              onProgress({ status: 'downloading', ...activePack })
+            } else if (data.event === 'pack-complete') {
+              onProgress({ status: 'complete', packId: data.id, packName: data.name, percent: 100 })
+            } else if (data.event === 'transfer') {
+              onProgress({
+                status: 'downloading',
+                ...activePack,
+                file: data.file,
+                downloadedBytes: data.downloadedBytes,
+                totalBytes: data.totalBytes,
+                speed: data.speed,
+              })
+            }
+          } catch { /* Ignore malformed third-party output. */ }
+          continue
+        }
+        const transfer = parseTransferProgress(line)
+        if (transfer) onProgress({ status: 'downloading', ...activePack, ...transfer })
       }
-
-      const readStream = fs.createReadStream(parts[i])
-      i++
-
-      readStream.on('error', (err) => {
-        writeStream.destroy()
-        reject(err)
-      })
-
-      readStream.on('end', writeNext)
-      readStream.pipe(writeStream, { end: false })
     }
-
-    writeStream.on('error', reject)
-    writeNext()
+    child.stdout.on('data', consume)
+    child.stderr.on('data', consume)
+    child.once('error', reject)
+    child.once('close', (code) => {
+      activeModelPackProcess = null
+      if (cancelled) {
+        onProgress({ status: 'cancelled', ...activePack })
+        resolve(false)
+      } else if (code === 0) {
+        resolve(true)
+      } else {
+        onProgress({ status: 'error', ...activePack })
+        reject(new Error(`Model-pack download failed (exit code ${code ?? 'unknown'}).`))
+      }
+    })
+    ;(child as ChildProcess & { aivsCancel?: () => void }).aivsCancel = () => { cancelled = true; child.kill() }
   })
 }
 
-/** Copy a local file with progress relative to a global total. */
-function copyFileWithProgress(
-  source: string,
-  dest: string,
-  globalOffset: number,
-  globalTotal: number,
-  onProgress: (progress: PythonSetupProgress) => void
+export function cancelModelPackDownload(): void {
+  ;(activeModelPackProcess as (ChildProcess & { aivsCancel?: () => void }) | null)?.aivsCancel?.()
+}
+
+/** Copy bundled Python + uv, then install the pinned WanGP runtime on first run. */
+export async function downloadPythonEmbed(
+  onProgress: (progress: PythonSetupProgress) => void,
 ): Promise<void> {
-  return new Promise((resolve, reject) => {
-    let copiedBytes = 0
+  if (process.platform !== 'win32' || isDev) return
+  const expectedHash = getRuntimeHash()
+  if (!expectedHash) throw new Error('Bundled runtime definition is unavailable.')
 
-    const readStream = fs.createReadStream(source)
-    const writeStream = fs.createWriteStream(dest)
-
-    readStream.on('data', (chunk: Buffer) => {
-      copiedBytes += chunk.length
-      const totalDone = globalOffset + copiedBytes
-      onProgress({
-        status: 'downloading',
-        percent: Math.round((totalDone / globalTotal) * 100),
-        downloadedBytes: totalDone,
-        totalBytes: globalTotal,
-        speed: 0,
-      })
-    })
-
-    readStream.on('error', reject)
-    writeStream.on('error', reject)
-    writeStream.on('finish', resolve)
-
-    readStream.pipe(writeStream)
-  })
-}
-
-/** Download a file without progress (used for manifest). */
-function downloadFileRaw(url: string, dest: string, redirectCount = 0): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (redirectCount > 5) {
-      reject(new Error('Too many redirects'))
-      return
-    }
-
-    const client = url.startsWith('https') ? https : http
-    const req = client.get(url, { headers: getAuthHeaders() }, (res) => {
-      if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        res.resume()
-        downloadFileRaw(res.headers.location, dest, redirectCount + 1).then(resolve).catch(reject)
-        return
-      }
-      if (!res.statusCode || res.statusCode >= 400) {
-        res.resume()
-        reject(new Error(`Download failed: HTTP ${res.statusCode}`))
-        return
-      }
-
-      const file = fs.createWriteStream(dest)
-      res.pipe(file)
-      file.on('finish', () => file.close(() => resolve()))
-      file.on('error', (err) => { fs.unlink(dest, () => {}); reject(err) })
-    })
-
-    req.on('error', reject)
-  })
-}
-
-/** Download a file, reporting progress as (globalDownloaded, globalTotal). */
-function downloadFileWithGlobalProgress(
-  url: string,
-  dest: string,
-  globalOffset: number,
-  globalTotal: number,
-  onProgress: (globalDownloaded: number, globalTotal: number) => void,
-  redirectCount = 0
-): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (redirectCount > 5) {
-      reject(new Error('Too many redirects'))
-      return
-    }
-
-    const client = url.startsWith('https') ? https : http
-    const req = client.get(url, { headers: getAuthHeaders() }, (res) => {
-      if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        res.resume()
-        downloadFileWithGlobalProgress(res.headers.location, dest, globalOffset, globalTotal, onProgress, redirectCount + 1)
-          .then(resolve).catch(reject)
-        return
-      }
-      if (!res.statusCode || res.statusCode >= 400) {
-        res.resume()
-        reject(new Error(`Download failed: HTTP ${res.statusCode}`))
-        return
-      }
-
-      // If caller didn't know total, use content-length from response
-      const effectiveTotal = globalTotal || parseInt(res.headers['content-length'] || '0', 10)
-
-      let downloadedBytes = 0
-      const file = fs.createWriteStream(dest)
-      res.pipe(file)
-
-      res.on('data', (chunk: Buffer) => {
-        downloadedBytes += chunk.length
-        onProgress(globalOffset + downloadedBytes, effectiveTotal)
-      })
-
-      file.on('finish', () => file.close(() => resolve()))
-      file.on('error', (err) => { fs.unlink(dest, () => {}); reject(err) })
-    })
-
-    req.on('error', reject)
-  })
-}
-
-/** Extract a .tar.gz file using the system tar command (ships on Windows 10+). */
-function extractTarGz(archive: string, destDir: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    execFile('tar', ['-xzf', archive, '-C', destDir], (err, _stdout, stderr) => {
-      if (err) {
-        reject(new Error(`tar extraction failed: ${stderr || err.message}`))
-        return
-      }
-      resolve()
-    })
-  })
+  const destDir = getPythonDir()
+  try {
+    onProgress({ status: 'extracting', percent: 5, downloadedBytes: 0, totalBytes: 0, speed: 0, message: 'Preparing embedded Python' })
+    copyBootstrap(destDir)
+    onProgress({ status: 'installing', percent: 10, downloadedBytes: 0, totalBytes: 0, speed: 0, message: 'Starting first-time setup' })
+    await installDependencies(path.join(destDir, 'python.exe'), onProgress)
+    fs.writeFileSync(getInstalledHashPath(), expectedHash, 'utf-8')
+    onProgress({ status: 'complete', percent: 100, downloadedBytes: 0, totalBytes: 0, speed: 0, message: 'WanGP is ready' })
+  } catch (error) {
+    fs.rmSync(destDir, { recursive: true, force: true })
+    const message = error instanceof Error ? error.message : String(error)
+    logger.error(`[python-setup] ${message}`)
+    onProgress({ status: 'error', percent: 0, downloadedBytes: 0, totalBytes: 0, speed: 0, message: 'Setup failed' })
+    throw error
+  }
 }

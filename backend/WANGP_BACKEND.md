@@ -19,7 +19,7 @@ This backend can delegate `/api/generate` and `/api/generate-image` to an existi
 
 ## Environment Note
 
-- The LTX backend interpreter must be able to import WanGP directly.
+- The AiVS backend interpreter must be able to import WanGP directly.
 - `WANGP_PYTHON` may still appear in runtime config/logging, but direct bridge execution now happens in-process through WanGP's Python API.
 
 ## Behavior

@@ -57,6 +57,10 @@ interface Window {
       skipped: string[]
       failed: { path: string; error: string }[]
     }>
+    loadProjects: () => Promise<unknown[]>
+    saveProject: (project: unknown, position?: number) => Promise<void>
+    deleteProject: (id: string) => Promise<void>
+    migrateProjectsFromLocalStorage: (projects: unknown[]) => Promise<unknown[]>
     showSaveDialog: (options: { title?: string; defaultPath?: string; filters?: { name: string; extensions: string[] }[] }) => Promise<string | null>
     saveFile: (filePath: string, data: string, encoding?: string) => Promise<{ success: boolean; path?: string; error?: string }>
     saveBinaryFile: (filePath: string, data: ArrayBuffer) => Promise<{ success: boolean; path?: string; error?: string }>
@@ -73,11 +77,16 @@ interface Window {
     exportCancel: (sessionId: string) => Promise<{ ok?: boolean }>
     checkPythonReady: () => Promise<{ ready: boolean }>
     startPythonSetup: () => Promise<void>
+    getModelPacks: () => Promise<unknown[]>
+    downloadModelPacks: (ids: string[]) => Promise<boolean>
+    cancelModelPackDownload: () => Promise<void>
     startPythonBackend: () => Promise<void>
     restartPythonBackend: () => Promise<void>
     getBackendHealthStatus: () => Promise<BackendHealthStatus | null>
     onPythonSetupProgress: (cb: (data: unknown) => void) => void
     removePythonSetupProgress: () => void
+    onModelPackProgress: (cb: (data: unknown) => void) => void
+    removeModelPackProgress: () => void
     onBackendHealthStatus: (cb: (data: BackendHealthStatus) => void) => (() => void)
     extractVideoFrame: (videoUrl: string, seekTime: number, width?: number, quality?: number) => Promise<{ path: string; url: string }>
     writeLog: (level: string, message: string) => Promise<void>

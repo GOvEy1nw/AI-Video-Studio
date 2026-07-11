@@ -1,5 +1,5 @@
 # local-build.ps1
-# All-in-one local build script for creating the LTX Desktop installer.
+# All-in-one local build script for creating the AiVS installer.
 # Prepares the Python environment, installs pnpm deps, builds the frontend,
 # then packages with electron-builder via create-installer.ps1.
 
@@ -14,7 +14,7 @@ $ErrorActionPreference = "Stop"
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ProjectDir = Split-Path -Parent $ScriptDir
-$PythonEmbedDir = Join-Path $ProjectDir "python-embed"
+$PythonBootstrapDir = Join-Path $ProjectDir "python-bootstrap"
 $ReleaseDir = Join-Path $ProjectDir "release"
 
 Write-Host @"
@@ -44,8 +44,8 @@ if ($LASTEXITCODE -ne 0) {
 if ($Clean) {
     Write-Host "Cleaning previous build artifacts..." -ForegroundColor Yellow
 
-    if (Test-Path $PythonEmbedDir) {
-        Remove-Item -Recurse -Force $PythonEmbedDir
+    if (Test-Path $PythonBootstrapDir) {
+        Remove-Item -Recurse -Force $PythonBootstrapDir
     }
     if (Test-Path $ReleaseDir) {
         Remove-Item -Recurse -Force $ReleaseDir
@@ -64,23 +64,23 @@ if ($Clean) {
 # Step 1: Prepare Python environment
 # ============================================================
 if (-not $SkipPython) {
-    Write-Host "`n[1/3] Preparing Python environment..." -ForegroundColor Yellow
+    Write-Host "`n[1/3] Preparing Python bootstrap..." -ForegroundColor Yellow
 
-    if (Test-Path $PythonEmbedDir) {
-        Write-Host "Python environment already exists. Use -Clean to rebuild." -ForegroundColor DarkYellow
+    if (Test-Path $PythonBootstrapDir) {
+        Write-Host "Python bootstrap already exists. Use -Clean to rebuild." -ForegroundColor DarkYellow
     } else {
-        & "$ScriptDir\prepare-python.ps1"
+        & "$ScriptDir\prepare-python-bootstrap.ps1"
         if ($LASTEXITCODE -ne 0) {
-            Write-Host "Failed to prepare Python environment!" -ForegroundColor Red
+            Write-Host "Failed to prepare Python bootstrap!" -ForegroundColor Red
             exit 1
         }
     }
 } else {
-    Write-Host "`n[1/3] Skipping Python preparation (using existing)..." -ForegroundColor DarkYellow
+    Write-Host "`n[1/3] Skipping Python bootstrap (using existing)..." -ForegroundColor DarkYellow
 }
 
-if (-not (Test-Path $PythonEmbedDir)) {
-    Write-Host "ERROR: Python environment not found at $PythonEmbedDir" -ForegroundColor Red
+if (-not (Test-Path $PythonBootstrapDir)) {
+    Write-Host "ERROR: Python bootstrap not found at $PythonBootstrapDir" -ForegroundColor Red
     Write-Host "Run without -SkipPython to create it." -ForegroundColor Red
     exit 1
 }

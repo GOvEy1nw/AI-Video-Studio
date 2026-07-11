@@ -24,7 +24,12 @@ AiVS is in active development.
 - Streamlined app launch & added connection indicator & refresh button for connection to WanGP backend.
 - Settings:
 	- Added video/image output settings (Settings > Outputs)
+	- Added Model Manager: optional WanGP model packs, approximate sizes, status, download and cancel controls.
 	- Removed most other settings, but kept 'Torch-Compile' option and ensured it's hooked into WanGP. <p align="center"><img src="https://github.com/GOvEy1nw/AI-Video-Studio/blob/main/images/NewSettings.png" width="40%"></p>
+- First run:
+	- Bundled Python, pip and uv automatically install the compatible WanGP GPU runtime.
+	- Optional model-pack selection has live transfer status and can be skipped for automatic download on first use.
+	- Project storage is selected at the end of setup; default: `Documents\\AiVS`.
 - Gallery:
 	- Added ability to drag and drop your own items into gallery (for easier access to regular references etc)
 	- Added Filtering (Type: Image/Video/Audio. Source: Generated/Uploaded)
@@ -46,17 +51,26 @@ AiVS is in active development.
 	- Video Gen:
 		- Added Start/End frame support
 		- Added Control Video/Audio support with video trim capabilities (note when a control video is added, the 'duration' setting turns to 'auto' and is controlled by the trim length).
-		- Re-worked 'retake' mode a bit:
-			- It now lives in video mode in a separate dropdown of current video modes (Generate/Retake/Reframe - More on this one next)
-			- The UI & interaction with 'retake' mode also lives in the prompt area, not a separate page that takes over the gallery. <p align="center"><img src="https://github.com/GOvEy1nw/AI-Video-Studio/blob/main/images/NewRetakeUI.png" width="80%"></p>
+		- Retake is visible as **Retake (soon)** but disabled until WanGP supports it reliably.
 		- Added new reframe mode with a nice easy to use framing UI that takes a control video and then uses ltx outpaint lora to expand edges. <p align="center"><img src="https://github.com/GOvEy1nw/AI-Video-Studio/blob/main/images/NewReframeVideoMode.png" width="80%"></p>
 		- Added a 'Timing' switch in the text prompt area that lets you easily create timed prompts for videos and converts it to a compatible 'relay prompt' for WanGP in the background. <p align="center"><img src="https://github.com/GOvEy1nw/AI-Video-Studio/blob/main/images/NewVideoTimingOption.png" width="80%"></p>
 
 # Planned
 
+- Retake mode when WanGP support is ready
 - LoRA UI
 - Audio/TTS Gen
 - Production workflow
+
+## Windows Release System Requirements
+
+- Windows 10 or 11, 64-bit.
+- NVIDIA CUDA GPU. The installer recognises GTX 10-series and RTX 20/30/40/50-series; RTX 20 or newer is the practical baseline.
+- Current NVIDIA driver: RTX 30/40/50 use the CUDA 13 stack and need R580 or newer; RTX 20/GTX 10 use the CUDA 12.8 fallback and should use R570.65 or newer.
+- VRAM: 12 GB minimum for selective/light use, 16 GB recommended for image work, 24 GB recommended for LTX video and larger model packs. This is guidance, not an enforced hardware gate.
+- At least 50 GB free disk space where model packs are installed; more is needed for several packs and generated media.
+
+The desktop installer includes Python, pip, uv, WanGP and the GPU runtime setup. It does not require Node.js, pnpm or Git.
 
 ## Quick Start: Windows
 
