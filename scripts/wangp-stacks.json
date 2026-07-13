@@ -1,34 +1,21 @@
 {
   "python": "3.11.9",
   "wei_version": "1.1.0",
-  "stacks": {
-    "cu130": {
-      "label": "Torch 2.10.0 + CUDA 13.0 (WanGP recommended)",
-      "torch": "torch==2.10.0 torchvision==0.25.0 torchaudio==2.10.0 --index-url https://download.pytorch.org/whl/cu130",
-      "triton": "triton-windows",
-      "sage2": "https://github.com/woct0rdho/SageAttention/releases/download/v2.2.0-windows.post4/sageattention-2.2.0+cu130torch2.9.0andhigher.post4-cp39-abi3-win_amd64.whl",
-      "sparge": "https://github.com/woct0rdho/SpargeAttn/releases/download/v0.1.0-windows.post4/spas_sage_attn-0.1.0%2Bcu130torch2.9.0andhigher.post4-cp39-abi3-win_amd64.whl",
-      "flash": "https://github.com/deepbeepmeep/kernels/releases/download/Flash2/flash_attn-2.8.3-cp311-cp311-win_amd64.whl",
-      "nunchaku": "https://github.com/nunchaku-ai/nunchaku/releases/download/v1.2.1/nunchaku-1.2.1+cu13.0torch2.10-cp311-cp311-win_amd64.whl",
-      "gguf": "https://github.com/deepbeepmeep/kernels/releases/download/GGUF_Kernels/llamacpp_gguf_cuda-1.0.2+torch210cu13py311-cp311-cp311-win_amd64.whl",
-      "lightx2v": "https://github.com/deepbeepmeep/kernels/releases/download/Light2xv/lightx2v_kernel-0.0.2+torch2.10.0-cp311-abi3-win_amd64.whl",
-      "bitsandbytes": "bitsandbytes==0.49.2"
-    },
-    "cu128": {
-      "label": "Torch 2.9.0 + CUDA 12.8 (legacy driver fallback)",
-      "torch": "torch==2.9.0 torchvision==0.24.0 torchaudio==2.9.0 --index-url https://download.pytorch.org/whl/cu128",
-      "triton": "triton-windows<3.3",
-      "sage2": "https://github.com/woct0rdho/SageAttention/releases/download/v2.2.0-windows.post4/sageattention-2.2.0+cu128torch2.9.0andhigher.post4-cp39-abi3-win_amd64.whl",
-      "sparge": "https://github.com/woct0rdho/SpargeAttn/releases/download/v0.1.0-windows.post4/spas_sage_attn-0.1.0%2Bcu128torch2.9.0andhigher.post4-cp39-abi3-win_amd64.whl",
-      "flash": "https://github.com/deepbeepmeep/kernels/releases/download/Flash2/flash_attn-2.8.3-cp311-cp311-win_amd64.whl",
-      "nunchaku": "https://github.com/nunchaku-ai/nunchaku/releases/download/v1.2.1/nunchaku-1.2.1+cu12.8torch2.9-cp311-cp311-win_amd64.whl",
-      "gguf": "",
-      "lightx2v": "",
-      "bitsandbytes": "bitsandbytes==0.49.2"
-    }
+  "minimum_driver": "580.0",
+  "stack": {
+    "id": "cu130",
+    "label": "Torch 2.10.0 + CUDA 13.0",
+    "torch": "torch==2.10.0 torchvision==0.25.0 torchaudio==2.10.0 --index-url https://download.pytorch.org/whl/cu130",
+    "triton": "triton-windows",
+    "sage2": "https://github.com/woct0rdho/SageAttention/releases/download/v2.2.0-windows.post4/sageattention-2.2.0+cu130torch2.9.0andhigher.post4-cp39-abi3-win_amd64.whl",
+    "sparge": "https://github.com/woct0rdho/SpargeAttn/releases/download/v0.1.0-windows.post4/spas_sage_attn-0.1.0%2Bcu130torch2.9.0andhigher.post4-cp39-abi3-win_amd64.whl",
+    "flash": "https://github.com/deepbeepmeep/kernels/releases/download/Flash2/flash_attn-2.8.3-cp311-cp311-win_amd64.whl",
+    "nunchaku": "https://github.com/nunchaku-ai/nunchaku/releases/download/v1.2.1/nunchaku-1.2.1+cu13.0torch2.10-cp311-cp311-win_amd64.whl",
+    "gguf": "https://github.com/deepbeepmeep/kernels/releases/download/GGUF_Kernels/llamacpp_gguf_cuda-1.0.2+torch210cu13py311-cp311-cp311-win_amd64.whl",
+    "lightx2v": "https://github.com/deepbeepmeep/kernels/releases/download/Light2xv/lightx2v_kernel-0.0.2+torch2.10.0-cp311-abi3-win_amd64.whl",
+    "bitsandbytes": "bitsandbytes==0.49.2"
   },
   "auto_kernels_by_gpu": {
-    "GTX_10": [],
     "RTX_20": ["triton", "sage2", "flash", "gguf", "nunchaku"],
     "RTX_30": ["triton", "sage2", "sparge", "flash", "gguf", "nunchaku"],
     "RTX_40": ["triton", "sage2", "sparge", "flash", "gguf", "nunchaku"],

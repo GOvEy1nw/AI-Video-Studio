@@ -47,6 +47,8 @@ extraResources:
       - "!release/**"
   - from: python-bootstrap
     to: python-bootstrap
+  - from: git-bootstrap
+    to: git
   - from: scripts
     to: scripts
     filter:

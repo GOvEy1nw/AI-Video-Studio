@@ -256,11 +256,6 @@ try:
     print(f'Diffusers: {diffusers.__version__}')
 except ImportError as e:
     print(f'Diffusers import failed: {e}')
-try:
-    from ltx_pipelines import distilled
-    print(f'ltx-pipelines: OK')
-except ImportError as e:
-    print(f'ltx-pipelines: FAILED - {e}')
 "@
 
 $TestScript | & $PythonExe -

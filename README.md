@@ -65,12 +65,12 @@ AiVS is in active development.
 ## Windows Release System Requirements
 
 - Windows 10 or 11, 64-bit.
-- NVIDIA CUDA GPU. The installer recognises GTX 10-series and RTX 20/30/40/50-series; RTX 20 or newer is the practical baseline.
-- Current NVIDIA driver: RTX 30/40/50 use the CUDA 13 stack and need R580 or newer; RTX 20/GTX 10 use the CUDA 12.8 fallback and should use R570.65 or newer.
+- NVIDIA RTX 20, 30, 40 or 50 series GPU. GTX cards are not supported.
+- NVIDIA driver 580 or newer. AiVS uses one supported runtime: Torch 2.10 with CUDA 13.0.
 - VRAM: 12 GB minimum for selective/light use, 16 GB recommended for image work, 24 GB recommended for LTX video and larger model packs. This is guidance, not an enforced hardware gate.
 - At least 50 GB free disk space where model packs are installed; more is needed for several packs and generated media.
 
-The desktop installer includes Python, pip, uv, WanGP and the GPU runtime setup. It does not require Node.js, pnpm or Git.
+The desktop installer includes Python, pip, uv, MinGit, WanGP and GPU runtime setup. It does not require Node.js, pnpm or a system Git installation.
 
 ## Quick Start: Windows
 
@@ -141,11 +141,10 @@ Useful options:
 
 ```powershell
 scripts/install-wangp-stack.ps1 -List
-scripts/install-wangp-stack.ps1 -Stack cu130 -GpuGeneration RTX_40
 scripts/install-wangp-stack.ps1 -SkipWan2gpRequirements
 ```
 
-The installer detects NVIDIA GPU generation, selects the configured CUDA stack from `scripts/wangp-stacks.json`, and installs matching PyTorch plus curated performance wheels into `backend/.venv`.
+The installer validates supported RTX generation and NVIDIA driver 580+, then installs pinned Torch 2.10/CUDA 13 plus curated performance wheels into `backend/.venv`.
 
 Development setup and backend test commands use `uv sync --inexact` so normal dependency syncs update declared backend packages without pruning WanGP requirements or performance wheels installed into the same virtual environment.
 

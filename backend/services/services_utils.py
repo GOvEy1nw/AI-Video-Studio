@@ -13,8 +13,6 @@ if TYPE_CHECKING:
     import numpy as np
     from numpy.typing import NDArray
 
-    from ltx_core.model.video_vae import TilingConfig
-
 
 JSONScalar: TypeAlias = str | int | float | bool | None
 JSONValue: TypeAlias = JSONScalar | list["JSONValue"] | dict[str, "JSONValue"]
@@ -26,17 +24,11 @@ TensorType: TypeAlias = torch.Tensor
 PILImageType: TypeAlias = PILImage
 
 if TYPE_CHECKING:
-    from ltx_core.types import Audio as AudioType
-
     FrameArray: TypeAlias = NDArray[np.uint8]
-    TilingConfigType: TypeAlias = TilingConfig
 else:
     FrameArray: TypeAlias = object
-    TilingConfigType: TypeAlias = object
-    AudioType: TypeAlias = object
 
 TensorOrNone: TypeAlias = TensorType | None
-AudioOrNone: TypeAlias = AudioType | None
 
 logger = logging.getLogger(__name__)
 

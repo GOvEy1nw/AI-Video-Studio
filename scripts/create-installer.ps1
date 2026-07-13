@@ -38,6 +38,11 @@ if (-not (Test-Path "python-bootstrap\python.exe")) {
     exit 1
 }
 
+if (-not (Test-Path "git-bootstrap\cmd\git.exe")) {
+    Write-Host "ERROR: Git bootstrap not found. Run prepare-git.ps1 first." -ForegroundColor Red
+    exit 1
+}
+
 if (-not (Test-Path $ElectronBuilder)) {
     Write-Host "ERROR: electron-builder is not installed. Run pnpm install first." -ForegroundColor Red
     exit 1

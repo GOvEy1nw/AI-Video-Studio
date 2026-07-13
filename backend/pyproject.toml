@@ -12,9 +12,8 @@ dependencies = [
     "tokenizers==0.21.4",
     # Torch is pinned to the cu130 stack's exact version so `uv sync` and
     # scripts/install-wangp-stack.ps1 agree. The stack installer owns the
-    # CUDA index (cu130 for RTX 30/40/50, cu128 fallback) and the curated
-    # kernel wheels (sageattention, flash_attn, nunchaku, etc.) — those
-    # are NOT listed here because their versions/URLs are hardware-specific.
+    # single CUDA 13.0 index and curated kernel wheels (sageattention,
+    # flash_attn, nunchaku, etc.). Those wheels remain hardware-specific.
     "torch==2.10.0",
     "torchvision==0.25.0",
     "torchaudio==2.10.0",
@@ -22,9 +21,6 @@ dependencies = [
     "tqdm>=4.66.0",
     "pynvml>=11.5.0; sys_platform != 'darwin'",
     "pydantic==2.10.6",
-    # LTX-2 inference dependencies
-    "ltx-core",
-    "ltx-pipelines",
     "diffusers==0.36.0",
     "ftfy>=6.0.0",
     "imageio>=2.37.2",
@@ -57,8 +53,6 @@ torchvision = [
     { index = "pytorch-cu130", marker = "sys_platform == 'win32' or sys_platform == 'linux'" },
 ]
 torchaudio = { index = "pytorch-cu130" }
-ltx-core = { git = "https://github.com/Lightricks/LTX-2.git", subdirectory = "packages/ltx-core", rev = "00dc53d3f81c405932f9f16d9c57557de411e702" }
-ltx-pipelines = { git = "https://github.com/Lightricks/LTX-2.git", subdirectory = "packages/ltx-pipelines", rev = "00dc53d3f81c405932f9f16d9c57557de411e702" }
 
 [project.optional-dependencies]
 test = ["pytest>=8.0", "requests>=2.31", "httpx>=0.27"]

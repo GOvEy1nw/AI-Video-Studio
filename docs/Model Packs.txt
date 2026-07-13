@@ -1,0 +1,69 @@
+Model Packs:
+
+
+Z-Image-Turbo
+https://huggingface.co/DeepBeepMeep/Z-Image/resolve/main/Qwen3/qwen3_quanto_bf16_int8.safetensors
+https://huggingface.co/DeepBeepMeep/Z-Image/resolve/main/ZImageTurbo_quanto_bf16_int8.safetensors
+https://huggingface.co/DeepBeepMeep/Z-Image/resolve/main/ZImageTurbo_VAE_bf16.safetensors
+https://huggingface.co/DeepBeepMeep/Z-Image/resolve/main/Z-Image-Turbo-Fun-Controlnet-Union2.1_quanto_bf16_int8.safetensors
+Total = 14.11GB
+
+
+
+Krea 2 Turbo
+https://huggingface.co/DeepBeepMeep/krea-2/resolve/main/Qwen3-VL-4B-Instruct/Qwen3-VL-4B-Instruct_quanto_bf16_int8.safetensors
+https://huggingface.co/DeepBeepMeep/krea-2/resolve/main/Krea2Turbo_quanto_bf16_int8.safetensors
+https://huggingface.co/DeepBeepMeep/Qwen_image/resolve/main/qwen_vae.safetensors
+Total = 16.81GB
+
+
+
+Flux 2 Klein 4b
+https://huggingface.co/DeepBeepMeep/Z-Image/resolve/main/Qwen3/qwen3_quanto_bf16_int8.safetensors
+https://huggingface.co/DeepBeepMeep/Flux2/resolve/main/flux-2-klein-4b_quanto_bf16_int8.safetensors
+https://huggingface.co/DeepBeepMeep/Flux2/resolve/main/flux2_vae.safetensors
+Total = 8.21GB
+
+
+HiDream O1
+https://huggingface.co/DeepBeepMeep/HiDream/resolve/main/HiDreamO1Image_quanto_bf16_int8.safetensors
+Total = 12.7GB
+
+
+LTX 2.3 Turbo
+https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/gemma-3-12b-it-qat-q4_0-unquantized/gemma-3-12b-it-qat-q4_0-unquantized_quanto_bf16_int8.safetensors
+https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-distilled-1.1_diffusion_model_quanto_bf16_int8.safetensors
+https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-ic-lora-union-control-ref0.5.safetensors
+https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/id-lora-celebvhq-ltx2.3.safetensors
+https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-ic-lora-outpaint.safetensors
+https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-ic-lora-in-outpainting-0.9.safetensors
+https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-ic-lora-ingredients-0.9.safetensors
+https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-ic-lora-hdr-0.9.safetensors
+https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-spatial-upscaler-x2-1.1.safetensors
+https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-ic-lora-hdr-scene-emb.safetensors
+https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b_audio_vae.safetensors
+https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b_embeddings_connector.safetensors
+https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b_text_embedding_projection.safetensors
+https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b_vae.safetensors
+https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b_vocoder.safetensors
+https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-temporal-upscaler-x2-1.0.safetensors
+https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/JoyAI-Echo_diffusion_model_quanto_bf16_int8.safetensors
+Total = 60.95GB
+
+
+Shared Model Files
+https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/pose/dw-ll_ucoco_384.onnx
+https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/pose/yolox_l.onnx
+https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/chinese-wav2vec2-base/pytorch_model.bin
+https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/depth/depth_anything_v2_vitb.pth
+https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/depth/depth_anything_v2_vitl.pth
+https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/det_align/detface.pt
+https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/flow/raft-things.pth
+https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/mask/matanyone.safetensors
+https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/mask/sam_vit_h_4b8939_fp16.safetensors
+https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/pyannote/pyannote_model_wespeaker-voxceleb-resnet34-LM.bin
+https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/pyannote/pytorch_model_segmentation-3.0.bin
+https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/roformer/model_bs_roformer_ep_317_sdr_12.9755.ckpt
+https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/scribble/netG_A_latest.pth
+https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/wav2vec/model.safetensors
+Total = 4.8GB

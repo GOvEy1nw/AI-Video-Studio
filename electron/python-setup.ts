@@ -92,13 +92,37 @@ export function getPythonDir(): string {
   return path.join(process.resourcesPath, 'python')
 }
 
+function findBundledGitExecutable(): string | null {
+  if (process.platform !== 'win32') return null
+  const root = isDev ? path.join(process.cwd(), 'git-bootstrap') : path.join(process.resourcesPath, 'git')
+  const gitExe = path.join(root, 'cmd', 'git.exe')
+  return fs.existsSync(gitExe) ? gitExe : null
+}
+
+export function getRuntimeEnvironment(): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = { ...process.env }
+  const gitExe = findBundledGitExecutable()
+  if (!gitExe) {
+    if (!isDev && process.platform === 'win32') throw new Error('Bundled Git runtime is missing.')
+    return env
+  }
+
+  const pathKey = Object.keys(env).find((key) => key.toLowerCase() === 'path') ?? 'PATH'
+  env[pathKey] = `${path.dirname(gitExe)}${path.delimiter}${env[pathKey] ?? ''}`
+  env.GIT_PYTHON_GIT_EXECUTABLE = gitExe
+  return env
+}
+
 export function isPythonReady(): { ready: boolean } {
   if (process.platform !== 'win32' || isDev) return { ready: true }
   const expectedHash = getRuntimeHash()
   return {
     ready: Boolean(expectedHash) &&
       expectedHash === readHash(getInstalledHashPath()) &&
-      fs.existsSync(path.join(getPythonDir(), 'python.exe')),
+      fs.existsSync(path.join(getPythonDir(), 'python.exe')) &&
+      fs.existsSync(path.join(getPythonDir(), 'Include', 'Python.h')) &&
+      fs.existsSync(path.join(getPythonDir(), 'libs', 'python311.lib')) &&
+      Boolean(findBundledGitExecutable()),
   }
 }
 
@@ -139,6 +163,11 @@ function installDependencies(
     let stdoutRemainder = ''
     let stderrRemainder = ''
     const errorLines: string[] = []
+    const recordErrorLine = (line: string): void => {
+      if (!line) return
+      errorLines.push(line)
+      if (errorLines.length > 80) errorLines.shift()
+    }
 
     const emitProgress = () => onProgress({
       status: 'installing',
@@ -179,7 +208,7 @@ function installDependencies(
           logger.info(`[python-setup] ${match[2]}`)
           continue
         }
-        if (stream === 'stderr' && line) errorLines.push(line)
+        if (stream === 'stderr') recordErrorLine(line)
         acceptDetail(line)
       }
     }
@@ -191,7 +220,7 @@ function installDependencies(
         '-PythonExe', pythonExe,
         '-ProjectDir', process.resourcesPath,
       ],
-      { windowsHide: true },
+      { windowsHide: true, env: getRuntimeEnvironment() },
     )
     const heartbeat = setInterval(() => {
       if (Date.now() - lastOutputAt < 4_000) return
@@ -210,7 +239,15 @@ function installDependencies(
       acceptDetail(stdoutRemainder)
       acceptDetail(stderrRemainder)
       if (code === 0) resolve()
-      else reject(new Error(`Python dependency setup failed (exit code ${code ?? 'unknown'}): ${errorLines.slice(-3).join(' ')}`))
+      else {
+        recordErrorLine(stderrRemainder.trim())
+        logger.error(`[python-setup] Installer stderr:\n${errorLines.join('\n')}`)
+        const details = errorLines
+          .filter((line) => !/^(?:At |\+|~|CategoryInfo|FullyQualifiedErrorId)/.test(line))
+          .slice(-12)
+          .join(' ')
+        reject(new Error(`Python dependency setup failed (exit code ${code ?? 'unknown'}): ${details || errorLines.slice(-12).join(' ')}`))
+      }
     })
     emitProgress()
   })
@@ -270,14 +307,23 @@ export function downloadModelPacks(
   return new Promise((resolve, reject) => {
     let activePack: Pick<ModelPackProgress, 'packId' | 'packName'> = {}
     let cancelled = false
-    let remainder = ''
-    const child = spawn(pythonExe, [runner, '--wangp-root', wangpRoot, '--app-data-dir', app.getPath('userData'), '--download', ...ids], { windowsHide: true })
+    let spawnFailed = false
+    const remainders = { stdout: '', stderr: '' }
+    const diagnosticLines: string[] = []
+    const recordDiagnostic = (line: string): void => {
+      if (!line) return
+      diagnosticLines.push(line)
+      if (diagnosticLines.length > 80) diagnosticLines.shift()
+    }
+    const child = spawn(
+      pythonExe,
+      [runner, '--wangp-root', wangpRoot, '--app-data-dir', app.getPath('userData'), '--download', ...ids],
+      { windowsHide: true, cwd: wangpRoot, env: getRuntimeEnvironment() },
+    )
     activeModelPackProcess = child
-    const consume = (chunk: Buffer): void => {
-      const lines = (remainder + chunk.toString()).split(/[\r\n]/)
-      remainder = lines.pop() ?? ''
-      for (const raw of lines) {
-        const line = raw.trim()
+    const consumeLine = (raw: string): void => {
+      const line = raw.trim()
+      if (!line) return
         const event = /^AIVS_PACK:(.+)$/.exec(line)
         if (event) {
           try {
@@ -306,17 +352,33 @@ export function downloadModelPacks(
               })
             }
           } catch { /* Ignore malformed third-party output. */ }
-          continue
+        return
         }
         const transfer = parseTransferProgress(line)
-        if (transfer) onProgress({ status: 'downloading', ...activePack, ...transfer })
+      if (transfer) {
+        onProgress({ status: 'downloading', ...activePack, ...transfer })
+        return
       }
+      recordDiagnostic(line)
     }
-    child.stdout.on('data', consume)
-    child.stderr.on('data', consume)
-    child.once('error', reject)
-    child.once('close', (code) => {
+    const consume = (chunk: Buffer, stream: 'stdout' | 'stderr'): void => {
+      const lines = (remainders[stream] + chunk.toString()).split(/[\r\n]/)
+      remainders[stream] = lines.pop() ?? ''
+      for (const line of lines) consumeLine(line)
+    }
+    child.stdout.on('data', (chunk: Buffer) => consume(chunk, 'stdout'))
+    child.stderr.on('data', (chunk: Buffer) => consume(chunk, 'stderr'))
+    child.once('error', (error) => {
+      spawnFailed = true
       activeModelPackProcess = null
+      onProgress({ status: 'error', ...activePack })
+      reject(new Error(`Model-pack download failed to start: ${error.message}`))
+    })
+    child.once('close', (code) => {
+      if (spawnFailed) return
+      activeModelPackProcess = null
+      consumeLine(remainders.stdout)
+      consumeLine(remainders.stderr)
       if (cancelled) {
         onProgress({ status: 'cancelled', ...activePack })
         resolve(false)
@@ -324,7 +386,9 @@ export function downloadModelPacks(
         resolve(true)
       } else {
         onProgress({ status: 'error', ...activePack })
-        reject(new Error(`Model-pack download failed (exit code ${code ?? 'unknown'}).`))
+        logger.error(`[model-pack] Downloader output:\n${diagnosticLines.join('\n')}`)
+        const details = diagnosticLines.slice(-12).join(' ')
+        reject(new Error(`Model-pack download failed (exit code ${code ?? 'unknown'}): ${details || 'No diagnostic output.'}`))
       }
     })
     ;(child as ChildProcess & { aivsCancel?: () => void }).aivsCancel = () => { cancelled = true; child.kill() }

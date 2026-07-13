@@ -6,7 +6,7 @@ import { getAppDataDir } from './app-paths'
 import { getCurrentDir, isDev } from './config'
 import { logger, writeLog } from './logger'
 import { getCurrentLogFilename } from './logging-management'
-import { getPythonDir } from './python-setup'
+import { getPythonDir, getRuntimeEnvironment } from './python-setup'
 import { getMainWindow } from './window'
 
 let pythonProcess: ChildProcess | null = null
@@ -248,7 +248,7 @@ export async function startPythonBackend(): Promise<void> {
     pythonProcess = spawn(pythonPath, pythonArgs, {
       cwd: backendPath,
       env: {
-        ...process.env,
+        ...getRuntimeEnvironment(),
         PYTHONUNBUFFERED: '1',
         PYTHONNOUSERSITE: '1',
         // AIVS_* is canonical; LTX_* is only read for one compatibility period.

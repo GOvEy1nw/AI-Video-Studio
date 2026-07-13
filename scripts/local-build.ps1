@@ -15,6 +15,7 @@ $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ProjectDir = Split-Path -Parent $ScriptDir
 $PythonBootstrapDir = Join-Path $ProjectDir "python-bootstrap"
+$GitBootstrapDir = Join-Path $ProjectDir "git-bootstrap"
 $ReleaseDir = Join-Path $ProjectDir "release"
 
 Write-Host @"
@@ -46,6 +47,9 @@ if ($Clean) {
 
     if (Test-Path $PythonBootstrapDir) {
         Remove-Item -Recurse -Force $PythonBootstrapDir
+    }
+    if (Test-Path $GitBootstrapDir) {
+        Remove-Item -Recurse -Force $GitBootstrapDir
     }
     if (Test-Path $ReleaseDir) {
         Remove-Item -Recurse -Force $ReleaseDir
@@ -83,6 +87,17 @@ if (-not (Test-Path $PythonBootstrapDir)) {
     Write-Host "ERROR: Python bootstrap not found at $PythonBootstrapDir" -ForegroundColor Red
     Write-Host "Run without -SkipPython to create it." -ForegroundColor Red
     exit 1
+}
+
+Write-Host "Preparing Git bootstrap..." -ForegroundColor Yellow
+if (Test-Path $GitBootstrapDir) {
+    Write-Host "Git bootstrap already exists. Use -Clean to rebuild." -ForegroundColor DarkYellow
+} else {
+    & "$ScriptDir\prepare-git.ps1"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Failed to prepare Git bootstrap!" -ForegroundColor Red
+        exit 1
+    }
 }
 
 # ============================================================

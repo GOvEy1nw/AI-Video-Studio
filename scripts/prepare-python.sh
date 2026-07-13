@@ -231,12 +231,6 @@ try:
 except ImportError as e:
     print(f'  Diffusers import FAILED: {e}')
     sys.exit(1)
-try:
-    from ltx_pipelines import distilled
-    print(f'  ltx-pipelines: OK')
-except ImportError as e:
-    print(f'  ltx-pipelines: FAILED - {e}')
-    sys.exit(1)
 "
 
 # Calculate size

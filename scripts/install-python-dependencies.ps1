@@ -5,6 +5,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $env:PYTHONWARNINGS = "ignore:The pynvml package is deprecated.*:FutureWarning"
+$env:UV_SYSTEM_CERTS = "true"
 $BackendDir = Join-Path $ProjectDir "backend"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $UvExe = Join-Path (Split-Path -Parent $PythonExe) "Scripts\uv.exe"
@@ -39,20 +40,35 @@ try {
     Write-Output "AIVS_STEP:4:Installing Python headers"
     & $UvExe python install $PythonVersion --quiet
     if ($LASTEXITCODE -ne 0) { throw "Python header runtime download failed." }
-    $UvPython = & $UvExe python find $PythonVersion 2>$null
+    $UvPython = & $UvExe python find --managed-python $PythonVersion 2>$null
     if (-not $UvPython) { throw "Matching uv-managed Python not found." }
-    $UvPrefix = & $UvPython -c "import sys; print(sys.prefix)"
+    $UvPrefix = (& $UvPython -c "import sys; print(sys.prefix)").Trim()
     $IncludeSource = Join-Path $UvPrefix "Include"
     if (-not (Test-Path $IncludeSource)) { $IncludeSource = Join-Path $UvPrefix "include" }
     $LibsSource = Join-Path $UvPrefix "libs"
-    if (-not (Test-Path $IncludeSource) -or -not (Test-Path $LibsSource)) {
+    $VersionParts = $PythonVersion.Split(".")
+    $ImportLibraryName = "python$($VersionParts[0])$($VersionParts[1]).lib"
+    if (
+        -not (Test-Path (Join-Path $IncludeSource "Python.h")) -or
+        -not (Test-Path (Join-Path $LibsSource $ImportLibraryName))
+    ) {
         throw "Matching Python headers or import libraries are unavailable."
     }
-    Copy-Item -Path $IncludeSource -Destination (Join-Path $PythonRoot "Include") -Recurse -Force
-    Copy-Item -Path $LibsSource -Destination (Join-Path $PythonRoot "libs") -Recurse -Force
+    $IncludeDestination = Join-Path $PythonRoot "Include"
+    $LibsDestination = Join-Path $PythonRoot "libs"
+    Remove-Item -Path $IncludeDestination, $LibsDestination -Recurse -Force -ErrorAction SilentlyContinue
+    New-Item -ItemType Directory -Path $IncludeDestination, $LibsDestination | Out-Null
+    Copy-Item -Path (Join-Path $IncludeSource "*") -Destination $IncludeDestination -Recurse -Force
+    Copy-Item -Path (Join-Path $LibsSource "*") -Destination $LibsDestination -Recurse -Force
+    if (
+        -not (Test-Path (Join-Path $IncludeDestination "Python.h")) -or
+        -not (Test-Path (Join-Path $LibsDestination $ImportLibraryName))
+    ) {
+        throw "Python headers or import libraries were not copied into the bundled runtime."
+    }
 
     Write-Output "AIVS_STEP:5:Verifying runtime"
-    & $PythonExe -c "import fastapi, torch; from ltx_pipelines import distilled; print(torch.__version__)"
+    & $PythonExe -c "from pathlib import Path; import sysconfig, fastapi, torch; assert (Path(sysconfig.get_paths()['include']) / 'Python.h').is_file(); print(torch.__version__)"
     if ($LASTEXITCODE -ne 0) { throw "Runtime verification failed." }
 
 } finally {

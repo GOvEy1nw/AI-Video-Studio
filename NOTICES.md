@@ -35,8 +35,6 @@ Lightricks LTX Desktop. Their applicable notices remain below.
 - **tqdm** — Copyright (c) Casper da Costa-Luis — Mozilla Public License 2.0
 - **pynvml** — Copyright (c) NVIDIA Corporation — BSD 3-Clause License
 - **pydantic** — Copyright (c) Samuel Colvin and Pydantic Services Inc. — MIT License
-- **ltx-core** — Copyright (c) Lightricks — Apache License 2.0
-- **ltx-pipelines** — Copyright (c) Lightricks — Apache License 2.0
 - **diffusers** — Copyright (c) Hugging Face — Apache License 2.0
 - **ftfy** — Copyright (c) Robyn Speer and Luminoso Technologies — Apache License 2.0
 - **imageio** — Copyright (c) imageio contributors — BSD 2-Clause License
@@ -51,6 +49,12 @@ Lightricks LTX Desktop. Their applicable notices remain below.
 - **uvicorn** — Copyright (c) Encode OSS Ltd. — BSD 3-Clause License
 - **python-multipart** — Copyright (c) Andrew Dunham — Apache License 2.0
 - **triton-windows** — Copyright (c) OpenAI — MIT License (Windows only)
+
+---
+
+## Bundled Tools
+
+- **Git for Windows (MinGit)** — Git contributors and Git for Windows contributors — GNU General Public License v2.0. Source: https://github.com/git-for-windows/git/tree/v2.55.0.windows.2. Component license texts are retained inside the bundled MinGit distribution.
 
 ---
 

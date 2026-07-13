@@ -31,7 +31,7 @@ powered exclusively by WanGP. Three-layer architecture inherited from the fork:
 | `pnpm build:frontend` | Vite frontend build only |
 | `pnpm build:mac` / `pnpm build:win` | Full platform builds |
 | `pnpm setup:dev:mac` / `pnpm setup:dev:win` | One-time dev environment setup |
-| `scripts/install-wangp-stack.ps1` | Install/refresh the WanGP GPU stack (auto-detects NVIDIA GPU, picks cu130/cu128 stack, installs curated wheels). Use `-List` to dry-run detection. |
+| `scripts/install-wangp-stack.ps1` | Install/refresh the single Torch 2.10/CUDA 13 WanGP stack. Requires RTX 20/30/40/50 series and NVIDIA driver 580+. Use `-List` to validate hardware. |
 
 Run a single backend test: `cd backend && uv run pytest tests/test_generation.py -v --tb=short`
 
