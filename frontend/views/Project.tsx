@@ -1,9 +1,10 @@
-import { ArrowLeft, Sparkles, Film } from "lucide-react";
+import { ArrowLeft, Sparkles, Film, Clapperboard } from "lucide-react";
 import { useProjects } from "../contexts/ProjectContext";
 import { AivsLogo } from "../components/AivsLogo";
 import { Button } from "../components/ui/button";
 import { GenSpace } from "./GenSpace";
 import { VideoEditor } from "./VideoEditor";
+import { DirectorEditor } from "./DirectorEditor";
 import type { ProjectTab } from "../types/project";
 
 export function Project() {
@@ -25,6 +26,11 @@ export function Project() {
       id: "gen-space",
       label: "Gen Space",
       icon: <Sparkles className="h-4 w-4" />,
+    },
+    {
+      id: "director",
+      label: "Director",
+      icon: <Clapperboard className="h-4 w-4" />,
     },
     {
       id: "video-editor",
@@ -80,6 +86,11 @@ export function Project() {
           className={`absolute inset-0 ${currentTab === "gen-space" ? "" : "invisible pointer-events-none"}`}
         >
           <GenSpace />
+        </div>
+        <div
+          className={`absolute inset-0 ${currentTab === "director" ? "" : "invisible pointer-events-none"}`}
+        >
+          <DirectorEditor />
         </div>
         <div
           className={`absolute inset-0 ${currentTab === "video-editor" ? "" : "invisible pointer-events-none"}`}

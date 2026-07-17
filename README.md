@@ -16,7 +16,7 @@ Note: I'm more of a Solutions Architect than a coder, so I'm up-front clarifying
 
 # Current Status
 
-AiVS is in active development.
+AiVS is in active development. Director Mode V1 is available as a standalone workspace for planning and generating prompt-driven video timelines. Guide Audio and Control Media tracks are visible but remain locked for a later release.
 
 # New Features:
 
@@ -53,7 +53,12 @@ AiVS is in active development.
 		- Added Control Video/Audio support with video trim capabilities (note when a control video is added, the 'duration' setting turns to 'auto' and is controlled by the trim length).
 		- Retake is visible as **Retake (soon)** but disabled until WanGP supports it reliably.
 		- Added new reframe mode with a nice easy to use framing UI that takes a control video and then uses ltx outpaint lora to expand edges. <p align="center"><img src="https://github.com/GOvEy1nw/AI-Video-Studio/blob/main/images/NewReframeVideoMode.png" width="80%"></p>
-		- Added a 'Timing' switch in the text prompt area that lets you easily create timed prompts for videos and converts it to a compatible 'relay prompt' for WanGP in the background. <p align="center"><img src="https://github.com/GOvEy1nw/AI-Video-Studio/blob/main/images/NewVideoTimingOption.png" width="80%"></p>
+- Director Mode:
+	- Added a standalone workspace between GenSpace and Video Editor with the shared asset library, multiple Director timelines, contextual segment settings, preview playback and a frame-based timeline.
+	- Build videos from movable and resizable prompt segments, optional local/global prompts, key frames pinned to Start/Middle/End, or a frame-zero Continue Video segment. Gaps, segment reordering, ripple resizing and contextual split/delete are supported.
+	- Generated videos populate a Generated track automatically. Regenerations become takes, with timeline playback, scrubbing, looping, take selection, visibility and deletion controls.
+	- Director V1 runs at 24 fps, snaps output lengths to `8n+1`, and supports timelines up to 20 seconds. Guide Audio and Control Media tracks are reserved for later releases.
+	- See [Director Mode V1](docs/DIRECTOR_MODE_V1.md) and the [implementation plan](docs/DIRECTOR_MODE_V1_IMPLEMENTATION_PLAN.md) for current behavior and constraints.
 
 # Planned
 

@@ -56,6 +56,21 @@ export interface ModelProfileUi {
   allowedResolutionTiers: string[]
 }
 
+export interface ModelProfileDirectorPolicy {
+  enabled: boolean
+  promptRelay: boolean
+  injectedFrames: boolean
+  continueVideo: boolean
+  guideAudioStartOnly: boolean
+  maxImageKeyframes: number | null
+  maxGuidanceSegments: number
+  guidanceModes: Array<'human_motion' | 'depth' | 'ingredients'>
+  maxDurationSeconds: number
+  allowKeyframesWithVideoGuidance: boolean
+  allowKeyframesWithIngredients: boolean
+  allowGuideAudioWithGuidance: boolean
+}
+
 export type ModelProfileJsonValue =
   | string
   | number
@@ -89,6 +104,7 @@ export interface ModelProfile {
   capabilities: ModelProfileCapabilities
   ui: ModelProfileUi
   inputMedia: ModelProfileInputMedia
+  director: ModelProfileDirectorPolicy
   availability: ModelProfileAvailability
 }
 

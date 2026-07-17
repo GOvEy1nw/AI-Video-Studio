@@ -1,5 +1,7 @@
 // Project and Asset types for AiVS
 
+import type { DirectorGenerationMetadata, DirectorSequenceV1 } from './director'
+
 // Parameters needed to regenerate a shot
 export interface GenerationParams {
   mode: 'text-to-video' | 'image-to-video' | 'audio-to-video' | 'text-to-image' | 'retake' | 'reframe'
@@ -65,6 +67,7 @@ export interface Asset {
   takes?: AssetTake[] // All takes (index 0 = original). If undefined, the asset itself is the only take.
   activeTakeIndex?: number // Which take is currently active (default = 0 / latest)
   colorLabel?: string // Color label for organization (e.g. 'violet', 'blue', 'green', 'yellow', 'red', 'rose', 'orange', 'mango')
+  directorGeneration?: DirectorGenerationMetadata
 }
 
 export interface Track {
@@ -416,6 +419,15 @@ export interface Timeline {
   tracks: Track[]
   clips: TimelineClip[]
   subtitles?: SubtitleClip[]  // Subtitle cues on subtitle tracks
+  director?: DirectorSequenceV1
+}
+
+export interface DirectorTimelineDocument {
+  id: string
+  name: string
+  createdAt: number
+  updatedAt: number
+  sequence: DirectorSequenceV1
 }
 
 export interface Project {
@@ -424,9 +436,12 @@ export interface Project {
   createdAt: number
   updatedAt: number
   assets: Asset[]
+  assetBins?: string[]
   thumbnail?: string
   timelines: Timeline[]
   activeTimelineId?: string
+  directorTimelines?: DirectorTimelineDocument[]
+  activeDirectorTimelineId?: string
   /** GenSpace seed lock persists per project until changed. */
   genSpaceSeedLocked?: boolean
   genSpaceLockedSeed?: number
@@ -440,8 +455,8 @@ export function clampGenSpaceSeed(value: number): number {
   return Math.min(MAX_GENSPACE_SEED, Math.max(0, Math.floor(value)))
 }
 
-export type ViewType = 'home' | 'project' | 'playground'
-export type ProjectTab = 'gen-space' | 'video-editor'
+export type ViewType = 'home' | 'project'
+export type ProjectTab = 'gen-space' | 'director' | 'video-editor'
 
 // Default tracks for new timelines
 export const DEFAULT_TRACKS: Track[] = [

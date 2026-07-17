@@ -8,7 +8,6 @@ import { useBackend } from './hooks/use-backend'
 import { logger } from './lib/logger'
 import { Home } from './views/Home'
 import { Project } from './views/Project'
-import { Playground } from './views/Playground'
 import { PythonSetup } from './components/PythonSetup'
 import { SettingsModal, type SettingsTabId } from './components/SettingsModal'
 import { LogViewer } from './components/LogViewer'
@@ -184,8 +183,6 @@ function AppContent() {
         return <Home />
       case 'project':
         return <Project />
-      case 'playground':
-        return <Playground />
       default:
         return <Home />
     }

@@ -1,7 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
-import type { Project, Asset, AssetTake, ViewType, ProjectTab, Timeline } from '../types/project'
+import type { Project, Asset, AssetTake, ViewType, ProjectTab, Timeline, DirectorTimelineDocument } from '../types/project'
 import { createDefaultTimeline } from '../types/project'
 import { recoverGenerationParamsMedia } from '../lib/apply-generation-params'
+import { cloneDirectorSequence, normalizeDirectorSequence } from '../lib/director-timeline'
+import type { DirectorSequenceV1 } from '../types/director'
 import { logger } from '../lib/logger'
 
 interface ProjectContextType {
@@ -32,6 +34,9 @@ interface ProjectContextType {
   deleteTakeFromAsset: (projectId: string, assetId: string, takeIndex: number) => void
   setAssetActiveTake: (projectId: string, assetId: string, takeIndex: number) => void
   toggleFavorite: (projectId: string, assetId: string) => void
+  createAssetBin: (projectId: string, name: string) => void
+  renameAssetBin: (projectId: string, oldName: string, newName: string) => void
+  deleteAssetBin: (projectId: string, name: string) => void
   
   // Timelines
   addTimeline: (projectId: string, name?: string) => Timeline
@@ -39,13 +44,21 @@ interface ProjectContextType {
   renameTimeline: (projectId: string, timelineId: string, name: string) => void
   duplicateTimeline: (projectId: string, timelineId: string) => Timeline | null
   setActiveTimeline: (projectId: string, timelineId: string) => void
-  updateTimeline: (projectId: string, timelineId: string, updates: Partial<Pick<Timeline, 'tracks' | 'clips' | 'subtitles'>>) => void
+  updateTimeline: (projectId: string, timelineId: string, updates: Partial<Pick<Timeline, 'tracks' | 'clips' | 'subtitles' | 'director'>>) => void
   getActiveTimeline: (projectId: string) => Timeline | null
+
+  // Director timelines
+  addDirectorTimeline: (projectId: string, sequence: DirectorSequenceV1, name?: string) => DirectorTimelineDocument
+  deleteDirectorTimeline: (projectId: string, timelineId: string) => void
+  renameDirectorTimeline: (projectId: string, timelineId: string, name: string) => void
+  duplicateDirectorTimeline: (projectId: string, timelineId: string) => DirectorTimelineDocument | null
+  setActiveDirectorTimeline: (projectId: string, timelineId: string) => void
+  updateDirectorTimeline: (projectId: string, timelineId: string, sequence: DirectorSequenceV1) => void
+  getActiveDirectorTimeline: (projectId: string) => DirectorTimelineDocument | null
   
   // Navigation helpers
   openProject: (id: string) => void
   goHome: () => void
-  openPlayground: () => void
   
   // Cross-view communication (editor → gen space)
   genSpaceEditImageUrl: string | null
@@ -81,14 +94,36 @@ const STORAGE_KEY = 'ltx-projects'
 
 // Migrate old projects that don't have timelines
 function migrateProject(project: Project): Project {
-  if (!project.timelines) {
-    return {
-      ...project,
-      timelines: [createDefaultTimeline('Timeline 1')],
-      activeTimelineId: undefined, // will be set on first access
-    }
+  const sourceTimelines = project.timelines || [createDefaultTimeline('Timeline 1')]
+  const migratedFromEditor = sourceTimelines.flatMap((timeline) => {
+    const sequence = normalizeDirectorSequence(timeline.director)
+    return sequence ? [{
+      id: timeline.id,
+      name: `${timeline.name} Director`,
+      createdAt: timeline.createdAt,
+      updatedAt: sequence.updatedAt,
+      sequence,
+    }] : []
+  })
+  const directorTimelines = (project.directorTimelines ?? migratedFromEditor).flatMap((timeline) => {
+    const sequence = normalizeDirectorSequence(timeline.sequence)
+    return sequence ? [{ ...timeline, sequence }] : []
+  })
+  return {
+    ...project,
+    assetBins: Array.from(new Set([
+      ...(project.assetBins || []),
+      ...project.assets.flatMap((asset) => asset.bin ? [asset.bin] : []),
+    ])).sort((a, b) => a.localeCompare(b)),
+    timelines: sourceTimelines.map((timeline) => ({
+      ...timeline,
+      director: undefined,
+    })),
+    directorTimelines,
+    activeDirectorTimelineId: directorTimelines.some((timeline) => timeline.id === project.activeDirectorTimelineId)
+      ? project.activeDirectorTimelineId
+      : directorTimelines[0]?.id,
   }
-  return project
 }
 
 // Rebuild a file:// URL from a filesystem path
@@ -337,8 +372,10 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       createdAt: Date.now(),
       updatedAt: Date.now(),
       assets: [],
+      assetBins: [],
       timelines: [defaultTimeline],
       activeTimelineId: defaultTimeline.id,
+      directorTimelines: [],
     }
     setProjects(prev => [newProject, ...prev])
     return newProject
@@ -599,7 +636,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     ))
   }, [])
   
-  const updateTimeline = useCallback((projectId: string, timelineId: string, updates: Partial<Pick<Timeline, 'tracks' | 'clips' | 'subtitles'>>) => {
+  const updateTimeline = useCallback((projectId: string, timelineId: string, updates: Partial<Pick<Timeline, 'tracks' | 'clips' | 'subtitles' | 'director'>>) => {
     setProjects(prev => prev.map(p => 
       p.id === projectId 
         ? {
@@ -621,6 +658,123 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     const active = project.timelines.find(t => t.id === project.activeTimelineId)
     return active || project.timelines[0]
   }, [projects])
+
+  const addDirectorTimeline = useCallback((projectId: string, sequence: DirectorSequenceV1, name?: string): DirectorTimelineDocument => {
+    const project = projects.find(p => p.id === projectId)
+    const count = (project?.directorTimelines?.length || 0) + 1
+    const now = Date.now()
+    const timeline: DirectorTimelineDocument = {
+      id: `director-${now}-${Math.random().toString(36).substr(2, 9)}`,
+      name: name || `Director Timeline ${count}`,
+      createdAt: now,
+      updatedAt: now,
+      sequence,
+    }
+    setProjects(prev => prev.map(p => p.id === projectId ? {
+      ...p,
+      directorTimelines: [...(p.directorTimelines || []), timeline],
+      activeDirectorTimelineId: timeline.id,
+      updatedAt: now,
+    } : p))
+    return timeline
+  }, [projects])
+
+  const deleteDirectorTimeline = useCallback((projectId: string, timelineId: string) => {
+    setProjects(prev => prev.map(p => {
+      if (p.id !== projectId) return p
+      const remaining = (p.directorTimelines || []).filter(timeline => timeline.id !== timelineId)
+      if (remaining.length === 0) return p
+      return {
+        ...p,
+        directorTimelines: remaining,
+        activeDirectorTimelineId: p.activeDirectorTimelineId === timelineId ? remaining[0].id : p.activeDirectorTimelineId,
+        updatedAt: Date.now(),
+      }
+    }))
+  }, [])
+
+  const createAssetBin = useCallback((projectId: string, name: string) => {
+    const trimmed = name.trim()
+    if (!trimmed) return
+    setProjects(prev => prev.map(project => project.id === projectId ? {
+      ...project,
+      assetBins: Array.from(new Set([...(project.assetBins || []), trimmed])).sort((a, b) => a.localeCompare(b)),
+      updatedAt: Date.now(),
+    } : project))
+  }, [])
+
+  const renameAssetBin = useCallback((projectId: string, oldName: string, newName: string) => {
+    const trimmed = newName.trim()
+    if (!trimmed || trimmed === oldName) return
+    setProjects(prev => prev.map(project => project.id === projectId ? {
+      ...project,
+      assetBins: Array.from(new Set((project.assetBins || []).map(bin => bin === oldName ? trimmed : bin))).sort((a, b) => a.localeCompare(b)),
+      assets: project.assets.map(asset => asset.bin === oldName ? { ...asset, bin: trimmed } : asset),
+      updatedAt: Date.now(),
+    } : project))
+  }, [])
+
+  const deleteAssetBin = useCallback((projectId: string, name: string) => {
+    setProjects(prev => prev.map(project => project.id === projectId ? {
+      ...project,
+      assetBins: (project.assetBins || []).filter(bin => bin !== name),
+      assets: project.assets.map(asset => asset.bin === name ? { ...asset, bin: undefined } : asset),
+      updatedAt: Date.now(),
+    } : project))
+  }, [])
+
+  const renameDirectorTimeline = useCallback((projectId: string, timelineId: string, name: string) => {
+    setProjects(prev => prev.map(p => p.id === projectId ? {
+      ...p,
+      directorTimelines: (p.directorTimelines || []).map(timeline => timeline.id === timelineId
+        ? { ...timeline, name, updatedAt: Date.now() }
+        : timeline),
+      updatedAt: Date.now(),
+    } : p))
+  }, [])
+
+  const duplicateDirectorTimeline = useCallback((projectId: string, timelineId: string): DirectorTimelineDocument | null => {
+    const project = projects.find(p => p.id === projectId)
+    const source = project?.directorTimelines?.find(timeline => timeline.id === timelineId)
+    if (!source) return null
+    const now = Date.now()
+    const duplicate: DirectorTimelineDocument = {
+      ...source,
+      id: `director-${now}-${Math.random().toString(36).substr(2, 9)}`,
+      name: `${source.name} (copy)`,
+      createdAt: now,
+      updatedAt: now,
+      sequence: cloneDirectorSequence(source.sequence),
+    }
+    setProjects(prev => prev.map(p => p.id === projectId ? {
+      ...p,
+      directorTimelines: [...(p.directorTimelines || []), duplicate],
+      activeDirectorTimelineId: duplicate.id,
+      updatedAt: now,
+    } : p))
+    return duplicate
+  }, [projects])
+
+  const setActiveDirectorTimeline = useCallback((projectId: string, timelineId: string) => {
+    setProjects(prev => prev.map(p => p.id === projectId ? { ...p, activeDirectorTimelineId: timelineId } : p))
+  }, [])
+
+  const updateDirectorTimeline = useCallback((projectId: string, timelineId: string, sequence: DirectorSequenceV1) => {
+    setProjects(prev => prev.map(p => p.id === projectId ? {
+      ...p,
+      directorTimelines: (p.directorTimelines || []).map(timeline => timeline.id === timelineId
+        ? { ...timeline, sequence, updatedAt: Date.now() }
+        : timeline),
+      updatedAt: Date.now(),
+    } : p))
+  }, [])
+
+  const getActiveDirectorTimeline = useCallback((projectId: string): DirectorTimelineDocument | null => {
+    const project = projects.find(p => p.id === projectId)
+    if (!project?.directorTimelines?.length) return null
+    return project.directorTimelines.find(timeline => timeline.id === project.activeDirectorTimelineId)
+      || project.directorTimelines[0]
+  }, [projects])
   
   const openProject = useCallback((id: string) => {
     setCurrentProjectId(id)
@@ -631,10 +785,6 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const goHome = useCallback(() => {
     setCurrentView('home')
     setCurrentProjectId(null)
-  }, [])
-  
-  const openPlayground = useCallback(() => {
-    setCurrentView('playground')
   }, [])
   
   return (
@@ -658,6 +808,9 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       deleteTakeFromAsset,
       setAssetActiveTake,
       toggleFavorite,
+      createAssetBin,
+      renameAssetBin,
+      deleteAssetBin,
       addTimeline,
       deleteTimeline,
       renameTimeline,
@@ -665,9 +818,15 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       setActiveTimeline,
       updateTimeline,
       getActiveTimeline,
+      addDirectorTimeline,
+      deleteDirectorTimeline,
+      renameDirectorTimeline,
+      duplicateDirectorTimeline,
+      setActiveDirectorTimeline,
+      updateDirectorTimeline,
+      getActiveDirectorTimeline,
       openProject,
       goHome,
-      openPlayground,
       genSpaceEditImageUrl,
       setGenSpaceEditImageUrl,
       genSpaceEditMode,

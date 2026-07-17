@@ -249,6 +249,32 @@ class WanGPBridge:
         elif audio_prompt_type:
             settings["audio_prompt_type"] = audio_prompt_type
 
+        return self._submit_video_settings(
+            settings=settings,
+            on_progress=on_progress,
+            is_cancelled=is_cancelled,
+        )
+
+    def generate_director_video(
+        self,
+        *,
+        settings: dict[str, object],
+        on_progress: ProgressCallback,
+        is_cancelled: CancelledCallback,
+    ) -> str:
+        return self._submit_video_settings(
+            settings=settings,
+            on_progress=on_progress,
+            is_cancelled=is_cancelled,
+        )
+
+    def _submit_video_settings(
+        self,
+        *,
+        settings: dict[str, object],
+        on_progress: ProgressCallback,
+        is_cancelled: CancelledCallback,
+    ) -> str:
         outputs = self._run_manifest(
             manifest=[{"id": 1, "params": settings, "plugin_data": {}}],
             media_suffixes={".mp4", ".mov", ".mkv", ".avi", ".webm", ".mp3", ".wav", ".ogg", ".aac", ".flac", ".m4a"},

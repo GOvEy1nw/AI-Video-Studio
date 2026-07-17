@@ -187,6 +187,35 @@ def test_generate_video_uses_source_frame_count_for_video_length() -> None:
     assert captured["settings"]["video_length"] == 145
 
 
+def test_generate_director_video_submits_exact_backend_settings() -> None:
+    bridge = _make_bridge()
+    captured: dict[str, object] = {}
+
+    def fake_run_manifest(*, manifest, media_suffixes, on_progress, is_cancelled):  # type: ignore[no-untyped-def]
+        captured["manifest"] = manifest
+        return ["E:/tmp/director.mp4"]
+
+    bridge._run_manifest = fake_run_manifest  # type: ignore[method-assign]
+    settings: dict[str, object] = {
+        "model_type": "ltx2_22B_distilled_1_1",
+        "prompt": "[1:61] walk",
+        "multi_prompts_gen_type": "FG",
+        "video_prompt_type": "KFI",
+        "image_refs": ["E:/tmp/one.png", "E:/tmp/two.png"],
+        "frames_positions": "1 61",
+        "video_length": 121,
+    }
+
+    output = bridge.generate_director_video(
+        settings=settings,
+        on_progress=lambda *_args: None,
+        is_cancelled=lambda: False,
+    )
+
+    assert output == "E:/tmp/director.mp4"
+    assert captured["manifest"] == [{"id": 1, "params": settings, "plugin_data": {}}]
+
+
 def test_select_final_output_prefers_newest_combined_file(tmp_path: Path) -> None:
     first = tmp_path / "2026-07-09-15h41m19s_seed1783608007_outpaint.mp4"
     combined = tmp_path / "2026-07-09-15h42m23s_seed1783608007_outpaint.mp4"
@@ -300,4 +329,3 @@ class WanGPSession:
                 sys.modules.pop(name, None)
             else:
                 sys.modules[name] = module
-

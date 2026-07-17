@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import {
-  FolderPlus, Folder, Upload, ChevronLeft, ChevronDown, ChevronRight, ChevronUp,
+  Folder, Upload, ChevronLeft, ChevronDown, ChevronRight, ChevronUp,
   X, RefreshCw, Loader2, Trash2, Music, Layers, Video, Image,
   Plus, FileUp, Film, LayoutGrid, List, ArrowUpDown,
 } from 'lucide-react'
@@ -8,6 +8,9 @@ import type { Asset, TimelineClip, Timeline } from '../../types/project'
 import { VideoThumbnailCard } from './VideoThumbnailCard'
 import { getColorLabel, COLOR_LABELS } from './video-editor-utils'
 import { Tooltip } from '../../components/ui/tooltip'
+import { GalleryFilters } from '../../components/GalleryFilters'
+import { GalleryBinBar, type GalleryBinContextMenuState } from '../../components/GalleryBinBar'
+import type { GalleryFilterState } from '../../lib/gallery-filters'
 
 export interface LeftPanelProps {
   leftPanelWidth: number
@@ -18,13 +21,12 @@ export interface LeftPanelProps {
   setCreatingBin: (v: boolean) => void
   newBinName: string
   setNewBinName: (v: string) => void
-  newBinInputRef: React.RefObject<HTMLInputElement | null>
   selectedBin: string | null
   setSelectedBin: (v: string | null) => void
   bins: string[]
   filteredAssets: Asset[]
-  assetFilter: 'all' | 'video' | 'image' | 'audio'
-  setAssetFilter: (v: 'all' | 'video' | 'image' | 'audio') => void
+  galleryFilter: GalleryFilterState
+  setGalleryFilter: (filter: GalleryFilterState) => void
   selectedAssetIds: Set<string>
   setSelectedAssetIds: React.Dispatch<React.SetStateAction<Set<string>>>
   assetLasso: { startX: number; startY: number; currentX: number; currentY: number } | null
@@ -32,6 +34,9 @@ export interface LeftPanelProps {
   assetGridRef: React.RefObject<HTMLDivElement | null>
   setAssetContextMenu: React.Dispatch<React.SetStateAction<{ assetId: string; x: number; y: number } | null>>
   setBinContextMenu: React.Dispatch<React.SetStateAction<{ bin: string; x: number; y: number } | null>>
+  onCreateBin: (name: string) => void
+  onRenameBin: (oldName: string, newName: string) => void
+  onDeleteBin: (name: string) => void
   setTakeContextMenu: React.Dispatch<React.SetStateAction<{ assetId: string; takeIndex: number; x: number; y: number } | null>>
   assets: Asset[]
   thumbnailMap: Record<string, string>
@@ -82,13 +87,12 @@ export function LeftPanel(props: LeftPanelProps) {
     setCreatingBin,
     newBinName,
     setNewBinName,
-    newBinInputRef,
     selectedBin,
     setSelectedBin,
     bins,
     filteredAssets,
-    assetFilter,
-    setAssetFilter,
+    galleryFilter,
+    setGalleryFilter,
     selectedAssetIds,
     setSelectedAssetIds,
     assetLasso,
@@ -96,6 +100,9 @@ export function LeftPanel(props: LeftPanelProps) {
     assetGridRef,
     setAssetContextMenu,
     setBinContextMenu,
+    onCreateBin,
+    onRenameBin,
+    onDeleteBin,
     setTakeContextMenu,
     assets,
     thumbnailMap,
@@ -191,14 +198,6 @@ export function LeftPanel(props: LeftPanelProps) {
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-white">Assets</h3>
             <div className="flex items-center gap-1">
-              <Tooltip content="Create bin" side="right">
-                <button
-                  onClick={() => setCreatingBin(true)}
-                  className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors"
-                >
-                  <FolderPlus className="h-4 w-4" />
-                </button>
-              </Tooltip>
               <Tooltip content="Import media" side="right">
                 <button
                   onClick={() => fileInputRef.current?.click()}
@@ -210,22 +209,40 @@ export function LeftPanel(props: LeftPanelProps) {
             </div>
           </div>
           
-          {/* Type filter + view toggle */}
+          {/* Shared Gen Space gallery controls */}
           <div className="flex items-center gap-1.5">
-            <div className="flex gap-1 bg-zinc-900 rounded-lg p-0.5 flex-1">
-              {(['all', 'video', 'image', 'audio'] as const).map(filter => (
-                <button
-                  key={filter}
-                  onClick={() => setAssetFilter(filter)}
-                  className={`flex-1 px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors ${
-                    assetFilter === filter 
-                      ? 'bg-zinc-800 text-white' 
-                      : 'text-zinc-500 hover:text-zinc-300'
-                  }`}
-                >
-                  {filter.charAt(0).toUpperCase() + filter.slice(1)}
-                </button>
-              ))}
+            <GalleryFilters filter={galleryFilter} onChange={setGalleryFilter} />
+            <div className="min-w-0 flex-1">
+              <GalleryBinBar
+                bins={bins}
+                assets={assets}
+                selectedBin={selectedBin}
+                creatingBin={creatingBin}
+                newBinName={newBinName}
+                onSelectBin={setSelectedBin}
+                onCreatingBinChange={setCreatingBin}
+                onNewBinNameChange={setNewBinName}
+                onCommitNewBin={(name) => {
+                  onCreateBin(name)
+                  if (selectedAssetIds.size > 0 && currentProjectId) {
+                    pushAssetUndoRef.current()
+                    selectedAssetIds.forEach(id => updateAsset(currentProjectId, id, { bin: name }))
+                    setSelectedAssetIds(new Set())
+                  }
+                  setSelectedBin(name)
+                  setCreatingBin(false)
+                  setNewBinName('')
+                }}
+                onAssignAssetToBin={(assetId, bin) => {
+                  if (!currentProjectId) return
+                  pushAssetUndoRef.current()
+                  updateAsset(currentProjectId, assetId, { bin })
+                }}
+                onRenameBin={onRenameBin}
+                onDeleteBin={onDeleteBin}
+                binContextMenu={null as GalleryBinContextMenuState | null}
+                onBinContextMenuChange={setBinContextMenu}
+              />
             </div>
             <div className="flex bg-zinc-900 rounded-lg p-0.5">
               <Tooltip content="Grid view" side="right">
@@ -246,107 +263,6 @@ export function LeftPanel(props: LeftPanelProps) {
               </Tooltip>
             </div>
           </div>
-          
-          {/* Bins row */}
-          {(bins.length > 0 || creatingBin) && (
-            <div className="flex flex-wrap gap-1">
-              <button
-                onClick={() => setSelectedBin(null)}
-                className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors flex items-center gap-1 ${
-                  selectedBin === null
-                    ? 'bg-blue-600/30 text-blue-300 border border-blue-500/40'
-                    : 'bg-zinc-800 text-zinc-500 hover:text-zinc-300 border border-transparent'
-                }`}
-              >
-                All
-              </button>
-              {bins.map(bin => (
-                <button
-                  key={bin}
-                  onClick={() => setSelectedBin(selectedBin === bin ? null : bin)}
-                  onContextMenu={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    setBinContextMenu({ bin, x: e.clientX, y: e.clientY })
-                  }}
-                  onDragOver={(e) => {
-                    e.preventDefault()
-                    e.currentTarget.classList.add('ring-2', 'ring-blue-400')
-                  }}
-                  onDragLeave={(e) => {
-                    e.currentTarget.classList.remove('ring-2', 'ring-blue-400')
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault()
-                    e.currentTarget.classList.remove('ring-2', 'ring-blue-400')
-                    if (!currentProjectId) return
-                    pushAssetUndoRef.current()
-                    // Handle multi-asset drag
-                    const assetIdsJson = e.dataTransfer.getData('assetIds')
-                    if (assetIdsJson) {
-                      try {
-                        const ids: string[] = JSON.parse(assetIdsJson)
-                        ids.forEach(id => updateAsset(currentProjectId, id, { bin }))
-                        setSelectedAssetIds(new Set())
-                      } catch { /* ignore parse errors */ }
-                    } else {
-                      const assetId = e.dataTransfer.getData('assetId')
-                      if (assetId) updateAsset(currentProjectId, assetId, { bin })
-                    }
-                  }}
-                  className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors flex items-center gap-1 group/bin ${
-                    selectedBin === bin
-                      ? 'bg-blue-600/30 text-blue-300 border border-blue-500/40'
-                      : 'bg-zinc-800 text-zinc-500 hover:text-zinc-300 border border-transparent'
-                  }`}
-                >
-                  <Folder className="h-3 w-3" />
-                  {bin}
-                  <span className="text-zinc-600 text-[9px]">
-                    {assets.filter(a => a.bin === bin).length}
-                  </span>
-                </button>
-              ))}
-              {creatingBin && (
-                <div className="flex items-center gap-1">
-                  <input
-                    ref={newBinInputRef as React.RefObject<HTMLInputElement>}
-                    type="text"
-                    value={newBinName}
-                    onChange={(e) => setNewBinName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && newBinName.trim()) {
-                        if (selectedAssetIds.size > 0 && currentProjectId) {
-                          pushAssetUndoRef.current()
-                          const binName = newBinName.trim()
-                          selectedAssetIds.forEach(id => updateAsset(currentProjectId, id, { bin: binName }))
-                          setSelectedAssetIds(new Set())
-                        }
-                        setCreatingBin(false)
-                        setNewBinName('')
-                      }
-                      if (e.key === 'Escape') {
-                        setCreatingBin(false)
-                        setNewBinName('')
-                      }
-                    }}
-                    onBlur={() => {
-                      if (newBinName.trim() && selectedAssetIds.size > 0 && currentProjectId) {
-                        pushAssetUndoRef.current()
-                        const binName = newBinName.trim()
-                        selectedAssetIds.forEach(id => updateAsset(currentProjectId, id, { bin: binName }))
-                        setSelectedAssetIds(new Set())
-                      }
-                      setCreatingBin(false)
-                      setNewBinName('')
-                    }}
-                    placeholder="Bin name..."
-                    className="w-20 px-1.5 py-0.5 rounded text-[10px] bg-zinc-800 border border-zinc-600 text-white placeholder-zinc-600 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              )}
-            </div>
-          )}
           
           <input
             ref={fileInputRef as React.RefObject<HTMLInputElement>}

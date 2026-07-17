@@ -76,6 +76,7 @@ def test_state(tmp_path: Path, fake_services: FakeServices):
     fake_wangp_bridge = build_fake_wangp_bridge(output_dir=outputs_dir)
     handler.wangp_bridge = fake_wangp_bridge
     handler.video_generation._wangp_bridge = fake_wangp_bridge  # type: ignore[attr-defined]
+    handler.director_generation._wangp_bridge = fake_wangp_bridge  # type: ignore[attr-defined]
     handler.image_generation._wangp_bridge = fake_wangp_bridge  # type: ignore[attr-defined]
     handler.prompt_enhancement._wangp_bridge = fake_wangp_bridge  # type: ignore[attr-defined]
     handler.health._wangp_bridge = fake_wangp_bridge  # type: ignore[attr-defined]
@@ -117,8 +118,10 @@ def enable_wangp(test_state, wangp_bridge):
     wangp_bridge.available = True
     wangp_bridge.video_calls.clear()
     wangp_bridge.image_calls.clear()
+    wangp_bridge.director_calls.clear()
     wangp_bridge.raise_on_video = None
     wangp_bridge.raise_on_images = None
+    wangp_bridge.raise_on_director = None
     yield wangp_bridge
     test_state.config.wangp_enabled = False
 

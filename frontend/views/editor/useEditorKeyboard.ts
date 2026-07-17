@@ -78,6 +78,7 @@ interface KeyboardContext {
 }
 
 export interface UseEditorKeyboardParams {
+  enabled: boolean
   refs: KeyboardRefs
   setters: KeyboardSetters
   context: KeyboardContext
@@ -85,12 +86,15 @@ export interface UseEditorKeyboardParams {
 
 export function useEditorKeyboard(params: UseEditorKeyboardParams) {
   const { refs, setters, context } = params
+  const enabledRef = useRef(params.enabled)
+  enabledRef.current = params.enabled
   const kHeldRef = useRef(false)
   const contextRef = useRef(context)
   contextRef.current = context
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (!enabledRef.current) return
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
       if (refs.isKbEditorOpenRef.current) return
 

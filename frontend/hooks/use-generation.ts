@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from "react";
 import { GenerationSettings } from "../components/SettingsPanel";
 import { backendFetch } from "../lib/backend";
+import type { GenerateDirectorRequest, GenerateDirectorResponse } from "../types/director";
 
 interface GenerationState {
   isGenerating: boolean;
@@ -22,6 +23,7 @@ interface GenerationState {
   imageUrls: string[]; // For multiple image variations
   imagePaths: string[]; // Original file paths for all images
   error: string | null;
+  directorResult?: GenerateDirectorResponse | null;
 }
 
 interface GenerationProgress {
@@ -82,6 +84,7 @@ interface UseGenerationReturn extends GenerationState {
     shotPrompts?: { seconds: number; prompt: string }[],
     reframe?: ReframeGenerateOptions,
   ) => Promise<void>;
+  generateDirector: (request: GenerateDirectorRequest) => Promise<void>;
   generateImage: (
     prompt: string,
     settings: GenerationSettings,
@@ -193,19 +196,21 @@ export function useGeneration(): UseGenerationReturn {
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const generate = useCallback(
+  const runVideoRequest = useCallback(
     async (
       prompt: string,
       imagePath: string | null,
-      settings: GenerationSettings,
+      settings: GenerationSettings | null,
       audioPath?: string | null,
       inputMedia?: InputMediaRequest[],
       useAudioTrack?: boolean,
       shotPrompts?: { seconds: number; prompt: string }[],
       reframe?: ReframeGenerateOptions,
+      directorRequest?: GenerateDirectorRequest,
     ) => {
-      const statusMsg =
-        settings.model === "pro"
+      const statusMsg = directorRequest
+        ? "Generating Director sequence..."
+        : settings?.model === "pro"
           ? "Loading Pro model & generating..."
           : "Generating video...";
 
@@ -236,70 +241,48 @@ export function useGeneration(): UseGenerationReturn {
       let shouldApplyPollingUpdates = true;
 
       try {
-        // Prepare JSON body
-        const body: Record<string, unknown> = {
-          prompt,
-          model: settings.model,
-          modelProfileId: settings.videoProfileId,
-          duration: String(settings.duration),
-          resolution: settings.videoResolution,
-          fps: String(settings.fps),
-          audio: String(settings.audio),
-          cameraMotion: settings.cameraMotion,
-          aspectRatio: settings.aspectRatio || "16:9",
-          useAudioTrack: useAudioTrack !== undefined ? useAudioTrack : true,
-        };
-        if (imagePath) {
-          body.imagePath = imagePath;
-        }
-        if (audioPath) {
-          body.audioPath = audioPath;
-        }
-        if (inputMedia && inputMedia.length > 0) {
-          body.inputMedia = inputMedia.map((item) => {
-            let type = item.type || "image";
-            if (
-              [
-                "control_video",
-                "human_motion",
-                "human_motion_pose",
-                "depth",
-                "canny_edges",
-                "sdr_to_hdr",
-                "continue_video",
-              ].includes(item.role)
-            ) {
-              type = "video";
-            } else if (
-              ["audio_guide", "audio_to_video", "reference_voice"].includes(
-                item.role,
-              )
-            ) {
-              type = "audio";
-            }
-            return {
-              type,
-              path: item.path,
-              role: item.role,
-              trimStartTime: item.trimStartTime,
-              trimDuration: item.trimDuration,
-            };
-          });
-        }
-        if (shotPrompts && shotPrompts.length > 0) {
-          body.shotPrompts = shotPrompts;
-        }
-        if (reframe) {
-          body.prompt = prompt.trim() || "outpaint";
-          body.videoPromptType = "VG";
-          body.reframe = normalizeReframeForApi(reframe);
+        let body: Record<string, unknown>;
+        let endpoint = "/api/generate";
+        if (directorRequest) {
+          body = { ...directorRequest };
+          endpoint = "/api/director/generate";
+        } else {
+          if (!settings) throw new Error("Generation settings are required");
+          body = {
+            prompt,
+            model: settings.model,
+            modelProfileId: settings.videoProfileId,
+            duration: String(settings.duration),
+            resolution: settings.videoResolution,
+            fps: String(settings.fps),
+            audio: String(settings.audio),
+            cameraMotion: settings.cameraMotion,
+            aspectRatio: settings.aspectRatio || "16:9",
+            useAudioTrack: useAudioTrack !== undefined ? useAudioTrack : true,
+          };
+          if (imagePath) body.imagePath = imagePath;
+          if (audioPath) body.audioPath = audioPath;
+          if (inputMedia && inputMedia.length > 0) {
+            body.inputMedia = inputMedia.map((item) => {
+              let type = item.type || "image";
+              if (["control_video", "human_motion", "human_motion_pose", "depth", "canny_edges", "sdr_to_hdr", "continue_video"].includes(item.role)) type = "video";
+              else if (["audio_guide", "audio_to_video", "reference_voice"].includes(item.role)) type = "audio";
+              return { type, path: item.path, role: item.role, trimStartTime: item.trimStartTime, trimDuration: item.trimDuration };
+            });
+          }
+          if (shotPrompts && shotPrompts.length > 0) body.shotPrompts = shotPrompts;
+          if (reframe) {
+            body.prompt = prompt.trim() || "outpaint";
+            body.videoPromptType = "VG";
+            body.reframe = normalizeReframeForApi(reframe);
+          }
         }
 
         // Poll for real progress from backend with time-based interpolation
         let lastPhase = "";
         let inferenceStartTime = 0;
         // Estimated inference time in seconds based on model
-        const estimatedInferenceTime = settings.model === "pro" ? 120 : 45;
+        const estimatedInferenceTime = settings?.model === "pro" ? 120 : 45;
 
         const pollProgress = async () => {
           if (!shouldApplyPollingUpdates) return;
@@ -361,7 +344,7 @@ export function useGeneration(): UseGenerationReturn {
         progressInterval = setInterval(pollProgress, 500);
 
         // Start generation (HTTP POST - synchronous, returns when done)
-        const response = await backendFetch("/api/generate", {
+        const response = await backendFetch(endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
@@ -403,6 +386,7 @@ export function useGeneration(): UseGenerationReturn {
             imageUrls: [],
             imagePaths: [],
             error: null,
+            directorResult: directorRequest ? result as GenerateDirectorResponse : null,
           });
         } else if (result.status === "cancelled") {
           setState((prev) => ({
@@ -438,6 +422,17 @@ export function useGeneration(): UseGenerationReturn {
       }
     },
     [],
+  );
+
+  const generate = useCallback<UseGenerationReturn["generate"]>(
+    (...args) => runVideoRequest(...args),
+    [runVideoRequest],
+  );
+
+  const generateDirector = useCallback(
+    (request: GenerateDirectorRequest) =>
+      runVideoRequest("", null, null, undefined, undefined, undefined, undefined, undefined, request),
+    [runVideoRequest],
   );
 
   const cancel = useCallback(async () => {
@@ -685,6 +680,7 @@ export function useGeneration(): UseGenerationReturn {
   return {
     ...state,
     generate,
+    generateDirector,
     generateImage,
     cancel,
     reset,

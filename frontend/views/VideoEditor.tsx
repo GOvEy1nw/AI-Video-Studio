@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import {
   Plus, Trash2,
-  ZoomIn, ZoomOut, Maximize2,
+  ZoomIn,
   Volume2, VolumeX, Copy,
   Layers,
   Gauge, Upload,
@@ -20,6 +20,7 @@ import { useGeneration } from '../hooks/use-generation'
 import { Button } from '../components/ui/button'
 import { logger } from '../lib/logger'
 import { Tooltip } from '../components/ui/tooltip'
+import { collectGalleryBins, DEFAULT_GALLERY_FILTER, filterGalleryAssets, filterGalleryAssetsByBin, type GalleryFilterState } from '../lib/gallery-filters'
 import { ExportModal } from '../components/ExportModal'
 import { MenuBar, type MenuDefinition } from '../components/MenuBar'
 import { ImportTimelineModal } from '../components/ImportTimelineModal'
@@ -59,6 +60,12 @@ import { GapGenerationModal } from './editor/GapGenerationModal'
 import { GenerationErrorDialog } from '../components/GenerationErrorDialog'
 import { I2vGenerationModal } from './editor/I2vGenerationModal'
 import { SubtitleTrackStyleEditor } from './editor/SubtitleTrackStyleEditor'
+import {
+  TimelinePlayhead,
+  TimelineRuler,
+  TimelineSegmentFrame,
+  TimelineZoomControls,
+} from './editor/timeline/TimelinePrimitives'
 
 // Custom scissors cursor SVG for the blade tool (white with dark outline for contrast)
 const SCISSORS_CURSOR_SVG = `<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='6' cy='6' r='3'/><path d='M8.12 8.12 12 12'/><path d='M20 4 8.12 15.88'/><circle cx='6' cy='18' r='3'/><path d='M14.8 14.8 20 20'/></svg>`
@@ -74,9 +81,10 @@ export function VideoEditor() {
   const { 
     currentProject, currentProjectId, addAsset, deleteAsset, updateAsset,
     addTakeToAsset, deleteTakeFromAsset, setAssetActiveTake,
+    createAssetBin, renameAssetBin, deleteAssetBin,
     addTimeline, deleteTimeline, renameTimeline, duplicateTimeline,
     setActiveTimeline, updateTimeline, getActiveTimeline,
-    setCurrentTab, setGenSpaceEditImageUrl, setGenSpaceEditMode, setGenSpaceAudioUrl,
+    currentTab, setCurrentTab, setGenSpaceEditImageUrl, setGenSpaceEditMode, setGenSpaceAudioUrl,
     setGenSpaceRetakeSource, pendingRetakeUpdate, setPendingRetakeUpdate,
   } = useProjects()
 
@@ -115,7 +123,7 @@ export function VideoEditor() {
   const [isPlaying, setIsPlaying] = useState(false)
   const [zoom, setZoom] = useState(1)
   const [selectedClipIds, setSelectedClipIds] = useState<Set<string>>(new Set())
-  const [assetFilter, setAssetFilter] = useState<'all' | 'video' | 'image' | 'audio'>('all')
+  const [galleryFilter, setGalleryFilter] = useState<GalleryFilterState>(DEFAULT_GALLERY_FILTER)
   const [selectedBin, setSelectedBin] = useState<string | null>(null) // null = all assets
   const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(new Set())
   // Lasso selection for assets
@@ -246,12 +254,13 @@ export function VideoEditor() {
   
   // Resizable layout
   const [layout, setLayout] = useState<EditorLayout>(loadLayout)
+  const previewAreaRef = useRef<HTMLDivElement>(null)
   const resizeDragRef = useRef<{
     type: 'left' | 'right' | 'timeline' | 'assets'
     startPos: number
     startSize: number
   } | null>(null)
-  
+
   // JKL shuttle speed: -8, -4, -2, -1, 0, 1, 2, 4, 8
   const [shuttleSpeed, setShuttleSpeed] = useState(0)
   
@@ -404,8 +413,9 @@ export function VideoEditor() {
   }, [layoutPresets])
 
   const handleApplyLayoutPreset = useCallback((preset: LayoutPreset) => {
-    setLayout({ ...preset.layout })
-    saveLayout({ ...preset.layout })
+    const next = { ...DEFAULT_LAYOUT, ...preset.layout }
+    setLayout(next)
+    saveLayout(next)
   }, [])
 
   // Close layout menu on outside click
@@ -490,6 +500,14 @@ export function VideoEditor() {
     }
   }, [sourceIsPlaying])
 
+  useEffect(() => {
+    if (currentTab === 'video-editor') return
+    setIsPlaying(false)
+    setShuttleSpeed(0)
+    sourceVideoRef.current?.pause()
+    setSourceIsPlaying(false)
+  }, [currentTab, setSourceIsPlaying, sourceVideoRef])
+
   // Clip/track operations (extracted hook)
   const {
     addClipToTimeline, handleImportFile,
@@ -537,26 +555,12 @@ export function VideoEditor() {
   // Keep assetsRef in sync (declared after assets to avoid forward-reference)
   useEffect(() => { assetsRef.current = assets }, [assets])
   
-  // Compute bins from assets
-  const bins = useMemo(() => {
-    const binSet = new Set<string>()
-    for (const asset of assets) {
-      if (asset.bin) binSet.add(asset.bin)
-    }
-    return Array.from(binSet).sort()
-  }, [assets])
+  const bins = useMemo(() => collectGalleryBins(assets, currentProject?.assetBins), [assets, currentProject?.assetBins])
   
   // Filter assets by type + bin
   const filteredAssets = useMemo(() => {
-    let result = assets
-    if (assetFilter !== 'all') {
-      result = result.filter(a => a.type === assetFilter)
-    }
-    if (selectedBin !== null) {
-      result = result.filter(a => a.bin === selectedBin)
-    }
-    return result
-  }, [assets, assetFilter, selectedBin])
+    return filterGalleryAssetsByBin(filterGalleryAssets(assets, galleryFilter), selectedBin)
+  }, [assets, galleryFilter, selectedBin])
   
   // --- Thumbnail generation for video assets ---
   const [thumbnailMap, setThumbnailMap] = useState<Record<string, string>>({})
@@ -1084,6 +1088,7 @@ export function VideoEditor() {
   })
   
   useEditorKeyboard({
+    enabled: currentTab === 'video-editor',
     refs: {
       kbLayoutRef,
       isKbEditorOpenRef,
@@ -1656,7 +1661,6 @@ export function VideoEditor() {
     return classifyResolution(h)
   }, [getClipUrl, resolutionCache, assets, classifyResolution])
 
-
   // Menu bar definitions (extracted)
   const menuDefinitions: MenuDefinition[] = useMemo(() => buildMenuDefinitions({
     selectedClip, selectedClipIds, clips, tracks, subtitles, snapEnabled,
@@ -1674,14 +1678,14 @@ export function VideoEditor() {
     handleAddTimeline, handleDuplicateTimeline, handleResetLayout,
   }), [selectedClip, selectedClipIds, clips, tracks, subtitles, snapEnabled, showEffectsBrowser, showSourceMonitor, showPropertiesPanel, _showICLoraPanel, sourceAsset, activeTool, activeTimeline, timelines, handleInsertEdit, handleOverwriteEdit, kbLayout])
 
-
   // --- Render ---
   
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Menu Bar */}
       <MenuBar menus={menuDefinitions} rightContent={
-        <div ref={layoutMenuRef} className="relative">
+        <div className="flex items-center gap-1">
+          <div ref={layoutMenuRef} className="relative">
           <button
             onClick={() => setShowLayoutMenu(v => !v)}
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[12px] transition-colors ${
@@ -1785,6 +1789,7 @@ export function VideoEditor() {
               )}
             </div>
           )}
+          </div>
         </div>
       } />
       {/* Main Content */}
@@ -1798,13 +1803,12 @@ export function VideoEditor() {
         setCreatingBin={setCreatingBin}
         newBinName={newBinName}
         setNewBinName={setNewBinName}
-        newBinInputRef={newBinInputRef}
         selectedBin={selectedBin}
         setSelectedBin={setSelectedBin}
         bins={bins}
         filteredAssets={filteredAssets}
-        assetFilter={assetFilter}
-        setAssetFilter={setAssetFilter}
+        galleryFilter={galleryFilter}
+        setGalleryFilter={setGalleryFilter}
         selectedAssetIds={selectedAssetIds}
         setSelectedAssetIds={setSelectedAssetIds}
         assetLasso={assetLasso}
@@ -1812,6 +1816,19 @@ export function VideoEditor() {
         assetGridRef={assetGridRef}
         setAssetContextMenu={setAssetContextMenu}
         setBinContextMenu={setBinContextMenu}
+        onCreateBin={(name) => currentProjectId && createAssetBin(currentProjectId, name)}
+        onRenameBin={(oldName, newName) => {
+          if (!currentProjectId) return
+          pushAssetUndoRef.current()
+          renameAssetBin(currentProjectId, oldName, newName)
+          if (selectedBin === oldName) setSelectedBin(newName)
+        }}
+        onDeleteBin={(name) => {
+          if (!currentProjectId) return
+          pushAssetUndoRef.current()
+          deleteAssetBin(currentProjectId, name)
+          if (selectedBin === name) setSelectedBin(null)
+        }}
         setTakeContextMenu={setTakeContextMenu}
         assets={assets}
         thumbnailMap={thumbnailMap}
@@ -1862,7 +1879,10 @@ export function VideoEditor() {
       {/* Main Editor Area */}
       <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
         {/* Preview Area (optionally split into Clip Viewer + Timeline Viewer) */}
-        <div className="flex-1 flex min-h-0 min-w-0">
+        <div
+          ref={previewAreaRef}
+          className="flex-1 flex min-h-0 min-w-0"
+        >
           
           {/* === Clip Viewer (Source Monitor) === */}
           {showSourceMonitor && (
@@ -2403,38 +2423,16 @@ export function VideoEditor() {
                 )}
               </div>
               <div ref={rulerScrollRef} className="flex-1 overflow-hidden">
-                <div 
+                <TimelineRuler
                   ref={timelineRef}
-                  style={{ minWidth: `${totalDuration * pixelsPerSecond}px` }}
-                  className={`h-6 bg-zinc-900 border-b border-zinc-800 relative select-none ${
-                    'cursor-pointer'
-                  }`}
+                  durationUnits={totalDuration}
+                  pixelsPerUnit={pixelsPerSecond}
+                  majorInterval={rulerInterval}
+                  minorInterval={rulerSubInterval}
+                  formatLabel={formatTime}
+                  className="cursor-pointer"
                   onMouseDown={handleRulerMouseDown}
                 >
-                  {(() => {
-                    const ticks: React.ReactNode[] = []
-                    // Render major + minor ticks up to totalDuration
-                    const end = totalDuration + rulerInterval
-                    for (let t = 0; t < end; t = +(t + rulerSubInterval).toFixed(4)) {
-                      const isMajor = Math.abs(t % rulerInterval) < 0.001 || Math.abs(t % rulerInterval - rulerInterval) < 0.001
-                      const leftPx = t * pixelsPerSecond
-                      ticks.push(
-                        <div
-                          key={t}
-                          className="absolute top-0 bottom-0"
-                          style={{ left: `${leftPx}px` }}
-                        >
-                          <div className={`h-full border-l ${isMajor ? 'border-zinc-700' : 'border-zinc-800'}`} />
-                          {isMajor && (
-                            <span className="absolute left-1 bottom-0.5 text-[10px] text-zinc-500 whitespace-nowrap leading-none">
-                              {formatTime(t)}
-                            </span>
-                          )}
-                        </div>
-                      )
-                    }
-                    return ticks
-                  })()}
                   {/* Dimmed region BEFORE In point on ruler */}
                   {inPoint !== null && (
                     <div
@@ -2490,14 +2488,13 @@ export function VideoEditor() {
                     </div>
                   )}
                   {/* Playhead (ruler) — position updated by rAF engine during playback */}
-                  <div 
+                  <TimelinePlayhead
                     ref={playheadRulerRef}
-                    className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-20 pointer-events-none"
-                    style={{ left: `${currentTime * pixelsPerSecond}px` }}
-                  >
-                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent border-t-red-500" />
-                  </div>
-                </div>
+                    position={currentTime * pixelsPerSecond}
+                    rulerHead
+                    className="z-20"
+                  />
+                </TimelineRuler>
               </div>
             </div>
             
@@ -2782,10 +2779,9 @@ export function VideoEditor() {
               {/* Scrollable track content area */}
               <div className="flex-1 flex flex-col min-w-0 relative overflow-hidden">
                 {/* Full-height playhead line — spans spacer + tracks, positioned on the wrapper */}
-                <div
+                <TimelinePlayhead
                   ref={playheadOverlayRef}
-                  className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-30 pointer-events-none"
-                  style={{ left: `${currentTime * pixelsPerSecond - (trackContainerRef.current?.scrollLeft || 0)}px` }}
+                  position={currentTime * pixelsPerSecond - (trackContainerRef.current?.scrollLeft || 0)}
                 />
                 {/* Spacer matching the add-track button bar height */}
                 <div className="flex-shrink-0 h-7 border-b border-zinc-700/50" />
@@ -3024,9 +3020,9 @@ export function VideoEditor() {
                     const liveAsset = clip.assetId ? assets.find(a => a.id === clip.assetId) : null
                     const clipColor = getColorLabel(clip.colorLabel || liveAsset?.colorLabel || clip.asset?.colorLabel)
                     return (
-                    <div
+                    <TimelineSegmentFrame
                       key={clip.id}
-                      className={`absolute rounded border-2 transition-all overflow-hidden select-none ${
+                      className={`absolute border-2 transition-all ${
                         selectedClipIds.has(clip.id) 
                           ? 'border-blue-500 shadow-lg shadow-blue-500/20' 
                           : clipColor
@@ -3293,7 +3289,7 @@ export function VideoEditor() {
                           activeTool === 'roll' ? 'bg-yellow-300' : activeTool === 'ripple' ? 'bg-green-300' : 'bg-zinc-500'
                         }`} />
                       </div>
-                    </div>
+                    </TimelineSegmentFrame>
                   )})}
                   
                   {/* Gap indicators between clips */}
@@ -3786,43 +3782,14 @@ export function VideoEditor() {
           <div className="flex-1" />
           
           {/* Zoom slider bar */}
-          <div className="flex items-center gap-2">
-            <Tooltip content="Zoom out (-)" side="top">
-              <button
-                onClick={() => { centerOnPlayheadRef.current = true; setZoom(Math.max(getMinZoom(), +(zoom - 0.25).toFixed(2))) }}
-                className="p-0.5 rounded hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300 transition-colors"
-              >
-                <ZoomOut className="h-3.5 w-3.5" />
-              </button>
-            </Tooltip>
-            <input
-              type="range"
-              min={Math.max(1, Math.round(getMinZoom() * 100))}
-              max={400}
-              step={5}
-              value={Math.round(zoom * 100)}
-              onChange={(e) => { centerOnPlayheadRef.current = true; setZoom(Math.max(getMinZoom(), +(parseInt(e.target.value) / 100).toFixed(2))) }}
-              className="w-28 h-1 accent-blue-500 cursor-pointer"
-              title={`Zoom: ${Math.round(zoom * 100)}%`}
-            />
-            <Tooltip content="Zoom in (+)" side="top">
-              <button
-                onClick={() => { centerOnPlayheadRef.current = true; setZoom(Math.min(4, +(zoom + 0.25).toFixed(2))) }}
-                className="p-0.5 rounded hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300 transition-colors"
-              >
-                <ZoomIn className="h-3.5 w-3.5" />
-              </button>
-            </Tooltip>
-            <span className="text-[10px] text-zinc-500 tabular-nums w-8 text-right">{Math.round(zoom * 100)}%</span>
-            <Tooltip content="Fit to view (Ctrl+0)" side="top">
-              <button
-                onClick={handleFitToView}
-                className="p-0.5 rounded hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300 transition-colors ml-0.5"
-              >
-                <Maximize2 className="h-3.5 w-3.5" />
-              </button>
-            </Tooltip>
-          </div>
+          <TimelineZoomControls
+            value={zoom}
+            min={Math.max(0.01, getMinZoom())}
+            max={4}
+            step={0.25}
+            onChange={(value) => { centerOnPlayheadRef.current = true; setZoom(+value.toFixed(2)) }}
+            onFit={handleFitToView}
+          />
         </div>
       </div>
       
@@ -3983,9 +3950,7 @@ export function VideoEditor() {
               const newName = prompt('Rename bin:', binContextMenu.bin)
               if (newName?.trim() && currentProjectId && newName.trim() !== binContextMenu.bin) {
                 pushAssetUndoRef.current()
-                for (const asset of assets.filter(a => a.bin === binContextMenu.bin)) {
-                  updateAsset(currentProjectId, asset.id, { bin: newName.trim() })
-                }
+                renameAssetBin(currentProjectId, binContextMenu.bin, newName.trim())
                 if (selectedBin === binContextMenu.bin) setSelectedBin(newName.trim())
               }
               setBinContextMenu(null)
@@ -3999,9 +3964,7 @@ export function VideoEditor() {
             onClick={() => {
               if (currentProjectId) {
                 pushAssetUndoRef.current()
-                for (const asset of assets.filter(a => a.bin === binContextMenu.bin)) {
-                  updateAsset(currentProjectId, asset.id, { bin: undefined })
-                }
+                deleteAssetBin(currentProjectId, binContextMenu.bin)
                 if (selectedBin === binContextMenu.bin) setSelectedBin(null)
               }
               setBinContextMenu(null)
@@ -4051,7 +4014,9 @@ export function VideoEditor() {
             updateClip={updateClip}
             getLiveAsset={getLiveAsset}
             getMaxClipDuration={getMaxClipDuration}
-            setAssetFilter={setAssetFilter}
+            setAssetFilter={(filter) => setGalleryFilter(filter === 'all'
+              ? DEFAULT_GALLERY_FILTER
+              : { ...DEFAULT_GALLERY_FILTER, types: [filter] })}
             setSelectedBin={setSelectedBin}
             setTakesViewAssetId={setTakesViewAssetId}
             setSelectedAssetIds={setSelectedAssetIds}

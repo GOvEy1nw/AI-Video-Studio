@@ -1,0 +1,6 @@
+{
+  "model_type": "ltx2_22B_distilled_1_1",
+  "multi_prompts_gen_type": "FG",
+  "video_prompt_type": "I",
+  "image_refs": ["$REFERENCE_SHEET"]
+}

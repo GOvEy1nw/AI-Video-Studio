@@ -65,6 +65,11 @@ class FakeWangpEnhancePromptCall:
 
 
 @dataclass
+class FakeWangpDirectorCall:
+    settings: dict[str, object]
+
+
+@dataclass
 class FakeWanGPBridge:
     """Test stand-in for ``WanGPBridge``.
 
@@ -93,9 +98,11 @@ class FakeWanGPBridge:
     video_calls: list[FakeWangpVideoCall] = field(default_factory=list)
     image_calls: list[FakeWangpImageCall] = field(default_factory=list)
     enhance_prompt_calls: list[FakeWangpEnhancePromptCall] = field(default_factory=list)
+    director_calls: list[FakeWangpDirectorCall] = field(default_factory=list)
     raise_on_video: Exception | None = None
     raise_on_images: Exception | None = None
     raise_on_enhance_prompt: Exception | None = None
+    raise_on_director: Exception | None = None
 
     def get_status(self) -> WanGPBridgeStatus:
         return WanGPBridgeStatus(
@@ -213,6 +220,21 @@ class FakeWanGPBridge:
             image_path.write_bytes(b"fake-wangp-image")
             outputs.append(str(image_path))
         return outputs
+
+    def generate_director_video(
+        self,
+        *,
+        settings: dict[str, object],
+        on_progress: ProgressCallback,
+        is_cancelled: Callable[[], bool],
+    ) -> str:
+        self.director_calls.append(FakeWangpDirectorCall(settings=dict(settings)))
+        if self.raise_on_director is not None:
+            raise self.raise_on_director
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = self.output_dir / f"fake_wangp_director_{uuid.uuid4().hex[:8]}.mp4"
+        output_path.write_bytes(b"fake-wangp-director")
+        return str(output_path)
 
     def enhance_prompt(
         self,

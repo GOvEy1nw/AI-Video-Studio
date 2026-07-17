@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 from state.app_settings import AppSettings
 from handlers import (
+    DirectorGenerationHandler,
     GenerationHandler,
     HealthHandler,
     ImageGenerationHandler,
@@ -72,6 +73,15 @@ class AppHandler:
         self.generation = GenerationHandler(state=self.state, lock=self._lock)
 
         self.video_generation = VideoGenerationHandler(
+            state=self.state,
+            lock=self._lock,
+            generation_handler=self.generation,
+            outputs_dir=config.outputs_dir,
+            config=config,
+            wangp_bridge=self.wangp_bridge,
+        )
+
+        self.director_generation = DirectorGenerationHandler(
             state=self.state,
             lock=self._lock,
             generation_handler=self.generation,

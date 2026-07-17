@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse
 from starlette.responses import Response as StarletteResponse
 
 from _routes._errors import HTTPError
+from _routes.director import router as director_router
 from _routes.generation import router as generation_router
 from _routes.health import router as health_router
 from _routes.image_gen import router as image_gen_router
@@ -106,5 +107,6 @@ def create_app(
     app.include_router(image_gen_router)
     app.include_router(retake_router)
     app.include_router(model_profiles_router)
+    app.include_router(director_router)
 
     return app

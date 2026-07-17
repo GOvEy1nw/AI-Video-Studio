@@ -50,6 +50,23 @@ AvailabilityState = Literal[
     "experimental",
     "hidden",
 ]
+DirectorGuidanceMode = Literal["human_motion", "depth", "ingredients"]
+
+
+@dataclass(frozen=True)
+class DirectorPolicy:
+    enabled: bool = False
+    prompt_relay: bool = False
+    injected_frames: bool = False
+    continue_video: bool = False
+    guide_audio_start_only: bool = False
+    max_image_keyframes: int | None = None
+    max_guidance_segments: int = 0
+    guidance_modes: tuple[DirectorGuidanceMode, ...] = ()
+    max_duration_seconds: int = 20
+    allow_keyframes_with_video_guidance: bool = False
+    allow_keyframes_with_ingredients: bool = False
+    allow_guide_audio_with_guidance: bool = False
 
 
 @dataclass(frozen=True)
@@ -134,6 +151,7 @@ class ModelProfile:
     wangp_resolution_categories: tuple[str, ...] = ()
     max_parallel_images: int = 1
     max_total_variations: int = 12
+    director: DirectorPolicy = field(default_factory=DirectorPolicy)
 
 
 REFERENCE_SUBJECT_ROLE = InputMediaRole(
@@ -934,6 +952,20 @@ VIDEO_PROFILES: tuple[ModelProfile, ...] = (
         default_resolution_tier="540p",
         allowed_aspect_ratios=("1:1", "16:9", "9:16"),
         allowed_resolution_tiers=("540p", "720p", "1080p"),
+        director=DirectorPolicy(
+            enabled=True,
+            prompt_relay=True,
+            injected_frames=True,
+            continue_video=True,
+            guide_audio_start_only=True,
+            max_image_keyframes=16,
+            max_guidance_segments=1,
+            guidance_modes=("human_motion", "depth", "ingredients"),
+            max_duration_seconds=20,
+            allow_keyframes_with_video_guidance=False,
+            allow_keyframes_with_ingredients=False,
+            allow_guide_audio_with_guidance=False,
+        ),
     ),
 )
 

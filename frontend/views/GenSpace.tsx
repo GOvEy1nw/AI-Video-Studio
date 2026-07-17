@@ -35,7 +35,6 @@ import {
   AlertCircle,
   Pencil,
   LoaderCircle,
-  Plus,
   ListFilter,
   List,
   Folder,
@@ -123,18 +122,6 @@ type ImageInputItem = {
   mediaDuration?: number;
 };
 
-type MultiShotRow = {
-  id: string;
-  seconds: number;
-  prompt: string;
-};
-
-const MAX_MULTI_SHOT_SECONDS = 20;
-const MULTI_SHOT_SECONDS = Array.from(
-  { length: MAX_MULTI_SHOT_SECONDS },
-  (_, index) => index + 1,
-);
-
 const GUIDE_MEDIA_ROLES = [
   "control_video",
   "human_motion",
@@ -147,14 +134,6 @@ const GUIDE_MEDIA_ROLES = [
   "audio_to_video",
   "reference_voice",
 ];
-
-function createMultiShotRow(seconds = 4): MultiShotRow {
-  return {
-    id: crypto.randomUUID(),
-    seconds,
-    prompt: "",
-  };
-}
 
 function MediaInputTrimEditor({
   item,
@@ -329,20 +308,6 @@ function MediaInputTrimEditor({
       </div>
     </div>
   );
-}
-
-function formatMultiShotPrompt(
-  globalPrompt: string,
-  rows: MultiShotRow[],
-): string {
-  let cursor = 0;
-  const relayedPrompts = rows.map((row) => {
-    const start = cursor;
-    cursor += row.seconds;
-    return `[${start}s:${cursor}s] ${row.prompt.trim()}`;
-  });
-
-  return [globalPrompt.trim(), ...relayedPrompts].filter(Boolean).join("\n");
 }
 
 // Asset card with hover overlays
@@ -1140,10 +1105,6 @@ function PromptBar({
   videoProfiles,
   useAudioTrack,
   onUseAudioTrackChange,
-  multiShotEnabled,
-  onMultiShotEnabledChange,
-  multiShotRows,
-  onMultiShotRowsChange,
   syncInputFileToGallery,
   mediaInputsExpandKey = 0,
   reframeDurationSeconds,
@@ -1190,10 +1151,6 @@ function PromptBar({
   videoProfiles: ModelProfile[];
   useAudioTrack: boolean;
   onUseAudioTrackChange: (v: boolean) => void;
-  multiShotEnabled: boolean;
-  onMultiShotEnabledChange: (enabled: boolean) => void;
-  multiShotRows: MultiShotRow[];
-  onMultiShotRowsChange: (rows: MultiShotRow[]) => void;
   syncInputFileToGallery?: (file: File) => Promise<string | null>;
   mediaInputsExpandKey?: number;
   reframeDurationSeconds?: number;
@@ -1242,11 +1199,6 @@ function PromptBar({
     imageInputPolicy?.defaultRole ||
     imageInputPolicy?.roles[0]?.role ||
     "reference_subject";
-  const multiShotTotalSeconds = multiShotRows.reduce(
-    (total, row) => total + row.seconds,
-    0,
-  );
-
   useEffect(() => {
     if (mode !== "video" || !selectedVideoProfile) return;
     const allowedAspects = selectedVideoProfile.ui.allowedAspectRatios;
@@ -1684,26 +1636,6 @@ function PromptBar({
       e.preventDefault();
       onGenerate();
     }
-  };
-
-  const updateMultiShotRow = (id: string, patch: Partial<MultiShotRow>) => {
-    onMultiShotRowsChange(
-      multiShotRows.map((row) => (row.id === id ? { ...row, ...patch } : row)),
-    );
-  };
-
-  const removeMultiShotRow = (id: string) => {
-    if (multiShotRows.length <= 2) return;
-    onMultiShotRowsChange(multiShotRows.filter((row) => row.id !== id));
-  };
-
-  const addMultiShotRow = () => {
-    const remaining = MAX_MULTI_SHOT_SECONDS - multiShotTotalSeconds;
-    if (remaining <= 0) return;
-    onMultiShotRowsChange([
-      ...multiShotRows,
-      createMultiShotRow(Math.min(4, remaining)),
-    ]);
   };
 
   const videoModelOptions = videoProfiles.map((profile) => ({
@@ -2422,43 +2354,23 @@ function PromptBar({
 
         {/* Prompt input - fills remaining width */}
         <div className="flex flex-1 min-w-0 flex-col py-1">
-          {!(mode === "video" && multiShotEnabled) && (
-            <textarea
-              value={prompt}
-              onChange={(e) => onPromptChange(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={
-                isReframe
-                  ? "optional text prompt to drive outpainting..."
-                  : isRetake
-                    ? "Describe what should happen in the selected section..."
-                    : mode === "image"
-                      ? "A close-up of a woman talking on the phone..."
-                      : "The woman sips from a cup of coffee..."
-              }
-              className="w-full bg-transparent text-white text-sm placeholder:text-zinc-500 focus:outline-none px-2 py-2 resize-none overflow-y-auto h-[70px] leading-5"
-            />
-          )}
+          <textarea
+            value={prompt}
+            onChange={(e) => onPromptChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={
+              isReframe
+                ? "optional text prompt to drive outpainting..."
+                : isRetake
+                  ? "Describe what should happen in the selected section..."
+                  : mode === "image"
+                    ? "A close-up of a woman talking on the phone..."
+                    : "The woman sips from a cup of coffee..."
+            }
+            className="w-full bg-transparent text-white text-sm placeholder:text-zinc-500 focus:outline-none px-2 py-2 resize-none overflow-y-auto h-[70px] leading-5"
+          />
           {!isPanelMode && (
-            <div
-              className={`flex items-center gap-2 px-2 pb-0.5 pt-1 ${mode === "video" ? "justify-between" : "justify-end"}`}
-            >
-              {mode === "video" && (
-                <button
-                  type="button"
-                  onClick={() => onMultiShotEnabledChange(!multiShotEnabled)}
-                  disabled={isGenerating}
-                  className={`flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] font-medium transition-colors ${
-                    multiShotEnabled
-                      ? "bg-blue-500/20 text-blue-300 hover:bg-blue-500/30"
-                      : "bg-zinc-800/80 text-zinc-400 hover:bg-zinc-700 hover:text-white"
-                  } disabled:opacity-40`}
-                  title="Timing"
-                >
-                  <Film className="h-3 w-3" />
-                  Timing
-                </button>
-              )}
+            <div className="flex items-center justify-end gap-2 px-2 pb-0.5 pt-1">
               <div className="flex items-center gap-2">
                 <SeedControl
                   seedLocked={seedLocked}
@@ -2485,95 +2397,6 @@ function PromptBar({
           )}
         </div>
       </div>
-
-      {mode === "video" && !isPanelMode && multiShotEnabled && (
-        <div className="max-h-72 overflow-y-auto border-t border-zinc-800/60 bg-zinc-950/30">
-          <div className="flex items-center gap-2 border-b border-zinc-800/60 px-2 py-2">
-            <div className="flex h-8 w-[82px] shrink-0 items-center justify-center rounded-md bg-zinc-800/80 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
-              Global
-            </div>
-            <input
-              value={prompt}
-              onChange={(e) => onPromptChange(e.target.value)}
-              placeholder="Global prompt for the whole video"
-              className="min-w-0 flex-1 bg-transparent text-sm text-white placeholder:text-zinc-600 focus:outline-none"
-            />
-          </div>
-          {multiShotRows.map((row, index) => {
-            const secondsUsedByOtherRows = multiShotTotalSeconds - row.seconds;
-            const maxForRow = Math.max(
-              1,
-              MAX_MULTI_SHOT_SECONDS - secondsUsedByOtherRows,
-            );
-            const durationOptions = MULTI_SHOT_SECONDS.filter(
-              (value) => value <= maxForRow,
-            );
-
-            return (
-              <div
-                key={row.id}
-                className="flex items-center gap-2 border-b border-zinc-800/60 px-2 py-2"
-              >
-                <label className="flex h-8 w-[92px] shrink-0 items-center gap-1.5 rounded-md bg-zinc-800 px-2 text-zinc-300">
-                  <Video className="h-3.5 w-3.5" />
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
-                    {index + 1}
-                  </span>
-                  <select
-                    value={row.seconds}
-                    onChange={(e) =>
-                      updateMultiShotRow(row.id, {
-                        seconds: parseInt(e.target.value, 10),
-                      })
-                    }
-                    className="w-11 bg-transparent text-[10px] font-semibold tracking-wider text-zinc-400 focus:outline-none"
-                    title={`Segment ${index + 1} length`}
-                  >
-                    {durationOptions.map((value) => (
-                      <option
-                        key={value}
-                        value={value}
-                        className="bg-zinc-800 text-white"
-                      >
-                        {String(value).padStart(2, "0")}s
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <input
-                  value={row.prompt}
-                  onChange={(e) =>
-                    updateMultiShotRow(row.id, { prompt: e.target.value })
-                  }
-                  placeholder={`Segment ${index + 1}`}
-                  className="min-w-0 flex-1 bg-transparent text-sm text-white placeholder:text-zinc-600 focus:outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={() => removeMultiShotRow(row.id)}
-                  disabled={multiShotRows.length <= 2}
-                  className="p-1 rounded-md text-zinc-600 hover:text-white hover:bg-zinc-800 disabled:opacity-0 disabled:pointer-events-none"
-                  title="Remove segment"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            );
-          })}
-          <button
-            type="button"
-            onClick={addMultiShotRow}
-            disabled={multiShotTotalSeconds >= MAX_MULTI_SHOT_SECONDS}
-            className="flex w-full items-center justify-center gap-1.5 px-2 py-2 text-xs text-zinc-400 hover:bg-zinc-800/60 hover:text-white disabled:cursor-not-allowed disabled:text-zinc-700 disabled:hover:bg-transparent"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Add segment
-            <span className="text-zinc-600">
-              {multiShotTotalSeconds}/{MAX_MULTI_SHOT_SECONDS}s
-            </span>
-          </button>
-        </div>
-      )}
 
       {/* Bottom row: Mode selector + Settings */}
       <div className="flex items-center gap-0.5 px-1.5 py-1.5 border-t border-zinc-800/60 text-xs text-zinc-400">
@@ -2742,18 +2565,7 @@ function PromptBar({
 
             <div className="w-px h-4 bg-zinc-700 mx-0.5" />
 
-            {multiShotEnabled ? (
-              <button
-                type="button"
-                disabled
-                className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-zinc-800/40 text-zinc-500 cursor-not-allowed"
-                title="Video duration is controlled by timing segments"
-              >
-                <Clock className="h-3.5 w-3.5" />
-                <span>auto</span>
-                <span className="text-zinc-600">{multiShotTotalSeconds}s</span>
-              </button>
-            ) : guideItemForTrim ? (
+            {guideItemForTrim ? (
               <button
                 type="button"
                 disabled
@@ -2946,6 +2758,9 @@ export function GenSpace() {
     deleteAsset,
     updateAsset,
     toggleFavorite,
+    createAssetBin,
+    renameAssetBin,
+    deleteAssetBin,
     genSpaceEditImageUrl,
     setGenSpaceEditImageUrl,
     setGenSpaceEditMode,
@@ -2966,11 +2781,6 @@ export function GenSpace() {
   const [useAudioTrack, setUseAudioTrack] = useState(true);
   const [localError, setLocalError] = useState<string | null>(null);
   const [isEnhancingPrompt, setIsEnhancingPrompt] = useState(false);
-  const [multiShotEnabled, setMultiShotEnabled] = useState(false);
-  const [multiShotRows, setMultiShotRows] = useState<MultiShotRow[]>(() => [
-    createMultiShotRow(4),
-    createMultiShotRow(4),
-  ]);
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
@@ -2980,7 +2790,6 @@ export function GenSpace() {
   const [gallerySize, setGallerySize] = useState<GallerySize>("medium");
   const [showSizeMenu, setShowSizeMenu] = useState(false);
   const [selectedBin, setSelectedBin] = useState<string | null>(null);
-  const [stagedBins, setStagedBins] = useState<string[]>([]);
   const [creatingBin, setCreatingBin] = useState(false);
   const [newBinName, setNewBinName] = useState("");
   const [binContextMenu, setBinContextMenu] =
@@ -3555,27 +3364,10 @@ export function GenSpace() {
       return;
     }
 
-    const shouldUseMultiShot =
-      mode === "video" && videoMode === "generate" && multiShotEnabled;
-    if (!shouldUseMultiShot && !prompt.trim()) return;
-    if (shouldUseMultiShot && multiShotRows.some((row) => !row.prompt.trim()))
-      return;
-    const multiShotDuration = multiShotRows.reduce(
-      (total, row) => total + row.seconds,
-      0,
-    );
-    const generationPrompt = shouldUseMultiShot
-      ? formatMultiShotPrompt(prompt, multiShotRows)
-      : prompt;
-    const shotPrompts = shouldUseMultiShot
-      ? multiShotRows.map((row) => ({
-          seconds: row.seconds,
-          prompt: row.prompt.trim(),
-        }))
-      : undefined;
+    if (!prompt.trim()) return;
 
     // Save the prompt before generation starts
-    setLastPrompt(generationPrompt);
+    setLastPrompt(prompt);
 
     if (mode === "image") {
       const inputMedia = imageInputs.flatMap((item) => {
@@ -3590,7 +3382,7 @@ export function GenSpace() {
         return [entry];
       });
       generateImage(
-        generationPrompt,
+        prompt,
         {
           model: "fast" as "fast" | "pro",
           duration: 5,
@@ -3639,17 +3431,16 @@ export function GenSpace() {
             ? fileUrlToPath(inputAudio)
             : null;
       const videoSettings = { ...settings };
-      if (shouldUseMultiShot) videoSettings.duration = multiShotDuration;
       const autoDuration = imageInputs.find(
         (item) =>
           GUIDE_MEDIA_ROLES.includes(item.role) &&
           (item.type === "video" || item.type === "audio"),
       )?.trimDuration;
-      if (!shouldUseMultiShot && autoDuration && autoDuration > 0) {
+      if (autoDuration && autoDuration > 0) {
         videoSettings.duration = Math.max(2, Math.ceil(autoDuration));
       }
       if (audioPath) videoSettings.model = "pro";
-      if (shouldUseMultiShot || autoDuration) setSettings(videoSettings);
+      if (autoDuration) setSettings(videoSettings);
 
       const inputMedia = imageInputs.flatMap((item) => {
         const path = fileUrlToPath(item.url);
@@ -3688,7 +3479,6 @@ export function GenSpace() {
         audioPath,
         inputMedia,
         useAudioTrack,
-        shotPrompts,
       );
     }
   };
@@ -3937,9 +3727,6 @@ export function GenSpace() {
   const handleVideoModeChange = useCallback((nextMode: VideoProcessMode) => {
     if (nextMode === "retake") return;
     setVideoMode(nextMode);
-    if (nextMode !== "generate") {
-      setMultiShotEnabled(false);
-    }
     if (nextMode === "reframe") {
       setPrompt("");
     }
@@ -3953,9 +3740,6 @@ export function GenSpace() {
       const projectAssets = currentProject?.assets ?? [];
 
       setLocalError(null);
-      setMultiShotEnabled(false);
-      setMultiShotRows([createMultiShotRow(4), createMultiShotRow(4)]);
-
       const nextMode = genSpaceModeFromParams(params);
       const restoredInputs = buildImageInputsFromParams(params, projectAssets);
       const { inputImage: restoredImage, inputAudio: restoredAudio } =
@@ -4068,9 +3852,7 @@ export function GenSpace() {
     ? reframeInput.ready && !!reframeInput.videoPath && !isGenerating
     : isRetakeMode
       ? retakeInput.ready && !!retakeInput.videoPath && !isRetaking
-      : mode === "video" && multiShotEnabled
-        ? multiShotRows.every((row) => row.prompt.trim())
-        : !!prompt.trim();
+      : !!prompt.trim();
   const promptButtonLabel = isReframeMode
     ? "Reframe"
     : isRetakeMode
@@ -4142,8 +3924,8 @@ export function GenSpace() {
   }, [assets, galleryFilter, showFavorites, selectedBin]);
 
   const galleryBins = useMemo(
-    () => collectGalleryBins(assets, stagedBins),
-    [assets, stagedBins],
+    () => collectGalleryBins(assets, currentProject?.assetBins),
+    [assets, currentProject?.assetBins],
   );
 
   const handleAssignAssetToBin = useCallback(
@@ -4156,47 +3938,35 @@ export function GenSpace() {
 
   const handleCommitNewBin = useCallback((name: string) => {
     const trimmed = name.trim();
-    if (!trimmed) return;
-    setStagedBins((prev) =>
-      prev.includes(trimmed) ? prev : [...prev, trimmed].sort(),
-    );
+    if (!trimmed || !currentProjectId) return;
+    createAssetBin(currentProjectId, trimmed);
     setSelectedBin(trimmed);
     setCreatingBin(false);
     setNewBinName("");
-  }, []);
+  }, [createAssetBin, currentProjectId]);
 
   const handleRenameBin = useCallback(
     (oldName: string, newName: string) => {
       if (!currentProjectId) return;
       const trimmed = newName.trim();
       if (!trimmed || trimmed === oldName) return;
-      for (const asset of assets.filter((entry) => entry.bin === oldName)) {
-        updateAsset(currentProjectId, asset.id, { bin: trimmed });
-      }
-      setStagedBins((prev) =>
-        prev
-          .map((entry) => (entry === oldName ? trimmed : entry))
-          .sort((a, b) => a.localeCompare(b)),
-      );
+      renameAssetBin(currentProjectId, oldName, trimmed);
       if (selectedBin === oldName) {
         setSelectedBin(trimmed);
       }
     },
-    [assets, currentProjectId, selectedBin, updateAsset],
+    [currentProjectId, renameAssetBin, selectedBin],
   );
 
   const handleDeleteBin = useCallback(
     (bin: string) => {
       if (!currentProjectId) return;
-      for (const asset of assets.filter((entry) => entry.bin === bin)) {
-        updateAsset(currentProjectId, asset.id, { bin: undefined });
-      }
-      setStagedBins((prev) => prev.filter((entry) => entry !== bin));
+      deleteAssetBin(currentProjectId, bin);
       if (selectedBin === bin) {
         setSelectedBin(null);
       }
     },
-    [assets, currentProjectId, selectedBin, updateAsset],
+    [currentProjectId, deleteAssetBin, selectedBin],
   );
 
   const handleAssetContextMenu = useCallback(
@@ -4667,10 +4437,6 @@ export function GenSpace() {
           videoProfiles={videoProfiles}
           useAudioTrack={useAudioTrack}
           onUseAudioTrackChange={setUseAudioTrack}
-          multiShotEnabled={multiShotEnabled}
-          onMultiShotEnabledChange={setMultiShotEnabled}
-          multiShotRows={multiShotRows}
-          onMultiShotRowsChange={setMultiShotRows}
           syncInputFileToGallery={syncInputFileToGallery}
           mediaInputsExpandKey={mediaInputsExpandKey}
           reframeDurationSeconds={reframeInput.duration}

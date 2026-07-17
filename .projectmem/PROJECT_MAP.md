@@ -1,6 +1,6 @@
 # Project Map - AI Video Studio
 
-Status: Updated 2026-07-09 after Reframe/Retake prompt-bar integration, optional reframe prompts, and source-frame video_length handling.
+Status: Updated 2026-07-16 after Director prompt-timeline UI implementation.
 
 ## Purpose
 
@@ -73,6 +73,12 @@ Files, dialogs, ffmpeg, backend process management
 - `frontend/types/project.ts` - project, asset, generation metadata types.
 - `frontend/contexts/ProjectContext.tsx` - project state, assets, view routing, editor-to-GenSpace handoff.
 - `frontend/views/VideoEditor.tsx` - inherited video editor, retained as beta/future workflow surface.
+- `frontend/views/director/` - Director workspace, prompt-first frame timeline, contextual controls, preview, persistence, undo/redo; Guide Audio and Control Media remain visible but locked.
+- `frontend/views/editor/timeline/TimelinePrimitives.tsx` - domain-neutral ruler, playhead, segment shell, viewport, track-row, and zoom visuals shared by Edit and Director timelines.
+- `frontend/types/director.ts` - versioned Director recipe and semantic request types.
+- `frontend/lib/director-timeline.ts` - frame snapping, keyframe roles, split/delete/ripple operations, migration/clone.
+- `frontend/lib/director-validation.ts` - profile compatibility, media, prompt, keyframe, and source-audio validation.
+- `frontend/lib/director-request.ts` - resolves project asset IDs into semantic Director API request paths.
 
 ### Current QuickGen behavior
 
@@ -123,6 +129,9 @@ Files, dialogs, ffmpeg, backend process management
 - `backend/handlers/prompt_enhancement_handler.py` - WanGP prompt enhancement routing.
 - `backend/handlers/model_profiles_handler.py` - `GET /api/model-profiles`.
 - `backend/services/wangp_bridge.py` - WanGP API bridge for image/video manifest execution.
+- `backend/services/director_compiler.py` - pure semantic Director compiler and stable validation codes.
+- `backend/handlers/director_generation_handler.py` - Director media validation/trimming, profile policy, shared job state, settings orchestration.
+- `backend/_routes/director.py` - thin `POST /api/director/generate` route.
 - `backend/model_profiles/profiles.py` - curated image/video model profiles plus raw WanGP metadata.
 - `backend/model_profiles/resolution_resolver.py` - curated image profile resolution table.
 - `backend/tests/fakes/fake_wangp_bridge.py` - fake bridge used by tests.
@@ -185,6 +194,8 @@ Profile response includes:
 - Image generation sends `modelProfileId`, `aspectRatio`, and `resolutionTier`; backend resolves exact `WxH`.
 - Video generation sends `modelProfileId`; legacy `model: fast` maps to the curated LTX2 video profile.
 - Multi-shot video requests send `shotPrompts`; backend combines the optional global prompt and timed rows into WanGP relayed prompt syntax.
+- Director-enabled profiles expose curated `director` policy; frontend never infers Director combinations from raw WanGP metadata.
+- Director requests remain semantic. Backend maps Start/End/Injected images, Continue Video, Guide Audio, Ingredients, Human Motion, and Depth.
 - WanGP manifests use `multi_prompts_gen_type: "FG"` so all lines are treated as one prompt unless relayed ranges are present.
 - Raw WanGP metadata is retained separately from AiVS-curated UI capability fields.
 
@@ -208,10 +219,13 @@ Profile response includes:
 - `backend/tests/test_reframe_wangp_mapping.py` covers padding → WanGP outpaint field mapping.
 - `backend/tests/test_wangp_bridge.py` covers bridge mapping behavior.
 - `backend/tests/test_pyright.py` enforces pyright strict mode.
+- `backend/tests/test_director_compiler.py` covers frame/keyframe/prompt/audio/guidance compilation.
+- `backend/tests/test_director_generation.py` covers semantic endpoint and shared bridge/state flow.
+- `backend/tests/fixtures/wangp/director/` pins sanitized WanGP 12.3 Director settings contracts.
 
 Current verified checks:
 
-- `uv run --extra test pytest -q` -> 214 passed.
+- `uv run pytest -q --tb=short` -> 190 passed.
 - `uv run pyright` -> 0 errors.
 - TypeScript `tsc --noEmit` -> passed.
 - `pnpm run build:frontend` via direct pnpm -> passed.

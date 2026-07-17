@@ -13,10 +13,10 @@ export interface AssetContextMenuProps {
   isRegenerating: boolean
   regeneratingAssetId: string | null
   currentProjectId: string | null
-  pushAssetUndoRef: React.RefObject<() => void>
-  addClipToTimeline: (asset: Asset, trackIndex?: number, startTime?: number) => void
-  handleRegenerate: (assetId: string) => void
-  handleCancelRegeneration: () => void
+  pushAssetUndoRef?: React.RefObject<() => void>
+  addClipToTimeline?: (asset: Asset, trackIndex?: number, startTime?: number) => void
+  handleRegenerate?: (assetId: string) => void
+  handleCancelRegeneration?: () => void
   setAssetActiveTake: (projectId: string, assetId: string, takeIndex: number) => void
   setTakesViewAssetId: (assetId: string | null) => void
   setSelectedAssetIds: React.Dispatch<React.SetStateAction<Set<string>>>
@@ -25,7 +25,7 @@ export interface AssetContextMenuProps {
   addAsset: (projectId: string, asset: Omit<Asset, 'id' | 'createdAt'>) => void
   deleteAsset: (projectId: string, assetId: string) => void
   deleteTakeFromAsset: (projectId: string, assetId: string, takeIndex: number) => void
-  setClips: React.Dispatch<React.SetStateAction<import('../../types/project').TimelineClip[]>>
+  setClips?: React.Dispatch<React.SetStateAction<import('../../types/project').TimelineClip[]>>
 }
 
 export function AssetContextMenu({
@@ -67,7 +67,7 @@ export function AssetContextMenu({
         </div>
       )}
 
-      {!isMulti && (
+      {!isMulti && addClipToTimeline && (
         <button
           onClick={() => {
             addClipToTimeline(asset, 0)
@@ -94,12 +94,12 @@ export function AssetContextMenu({
       )}
 
       {/* AI regeneration - only for assets with generationParams */}
-      {!isMulti && asset.generationParams && (
+      {!isMulti && asset.generationParams && handleRegenerate && (
         <>
           {isRegenerating && regeneratingAssetId === asset.id ? (
             <button
               onClick={() => {
-                handleCancelRegeneration()
+                handleCancelRegeneration?.()
                 setAssetContextMenu(null)
               }}
               className="w-full text-left px-3 py-1.5 text-red-400 hover:bg-zinc-700 flex items-center gap-3"
@@ -132,7 +132,7 @@ export function AssetContextMenu({
               onClick={(e) => {
                 e.stopPropagation()
                 if (currentProjectId) {
-                  pushAssetUndoRef.current?.()
+                  pushAssetUndoRef?.current?.()
                   const idx = Math.max(0, (asset.activeTakeIndex ?? 0) - 1)
                   setAssetActiveTake(currentProjectId, asset.id, idx)
                 }
@@ -149,7 +149,7 @@ export function AssetContextMenu({
               onClick={(e) => {
                 e.stopPropagation()
                 if (currentProjectId && asset.takes) {
-                  pushAssetUndoRef.current?.()
+                  pushAssetUndoRef?.current?.()
                   const idx = Math.min(asset.takes.length - 1, (asset.activeTakeIndex ?? 0) + 1)
                   setAssetActiveTake(currentProjectId, asset.id, idx)
                 }
@@ -174,7 +174,7 @@ export function AssetContextMenu({
           <button
             onClick={() => {
               if (!currentProjectId || !asset.takes) return
-              pushAssetUndoRef.current?.()
+              pushAssetUndoRef?.current?.()
               asset.takes.slice(1).forEach(take => {
                 addAsset(currentProjectId, {
                   type: asset.type,
@@ -209,8 +209,8 @@ export function AssetContextMenu({
               const activeIdx = asset.activeTakeIndex ?? 0
               if (confirm(`Delete take ${activeIdx + 1}?`)) {
                 if (currentProjectId && asset.takes) {
-                  pushAssetUndoRef.current?.()
-                  setClips(prev => prev.map(c => {
+                  pushAssetUndoRef?.current?.()
+              setClips?.(prev => prev.map(c => {
                     if (c.assetId !== asset.id) return c
                     const cIdx = c.takeIndex ?? (asset.activeTakeIndex ?? asset.takes!.length - 1)
                     if (cIdx === activeIdx) {
@@ -242,11 +242,11 @@ export function AssetContextMenu({
         <button
           onClick={() => {
             if (currentProjectId) {
-              pushAssetUndoRef.current?.()
+              pushAssetUndoRef?.current?.()
               targetIds.forEach(id => updateAsset(currentProjectId, id, { colorLabel: undefined }))
               // Sync: also clear colorLabel on all timeline clips referencing these assets
               const ids = new Set(targetIds)
-              setClips(prev => prev.map(c => c.assetId && ids.has(c.assetId) ? { ...c, colorLabel: undefined } : c))
+              setClips?.(prev => prev.map(c => c.assetId && ids.has(c.assetId) ? { ...c, colorLabel: undefined } : c))
             }
             setAssetContextMenu(null)
           }}
@@ -262,11 +262,11 @@ export function AssetContextMenu({
             key={cl.id}
             onClick={() => {
               if (currentProjectId) {
-                pushAssetUndoRef.current?.()
+                pushAssetUndoRef?.current?.()
                 targetIds.forEach(id => updateAsset(currentProjectId, id, { colorLabel: cl.id }))
                 // Sync: also set colorLabel on all timeline clips referencing these assets
                 const ids = new Set(targetIds)
-                setClips(prev => prev.map(c => c.assetId && ids.has(c.assetId) ? { ...c, colorLabel: cl.id } : c))
+                setClips?.(prev => prev.map(c => c.assetId && ids.has(c.assetId) ? { ...c, colorLabel: cl.id } : c))
               }
               setAssetContextMenu(null)
             }}
@@ -286,7 +286,7 @@ export function AssetContextMenu({
       <button
         onClick={() => {
           if (currentProjectId) {
-            pushAssetUndoRef.current?.()
+            pushAssetUndoRef?.current?.()
             targetIds.forEach(id => updateAsset(currentProjectId, id, { bin: undefined }))
           }
           setAssetContextMenu(null)
@@ -303,7 +303,7 @@ export function AssetContextMenu({
           key={bin}
           onClick={() => {
             if (currentProjectId) {
-              pushAssetUndoRef.current?.()
+              pushAssetUndoRef?.current?.()
               targetIds.forEach(id => updateAsset(currentProjectId, id, { bin }))
             }
             setAssetContextMenu(null)
@@ -320,7 +320,7 @@ export function AssetContextMenu({
         onClick={() => {
           const name = prompt('New bin name:')
           if (name?.trim() && currentProjectId) {
-            pushAssetUndoRef.current?.()
+            pushAssetUndoRef?.current?.()
             targetIds.forEach(id => updateAsset(currentProjectId, id, { bin: name.trim() }))
           }
           setAssetContextMenu(null)
@@ -340,7 +340,7 @@ export function AssetContextMenu({
               if (!currentProjectId) return
               const selectedAssets = assets.filter(a => targetIds.includes(a.id))
               if (selectedAssets.length < 2) return
-              pushAssetUndoRef.current?.()
+              pushAssetUndoRef?.current?.()
               const primary = selectedAssets[0]
               const newTakes = selectedAssets.map(a => ({
                 url: a.url, path: a.path, thumbnail: a.thumbnail, createdAt: a.createdAt,
@@ -373,7 +373,7 @@ export function AssetContextMenu({
       <button
         onClick={() => {
           if (currentProjectId) {
-            pushAssetUndoRef.current?.()
+            pushAssetUndoRef?.current?.()
             targetIds.forEach(id => deleteAsset(currentProjectId, id))
           }
           setAssetContextMenu(null)

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from enum import Enum
 from typing import Literal, NamedTuple, TypeAlias, TypedDict
 from typing import Annotated
 
@@ -232,6 +233,21 @@ class ModelProfileUi(BaseModel):
     allowedResolutionTiers: list[str]
 
 
+class ModelProfileDirectorPolicy(BaseModel):
+    enabled: bool
+    promptRelay: bool
+    injectedFrames: bool
+    continueVideo: bool
+    guideAudioStartOnly: bool
+    maxImageKeyframes: int | None
+    maxGuidanceSegments: int
+    guidanceModes: list[Literal["human_motion", "depth", "ingredients"]]
+    maxDurationSeconds: int
+    allowKeyframesWithVideoGuidance: bool
+    allowKeyframesWithIngredients: bool
+    allowGuideAudioWithGuidance: bool
+
+
 class ModelProfileWanGPMetadata(BaseModel):
     modelType: str
     family: str
@@ -257,6 +273,7 @@ class ModelProfileResponse(BaseModel):
     capabilities: ModelProfileCapabilities
     ui: ModelProfileUi
     inputMedia: ModelProfileInputMedia
+    director: ModelProfileDirectorPolicy
     availability: str = "available"
 
 
@@ -342,6 +359,81 @@ class GenerateVideoRequest(BaseModel):
         if not self.prompt.strip() and not self.shotPrompts and self.reframe is None:
             raise ValueError("prompt is required unless shotPrompts or reframe are provided")
         return self
+
+
+class DirectorKeyframePoint(str, Enum):
+    START = "start"
+    CENTRE = "centre"
+    END = "end"
+
+
+class DirectorImageKeyframeInput(BaseModel):
+    assetId: str | None = None
+    path: str
+    point: DirectorKeyframePoint
+    strength: float = Field(default=1.0, ge=0.0, le=1.0)
+
+
+class DirectorPromptSegmentInput(BaseModel):
+    id: str
+    startFrame: int = Field(ge=0)
+    endFrameExclusive: int = Field(gt=0)
+    prompt: str = ""
+    keyframe: DirectorImageKeyframeInput | None = None
+
+
+class DirectorContinueVideoInput(BaseModel):
+    assetId: str | None = None
+    path: str
+    timelineDurationFrames: int = Field(gt=0)
+    trimStartTime: float = Field(default=0.0, ge=0)
+    trimDuration: float = Field(gt=0)
+    useSourceAudio: bool = False
+
+
+class DirectorGuideAudioInput(BaseModel):
+    assetId: str | None = None
+    path: str
+    trimStartTime: float = Field(default=0.0, ge=0)
+    trimDuration: float = Field(gt=0)
+    strength: float = Field(default=1.0, ge=0.0, le=1.0)
+
+
+class DirectorGuidanceInput(BaseModel):
+    mode: Literal["human_motion", "depth", "ingredients"]
+    assetId: str | None = None
+    path: str
+    trimStartTime: float | None = Field(default=None, ge=0)
+    trimDuration: float | None = Field(default=None, gt=0)
+    timelineDurationFrames: int | None = Field(default=None, gt=0)
+    strength: float = Field(default=1.0, ge=0.0, le=1.0)
+    useSourceAudio: bool = False
+    referenceDescription: str = ""
+
+
+class GenerateDirectorRequest(BaseModel):
+    schemaVersion: Literal[1]
+    modelProfileId: str
+    resolutionTier: str
+    aspectRatio: str
+    fps: int = Field(gt=0)
+    requestedDurationSeconds: float = Field(gt=0)
+    durationFrames: int = Field(gt=0)
+    generateAudio: bool = True
+    globalPrompt: str = ""
+    promptSegments: list[DirectorPromptSegmentInput]
+    continueVideo: DirectorContinueVideoInput | None = None
+    guideAudio: DirectorGuideAudioInput | None = None
+    guidance: DirectorGuidanceInput | None = None
+
+
+class GenerateDirectorResponse(BaseModel):
+    status: str
+    video_path: str | None = None
+    seed: int | None = None
+    resolvedFrameCount: int | None = None
+    compiledPrompt: str | None = None
+    warnings: list[str] = Field(default_factory=list)
 
 
 class GenerateImageInputMedia(BaseModel):

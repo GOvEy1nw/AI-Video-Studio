@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 
 from api_types import (
     ModelProfileCapabilities,
+    ModelProfileDirectorPolicy,
     ModelProfileInputMedia,
     ModelProfileInputMediaRole,
     ModelProfileListResponse,
@@ -111,6 +112,20 @@ class ModelProfilesHandler(StateHandlerBase):
                     )
                     for role in profile.input_media.roles
                 ],
+            ),
+            director=ModelProfileDirectorPolicy(
+                enabled=profile.director.enabled,
+                promptRelay=profile.director.prompt_relay,
+                injectedFrames=profile.director.injected_frames,
+                continueVideo=profile.director.continue_video,
+                guideAudioStartOnly=profile.director.guide_audio_start_only,
+                maxImageKeyframes=profile.director.max_image_keyframes,
+                maxGuidanceSegments=profile.director.max_guidance_segments,
+                guidanceModes=list(profile.director.guidance_modes),
+                maxDurationSeconds=profile.director.max_duration_seconds,
+                allowKeyframesWithVideoGuidance=profile.director.allow_keyframes_with_video_guidance,
+                allowKeyframesWithIngredients=profile.director.allow_keyframes_with_ingredients,
+                allowGuideAudioWithGuidance=profile.director.allow_guide_audio_with_guidance,
             ),
             availability=availability,
         )

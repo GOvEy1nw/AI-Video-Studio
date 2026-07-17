@@ -5,7 +5,6 @@ import {
   MoreVertical,
   Trash2,
   Pencil,
-  Sparkles,
 } from "lucide-react";
 import { useProjects } from "../contexts/ProjectContext";
 import { AivsLogo } from "../components/AivsLogo";
@@ -136,7 +135,6 @@ export function Home() {
     deleteProject,
     renameProject,
     openProject,
-    openPlayground,
   } = useProjects();
   const [isCreating, setIsCreating] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
@@ -178,19 +176,6 @@ export function Home() {
             <Folder className="h-4 w-4" />
             Home
           </button>
-
-          <div className="mt-6">
-            <h4 className="px-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">
-              Quick Actions
-            </h4>
-            <button
-              onClick={openPlayground}
-              className="w-full px-3 py-2 rounded-lg text-zinc-400 hover:bg-zinc-800 hover:text-white text-left text-sm flex items-center gap-2 transition-colors"
-            >
-              <Sparkles className="h-4 w-4" />
-              Playground
-            </button>
-          </div>
 
           {projects.length > 0 && (
             <div className="mt-6">

@@ -1,0 +1,6 @@
+{
+  "model_type": "ltx2_22B_distilled_1_1",
+  "multi_prompts_gen_type": "FG",
+  "audio_prompt_type": "K",
+  "audio_guide": "$SOURCE_VIDEO"
+}

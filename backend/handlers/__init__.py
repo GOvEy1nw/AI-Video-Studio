@@ -1,6 +1,7 @@
 """State handler exports."""
 
 from handlers.generation_handler import GenerationHandler
+from handlers.director_generation_handler import DirectorGenerationHandler
 from handlers.health_handler import HealthHandler
 from handlers.image_generation_handler import ImageGenerationHandler
 from handlers.model_profiles_handler import ModelProfilesHandler
@@ -13,6 +14,7 @@ __all__ = [
     "SettingsHandler",
     "PromptEnhancementHandler",
     "GenerationHandler",
+    "DirectorGenerationHandler",
     "VideoGenerationHandler",
     "ImageGenerationHandler",
     "HealthHandler",
