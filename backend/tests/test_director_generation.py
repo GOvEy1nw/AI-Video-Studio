@@ -113,6 +113,13 @@ def test_director_uses_locked_seed(client, enable_wangp, test_state) -> None:
     assert enable_wangp.director_calls[0].settings["seed"] == 123
 
 
+def test_director_delegates_unlocked_seed_to_wangp(client, enable_wangp) -> None:
+    response = client.post("/api/director/generate", json=_payload())
+    assert response.status_code == 200
+    assert response.json()["seed"] is None
+    assert "seed" not in enable_wangp.director_calls[0].settings
+
+
 def test_director_rejects_unknown_profile(client, enable_wangp) -> None:
     payload = _payload()
     payload["modelProfileId"] = "missing"

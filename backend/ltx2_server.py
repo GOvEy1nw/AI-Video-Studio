@@ -174,6 +174,11 @@ WANGP_ROOT = _resolve_wangp_root()
 WANGP_ENABLED = platform.system() in ("Windows", "Linux") and WANGP_ROOT is not None
 WANGP_PYTHON = _resolve_wangp_python(WANGP_ROOT) if WANGP_ENABLED else None
 WANGP_CONFIG_DIR = APP_DATA_DIR / "wangp_bridge"
+WANGP_CHECKPOINTS_DIR = (
+    Path(value).resolve()
+    if (value := os.environ.get("WANGP_CHECKPOINTS_DIR", "").strip())
+    else None
+)
 WANGP_VIDEO_MODEL_TYPE = os.environ.get("WANGP_VIDEO_MODEL_TYPE", "ltx2_22B_distilled_1_1")
 WANGP_IMAGE_MODEL_TYPE = os.environ.get("WANGP_IMAGE_MODEL_TYPE", "z_image")
 WANGP_EXTRA_ARGS = _resolve_wangp_extra_args()
@@ -211,6 +216,7 @@ runtime_config = RuntimeConfig(
     wangp_video_model_type=WANGP_VIDEO_MODEL_TYPE,
     wangp_image_model_type=WANGP_IMAGE_MODEL_TYPE,
     wangp_extra_args=WANGP_EXTRA_ARGS,
+    wangp_checkpoints_dir=WANGP_CHECKPOINTS_DIR,
 )
 
 handler = build_initial_state(runtime_config, DEFAULT_APP_SETTINGS)

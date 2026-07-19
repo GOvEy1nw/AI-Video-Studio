@@ -48,6 +48,7 @@ class AppHandler:
             image_model_type=config.wangp_image_model_type,
             camera_motion_prompts=config.camera_motion_prompts,
             extra_args=config.wangp_extra_args,
+            checkpoints_dir=config.wangp_checkpoints_dir,
         )
 
         self._lock = threading.RLock()

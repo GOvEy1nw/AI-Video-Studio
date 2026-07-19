@@ -3,6 +3,7 @@ import crypto from 'crypto'
 import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
+import { getCustomCheckpointsPath, setCustomCheckpointsPath } from './app-state'
 import { isDev } from './config'
 import { logger } from './logger'
 
@@ -46,7 +47,40 @@ const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
 
 let activeModelPackProcess: ChildProcess | null = null
 let activeModelPackDeleteProcess: ChildProcess | null = null
+let activeModelPackRefreshProcess: ChildProcess | null = null
+let activeModelPackRefreshPromise: Promise<ModelPack[]> | null = null
 let activeModelPackProgress: ModelPackProgress | null = null
+
+export interface CheckpointsLocation {
+  path: string
+  custom: boolean
+  defaultPath: string
+}
+
+function getWanGPRoot(): string {
+  return path.join(isDev ? process.cwd() : process.resourcesPath, 'Wan2GP')
+}
+
+export function getCheckpointsLocation(): CheckpointsLocation {
+  const customPath = getCustomCheckpointsPath()
+  const defaultPath = path.join(getWanGPRoot(), 'ckpts')
+  return {
+    path: customPath ?? defaultPath,
+    custom: customPath !== null,
+    defaultPath,
+  }
+}
+
+export function setCheckpointsLocation(value: string | null): CheckpointsLocation {
+  if (value !== null) {
+    const resolved = path.resolve(value)
+    if (!fs.statSync(resolved).isDirectory()) throw new Error('Checkpoint path must be a folder.')
+    setCustomCheckpointsPath(resolved)
+  } else {
+    setCustomCheckpointsPath(null)
+  }
+  return getCheckpointsLocation()
+}
 
 function getRuntimeFiles(): string[] {
   const root = isDev ? process.cwd() : process.resourcesPath
@@ -101,6 +135,7 @@ function findBundledGitExecutable(): string | null {
 
 export function getRuntimeEnvironment(): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env }
+  env.WANGP_CHECKPOINTS_DIR = getCheckpointsLocation().path
   const gitExe = findBundledGitExecutable()
   if (!gitExe) {
     if (!isDev && process.platform === 'win32') throw new Error('Bundled Git runtime is missing.')
@@ -286,6 +321,54 @@ export function getModelPacks(): ModelPack[] {
   return MODEL_PACKS.map((pack) => ({ ...pack, installed: installed.has(pack.id) }))
 }
 
+/** Rebuild model-pack state from files already present in the active checkpoint folder. */
+export function refreshModelPacks(): Promise<ModelPack[]> {
+  if (activeModelPackRefreshPromise) return activeModelPackRefreshPromise
+  if (activeModelPackProcess || activeModelPackDeleteProcess) {
+    throw new Error('Another model-pack operation is already running.')
+  }
+  const pythonExe = path.join(getPythonDir(), 'python.exe')
+  const runner = path.join(isDev ? process.cwd() : process.resourcesPath, 'backend', 'wangp_model_packs.py')
+  const wangpRoot = getWanGPRoot()
+  const checkpointsDir = getCheckpointsLocation().path
+
+  activeModelPackRefreshPromise = new Promise((resolve, reject) => {
+    let spawnFailed = false
+    const diagnosticLines: string[] = []
+    const recordDiagnostics = (chunk: Buffer): void => {
+      diagnosticLines.push(...chunk.toString().split(/[\r\n]/).filter(Boolean))
+      if (diagnosticLines.length > 80) diagnosticLines.splice(0, diagnosticLines.length - 80)
+    }
+    const child = spawn(
+      pythonExe,
+      [runner, '--wangp-root', wangpRoot, '--app-data-dir', app.getPath('userData'), '--checkpoints-dir', checkpointsDir, '--list'],
+      { windowsHide: true, cwd: wangpRoot, env: getRuntimeEnvironment() },
+    )
+    activeModelPackRefreshProcess = child
+    child.stdout.on('data', recordDiagnostics)
+    child.stderr.on('data', recordDiagnostics)
+    child.once('error', (error) => {
+      spawnFailed = true
+      activeModelPackRefreshProcess = null
+      activeModelPackRefreshPromise = null
+      reject(new Error(`Model-pack refresh failed to start: ${error.message}`))
+    })
+    child.once('close', (code) => {
+      if (spawnFailed) return
+      activeModelPackRefreshProcess = null
+      activeModelPackRefreshPromise = null
+      if (code === 0) {
+        resolve(getModelPacks())
+        return
+      }
+      logger.error(`[model-pack] Refresh output:\n${diagnosticLines.join('\n')}`)
+      const details = diagnosticLines.slice(-12).join(' ')
+      reject(new Error(`Model-pack refresh failed (exit code ${code ?? 'unknown'}): ${details || 'No diagnostic output.'}`))
+    })
+  })
+  return activeModelPackRefreshPromise
+}
+
 export function getModelPackProgress(): ModelPackProgress | null {
   return activeModelPackProcess ? activeModelPackProgress : null
 }
@@ -318,10 +401,11 @@ export function downloadModelPacks(
   onProgress: (progress: ModelPackProgress) => void,
 ): Promise<boolean> {
   if (!ids.length) return Promise.resolve(true)
-  if (activeModelPackProcess || activeModelPackDeleteProcess) throw new Error('Another model-pack operation is already running.')
+  if (activeModelPackProcess || activeModelPackDeleteProcess || activeModelPackRefreshProcess) throw new Error('Another model-pack operation is already running.')
   const pythonExe = path.join(getPythonDir(), 'python.exe')
   const runner = path.join(isDev ? process.cwd() : process.resourcesPath, 'backend', 'wangp_model_packs.py')
-  const wangpRoot = path.join(isDev ? process.cwd() : process.resourcesPath, 'Wan2GP')
+  const wangpRoot = getWanGPRoot()
+  const checkpointsDir = getCheckpointsLocation().path
 
   return new Promise((resolve, reject) => {
     let activePack: Pick<ModelPackProgress, 'packId' | 'packName'> = {}
@@ -340,7 +424,7 @@ export function downloadModelPacks(
     }
     const child = spawn(
       pythonExe,
-      [runner, '--wangp-root', wangpRoot, '--app-data-dir', app.getPath('userData'), '--download', ...ids],
+      [runner, '--wangp-root', wangpRoot, '--app-data-dir', app.getPath('userData'), '--checkpoints-dir', checkpointsDir, '--download', ...ids],
       { windowsHide: true, cwd: wangpRoot, env: getRuntimeEnvironment() },
     )
     activeModelPackProcess = child
@@ -429,10 +513,11 @@ export function cancelModelPackDownload(): void {
 
 export function deleteModelPack(id: string): Promise<void> {
   if (!MODEL_PACKS.some((pack) => pack.id === id)) throw new Error(`Unknown model pack: ${id}`)
-  if (activeModelPackProcess || activeModelPackDeleteProcess) throw new Error('Another model-pack operation is already running.')
+  if (activeModelPackProcess || activeModelPackDeleteProcess || activeModelPackRefreshProcess) throw new Error('Another model-pack operation is already running.')
   const pythonExe = path.join(getPythonDir(), 'python.exe')
   const runner = path.join(isDev ? process.cwd() : process.resourcesPath, 'backend', 'wangp_model_packs.py')
-  const wangpRoot = path.join(isDev ? process.cwd() : process.resourcesPath, 'Wan2GP')
+  const wangpRoot = getWanGPRoot()
+  const checkpointsDir = getCheckpointsLocation().path
 
   return new Promise((resolve, reject) => {
     let spawnFailed = false
@@ -443,7 +528,7 @@ export function deleteModelPack(id: string): Promise<void> {
     }
     const child = spawn(
       pythonExe,
-      [runner, '--wangp-root', wangpRoot, '--app-data-dir', app.getPath('userData'), '--delete', id],
+      [runner, '--wangp-root', wangpRoot, '--app-data-dir', app.getPath('userData'), '--checkpoints-dir', checkpointsDir, '--delete', id],
       { windowsHide: true, cwd: wangpRoot, env: getRuntimeEnvironment() },
     )
     activeModelPackDeleteProcess = child

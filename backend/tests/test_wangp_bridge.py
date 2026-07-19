@@ -82,6 +82,24 @@ def test_runtime_preferences_update_wangp_config(tmp_path: Path) -> None:
     assert saved["boost"] == 1
 
 
+def test_custom_checkpoints_directory_updates_wangp_config(tmp_path: Path) -> None:
+    checkpoints_dir = tmp_path / "existing-wangp" / "ckpts"
+    WanGPBridge(
+        enabled=True,
+        root=tmp_path,
+        python_executable=None,
+        config_dir=tmp_path / "config",
+        output_dir=tmp_path / "outputs",
+        video_model_type="ltx2_22B_distilled_1_1",
+        image_model_type="z_image",
+        camera_motion_prompts={},
+        checkpoints_dir=checkpoints_dir,
+    )
+
+    saved = json.loads((tmp_path / "config" / "wgp_config.json").read_text(encoding="utf-8"))
+    assert saved["checkpoints_paths"] == [str(checkpoints_dir.resolve()), "."]
+
+
 def test_z_image_uses_eight_step_floor() -> None:
     bridge = _make_bridge(image_model_type="z_image")
 

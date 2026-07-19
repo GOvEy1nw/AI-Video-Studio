@@ -63,6 +63,7 @@ class WanGPBridge:
         image_model_type: str,
         camera_motion_prompts: dict[str, str],
         extra_args: Iterable[str] = (),
+        checkpoints_dir: Path | None = None,
     ) -> None:
         self._enabled = enabled
         self._root = root
@@ -77,6 +78,10 @@ class WanGPBridge:
         self._submitted_manifest_once = False
         self._session_lock = threading.Lock()
         self._last_preview_write_at = 0.0
+        if checkpoints_dir is not None:
+            self._write_runtime_config(
+                {"checkpoints_paths": [str(checkpoints_dir.resolve()), "."]}
+            )
 
     def set_compile_enabled(self, enabled: bool) -> None:
         with self._session_lock:

@@ -78,7 +78,10 @@ interface Window {
     checkPythonReady: () => Promise<{ ready: boolean }>
     startPythonSetup: () => Promise<void>
     getModelPacks: () => Promise<unknown[]>
+    refreshModelPacks: () => Promise<unknown[]>
     getModelPackProgress: () => Promise<unknown | null>
+    getCheckpointsLocation: () => Promise<{ path: string; custom: boolean; defaultPath: string }>
+    setCheckpointsLocation: (value: string | null) => Promise<{ path: string; custom: boolean; defaultPath: string }>
     downloadModelPacks: (ids: string[]) => Promise<boolean>
     cancelModelPackDownload: () => Promise<void>
     deleteModelPack: (id: string) => Promise<void>

@@ -4,6 +4,7 @@ import path from 'path'
 
 export interface AppState {
   projectAssetsPath?: string
+  checkpointsPath?: string
   [key: string]: unknown
 }
 
@@ -45,5 +46,17 @@ export function setProjectAssetsPath(p: string): void {
   cachedProjectAssetsPath = p
   const state = readAppState()
   state.projectAssetsPath = p
+  writeAppState(state)
+}
+
+export function getCustomCheckpointsPath(): string | null {
+  const value = readAppState().checkpointsPath
+  return typeof value === 'string' && value.trim() ? value : null
+}
+
+export function setCustomCheckpointsPath(value: string | null): void {
+  const state = readAppState()
+  if (value) state.checkpointsPath = value
+  else delete state.checkpointsPath
   writeAppState(state)
 }

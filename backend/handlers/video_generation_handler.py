@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import math
-import time
 import uuid
 from pathlib import Path
 from threading import RLock
@@ -62,12 +61,12 @@ class VideoGenerationHandler(StateHandlerBase):
     def _make_generation_id() -> str:
         return uuid.uuid4().hex[:8]
 
-    def _resolve_seed(self) -> int:
+    def _resolve_seed(self) -> int | None:
         settings = self.state.app_settings
         if settings.seed_locked:
             logger.info("Using locked seed: %s", settings.locked_seed)
             return settings.locked_seed
-        return int(time.time()) % 2147483647
+        return None
 
     def _generate_via_wangp(self, req: GenerateVideoRequest) -> GenerateVideoResponse:
         if self._generation.is_generation_running():

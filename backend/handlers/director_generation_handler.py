@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import time
 import uuid
 from collections.abc import Callable
 from pathlib import Path
@@ -190,11 +189,11 @@ class DirectorGenerationHandler(StateHandlerBase):
                 except OSError:
                     logger.warning("Could not remove temporary Director media: %s", path)
 
-    def _resolve_seed(self) -> int:
+    def _resolve_seed(self) -> int | None:
         settings = self.state.app_settings
         if settings.seed_locked:
             return settings.locked_seed
-        return int(time.time()) % 2147483647
+        return None
 
     @staticmethod
     def _validate_image(path: str) -> Path:
@@ -240,7 +239,7 @@ class DirectorGenerationHandler(StateHandlerBase):
         model_type: str,
         resolution: str,
         fps: int,
-        seed: int,
+        seed: int | None,
         profile_defaults: dict[str, object],
         prompt_relay_epsilon: float,
     ) -> dict[str, object]:
@@ -255,7 +254,6 @@ class DirectorGenerationHandler(StateHandlerBase):
                 "video_length": plan.generation_frame_count,
                 "duration_seconds": plan.generation_duration_seconds,
                 "force_fps": fps,
-                "seed": seed,
                 "sliding_window_size": 481,
                 "video_output_codec": app_settings.output_settings.video_codec,
                 "video_container": app_settings.output_settings.video_container,
@@ -263,6 +261,8 @@ class DirectorGenerationHandler(StateHandlerBase):
                 "metadata_type": app_settings.output_settings.metadata_mode,
             }
         )
+        if seed is not None:
+            settings["seed"] = seed
         if plan.uses_prompt_relay:
             custom_settings = settings.get("custom_settings")
             settings["custom_settings"] = {

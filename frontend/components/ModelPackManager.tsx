@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Download, Loader2, Square, Trash2 } from "lucide-react";
+import { Download, Loader2, RefreshCw, Square, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
 
 interface ModelPack {
@@ -44,11 +44,14 @@ export function ModelPackManager({
   const [progress, setProgress] = useState<PackProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
   const downloading = progress?.status === "downloading";
-  const busy = downloading || deleting !== null;
+  const busy = downloading || deleting !== null || checking;
 
-  const refresh = async () => {
-    const result = await window.electronAPI.getModelPacks();
+  const refresh = async (scan = false) => {
+    const result = scan
+      ? await window.electronAPI.refreshModelPacks()
+      : await window.electronAPI.getModelPacks();
     setPacks(result as ModelPack[]);
   };
 
@@ -137,7 +140,24 @@ export function ModelPackManager({
   return (
     <div className={firstRun ? "w-full max-w-3xl" : "space-y-4"}>
       <div className="space-y-1">
-        <h3 className="text-sm font-semibold text-white">Model Manager</h3>
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-sm font-semibold text-white">Model Manager</h3>
+          <Button
+            variant="outline"
+            className="h-8 border-zinc-600 px-2.5 text-xs"
+            disabled={busy}
+            onClick={() => {
+              setError(null);
+              setChecking(true);
+              void refresh(true)
+                .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Model check failed."))
+                .finally(() => setChecking(false));
+            }}
+          >
+            <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${checking ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+        </div>
         <p className="text-xs leading-relaxed text-zinc-400">
           Shared files are skipped automatically, so estimated sizes can be
           smaller when another pack is already installed.

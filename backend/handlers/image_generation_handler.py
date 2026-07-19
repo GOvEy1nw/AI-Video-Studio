@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import time
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -75,7 +74,7 @@ class ImageGenerationHandler(StateHandlerBase):
 
         generation_id = uuid.uuid4().hex[:8]
         settings = self.state.app_settings.model_copy(deep=True)
-        seed = settings.locked_seed if settings.seed_locked else int(time.time()) % 2147483647
+        seed = settings.locked_seed if settings.seed_locked else None
 
         # Profile-driven WanGP settings: model_type + model defaults,
         # merged with the request's explicit num_steps and the resolved
@@ -113,7 +112,7 @@ class ImageGenerationHandler(StateHandlerBase):
                         height=height,
                         num_steps=num_steps,
                         num_images=chunk_size,
-                        seed=seed + offset,
+                        seed=None if seed is None else seed + offset,
                         on_progress=self._generation.update_progress,
                         is_cancelled=self._generation.is_generation_cancelled,
                         model_type=wangp_model_type,

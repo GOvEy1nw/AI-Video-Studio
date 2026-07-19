@@ -117,7 +117,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   checkPythonReady: (): Promise<{ ready: boolean }> => ipcRenderer.invoke('check-python-ready'),
   startPythonSetup: (): Promise<void> => ipcRenderer.invoke('start-python-setup'),
   getModelPacks: (): Promise<unknown[]> => ipcRenderer.invoke('get-model-packs'),
+  refreshModelPacks: (): Promise<unknown[]> => ipcRenderer.invoke('refresh-model-packs'),
   getModelPackProgress: (): Promise<unknown | null> => ipcRenderer.invoke('get-model-pack-progress'),
+  getCheckpointsLocation: (): Promise<{ path: string; custom: boolean; defaultPath: string }> => ipcRenderer.invoke('get-checkpoints-location'),
+  setCheckpointsLocation: (value: string | null): Promise<{ path: string; custom: boolean; defaultPath: string }> => ipcRenderer.invoke('set-checkpoints-location', value),
   downloadModelPacks: (ids: string[]): Promise<boolean> => ipcRenderer.invoke('download-model-packs', ids),
   cancelModelPackDownload: (): Promise<void> => ipcRenderer.invoke('cancel-model-pack-download'),
   deleteModelPack: (id: string): Promise<void> => ipcRenderer.invoke('delete-model-pack', id),
@@ -236,7 +239,10 @@ declare global {
       checkPythonReady: () => Promise<{ ready: boolean }>
       startPythonSetup: () => Promise<void>
       getModelPacks: () => Promise<unknown[]>
+      refreshModelPacks: () => Promise<unknown[]>
       getModelPackProgress: () => Promise<unknown | null>
+      getCheckpointsLocation: () => Promise<{ path: string; custom: boolean; defaultPath: string }>
+      setCheckpointsLocation: (value: string | null) => Promise<{ path: string; custom: boolean; defaultPath: string }>
       downloadModelPacks: (ids: string[]) => Promise<boolean>
       cancelModelPackDownload: () => Promise<void>
       deleteModelPack: (id: string) => Promise<void>

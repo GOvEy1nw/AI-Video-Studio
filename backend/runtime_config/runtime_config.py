@@ -22,4 +22,5 @@ class RuntimeConfig:
     wangp_video_model_type: str
     wangp_image_model_type: str
     wangp_extra_args: tuple[str, ...]
+    wangp_checkpoints_dir: Path | None = None
 

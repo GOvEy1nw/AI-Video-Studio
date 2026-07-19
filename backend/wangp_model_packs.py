@@ -69,32 +69,32 @@ def _manifest_path(root: Path, path: Path) -> str:
         return str(resolved)
 
 
-def _pack_is_installed(root: Path, manifest: list[str] | None) -> bool:
-    if not manifest:
-        return False
-    return all((Path(path) if Path(path).is_absolute() else root / path).is_file() for path in manifest)
-
-
 def _manifest_file_path(root: Path, value: str) -> Path:
     path = Path(value)
     return path if path.is_absolute() else root / path
 
 
-def _delete_pack_files(root: Path, manifests: dict[str, list[str]], pack_id: str) -> None:
+def _delete_pack_files(
+    root: Path,
+    manifests: dict[str, list[str]],
+    pack_id: str,
+    checkpoints_dir: Path | None = None,
+) -> None:
     manifest = manifests.get(pack_id)
     if manifest is None:
         return
 
     file_paths = [_manifest_file_path(root, value) for value in manifest]
+    allowed_roots = [root.resolve()]
+    if checkpoints_dir is not None:
+        allowed_roots.append(checkpoints_dir.resolve())
     outside_root: list[str] = []
     for file_path in file_paths:
-        try:
-            file_path.resolve().relative_to(root)
-        except ValueError:
+        if not any(file_path.resolve().is_relative_to(allowed_root) for allowed_root in allowed_roots):
             outside_root.append(str(file_path))
     if outside_root:
         raise RuntimeError(
-            "Refusing to delete model-pack files outside the WanGP directory: "
+            "Refusing to delete model-pack files outside configured model directories: "
             + ", ".join(outside_root)
         )
 
@@ -120,8 +120,8 @@ def _delete_pack_files(root: Path, manifests: dict[str, list[str]], pack_id: str
 class DownloadProgressMonitor:
     """Report growing WanGP checkpoint files when Hugging Face hides its TTY bar."""
 
-    def __init__(self, root: Path) -> None:
-        self._root = root / "chkpts"
+    def __init__(self, checkpoints_dir: Path) -> None:
+        self._root = checkpoints_dir
         self._previous: dict[Path, int] = {}
         self._stop = threading.Event()
         self._thread = threading.Thread(target=self._watch, daemon=True)
@@ -310,23 +310,39 @@ def _download_pack(wgp: Any, manager: Any, pack_id: str) -> set[Path]:
     if kind == "utility":
         definition = wgp.query_core_shared_model_files()
         wgp.process_files_def(**definition)
-        paths = _download_def_paths(manager, definition)
     elif kind == "prompt":
         assets = import_module("shared.prompt_enhancer.assets")
         definitions = cast(list[dict[str, Any]], assets.query_prompt_enhancer_download_defs())
         for definition in definitions:
             wgp.process_files_def(**definition)
-        paths = _download_def_paths(manager, definitions)
     else:
-        model_type = pack["model_type"]
-        _download_model_dependencies(wgp, model_type)
-        paths = _model_paths(manager, model_type)
-        shared_definitions = [
-            wgp.query_core_shared_model_files(),
-            wgp.query_matanyone_download_def(wgp.server_config),
-        ]
-        paths.update(_download_def_paths(manager, shared_definitions))
-    return _validate_paths(pack_id, paths)
+        _download_model_dependencies(wgp, pack["model_type"])
+    return _validate_paths(pack_id, _resolve_pack_paths(wgp, manager, pack_id))
+
+
+def _resolve_pack_paths(wgp: Any, manager: Any, pack_id: str) -> set[Path]:
+    """Resolve expected local files without downloading anything."""
+    pack = PACKS[pack_id]
+    kind = pack["kind"]
+    if kind == "utility":
+        return _download_def_paths(manager, wgp.query_core_shared_model_files())
+    if kind == "prompt":
+        assets = import_module("shared.prompt_enhancer.assets")
+        definitions = cast(list[dict[str, Any]], assets.query_prompt_enhancer_download_defs())
+        return _download_def_paths(manager, definitions)
+
+    model_type = pack["model_type"]
+    paths = _model_paths(manager, model_type)
+    paths.update(
+        _download_def_paths(
+            manager,
+            [
+                wgp.query_core_shared_model_files(),
+                wgp.query_matanyone_download_def(wgp.server_config),
+            ],
+        )
+    )
+    return paths
 
 
 def main() -> int:
@@ -334,6 +350,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--wangp-root", required=True)
     parser.add_argument("--app-data-dir", required=True)
+    parser.add_argument("--checkpoints-dir")
     parser.add_argument("--list", action="store_true")
     parser.add_argument("--download", nargs="*")
     parser.add_argument("--delete", nargs="*")
@@ -341,17 +358,15 @@ def main() -> int:
 
     root = Path(args.wangp_root).resolve()
     app_data_dir = Path(args.app_data_dir).resolve()
+    checkpoints_dir = (
+        Path(args.checkpoints_dir).resolve()
+        if args.checkpoints_dir
+        else root / "ckpts"
+    )
     if not (root / "wgp.py").is_file():
         raise RuntimeError("Bundled WanGP checkout is missing wgp.py")
 
     manifests = _load_state(app_data_dir)
-    if args.list:
-        _event(
-            "packs",
-            packs=[{"id": key, "installed": _pack_is_installed(root, manifests.get(key))} for key in PACKS],
-        )
-        return 0
-
     requested = cast(list[str], args.download or [])
     delete_requested = cast(list[str], args.delete or [])
     unknown = (set(requested) | set(delete_requested)) - set(PACKS)
@@ -359,7 +374,7 @@ def main() -> int:
         raise RuntimeError(f"Unknown model packs: {', '.join(sorted(unknown))}")
 
     for pack_id in delete_requested:
-        _delete_pack_files(root, manifests, pack_id)
+        _delete_pack_files(root, manifests, pack_id, checkpoints_dir)
         _save_state(app_data_dir, manifests)
     if args.delete is not None:
         return 0
@@ -374,11 +389,29 @@ def main() -> int:
         wgp = import_module("wgp")
     finally:
         sys.argv = runner_argv
+    files_locator = import_module("shared.utils.files_locator")
+    checkpoint_paths = [str(checkpoints_dir), "."]
+    files_locator.set_checkpoints_paths(checkpoint_paths)
+    wgp.server_config["checkpoints_paths"] = checkpoint_paths
     manager = _create_model_manager(wgp)
+
+    if args.list:
+        installed_packs: list[dict[str, object]] = []
+        for pack_id in PACKS:
+            paths = _resolve_pack_paths(wgp, manager, pack_id)
+            installed = bool(paths) and all(path.is_file() for path in paths)
+            if installed:
+                manifests[pack_id] = sorted(_manifest_path(root, path) for path in paths)
+            else:
+                manifests.pop(pack_id, None)
+            installed_packs.append({"id": pack_id, "installed": installed})
+        _save_state(app_data_dir, manifests)
+        _event("packs", packs=installed_packs)
+        return 0
 
     for pack_id in requested:
         _event("pack-start", id=pack_id, name=PACKS[pack_id]["name"])
-        monitor = DownloadProgressMonitor(root)
+        monitor = DownloadProgressMonitor(checkpoints_dir)
         monitor.start()
         try:
             paths = _download_pack(wgp, manager, pack_id)

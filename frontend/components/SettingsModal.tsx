@@ -26,6 +26,12 @@ interface SettingsModalProps {
 export type SettingsTabId = "general" | "advanced" | "outputs" | "about";
 type TabId = SettingsTabId;
 
+interface CheckpointsLocation {
+  path: string;
+  custom: boolean;
+  defaultPath: string;
+}
+
 type AdvancedSettings = Pick<
   AppSettings,
   "useTorchCompile" | "attentionMode" | "performanceProfile" | "reduceVram"
@@ -63,6 +69,10 @@ export function SettingsModal({
     null,
   );
   const [advancedReloaded, setAdvancedReloaded] = useState(false);
+  const [checkpointsLocation, setCheckpointsLocation] =
+    useState<CheckpointsLocation | null>(null);
+  const [savedCheckpointsLocation, setSavedCheckpointsLocation] =
+    useState<CheckpointsLocation | null>(null);
 
   useEffect(() => {
     if (isOpen && initialTab) {
@@ -91,6 +101,17 @@ export function SettingsModal({
     setAdvancedSettings(getAdvancedSettings(settings));
     setAdvancedSaveError(null);
     setAdvancedReloaded(false);
+    window.electronAPI
+      .getCheckpointsLocation()
+      .then((location) => {
+        setCheckpointsLocation(location);
+        setSavedCheckpointsLocation(location);
+      })
+      .catch((error: unknown) => {
+        setAdvancedSaveError(
+          error instanceof Error ? error.message : String(error),
+        );
+      });
   }, [
     isOpen,
     settings.attentionMode,
@@ -103,7 +124,9 @@ export function SettingsModal({
     advancedSettings.useTorchCompile !== settings.useTorchCompile ||
     advancedSettings.attentionMode !== settings.attentionMode ||
     advancedSettings.performanceProfile !== settings.performanceProfile ||
-    advancedSettings.reduceVram !== settings.reduceVram;
+    advancedSettings.reduceVram !== settings.reduceVram ||
+    checkpointsLocation?.path !== savedCheckpointsLocation?.path ||
+    checkpointsLocation?.custom !== savedCheckpointsLocation?.custom;
 
   const handleSaveAdvancedSettings = async () => {
     setAdvancedSaving(true);
@@ -111,6 +134,17 @@ export function SettingsModal({
     setAdvancedReloaded(false);
     try {
       await saveSettings(advancedSettings);
+      if (
+        checkpointsLocation &&
+        (checkpointsLocation.path !== savedCheckpointsLocation?.path ||
+          checkpointsLocation.custom !== savedCheckpointsLocation?.custom)
+      ) {
+        const savedLocation = await window.electronAPI.setCheckpointsLocation(
+          checkpointsLocation.custom ? checkpointsLocation.path : null,
+        );
+        setCheckpointsLocation(savedLocation);
+        setSavedCheckpointsLocation(savedLocation);
+      }
       await window.electronAPI.restartPythonBackend();
       setAdvancedReloaded(true);
     } catch (error) {
@@ -255,8 +289,64 @@ export function SettingsModal({
 
           {activeTab === "advanced" && (
             <div className="space-y-5">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-white">
+                  Custom WanGP Checkpoints Folder
+                </label>
+                <div className="flex gap-2">
+                  <div
+                    className="min-w-0 flex-1 truncate rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-300 select-text"
+                    title={checkpointsLocation?.path}
+                  >
+                    {checkpointsLocation?.path ?? "Loading…"}
+                  </div>
+                  {checkpointsLocation?.custom && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      disabled={advancedSaving}
+                      onClick={() => {
+                        setCheckpointsLocation((current) =>
+                          current
+                            ? {
+                                ...current,
+                                path: current.defaultPath,
+                                custom: false,
+                              }
+                            : current,
+                        );
+                        setAdvancedReloaded(false);
+                      }}
+                      className="shrink-0 text-xs"
+                    >
+                      Use default
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="shrink-0 border-zinc-700"
+                    disabled={advancedSaving || !checkpointsLocation}
+                    onClick={async () => {
+                      const directory =
+                        await window.electronAPI.showOpenDirectoryDialog({
+                          title: "Select Custom WanGP Checkpoints Folder",
+                        });
+                      if (!directory) return;
+                      setCheckpointsLocation((current) =>
+                        current
+                          ? { ...current, path: directory, custom: true }
+                          : current,
+                      );
+                      setAdvancedReloaded(false);
+                    }}
+                  >
+                    <Folder className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
               {/* Torch Compile */}
-              <div className="space-y-3">
+              <div className="space-y-3 pt-4 border-t border-zinc-800">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
@@ -293,7 +383,7 @@ export function SettingsModal({
                 </div>
               </div>
 
-              <div className="space-y-4 pt-4 border-t border-zinc-800">
+              <div className="flex gap-2">
                 <label className="block space-y-1.5">
                   <span className="text-sm font-medium text-white">
                     Attention Mode
@@ -371,14 +461,10 @@ export function SettingsModal({
                     <option value="3">Level 3 (6GB+)</option>
                   </select>
                 </label>
-                <p className="text-xs text-zinc-500">
-                  Higher levels save more VRAM but may run slower or add tiling
-                  artifacts.
-                </p>
               </div>
 
               <div className="space-y-3 pt-4 border-t border-zinc-800">
-                <p className="text-xs text-zinc-500 leading-relaxed">
+                <p className="text-xs leading-relaxed text-zinc-500">
                   Changes stay pending until saved. Reloading inference engine
                   interrupts any active generation.
                 </p>
@@ -390,12 +476,7 @@ export function SettingsModal({
                   }
                   className="w-full"
                 >
-                  <RefreshCw
-                    className={`h-4 w-4 ${advancedSaving ? "animate-spin" : ""}`}
-                  />
-                  {advancedSaving
-                    ? "Saving & Reloading…"
-                    : "Save & Reload Inference Engine"}
+                  {advancedSaving ? "Saving & Reloading…" : "Save & Reload"}
                 </Button>
                 {advancedSaveError && (
                   <p className="text-xs text-red-400" role="alert">

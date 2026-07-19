@@ -2,7 +2,7 @@ import { app, ipcMain } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import { checkGPU } from '../gpu'
-import { cancelModelPackDownload, deleteModelPack, downloadModelPacks, getModelPackProgress, getModelPacks, isPythonReady, downloadPythonEmbed } from '../python-setup'
+import { cancelModelPackDownload, deleteModelPack, downloadModelPacks, getCheckpointsLocation, getModelPackProgress, getModelPacks, isPythonReady, downloadPythonEmbed, refreshModelPacks, setCheckpointsLocation } from '../python-setup'
 import { getBackendHealthStatus, getBackendUrl, getAuthToken, startPythonBackend, restartPythonBackend } from '../python-backend'
 import { getMainWindow } from '../window'
 
@@ -139,7 +139,10 @@ export function registerAppHandlers(): void {
   })
 
   ipcMain.handle('get-model-packs', () => getModelPacks())
+  ipcMain.handle('refresh-model-packs', () => refreshModelPacks())
   ipcMain.handle('get-model-pack-progress', () => getModelPackProgress())
+  ipcMain.handle('get-checkpoints-location', () => getCheckpointsLocation())
+  ipcMain.handle('set-checkpoints-location', (_event, value: string | null) => setCheckpointsLocation(value))
 
   ipcMain.handle('download-model-packs', async (_event, ids: string[]) => {
     return await downloadModelPacks(ids, (progress) => {

@@ -9,7 +9,6 @@ from wangp_model_packs import (
     _delete_pack_files,
     _download_model_dependencies,
     _load_state,
-    _pack_is_installed,
 )
 
 
@@ -97,31 +96,21 @@ def test_legacy_completion_marker_is_not_treated_as_verified(tmp_path: Path) -> 
     assert _load_state(tmp_path) == {}
 
 
-def test_pack_manifest_detects_deleted_file(tmp_path: Path) -> None:
-    model_file = tmp_path / "chkpts" / "model.safetensors"
-    model_file.parent.mkdir()
-    model_file.write_bytes(b"ready")
-
-    assert _pack_is_installed(tmp_path, ["chkpts/model.safetensors"])
-    model_file.unlink()
-    assert not _pack_is_installed(tmp_path, ["chkpts/model.safetensors"])
-
-
 def test_delete_pack_keeps_files_referenced_by_another_pack(tmp_path: Path) -> None:
-    shared = tmp_path / "chkpts" / "shared.safetensors"
-    first_only = tmp_path / "chkpts" / "first.safetensors"
-    second_only = tmp_path / "chkpts" / "second.safetensors"
+    shared = tmp_path / "ckpts" / "shared.safetensors"
+    first_only = tmp_path / "ckpts" / "first.safetensors"
+    second_only = tmp_path / "ckpts" / "second.safetensors"
     shared.parent.mkdir()
     for file_path in (shared, first_only, second_only):
         file_path.write_bytes(b"model")
     manifests = {
-        "first": ["chkpts/shared.safetensors", "chkpts/first.safetensors"],
-        "second": ["chkpts/shared.safetensors", "chkpts/second.safetensors"],
+        "first": ["ckpts/shared.safetensors", "ckpts/first.safetensors"],
+        "second": ["ckpts/shared.safetensors", "ckpts/second.safetensors"],
     }
 
     _delete_pack_files(tmp_path, manifests, "first")
 
-    assert manifests == {"second": ["chkpts/shared.safetensors", "chkpts/second.safetensors"]}
+    assert manifests == {"second": ["ckpts/shared.safetensors", "ckpts/second.safetensors"]}
     assert shared.is_file()
     assert not first_only.exists()
     assert second_only.is_file()
@@ -143,9 +132,24 @@ def test_delete_pack_rejects_manifest_path_outside_wangp_root(tmp_path: Path) ->
     try:
         _delete_pack_files(wangp_root, manifests, "pack")
     except RuntimeError as exc:
-        assert "outside the WanGP directory" in str(exc)
+        assert "outside configured model directories" in str(exc)
     else:
         raise AssertionError("Expected deletion outside WanGP root to be rejected")
 
     assert external_file.read_text(encoding="utf-8") == "keep"
     assert manifests == {"pack": [str(external_file)]}
+
+
+def test_delete_pack_allows_configured_checkpoints_directory(tmp_path: Path) -> None:
+    wangp_root = tmp_path / "wangp"
+    checkpoints_dir = tmp_path / "existing-wangp" / "ckpts"
+    wangp_root.mkdir()
+    checkpoints_dir.mkdir(parents=True)
+    model_file = checkpoints_dir / "model.safetensors"
+    model_file.write_bytes(b"model")
+    manifests = {"pack": [str(model_file)]}
+
+    _delete_pack_files(wangp_root, manifests, "pack", checkpoints_dir)
+
+    assert manifests == {}
+    assert not model_file.exists()
