@@ -175,7 +175,7 @@ export function DirectorSidebar(props: Props) {
 
   useEffect(() => {
     if (!assetContextMenu) return;
-    const closeOnOutsideClick = (event: MouseEvent) => {
+    const closeOnOutsideClick = (event: globalThis.MouseEvent) => {
       if (
         assetContextMenuRef.current &&
         !assetContextMenuRef.current.contains(event.target as Node)
