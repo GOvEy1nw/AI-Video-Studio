@@ -10,6 +10,7 @@ const THUMB_QUALITY = 0.7
 
 /** Cache: videoUrl → thumbnailBlobUrl  (avoids regenerating on re-render) */
 const thumbnailCache = new Map<string, string>()
+const thumbnailPromiseCache = new Map<string, Promise<string>>()
 
 /**
  * Extract a single frame from a video URL at the given time (default 0 s)
@@ -23,8 +24,10 @@ export function generateThumbnail(
 ): Promise<string> {
   const cached = thumbnailCache.get(videoUrl)
   if (cached) return Promise.resolve(cached)
+  const pending = thumbnailPromiseCache.get(videoUrl)
+  if (pending) return pending
 
-  return new Promise<string>((resolve, reject) => {
+  const thumbnailPromise = new Promise<string>((resolve, reject) => {
     const video = document.createElement('video')
     video.crossOrigin = 'anonymous'
     video.preload = 'auto'
@@ -81,6 +84,19 @@ export function generateThumbnail(
 
     video.src = videoUrl
   })
+
+  const trackedPromise = thumbnailPromise.then(
+    (thumbnail) => {
+      thumbnailPromiseCache.delete(videoUrl)
+      return thumbnail
+    },
+    (error: unknown) => {
+      thumbnailPromiseCache.delete(videoUrl)
+      throw error
+    },
+  )
+  thumbnailPromiseCache.set(videoUrl, trackedPromise)
+  return trackedPromise
 }
 
 /**
@@ -125,7 +141,7 @@ export function getCachedThumbnail(videoUrl: string): string | undefined {
  * Safe to call multiple times – subsequent calls are no-ops.
  */
 export function warmThumbnail(videoUrl: string): void {
-  if (thumbnailCache.has(videoUrl)) return
+  if (thumbnailCache.has(videoUrl) || thumbnailPromiseCache.has(videoUrl)) return
   generateThumbnail(videoUrl).catch(() => {})
 }
 

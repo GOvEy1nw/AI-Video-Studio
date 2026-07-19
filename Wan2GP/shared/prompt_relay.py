@@ -117,7 +117,7 @@ class PromptRelayMaskBuilder:
 
         raw_query_frames = frame_indices.to(torch.float32)
         raw_max_frame = raw_query_frames.amax(dim=1, keepdim=True).clamp_min(1.0)
-        visible_start = raw_max_frame * self.visible_start_ratio
+        visible_start = torch.round(raw_max_frame * self.visible_start_ratio)
         query_frames = raw_query_frames - visible_start
         max_frame = (raw_max_frame - visible_start).clamp_min(1.0)
         sigma_sq = 2.0 * self.sigma * self.sigma
@@ -126,11 +126,11 @@ class PromptRelayMaskBuilder:
             end_key = min(segment.key_end, positive_len)
             if start_key >= end_key:
                 continue
-            start = torch.tensor(segment.start, device=device, dtype=torch.float32) * max_frame
-            end = torch.tensor(segment.end, device=device, dtype=torch.float32) * max_frame
+            start = torch.round(torch.tensor(segment.start, device=device, dtype=torch.float32) * max_frame)
+            end = torch.round(torch.tensor(segment.end, device=device, dtype=torch.float32) * max_frame)
             length = (end - start).clamp_min(1.0)
-            midpoint = (start + end) * 0.5
-            window = (length * 0.5 - 2.0).clamp_min(0.0)
+            midpoint = torch.floor((start + end) * 0.5)
+            window = (torch.floor(length * 0.5) - 2.0).clamp_min(0.0)
             distance = (query_frames - midpoint).abs()
             cost = torch.relu(distance - window).square() / sigma_sq
             mask[:, :, start_key:end_key] = -cost.unsqueeze(-1)
@@ -177,6 +177,7 @@ def encode_prompt_relay(
     frame_rate: float,
     tokenizer: Any,
     visible_frame_offset: int = 0,
+    epsilon: float = 1e-3,
 ) -> PromptRelayConditioning | None:
     plan = parse_prompt_relay(prompt)
     if plan is None:
@@ -190,11 +191,15 @@ def encode_prompt_relay(
         cache_keys=[("prompt_relay_full", full_prompt)],
     )[0]
     video_context, audio_context, video_mask, audio_mask = encoded
+    video_mask_builder = _build_mask_builder(plan, video_context, video_mask, token_ranges, num_frames, frame_rate, visible_frame_offset, epsilon)
+    audio_mask_builder = None if audio_context is None else _build_mask_builder(plan, audio_context, audio_mask, token_ranges, num_frames, frame_rate, visible_frame_offset, epsilon)
+    if video_mask_builder is not None:
+        print(f"[PromptRelay] epsilon={epsilon:g}, sigma={video_mask_builder.sigma:g}")
     return PromptRelayConditioning(
         video_context=video_context,
         audio_context=audio_context,
-        video_mask_builder=_build_mask_builder(plan, video_context, video_mask, token_ranges, num_frames, frame_rate, visible_frame_offset),
-        audio_mask_builder=None if audio_context is None else _build_mask_builder(plan, audio_context, audio_mask, token_ranges, num_frames, frame_rate, visible_frame_offset),
+        video_mask_builder=video_mask_builder,
+        audio_mask_builder=audio_mask_builder,
     )
 
 
@@ -206,6 +211,7 @@ def _build_mask_builder(
     num_frames: int,
     frame_rate: float,
     visible_frame_offset: int = 0,
+    epsilon: float = 1e-3,
 ) -> PromptRelayMaskBuilder | None:
     runtime_segments = []
     num_frames = max(int(num_frames), 1)
@@ -225,7 +231,7 @@ def _build_mask_builder(
         runtime_segments.append(_RuntimeSegment(start, end, start_key, end_key))
     if not any(segment.start > 0.0 or segment.end < 1.0 for segment in runtime_segments):
         return None
-    return PromptRelayMaskBuilder(_normalize_key_mask(mask, seq_len), runtime_segments, seq_len, visible_start_ratio=visible_start_ratio)
+    return PromptRelayMaskBuilder(_normalize_key_mask(mask, seq_len), runtime_segments, seq_len, visible_start_ratio=visible_start_ratio, epsilon=epsilon)
 
 
 def _parse_marker(marker: str) -> tuple[PromptRelayBound, PromptRelayBound | None] | None:

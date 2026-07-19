@@ -13,6 +13,62 @@ interface SeedControlProps {
   disabled?: boolean
 }
 
+export function SeedSettings({
+  seedLocked,
+  lockedSeed,
+  onChange,
+  disabled = false,
+}: SeedControlProps) {
+  const handleSeedInput = (raw: string) => {
+    const parsed = raw === '' ? DEFAULT_GENSPACE_LOCKED_SEED : Number(raw)
+    onChange({ seedLocked, lockedSeed: clampGenSpaceSeed(parsed) })
+  }
+
+  return (
+    <div className="space-y-3">
+      <label className="flex items-center justify-between gap-3">
+        <span className="text-xs font-medium text-zinc-300">Lock seed</span>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={seedLocked}
+          disabled={disabled}
+          onClick={() => onChange({ seedLocked: !seedLocked, lockedSeed })}
+          className={`relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-40 ${
+            seedLocked ? 'bg-blue-500' : 'bg-zinc-600'
+          }`}
+        >
+          <span
+            className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
+              seedLocked ? 'left-[18px]' : 'left-0.5'
+            }`}
+          />
+        </button>
+      </label>
+
+      <label className="block space-y-1.5">
+        <span className="text-xs font-medium text-zinc-300">Seed value</span>
+        <input
+          type="number"
+          min={0}
+          max={MAX_GENSPACE_SEED}
+          step={1}
+          value={lockedSeed}
+          disabled={disabled}
+          onChange={(event) => handleSeedInput(event.target.value)}
+          className="w-full rounded-md border border-zinc-600 bg-zinc-900 px-2.5 py-1.5 text-sm text-white focus:border-blue-500 focus:outline-none disabled:opacity-40"
+        />
+      </label>
+
+      <p className="text-[10px] leading-relaxed text-zinc-500">
+        {seedLocked
+          ? 'Generations in this project use the locked seed.'
+          : 'Each generation uses a random seed.'}
+      </p>
+    </div>
+  )
+}
+
 export function SeedControl({
   seedLocked,
   lockedSeed,
@@ -33,11 +89,6 @@ export function SeedControl({
     }
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [open])
-
-  const handleSeedInput = (raw: string) => {
-    const parsed = raw === '' ? DEFAULT_GENSPACE_LOCKED_SEED : Number(raw)
-    onChange({ seedLocked, lockedSeed: clampGenSpaceSeed(parsed) })
-  }
 
   return (
     <div ref={menuRef} className="relative">
@@ -64,45 +115,12 @@ export function SeedControl({
 
       {open && (
         <div className="absolute bottom-full right-0 z-50 mb-2 min-w-[220px] rounded-md border border-zinc-700 bg-zinc-800 p-3 shadow-xl">
-          <div className="space-y-3">
-            <label className="flex items-center justify-between gap-3">
-              <span className="text-xs font-medium text-zinc-300">Lock seed</span>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={seedLocked}
-                onClick={() => onChange({ seedLocked: !seedLocked, lockedSeed })}
-                className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${
-                  seedLocked ? 'bg-blue-500' : 'bg-zinc-600'
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
-                    seedLocked ? 'left-[18px]' : 'left-0.5'
-                  }`}
-                />
-              </button>
-            </label>
-
-            <label className="block space-y-1.5">
-              <span className="text-xs font-medium text-zinc-300">Seed value</span>
-              <input
-                type="number"
-                min={0}
-                max={MAX_GENSPACE_SEED}
-                step={1}
-                value={lockedSeed}
-                onChange={(e) => handleSeedInput(e.target.value)}
-                className="w-full rounded-md border border-zinc-600 bg-zinc-900 px-2.5 py-1.5 text-sm text-white focus:border-blue-500 focus:outline-none"
-              />
-            </label>
-
-            <p className="text-[10px] leading-relaxed text-zinc-500">
-              {seedLocked
-                ? 'Generations in this project use the locked seed.'
-                : 'Each generation uses a random seed.'}
-            </p>
-          </div>
+          <SeedSettings
+            seedLocked={seedLocked}
+            lockedSeed={lockedSeed}
+            onChange={onChange}
+            disabled={disabled}
+          />
         </div>
       )}
     </div>

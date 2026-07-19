@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib
+import json
 import logging
 import re
 import sys
@@ -83,6 +84,45 @@ class WanGPBridge:
             if enabled:
                 args.append("--compile")
             self._extra_args = tuple(args)
+
+    def set_runtime_preferences(
+        self,
+        *,
+        attention_mode: str,
+        performance_profile: float,
+        reduce_vram: str,
+    ) -> None:
+        vae_config = 0 if reduce_vram == "disabled" else int(reduce_vram)
+        boost = 1 if reduce_vram == "disabled" else 2
+        with self._session_lock:
+            self._write_runtime_config(
+                {
+                    "attention_mode": attention_mode,
+                    "profile": performance_profile,
+                    "video_profile": performance_profile,
+                    "image_profile": performance_profile,
+                    "audio_profile": performance_profile,
+                    "vae_config": vae_config,
+                    "boost": boost,
+                }
+            )
+
+    def _write_runtime_config(self, overrides: dict[str, object]) -> None:
+        config_path = self._resolve_session_config_path()
+        try:
+            payload: dict[str, object] = {}
+            if config_path.exists():
+                loaded = json.loads(config_path.read_text(encoding="utf-8"))
+                if not isinstance(loaded, dict):
+                    raise ValueError("WanGP config must contain a JSON object")
+                payload = cast(dict[str, object], loaded)
+            payload.update(overrides)
+            config_path.parent.mkdir(parents=True, exist_ok=True)
+            temporary_path = config_path.with_name(f".{config_path.name}.tmp")
+            temporary_path.write_text(json.dumps(payload, indent=4) + "\n", encoding="utf-8")
+            temporary_path.replace(config_path)
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            logger.warning("Could not update WanGP runtime settings: %s", exc)
 
     @property
     def has_session(self) -> bool:

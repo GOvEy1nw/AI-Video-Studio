@@ -2,7 +2,7 @@ import { app, ipcMain } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import { checkGPU } from '../gpu'
-import { cancelModelPackDownload, downloadModelPacks, getModelPacks, isPythonReady, downloadPythonEmbed } from '../python-setup'
+import { cancelModelPackDownload, deleteModelPack, downloadModelPacks, getModelPackProgress, getModelPacks, isPythonReady, downloadPythonEmbed } from '../python-setup'
 import { getBackendHealthStatus, getBackendUrl, getAuthToken, startPythonBackend, restartPythonBackend } from '../python-backend'
 import { getMainWindow } from '../window'
 
@@ -139,6 +139,7 @@ export function registerAppHandlers(): void {
   })
 
   ipcMain.handle('get-model-packs', () => getModelPacks())
+  ipcMain.handle('get-model-pack-progress', () => getModelPackProgress())
 
   ipcMain.handle('download-model-packs', async (_event, ids: string[]) => {
     return await downloadModelPacks(ids, (progress) => {
@@ -148,6 +149,10 @@ export function registerAppHandlers(): void {
 
   ipcMain.handle('cancel-model-pack-download', () => {
     cancelModelPackDownload()
+  })
+
+  ipcMain.handle('delete-model-pack', async (_event, id: string) => {
+    await deleteModelPack(id)
   })
 
   ipcMain.handle('start-python-backend', async () => {

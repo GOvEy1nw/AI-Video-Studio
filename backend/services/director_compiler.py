@@ -29,8 +29,10 @@ class DirectorInjectedFrame:
 @dataclass(frozen=True)
 class DirectorWanGPPlan:
     compiled_prompt: str
+    uses_prompt_relay: bool
     output_frame_count: int
-    duration_seconds: float
+    generation_frame_count: int
+    generation_duration_seconds: float
     start_image_path: str | None
     end_image_path: str | None
     injected_frames: tuple[DirectorInjectedFrame, ...]
@@ -80,7 +82,11 @@ def _validated_segments(
     if not request.promptSegments:
         _raise("DIRECTOR_PROMPT_REQUIRED")
     segments = sorted(request.promptSegments, key=lambda segment: segment.startFrame)
-    expected_start = request.continueVideo.timelineDurationFrames if request.continueVideo else 0
+    expected_start = (
+        request.continueVideo.timelineDurationFrames - 1
+        if request.continueVideo
+        else 0
+    )
     if expected_start >= output_frame_count:
         _raise("DIRECTOR_INVALID_FRAME_RANGE", "source prefix consumes output")
     previous_end = expected_start
@@ -90,7 +96,7 @@ def _validated_segments(
             _raise("DIRECTOR_PROMPT_OVERLAP", segment.id)
         if segment.endFrameExclusive <= segment.startFrame:
             _raise("DIRECTOR_INVALID_FRAME_RANGE", segment.id)
-        if segment.endFrameExclusive > request.durationFrames:
+        if segment.endFrameExclusive > request.durationFrames - 1:
             _raise("DIRECTOR_INVALID_FRAME_RANGE", segment.id)
         normalized.append(segment)
         previous_end = segment.endFrameExclusive
@@ -101,22 +107,24 @@ def _compile_prompt(
     global_prompt: str,
     segments: list[DirectorPromptSegmentInput],
     visible_frame_offset: int,
-    output_frame_count: int,
+    timeline_end_frame: int,
 ) -> str:
     global_text = global_prompt.strip()
     if _MANUAL_RELAY.search(global_text):
         _raise("DIRECTOR_MANUAL_RELAY_NOT_ALLOWED")
     lines = [global_text] if global_text else []
     for index, segment in enumerate(segments):
-        local = segment.prompt.strip() or global_text
+        local = segment.prompt.strip()
         if not local:
-            _raise("DIRECTOR_PROMPT_REQUIRED", segment.id)
+            if not global_text:
+                _raise("DIRECTOR_PROMPT_REQUIRED", segment.id)
+            continue
         if _MANUAL_RELAY.search(local):
             _raise("DIRECTOR_MANUAL_RELAY_NOT_ALLOWED", segment.id)
         effective_end = (
             segments[index + 1].startFrame
             if index + 1 < len(segments)
-            else output_frame_count
+            else timeline_end_frame
         )
         relay_start = segment.startFrame - visible_frame_offset + 1
         relay_end = effective_end - visible_frame_offset
@@ -148,11 +156,13 @@ def compile_director_request(
     ):
         _raise("DIRECTOR_INVALID_FRAME_RANGE", "Continue Video duration mismatch")
     segments = _validated_segments(request, output_frame_count)
-    if len(segments) > 1 and not policy.prompt_relay:
+    uses_prompt_relay = any(segment.prompt.strip() for segment in segments)
+    if uses_prompt_relay and not policy.prompt_relay:
         _raise("DIRECTOR_WANGP_MAPPING_UNAVAILABLE", "Prompt Relay")
-    visible_offset = continue_video.timelineDurationFrames if continue_video else 0
+    visible_offset = continue_video.timelineDurationFrames - 1 if continue_video else 0
+    generation_frame_count = output_frame_count - visible_offset
     compiled_prompt = _compile_prompt(
-        request.globalPrompt, segments, visible_offset, output_frame_count
+        request.globalPrompt, segments, visible_offset, output_frame_count - 1
     )
 
     start_image_path: str | None = None
@@ -265,8 +275,10 @@ def compile_director_request(
 
     return DirectorWanGPPlan(
         compiled_prompt=compiled_prompt,
+        uses_prompt_relay=uses_prompt_relay,
         output_frame_count=output_frame_count,
-        duration_seconds=(output_frame_count - 1) / request.fps,
+        generation_frame_count=generation_frame_count,
+        generation_duration_seconds=(generation_frame_count - 1) / request.fps,
         start_image_path=start_image_path,
         end_image_path=end_image_path,
         injected_frames=tuple(injected),

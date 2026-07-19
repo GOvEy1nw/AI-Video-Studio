@@ -156,6 +156,7 @@ class DirectorGenerationHandler(StateHandlerBase):
                 prepared.fps,
                 seed,
                 profile.wangp_default_settings,
+                prepared.promptRelayEpsilon,
             )
             output_path = self._wangp_bridge.generate_director_video(
                 settings=settings,
@@ -241,6 +242,7 @@ class DirectorGenerationHandler(StateHandlerBase):
         fps: int,
         seed: int,
         profile_defaults: dict[str, object],
+        prompt_relay_epsilon: float,
     ) -> dict[str, object]:
         app_settings = self.state.app_settings
         settings = dict(profile_defaults)
@@ -250,8 +252,8 @@ class DirectorGenerationHandler(StateHandlerBase):
                 "prompt": plan.compiled_prompt,
                 "multi_prompts_gen_type": "FG",
                 "resolution": resolution,
-                "video_length": plan.output_frame_count,
-                "duration_seconds": plan.duration_seconds,
+                "video_length": plan.generation_frame_count,
+                "duration_seconds": plan.generation_duration_seconds,
                 "force_fps": fps,
                 "seed": seed,
                 "sliding_window_size": 481,
@@ -261,6 +263,12 @@ class DirectorGenerationHandler(StateHandlerBase):
                 "metadata_type": app_settings.output_settings.metadata_mode,
             }
         )
+        if plan.uses_prompt_relay:
+            custom_settings = settings.get("custom_settings")
+            settings["custom_settings"] = {
+                **(custom_settings if isinstance(custom_settings, dict) else {}),
+                "prompt_relay_epsilon": prompt_relay_epsilon,
+            }
         if plan.continue_video_path:
             settings["video_source"] = plan.continue_video_path
         if plan.start_image_path:

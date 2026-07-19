@@ -15,6 +15,7 @@ import type {
   DirectorSequenceV1,
 } from "@/types/director";
 import {
+  ltxFrameCountToTimelineFrames,
   resizeContinueVideoTrim,
   resolveDirectorGenerationTake,
   snapLtxFramesDown,
@@ -53,7 +54,8 @@ const PROMPT_HEIGHT = 58;
 const GENERATED_HEIGHT = 58;
 const LOCKED_HEIGHT = 42;
 const BASE_PIXELS_PER_FRAME = 3;
-const DEFAULT_SEGMENT_FRAMES = 49;
+const DEFAULT_SEGMENT_FRAMES = 48;
+const MIN_SEGMENT_FRAMES = 8;
 
 function rulerTimecode(frame: number, fps: number): string {
   const safeFrame = Math.max(0, Math.round(frame));
@@ -80,7 +82,6 @@ export function DirectorTimeline({
   onCancel,
 }: Props) {
   const [zoom, setZoom] = useState(0.5);
-  const [focused, setFocused] = useState(false);
   const [viewportWidth, setViewportWidth] = useState(0);
   const [contextMenu, setContextMenu] = useState<
     | { kind: "prompt"; segmentId: string; x: number; y: number }
@@ -98,7 +99,7 @@ export function DirectorTimeline({
     [assets],
   );
   const rulerDurationFrames = Math.max(
-    sequence.output.durationFrames,
+    sequence.output.durationFrames - 1,
     maxDurationSeconds
       ? Math.ceil(maxDurationSeconds * sequence.output.fps)
       : sequence.output.durationFrames,
@@ -124,7 +125,9 @@ export function DirectorTimeline({
     ? byId.get(sequence.guidance.assetId)
     : undefined;
   const maximumDurationFrames = maxDurationSeconds
-    ? snapLtxFramesDown(maxDurationSeconds * sequence.output.fps)
+    ? ltxFrameCountToTimelineFrames(
+        snapLtxFramesDown(maxDurationSeconds * sequence.output.fps + 1),
+      )
     : Number.POSITIVE_INFINITY;
   const trackEndFrame = Number.isFinite(maximumDurationFrames)
     ? maximumDurationFrames
@@ -136,7 +139,11 @@ export function DirectorTimeline({
   );
   const promptGaps = useMemo(() => {
     const gaps: Array<{ startFrame: number; endFrameExclusive: number }> = [];
-    let cursor = sequence.continueVideo?.timelineDurationFrames ?? 0;
+    let cursor = sequence.continueVideo
+      ? ltxFrameCountToTimelineFrames(
+          sequence.continueVideo.timelineDurationFrames,
+        )
+      : 0;
     for (const segment of sortedPromptSegments) {
       if (segment.startFrame > cursor) {
         gaps.push({
@@ -251,7 +258,11 @@ export function DirectorTimeline({
       (a, b) => a.startFrame - b.startFrame,
     );
     const furthestFrame = Math.max(
-      snapshot.continueVideo?.timelineDurationFrames ?? 0,
+      snapshot.continueVideo
+        ? ltxFrameCountToTimelineFrames(
+            snapshot.continueVideo.timelineDurationFrames,
+          )
+        : 0,
       ...sorted.map((segment) => segment.endFrameExclusive),
     );
     const durationFrames = snapLtxFramesUp(
@@ -295,8 +306,11 @@ export function DirectorTimeline({
       );
     const move = (moveEvent: MouseEvent) => {
       const desiredStart =
-        segment.startFrame +
-        Math.round((moveEvent.clientX - originX) / pixelsPerFrame);
+        Math.round(
+          (segment.startFrame +
+            (moveEvent.clientX - originX) / pixelsPerFrame) /
+            8,
+        ) * 8;
       const desiredCentre = desiredStart + duration / 2;
       const targetIndex = segments
         .filter((item) => item.id !== segmentId)
@@ -322,7 +336,11 @@ export function DirectorTimeline({
       } else {
         const minimumStart =
           index === 0
-            ? (snapshot.continueVideo?.timelineDurationFrames ?? 0)
+            ? snapshot.continueVideo
+              ? ltxFrameCountToTimelineFrames(
+                  snapshot.continueVideo.timelineDurationFrames,
+                )
+              : 0
             : segments[index - 1].endFrameExclusive;
         const maximumStart =
           (segments[index + 1]?.startFrame ?? trackEndFrame) - duration;
@@ -365,9 +383,17 @@ export function DirectorTimeline({
     const previous = segments[index - 1];
     const next = segments[index + 1];
     const move = (moveEvent: MouseEvent) => {
-      const delta = Math.round((moveEvent.clientX - originX) / pixelsPerFrame);
+      const originBoundary =
+        edge === "in" ? segment.startFrame : segment.endFrameExclusive;
+      const delta =
+        Math.round(
+          (originBoundary + (moveEvent.clientX - originX) / pixelsPerFrame) / 8,
+        ) *
+          8 -
+        originBoundary;
       if (edge === "out" && moveEvent.shiftKey) {
-        const minimumDelta = segment.startFrame + 1 - segment.endFrameExclusive;
+        const minimumDelta =
+          segment.startFrame + MIN_SEGMENT_FRAMES - segment.endFrameExclusive;
         const maximumDelta =
           trackEndFrame - segments[segments.length - 1].endFrameExclusive;
         const rippleDelta = Math.max(
@@ -391,21 +417,32 @@ export function DirectorTimeline({
         onChange(updatePromptSegments(snapshot, resized));
         return;
       }
+      const trimsNeighbor = moveEvent.altKey;
       const boundary =
         edge === "in"
           ? Math.max(
               previous
-                ? previous.startFrame + 1
-                : (snapshot.continueVideo?.timelineDurationFrames ?? 0),
+                ? trimsNeighbor
+                  ? previous.startFrame + MIN_SEGMENT_FRAMES
+                  : previous.endFrameExclusive
+                : snapshot.continueVideo
+                  ? ltxFrameCountToTimelineFrames(
+                      snapshot.continueVideo.timelineDurationFrames,
+                    )
+                  : 0,
               Math.min(
-                segment.endFrameExclusive - 1,
+                segment.endFrameExclusive - MIN_SEGMENT_FRAMES,
                 segment.startFrame + delta,
               ),
             )
           : Math.max(
-              segment.startFrame + 1,
+              segment.startFrame + MIN_SEGMENT_FRAMES,
               Math.min(
-                next ? next.endFrameExclusive - 1 : trackEndFrame,
+                next
+                  ? trimsNeighbor
+                    ? next.endFrameExclusive - MIN_SEGMENT_FRAMES
+                    : next.startFrame
+                  : trackEndFrame,
                 segment.endFrameExclusive + delta,
               ),
             );
@@ -416,6 +453,7 @@ export function DirectorTimeline({
             : { ...item, endFrameExclusive: boundary };
         if (
           edge === "in" &&
+          trimsNeighbor &&
           previous &&
           item.id === previous.id &&
           boundary < previous.endFrameExclusive
@@ -424,6 +462,7 @@ export function DirectorTimeline({
         }
         if (
           edge === "out" &&
+          trimsNeighbor &&
           next &&
           item.id === next.id &&
           boundary > next.startFrame
@@ -463,7 +502,9 @@ export function DirectorTimeline({
     const maximumPrefixDuration = Number.isFinite(maximumPrefixFrames)
       ? Math.max(
           minimum,
-          (snapLtxFramesDown(maximumPrefixFrames) - 1) / snapshot.output.fps,
+          ltxFrameCountToTimelineFrames(
+            snapLtxFramesDown(maximumPrefixFrames + 1),
+          ) / snapshot.output.fps,
         )
       : Number.POSITIVE_INFINITY;
     const move = (moveEvent: MouseEvent) => {
@@ -509,11 +550,12 @@ export function DirectorTimeline({
       (item) => item.id === segmentId,
     );
     if (!segment) return;
-    const splitFrame =
+    const desiredSplitFrame =
       playheadFrame > segment.startFrame &&
       playheadFrame < segment.endFrameExclusive
         ? playheadFrame
         : Math.floor((segment.startFrame + segment.endFrameExclusive) / 2);
+    const splitFrame = Math.round(desiredSplitFrame / 8) * 8;
     onChange(
       updatePromptSegments(
         sequence,
@@ -552,10 +594,11 @@ export function DirectorTimeline({
     const centre = startFrame + availableFrames / 2;
     const segmentStart = alignToStart
       ? startFrame
-      : Math.round(
-          Math.max(
-            startFrame,
-            Math.min(endFrameExclusive - duration, centre - duration / 2),
+      : Math.max(
+          startFrame,
+          Math.min(
+            endFrameExclusive - duration,
+            Math.round((centre - duration / 2) / 8) * 8,
           ),
         );
     const segment: DirectorPromptSegmentV1 = {
@@ -572,14 +615,8 @@ export function DirectorTimeline({
 
   return (
     <TimelineViewport
-      className="flex h-full flex-col rounded-none border-x-0 border-b-0"
-      focused={focused}
+      className="flex h-full flex-col rounded-none border-x-0 border-b-0 outline-none"
       tabIndex={0}
-      onFocusCapture={() => setFocused(true)}
-      onBlurCapture={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null))
-          setFocused(false);
-      }}
       onKeyDown={(event) => {
         if (
           (event.key === "Backspace" || event.key === "Delete") &&
@@ -758,7 +795,7 @@ export function DirectorTimeline({
                   left: 0,
                   width: Math.max(
                     28,
-                    sequence.output.durationFrames * pixelsPerFrame,
+                    (sequence.output.durationFrames - 1) * pixelsPerFrame,
                   ),
                 }}
               >
@@ -848,8 +885,9 @@ export function DirectorTimeline({
                   left: 0,
                   width: Math.max(
                     28,
-                    sequence.continueVideo.timelineDurationFrames *
-                      pixelsPerFrame,
+                    ltxFrameCountToTimelineFrames(
+                      sequence.continueVideo.timelineDurationFrames,
+                    ) * pixelsPerFrame,
                   ),
                 }}
                 aria-label="Continue Video segment anchored at frame zero"
@@ -873,18 +911,15 @@ export function DirectorTimeline({
                 ) : null}
                 <div className="relative flex h-full items-center gap-2 px-3">
                   <Lock className="h-3 w-3 flex-shrink-0 text-zinc-300" />
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="truncate text-[10px] font-medium text-violet-100">
                       Continue Video
                     </div>
-                    <div className="truncate text-[10px] text-zinc-300">
-                      In {sequence.continueVideo.trimStartTime.toFixed(2)}s ·
-                      Out{" "}
-                      {(
-                        sequence.continueVideo.trimStartTime +
-                        sequence.continueVideo.trimDuration
-                      ).toFixed(2)}
-                      s
+                    <div className="flex justify-end text-[10px] tabular-nums text-zinc-300">
+                      {ltxFrameCountToTimelineFrames(
+                        sequence.continueVideo.timelineDurationFrames,
+                      )}
+                      f
                     </div>
                   </div>
                 </div>
@@ -981,7 +1016,7 @@ export function DirectorTimeline({
                 <button
                   type="button"
                   aria-label={`Adjust In for prompt segment ${index + 1}`}
-                  title="Adjust segment In"
+                  title="Adjust segment In · Hold Alt to trim previous segment"
                   onMouseDown={(event) =>
                     startSegmentEdgeDrag(event, segment.id, "in")
                   }
@@ -992,7 +1027,7 @@ export function DirectorTimeline({
                 <button
                   type="button"
                   aria-label={`Adjust Out for prompt segment ${index + 1}`}
-                  title="Adjust segment Out · Hold Shift to move following segments"
+                  title="Adjust segment Out · Hold Shift to move following segments · Hold Alt to trim next segment"
                   onMouseDown={(event) =>
                     startSegmentEdgeDrag(event, segment.id, "out")
                   }
@@ -1037,7 +1072,7 @@ export function DirectorTimeline({
                   top: GENERATED_HEIGHT + PROMPT_HEIGHT + LOCKED_HEIGHT + 5,
                   width: Math.max(
                     80,
-                    sequence.output.durationFrames * pixelsPerFrame,
+                    (sequence.output.durationFrames - 1) * pixelsPerFrame,
                   ),
                 }}
               >

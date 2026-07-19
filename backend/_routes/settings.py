@@ -30,6 +30,12 @@ def route_post_settings(
     changed_roots = {path.split(".", 1)[0] for path in changed_paths}
     if "use_torch_compile" in changed_paths:
         handler.wangp_bridge.set_compile_enabled(_after.use_torch_compile)
+    if changed_paths & {"attention_mode", "performance_profile", "reduce_vram"}:
+        handler.wangp_bridge.set_runtime_preferences(
+            attention_mode=_after.attention_mode,
+            performance_profile=_after.performance_profile,
+            reduce_vram=_after.reduce_vram,
+        )
 
     logger.info(
         "Applied settings patch (changed=%s)",

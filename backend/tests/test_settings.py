@@ -18,6 +18,9 @@ class TestGetSettings:
         assert r.status_code == 200
         data = r.json()
         assert data["useTorchCompile"] is False
+        assert data["attentionMode"] == "auto"
+        assert data["performanceProfile"] == 4
+        assert data["reduceVram"] == "disabled"
         assert data["loadOnStartup"] is False
         assert data["useLocalTextEncoder"] is False
         assert data["fastModel"] == {"useUpscaler": True}
@@ -53,6 +56,31 @@ class TestPostSettings:
         assert r.status_code == 200
         assert test_state.state.app_settings.use_torch_compile is True
         assert test_state.state.app_settings.load_on_startup is True
+
+    def test_update_runtime_preferences(self, client, test_state, wangp_bridge):
+        r = client.post(
+            "/api/settings",
+            json={
+                "attentionMode": "sage2",
+                "performanceProfile": 4.5,
+                "reduceVram": "2",
+            },
+        )
+
+        assert r.status_code == 200
+        assert test_state.state.app_settings.attention_mode == "sage2"
+        assert test_state.state.app_settings.performance_profile == 4.5
+        assert test_state.state.app_settings.reduce_vram == "2"
+        assert wangp_bridge.runtime_preferences == {
+            "attention_mode": "sage2",
+            "performance_profile": 4.5,
+            "reduce_vram": "2",
+        }
+
+    def test_invalid_runtime_preference_rejected(self, client):
+        r = client.post("/api/settings", json={"reduceVram": "4"})
+
+        assert r.status_code == 422
 
     def test_update_fast_model(self, client, test_state):
         r = client.post("/api/settings", json={"fastModel": {"useUpscaler": False}})
@@ -120,6 +148,17 @@ class TestPostSettings:
         except ValidationError:
             return
         raise AssertionError("ProRes MP4 should be rejected")
+
+    def test_invalid_output_settings_patch_returns_422_without_mutation(self, client, test_state):
+        before = test_state.state.app_settings.output_settings.model_copy(deep=True)
+
+        response = client.post(
+            "/api/settings",
+            json={"outputSettings": {"videoCodec": "prores_422"}},
+        )
+
+        assert response.status_code == 422
+        assert test_state.state.app_settings.output_settings == before
 
 
 class TestSettingsPersistence:

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { Video } from 'lucide-react'
+import { needsBlurredBackdrop } from '../../lib/media-aspect'
 
 export function VideoThumbnailCard({ url, thumbnailUrl }: { url: string; thumbnailUrl?: string }) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -7,6 +8,7 @@ export function VideoThumbnailCard({ url, thumbnailUrl }: { url: string; thumbna
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [isHovering, setIsHovering] = useState(false)
   const [videoReady, setVideoReady] = useState(false)
+  const [showBackdrop, setShowBackdrop] = useState(false)
   const [scrubProgress, setScrubProgress] = useState(0)
   const [scrubTime, setScrubTime] = useState('')
   const rafRef = useRef<number>(0)
@@ -22,7 +24,48 @@ export function VideoThumbnailCard({ url, thumbnailUrl }: { url: string; thumbna
       canvas.width = rect.width
       canvas.height = rect.height
     }
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+    const sourceWidth = video.videoWidth
+    const sourceHeight = video.videoHeight
+    if (!sourceWidth || !sourceHeight) return
+
+    const coverScale = Math.max(canvas.width / sourceWidth, canvas.height / sourceHeight)
+    const coverWidth = sourceWidth * coverScale
+    const coverHeight = sourceHeight * coverScale
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    const needsBackdrop = needsBlurredBackdrop(sourceWidth, sourceHeight)
+    setShowBackdrop(needsBackdrop)
+    if (!needsBackdrop) {
+      ctx.drawImage(
+        video,
+        (canvas.width - coverWidth) / 2,
+        (canvas.height - coverHeight) / 2,
+        coverWidth,
+        coverHeight,
+      )
+      return
+    }
+
+    ctx.save()
+    ctx.filter = 'blur(12px) brightness(0.55)'
+    ctx.drawImage(
+      video,
+      (canvas.width - coverWidth) / 2,
+      (canvas.height - coverHeight) / 2,
+      coverWidth,
+      coverHeight,
+    )
+    ctx.restore()
+
+    const containScale = Math.min(canvas.width / sourceWidth, canvas.height / sourceHeight)
+    const containWidth = sourceWidth * containScale
+    const containHeight = sourceHeight * containScale
+    ctx.drawImage(
+      video,
+      (canvas.width - containWidth) / 2,
+      (canvas.height - containHeight) / 2,
+      containWidth,
+      containHeight,
+    )
   }, [])
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
@@ -93,11 +136,29 @@ export function VideoThumbnailCard({ url, thumbnailUrl }: { url: string; thumbna
       onMouseMove={isHovering ? handleMouseMove : undefined}
     >
       {thumbnailUrl ? (
-        <img
-          src={thumbnailUrl}
-          alt=""
-          className={`w-full h-full object-cover absolute inset-0 ${isHovering && videoReady ? 'opacity-0' : 'opacity-100'} transition-opacity duration-100`}
-        />
+        <>
+          {showBackdrop && (
+            <img
+              src={thumbnailUrl}
+              alt=""
+              aria-hidden
+              className={`absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-xl ${isHovering && videoReady ? 'invisible' : ''}`}
+            />
+          )}
+          <img
+            src={thumbnailUrl}
+            alt=""
+            onLoad={(event) =>
+              setShowBackdrop(
+                needsBlurredBackdrop(
+                  event.currentTarget.naturalWidth,
+                  event.currentTarget.naturalHeight,
+                ),
+              )
+            }
+            className={`absolute inset-0 h-full w-full ${showBackdrop ? 'object-contain' : 'object-cover'} ${isHovering && videoReady ? 'opacity-0' : 'opacity-100'} transition-opacity duration-100`}
+          />
+        </>
       ) : (
         <div className={`w-full h-full bg-zinc-800 absolute inset-0 flex items-center justify-center ${isHovering && videoReady ? 'opacity-0' : 'opacity-100'} transition-opacity duration-100`}>
           <Video className="h-5 w-5 text-zinc-600" />

@@ -19,7 +19,6 @@ export interface PythonSetupProgress {
 export interface ModelPack {
   id: string
   name: string
-  description: string
   estimatedSize: string
   installed: boolean
 }
@@ -36,17 +35,18 @@ export interface ModelPackProgress {
 }
 
 const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
-  { id: 'utility', name: 'Utility Models', description: 'Control, pose, depth, flow, audio and face utilities.', estimatedSize: '~3 GB' },
-  { id: 'z_image_turbo', name: 'Z-Image Turbo', description: 'Default AiVS image model and its required assets.', estimatedSize: '~6 GB' },
-  { id: 'flux2_klein_4b', name: 'Flux 2 Klein 4B', description: 'Flux image model and its required assets.', estimatedSize: '~8 GB' },
-  { id: 'krea2_turbo', name: 'Krea 2 Turbo', description: 'Krea image model and its required assets.', estimatedSize: '~18 GB' },
-  { id: 'hidream_o1', name: 'HiDream O1', description: 'HiDream image model and its required assets.', estimatedSize: '~30 GB' },
-  { id: 'ltx2_turbo', name: 'LTX 2.3 Turbo 1.1', description: 'LTX video model and its required assets.', estimatedSize: '~12 GB' },
-  { id: 'prompt_enhancer', name: 'Prompt Enhancer', description: 'WanGP prompt enhancement models.', estimatedSize: '~20 GB' },
-  { id: 'ltx_lora', name: 'LTX LoRA', description: 'WanGP-provided LTX LoRA support assets.', estimatedSize: '~1 GB' },
+  { id: 'utility', name: 'Utility Models', estimatedSize: '2.3 GB' },
+  { id: 'z_image_turbo', name: 'Z-Image Turbo', estimatedSize: '14.3 GB' },
+  { id: 'flux2_klein_4b', name: 'Flux 2 Klein 4B', estimatedSize: '11.8 GB' },
+  { id: 'krea2_turbo', name: 'Krea 2 Turbo', estimatedSize: '20.5 GB' },
+  { id: 'hidream_o1', name: 'HiDream O1', estimatedSize: '15.4 GB' },
+  { id: 'ltx2_turbo', name: 'LTX 2.3 Turbo 1.1', estimatedSize: '42.8 GB' },
+  { id: 'prompt_enhancer', name: 'Prompt Enhancer', estimatedSize: '36.0 GB' },
 ]
 
 let activeModelPackProcess: ChildProcess | null = null
+let activeModelPackDeleteProcess: ChildProcess | null = null
+let activeModelPackProgress: ModelPackProgress | null = null
 
 function getRuntimeFiles(): string[] {
   const root = isDev ? process.cwd() : process.resourcesPath
@@ -259,8 +259,23 @@ function getModelPackStatePath(): string {
 
 function getInstalledModelPackIds(): Set<string> {
   try {
-    const parsed = JSON.parse(fs.readFileSync(getModelPackStatePath(), 'utf-8')) as { completed?: unknown }
-    return new Set(Array.isArray(parsed.completed) ? parsed.completed.filter((id): id is string => typeof id === 'string') : [])
+    const parsed = JSON.parse(fs.readFileSync(getModelPackStatePath(), 'utf-8')) as { files?: unknown }
+    if (!parsed.files || typeof parsed.files !== 'object' || Array.isArray(parsed.files)) return new Set()
+    const wangpRoot = path.join(isDev ? process.cwd() : process.resourcesPath, 'Wan2GP')
+    const installed = Object.entries(parsed.files).flatMap(([id, files]) => {
+      if (!Array.isArray(files) || files.length === 0) return []
+      const complete = files.every((file) => {
+        if (typeof file !== 'string') return false
+        const resolved = path.isAbsolute(file) ? file : path.resolve(wangpRoot, file)
+        try {
+          return fs.statSync(resolved).isFile()
+        } catch {
+          return false
+        }
+      })
+      return complete ? [id] : []
+    })
+    return new Set(installed)
   } catch {
     return new Set()
   }
@@ -269,6 +284,10 @@ function getInstalledModelPackIds(): Set<string> {
 export function getModelPacks(): ModelPack[] {
   const installed = getInstalledModelPackIds()
   return MODEL_PACKS.map((pack) => ({ ...pack, installed: installed.has(pack.id) }))
+}
+
+export function getModelPackProgress(): ModelPackProgress | null {
+  return activeModelPackProcess ? activeModelPackProgress : null
 }
 
 function parseByteSize(value: string): number {
@@ -299,7 +318,7 @@ export function downloadModelPacks(
   onProgress: (progress: ModelPackProgress) => void,
 ): Promise<boolean> {
   if (!ids.length) return Promise.resolve(true)
-  if (activeModelPackProcess) throw new Error('A model-pack download is already running.')
+  if (activeModelPackProcess || activeModelPackDeleteProcess) throw new Error('Another model-pack operation is already running.')
   const pythonExe = path.join(getPythonDir(), 'python.exe')
   const runner = path.join(isDev ? process.cwd() : process.resourcesPath, 'backend', 'wangp_model_packs.py')
   const wangpRoot = path.join(isDev ? process.cwd() : process.resourcesPath, 'Wan2GP')
@@ -310,6 +329,10 @@ export function downloadModelPacks(
     let spawnFailed = false
     const remainders = { stdout: '', stderr: '' }
     const diagnosticLines: string[] = []
+    const emitProgress = (progress: ModelPackProgress): void => {
+      activeModelPackProgress = progress
+      onProgress(progress)
+    }
     const recordDiagnostic = (line: string): void => {
       if (!line) return
       diagnosticLines.push(line)
@@ -321,6 +344,7 @@ export function downloadModelPacks(
       { windowsHide: true, cwd: wangpRoot, env: getRuntimeEnvironment() },
     )
     activeModelPackProcess = child
+    emitProgress({ status: 'downloading' })
     const consumeLine = (raw: string): void => {
       const line = raw.trim()
       if (!line) return
@@ -338,11 +362,11 @@ export function downloadModelPacks(
             }
             if (data.event === 'pack-start') {
               activePack = { packId: data.id, packName: data.name }
-              onProgress({ status: 'downloading', ...activePack })
+              emitProgress({ status: 'downloading', ...activePack })
             } else if (data.event === 'pack-complete') {
-              onProgress({ status: 'complete', packId: data.id, packName: data.name, percent: 100 })
+              emitProgress({ status: 'complete', packId: data.id, packName: data.name, percent: 100 })
             } else if (data.event === 'transfer') {
-              onProgress({
+              emitProgress({
                 status: 'downloading',
                 ...activePack,
                 file: data.file,
@@ -353,10 +377,10 @@ export function downloadModelPacks(
             }
           } catch { /* Ignore malformed third-party output. */ }
         return
-        }
-        const transfer = parseTransferProgress(line)
+      }
+      const transfer = parseTransferProgress(line)
       if (transfer) {
-        onProgress({ status: 'downloading', ...activePack, ...transfer })
+        emitProgress({ status: 'downloading', ...activePack, ...transfer })
         return
       }
       recordDiagnostic(line)
@@ -371,7 +395,8 @@ export function downloadModelPacks(
     child.once('error', (error) => {
       spawnFailed = true
       activeModelPackProcess = null
-      onProgress({ status: 'error', ...activePack })
+      emitProgress({ status: 'error', ...activePack })
+      activeModelPackProgress = null
       reject(new Error(`Model-pack download failed to start: ${error.message}`))
     })
     child.once('close', (code) => {
@@ -380,12 +405,15 @@ export function downloadModelPacks(
       consumeLine(remainders.stdout)
       consumeLine(remainders.stderr)
       if (cancelled) {
-        onProgress({ status: 'cancelled', ...activePack })
+        emitProgress({ status: 'cancelled', ...activePack })
+        activeModelPackProgress = null
         resolve(false)
       } else if (code === 0) {
+        activeModelPackProgress = null
         resolve(true)
       } else {
-        onProgress({ status: 'error', ...activePack })
+        emitProgress({ status: 'error', ...activePack })
+        activeModelPackProgress = null
         logger.error(`[model-pack] Downloader output:\n${diagnosticLines.join('\n')}`)
         const details = diagnosticLines.slice(-12).join(' ')
         reject(new Error(`Model-pack download failed (exit code ${code ?? 'unknown'}): ${details || 'No diagnostic output.'}`))
@@ -397,6 +425,47 @@ export function downloadModelPacks(
 
 export function cancelModelPackDownload(): void {
   ;(activeModelPackProcess as (ChildProcess & { aivsCancel?: () => void }) | null)?.aivsCancel?.()
+}
+
+export function deleteModelPack(id: string): Promise<void> {
+  if (!MODEL_PACKS.some((pack) => pack.id === id)) throw new Error(`Unknown model pack: ${id}`)
+  if (activeModelPackProcess || activeModelPackDeleteProcess) throw new Error('Another model-pack operation is already running.')
+  const pythonExe = path.join(getPythonDir(), 'python.exe')
+  const runner = path.join(isDev ? process.cwd() : process.resourcesPath, 'backend', 'wangp_model_packs.py')
+  const wangpRoot = path.join(isDev ? process.cwd() : process.resourcesPath, 'Wan2GP')
+
+  return new Promise((resolve, reject) => {
+    let spawnFailed = false
+    const diagnosticLines: string[] = []
+    const recordDiagnostics = (chunk: Buffer): void => {
+      diagnosticLines.push(...chunk.toString().split(/[\r\n]/).filter(Boolean))
+      if (diagnosticLines.length > 80) diagnosticLines.splice(0, diagnosticLines.length - 80)
+    }
+    const child = spawn(
+      pythonExe,
+      [runner, '--wangp-root', wangpRoot, '--app-data-dir', app.getPath('userData'), '--delete', id],
+      { windowsHide: true, cwd: wangpRoot, env: getRuntimeEnvironment() },
+    )
+    activeModelPackDeleteProcess = child
+    child.stdout.on('data', recordDiagnostics)
+    child.stderr.on('data', recordDiagnostics)
+    child.once('error', (error) => {
+      spawnFailed = true
+      activeModelPackDeleteProcess = null
+      reject(new Error(`Model-pack deletion failed to start: ${error.message}`))
+    })
+    child.once('close', (code) => {
+      if (spawnFailed) return
+      activeModelPackDeleteProcess = null
+      if (code === 0) {
+        resolve()
+        return
+      }
+      logger.error(`[model-pack] Deleter output:\n${diagnosticLines.join('\n')}`)
+      const details = diagnosticLines.slice(-12).join(' ')
+      reject(new Error(`Model-pack deletion failed (exit code ${code ?? 'unknown'}): ${details || 'No diagnostic output.'}`))
+    })
+  })
 }
 
 /** Copy bundled Python + uv, then install the pinned WanGP runtime on first run. */

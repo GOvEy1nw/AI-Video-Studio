@@ -6,6 +6,21 @@ import { cloneDirectorSequence, normalizeDirectorSequence } from '../lib/directo
 import type { DirectorSequenceV1 } from '../types/director'
 import { logger } from '../lib/logger'
 
+function createProjectId(name: string, createdAt: number, existingIds: Set<string>): string {
+  const date = new Date(createdAt)
+  const pad = (value: number) => value.toString().padStart(2, '0')
+  const safeName = name.replace(/[^a-zA-Z0-9_-]+/g, '') || 'Project'
+  const timestamp = `${date.getFullYear()}${pad(date.getDate())}${pad(date.getMonth() + 1)}_${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`
+  const baseId = `${safeName}_${timestamp}`
+  let id = baseId
+  let suffix = 2
+  while (existingIds.has(id)) {
+    id = `${baseId}_${suffix}`
+    suffix += 1
+  }
+  return id
+}
+
 interface ProjectContextType {
   // Navigation
   currentView: ViewType
@@ -37,6 +52,7 @@ interface ProjectContextType {
   createAssetBin: (projectId: string, name: string) => void
   renameAssetBin: (projectId: string, oldName: string, newName: string) => void
   deleteAssetBin: (projectId: string, name: string) => void
+  setAssetBinColor: (projectId: string, name: string, colorLabel?: string) => void
   
   // Timelines
   addTimeline: (projectId: string, name?: string) => Timeline
@@ -115,6 +131,7 @@ function migrateProject(project: Project): Project {
       ...(project.assetBins || []),
       ...project.assets.flatMap((asset) => asset.bin ? [asset.bin] : []),
     ])).sort((a, b) => a.localeCompare(b)),
+    assetBinColors: project.assetBinColors || {},
     timelines: sourceTimelines.map((timeline) => ({
       ...timeline,
       director: undefined,
@@ -365,21 +382,23 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const currentProject = projects.find(p => p.id === currentProjectId) || null
   
   const createProject = useCallback((name: string): Project => {
+    const createdAt = Date.now()
     const defaultTimeline = createDefaultTimeline('Timeline 1')
     const newProject: Project = {
-      id: `project-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: createProjectId(name, createdAt, new Set(projects.map(project => project.id))),
       name,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
+      createdAt,
+      updatedAt: createdAt,
       assets: [],
       assetBins: [],
+      assetBinColors: {},
       timelines: [defaultTimeline],
       activeTimelineId: defaultTimeline.id,
       directorTimelines: [],
     }
     setProjects(prev => [newProject, ...prev])
     return newProject
-  }, [])
+  }, [projects])
   
   const deleteProject = useCallback((id: string) => {
     setProjects(prev => prev.filter(p => p.id !== id))
@@ -706,21 +725,46 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const renameAssetBin = useCallback((projectId: string, oldName: string, newName: string) => {
     const trimmed = newName.trim()
     if (!trimmed || trimmed === oldName) return
-    setProjects(prev => prev.map(project => project.id === projectId ? {
-      ...project,
-      assetBins: Array.from(new Set((project.assetBins || []).map(bin => bin === oldName ? trimmed : bin))).sort((a, b) => a.localeCompare(b)),
-      assets: project.assets.map(asset => asset.bin === oldName ? { ...asset, bin: trimmed } : asset),
-      updatedAt: Date.now(),
-    } : project))
+    setProjects(prev => prev.map(project => {
+      if (project.id !== projectId) return project
+      const assetBinColors = { ...(project.assetBinColors || {}) }
+      if (assetBinColors[oldName]) {
+        assetBinColors[trimmed] = assetBinColors[oldName]
+        delete assetBinColors[oldName]
+      }
+      return {
+        ...project,
+        assetBins: Array.from(new Set((project.assetBins || []).map(bin => bin === oldName ? trimmed : bin))).sort((a, b) => a.localeCompare(b)),
+        assetBinColors,
+        assets: project.assets.map(asset => asset.bin === oldName ? { ...asset, bin: trimmed } : asset),
+        updatedAt: Date.now(),
+      }
+    }))
   }, [])
 
   const deleteAssetBin = useCallback((projectId: string, name: string) => {
-    setProjects(prev => prev.map(project => project.id === projectId ? {
-      ...project,
-      assetBins: (project.assetBins || []).filter(bin => bin !== name),
-      assets: project.assets.map(asset => asset.bin === name ? { ...asset, bin: undefined } : asset),
-      updatedAt: Date.now(),
-    } : project))
+    setProjects(prev => prev.map(project => {
+      if (project.id !== projectId) return project
+      const assetBinColors = { ...(project.assetBinColors || {}) }
+      delete assetBinColors[name]
+      return {
+        ...project,
+        assetBins: (project.assetBins || []).filter(bin => bin !== name),
+        assetBinColors,
+        assets: project.assets.map(asset => asset.bin === name ? { ...asset, bin: undefined } : asset),
+        updatedAt: Date.now(),
+      }
+    }))
+  }, [])
+
+  const setAssetBinColor = useCallback((projectId: string, name: string, colorLabel?: string) => {
+    setProjects(prev => prev.map(project => {
+      if (project.id !== projectId) return project
+      const assetBinColors = { ...(project.assetBinColors || {}) }
+      if (colorLabel) assetBinColors[name] = colorLabel
+      else delete assetBinColors[name]
+      return { ...project, assetBinColors, updatedAt: Date.now() }
+    }))
   }, [])
 
   const renameDirectorTimeline = useCallback((projectId: string, timelineId: string, name: string) => {
@@ -811,6 +855,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       createAssetBin,
       renameAssetBin,
       deleteAssetBin,
+      setAssetBinColor,
       addTimeline,
       deleteTimeline,
       renameTimeline,

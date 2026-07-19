@@ -26,8 +26,8 @@ def _request(**updates: object) -> GenerateDirectorRequest:
         "generateAudio": True,
         "globalPrompt": "cinematic scene",
         "promptSegments": [
-            {"id": "one", "startFrame": 0, "endFrameExclusive": 61, "prompt": "walk"},
-            {"id": "two", "startFrame": 61, "endFrameExclusive": 121, "prompt": "turn"},
+            {"id": "one", "startFrame": 0, "endFrameExclusive": 60, "prompt": "walk"},
+            {"id": "two", "startFrame": 60, "endFrameExclusive": 120, "prompt": "turn"},
         ],
     }
     payload.update(updates)
@@ -67,31 +67,63 @@ def test_compiles_prompt_relay_and_injected_keyframes() -> None:
             {
                 "id": "one",
                 "startFrame": 0,
-                "endFrameExclusive": 61,
+                "endFrameExclusive": 60,
                 "prompt": "walk",
                 "keyframe": {"path": "start.png", "point": "start"},
             },
             {
                 "id": "two",
-                "startFrame": 61,
-                "endFrameExclusive": 121,
+                "startFrame": 60,
+                "endFrameExclusive": 120,
                 "prompt": "turn",
                 "keyframe": {"path": "end.png", "point": "end"},
             },
         ]
     )
     plan = compile_director_request(request, _policy())
-    assert plan.compiled_prompt == "cinematic scene\n[1:61] walk\n[62:121] turn"
+    assert plan.compiled_prompt == "cinematic scene\n[1:60] walk\n[61:120] turn"
     assert plan.start_image_path is None
     assert plan.end_image_path is None
-    assert [frame.frame for frame in plan.injected_frames] == [0, 120]
+    assert [frame.frame for frame in plan.injected_frames] == [0, 119]
     assert plan.image_prompt_type is None
     assert plan.video_prompt_type == "KFI"
 
 
-def test_empty_local_prompt_uses_global_prompt() -> None:
-    request = _request(promptSegments=[{"id": "one", "startFrame": 0, "endFrameExclusive": 121, "prompt": ""}])
-    assert "[1:121] cinematic scene" in compile_director_request(request, _policy()).compiled_prompt
+def test_empty_local_prompt_uses_global_without_prompt_relay() -> None:
+    request = _request(
+        promptSegments=[
+            {
+                "id": "one",
+                "startFrame": 0,
+                "endFrameExclusive": 120,
+                "prompt": "",
+                "keyframe": {"path": "start.png", "point": "start"},
+            }
+        ]
+    )
+    plan = compile_director_request(request, _policy())
+    assert plan.compiled_prompt == "cinematic scene"
+    assert plan.uses_prompt_relay is False
+    assert [frame.frame for frame in plan.injected_frames] == [0]
+
+
+def test_empty_local_prompt_is_skipped_in_mixed_prompt_relay() -> None:
+    request = _request(
+        promptSegments=[
+            {"id": "one", "startFrame": 0, "endFrameExclusive": 60, "prompt": "walk"},
+            {
+                "id": "two",
+                "startFrame": 60,
+                "endFrameExclusive": 120,
+                "prompt": "",
+                "keyframe": {"path": "end.png", "point": "end"},
+            },
+        ]
+    )
+    plan = compile_director_request(request, _policy())
+    assert plan.compiled_prompt == "cinematic scene\n[1:60] walk"
+    assert plan.uses_prompt_relay is True
+    assert [frame.frame for frame in plan.injected_frames] == [119]
 
 
 def test_prompt_gaps_extend_previous_prompt_to_next_segment() -> None:
@@ -100,16 +132,16 @@ def test_prompt_gaps_extend_previous_prompt_to_next_segment() -> None:
             {
                 "id": "one",
                 "startFrame": 0,
-                "endFrameExclusive": 41,
+                "endFrameExclusive": 40,
                 "prompt": "walk",
                 "keyframe": {"path": "gap.png", "point": "end"},
             },
-            {"id": "two", "startFrame": 61, "endFrameExclusive": 81, "prompt": "turn"},
+            {"id": "two", "startFrame": 60, "endFrameExclusive": 80, "prompt": "turn"},
         ]
     )
     plan = compile_director_request(request, _policy())
-    assert plan.compiled_prompt == "cinematic scene\n[1:61] walk\n[62:121] turn"
-    assert plan.injected_frames[0].frame == 40
+    assert plan.compiled_prompt == "cinematic scene\n[1:60] walk\n[61:120] turn"
+    assert plan.injected_frames[0].frame == 39
 
 
 def test_start_and_end_keyframes_use_visible_injected_positions() -> None:
@@ -118,14 +150,14 @@ def test_start_and_end_keyframes_use_visible_injected_positions() -> None:
             {
                 "id": "one",
                 "startFrame": 0,
-                "endFrameExclusive": 41,
+                "endFrameExclusive": 40,
                 "prompt": "walk",
                 "keyframe": {"path": "start.png", "point": "start"},
             },
             {
                 "id": "two",
-                "startFrame": 61,
-                "endFrameExclusive": 81,
+                "startFrame": 60,
+                "endFrameExclusive": 80,
                 "prompt": "turn",
                 "keyframe": {"path": "end.png", "point": "end"},
             },
@@ -134,7 +166,7 @@ def test_start_and_end_keyframes_use_visible_injected_positions() -> None:
     plan = compile_director_request(request, _policy())
     assert plan.start_image_path is None
     assert plan.end_image_path is None
-    assert [frame.frame for frame in plan.injected_frames] == [0, 80]
+    assert [frame.frame for frame in plan.injected_frames] == [0, 79]
     assert plan.image_prompt_type is None
     assert plan.video_prompt_type == "KFI"
 
@@ -163,7 +195,7 @@ def test_rejects_non_v1_frame_rate() -> None:
 @pytest.mark.parametrize(
     ("segments", "code"),
     [
-        ([{"id": "one", "startFrame": 0, "endFrameExclusive": 80, "prompt": "x"}, {"id": "two", "startFrame": 70, "endFrameExclusive": 121, "prompt": "y"}], "DIRECTOR_PROMPT_OVERLAP"),
+        ([{"id": "one", "startFrame": 0, "endFrameExclusive": 80, "prompt": "x"}, {"id": "two", "startFrame": 70, "endFrameExclusive": 120, "prompt": "y"}], "DIRECTOR_PROMPT_OVERLAP"),
         ([{"id": "one", "startFrame": 0, "endFrameExclusive": 122, "prompt": "x"}], "DIRECTOR_INVALID_FRAME_RANGE"),
     ],
 )
@@ -177,8 +209,8 @@ def test_continue_video_uses_generated_prompt_coordinates_and_injected_final_coo
         promptSegments=[
             {
                 "id": "one",
-                "startFrame": 33,
-                "endFrameExclusive": 121,
+                "startFrame": 32,
+                "endFrameExclusive": 120,
                 "prompt": "continue",
                 "keyframe": {"path": "injected.png", "point": "centre"},
             }
@@ -194,15 +226,15 @@ def test_continue_video_uses_generated_prompt_coordinates_and_injected_final_coo
     assert plan.compiled_prompt.endswith("[1:88] continue")
     assert plan.image_prompt_type == "V"
     assert plan.video_prompt_type == "KFI"
-    assert plan.injected_frames[0].frame == 76
+    assert plan.injected_frames[0].frame == 75
 
 
 def test_continue_video_final_image_uses_verified_injected_fallback() -> None:
     request = _request(
         promptSegments=[{
             "id": "one",
-            "startFrame": 33,
-            "endFrameExclusive": 121,
+            "startFrame": 32,
+            "endFrameExclusive": 120,
             "prompt": "continue",
             "keyframe": {"path": "final.png", "point": "end"},
         }],
@@ -214,13 +246,13 @@ def test_continue_video_final_image_uses_verified_injected_fallback() -> None:
     )
     plan = compile_director_request(request, _policy())
     assert plan.end_image_path is None
-    assert plan.injected_frames[0].frame == 120
+    assert plan.injected_frames[0].frame == 119
     assert plan.warnings == ()
 
 
 def test_rejects_continue_duration_mismatch() -> None:
     request = _request(
-        promptSegments=[{"id": "one", "startFrame": 33, "endFrameExclusive": 121, "prompt": "continue"}],
+        promptSegments=[{"id": "one", "startFrame": 32, "endFrameExclusive": 120, "prompt": "continue"}],
         continueVideo={
             "path": "source.mp4",
             "timelineDurationFrames": 33,
@@ -235,7 +267,7 @@ def test_adjacent_keyframes_do_not_collide() -> None:
     request = _request(
         promptSegments=[
             {"id": "one", "startFrame": 0, "endFrameExclusive": 1, "prompt": "x", "keyframe": {"path": "a.png", "point": "end"}},
-            {"id": "two", "startFrame": 1, "endFrameExclusive": 121, "prompt": "y", "keyframe": {"path": "b.png", "point": "start"}},
+            {"id": "two", "startFrame": 1, "endFrameExclusive": 120, "prompt": "y", "keyframe": {"path": "b.png", "point": "start"}},
         ]
     )
     plan = compile_director_request(request, _policy())
@@ -247,7 +279,7 @@ def test_rejects_audio_conflict() -> None:
     request = _request(
         continueVideo={"path": "source.mp4", "timelineDurationFrames": 33, "trimDuration": 1.375, "useSourceAudio": True},
         guidance={"mode": "human_motion", "path": "guide.mp4", "useSourceAudio": True},
-        promptSegments=[{"id": "one", "startFrame": 33, "endFrameExclusive": 121, "prompt": "x"}],
+        promptSegments=[{"id": "one", "startFrame": 32, "endFrameExclusive": 120, "prompt": "x"}],
     )
     with pytest.raises(DirectorValidationError, match="DIRECTOR_AUDIO_SOURCE_CONFLICT"):
         compile_director_request(request, _policy())
@@ -257,7 +289,7 @@ def test_continue_source_audio_disables_but_preserves_guide_audio() -> None:
     request = _request(
         continueVideo={"path": "source.mp4", "timelineDurationFrames": 33, "trimDuration": 1.375, "useSourceAudio": True},
         guideAudio={"path": "guide.wav", "trimDuration": 5},
-        promptSegments=[{"id": "one", "startFrame": 33, "endFrameExclusive": 121, "prompt": "x"}],
+        promptSegments=[{"id": "one", "startFrame": 32, "endFrameExclusive": 120, "prompt": "x"}],
     )
     plan = compile_director_request(request, _policy())
     assert plan.guide_audio_path == "source.mp4"

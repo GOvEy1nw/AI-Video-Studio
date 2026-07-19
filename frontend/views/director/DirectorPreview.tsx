@@ -119,13 +119,19 @@ export function DirectorPreview(props: Props) {
             alt="Prompt keyframe"
           />
         ) : (
-          <div className="max-w-xl px-10 text-center text-sm leading-6 text-zinc-300">
+          <div
+            className="rounded-2xl bg-black/50 px-6 py-6 text-center text-sm text-zinc-100 mx-auto"
+            style={{ maxWidth: "75%" }}
+          >
             {promptText ||
               "Scrub the Director timeline to preview prompts and media."}
           </div>
         )}
         {!videoUrl && promptAsset && promptText && (
-          <div className="absolute inset-x-0 bottom-0 bg-black/75 px-4 py-3 text-center text-xs text-zinc-100">
+          <div
+            className="absolute rounded-2xl bg-black/50 px-6 py-6 text-center text-sm text-zinc-100 mx-auto"
+            style={{ maxWidth: "75%" }}
+          >
             {promptText}
           </div>
         )}

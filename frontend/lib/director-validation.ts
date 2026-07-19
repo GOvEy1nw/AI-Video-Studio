@@ -4,7 +4,11 @@ import type {
   DirectorAudioSource,
   DirectorSequenceV1,
 } from '@/types/director'
-import { resolveKeyframeFrame, snapLtxFramesUp } from './director-timeline'
+import {
+  ltxFrameCountToTimelineFrames,
+  resolveKeyframeFrame,
+  snapLtxFramesUp,
+} from './director-timeline'
 
 export interface DirectorIssue {
   code: string
@@ -72,7 +76,9 @@ export function validateDirectorSequence(
     add('DIRECTOR_TRACK_DEFERRED', 'Control Media is read-only in this Director V1 release. Remove it before generation.', { track: 'guidance' })
   }
 
-  const expectedStart = sequence.continueVideo?.timelineDurationFrames ?? 0
+  const expectedStart = sequence.continueVideo
+    ? ltxFrameCountToTimelineFrames(sequence.continueVideo.timelineDurationFrames)
+    : 0
   const sorted = [...sequence.promptSegments].sort((a, b) => a.startFrame - b.startFrame)
   if (sorted.length > 1 && policy && !policy.promptRelay) {
     add('DIRECTOR_WANGP_MAPPING_UNAVAILABLE', 'Selected model does not support Prompt Relay.')
@@ -82,7 +88,7 @@ export function validateDirectorSequence(
   const injectedStrengths = new Set<number>()
   for (const segment of sorted) {
     if (segment.startFrame < previousEnd) add('DIRECTOR_PROMPT_OVERLAP', 'Prompt segments overlap.', { segmentId: segment.id, track: 'prompt' })
-    if (segment.endFrameExclusive <= segment.startFrame || segment.endFrameExclusive > sequence.output.durationFrames) {
+    if (segment.endFrameExclusive <= segment.startFrame || segment.endFrameExclusive > sequence.output.durationFrames - 1) {
       add('DIRECTOR_INVALID_FRAME_RANGE', 'Prompt segment has an invalid frame range.', { segmentId: segment.id, track: 'prompt' })
     }
     if (RELAY_MARKER.test(segment.prompt) || RELAY_MARKER.test(sequence.globalPrompt)) {

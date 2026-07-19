@@ -22,7 +22,6 @@ PACKS: dict[str, dict[str, str]] = {
     "hidream_o1": {"name": "HiDream O1", "kind": "model", "model_type": "hidream_o1_dev"},
     "ltx2_turbo": {"name": "LTX 2.3 Turbo 1.1", "kind": "model", "model_type": "ltx2_22B_distilled_1_1"},
     "prompt_enhancer": {"name": "Prompt Enhancer", "kind": "prompt"},
-    "ltx_lora": {"name": "LTX LoRA", "kind": "lora", "model_type": "ltx2_22B_distilled_1_1"},
 }
 
 
@@ -34,17 +33,88 @@ def _state_path(app_data_dir: Path) -> Path:
     return app_data_dir / "model-pack-state.json"
 
 
-def _load_state(app_data_dir: Path) -> set[str]:
+def _load_state(app_data_dir: Path) -> dict[str, list[str]]:
     try:
-        return set(json.loads(_state_path(app_data_dir).read_text(encoding="utf-8")).get("completed", []))
+        raw_object: object = json.loads(_state_path(app_data_dir).read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        return set()
+        return {}
+    if not isinstance(raw_object, dict):
+        return {}
+    raw = cast(dict[str, object], raw_object)
+    files = raw.get("files", {})
+    if not isinstance(files, dict):
+        return {}
+    manifests: dict[str, list[str]] = {}
+    for pack_id, paths in cast(dict[object, object], files).items():
+        if not isinstance(pack_id, str) or not isinstance(paths, list):
+            continue
+        manifests[pack_id] = [path for path in cast(list[object], paths) if isinstance(path, str)]
+    return manifests
 
 
-def _save_state(app_data_dir: Path, completed: set[str]) -> None:
+def _save_state(app_data_dir: Path, manifests: dict[str, list[str]]) -> None:
     path = _state_path(app_data_dir)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({"completed": sorted(completed)}, indent=2), encoding="utf-8")
+    path.write_text(
+        json.dumps({"completed": sorted(manifests), "files": manifests}, indent=2),
+        encoding="utf-8",
+    )
+
+
+def _manifest_path(root: Path, path: Path) -> str:
+    resolved = path.resolve()
+    try:
+        return resolved.relative_to(root).as_posix()
+    except ValueError:
+        return str(resolved)
+
+
+def _pack_is_installed(root: Path, manifest: list[str] | None) -> bool:
+    if not manifest:
+        return False
+    return all((Path(path) if Path(path).is_absolute() else root / path).is_file() for path in manifest)
+
+
+def _manifest_file_path(root: Path, value: str) -> Path:
+    path = Path(value)
+    return path if path.is_absolute() else root / path
+
+
+def _delete_pack_files(root: Path, manifests: dict[str, list[str]], pack_id: str) -> None:
+    manifest = manifests.get(pack_id)
+    if manifest is None:
+        return
+
+    file_paths = [_manifest_file_path(root, value) for value in manifest]
+    outside_root: list[str] = []
+    for file_path in file_paths:
+        try:
+            file_path.resolve().relative_to(root)
+        except ValueError:
+            outside_root.append(str(file_path))
+    if outside_root:
+        raise RuntimeError(
+            "Refusing to delete model-pack files outside the WanGP directory: "
+            + ", ".join(outside_root)
+        )
+
+    shared_paths = {
+        os.path.normcase(os.path.abspath(_manifest_file_path(root, value)))
+        for other_id, paths in manifests.items()
+        if other_id != pack_id
+        for value in paths
+    }
+    errors: list[str] = []
+    for file_path in file_paths:
+        if os.path.normcase(os.path.abspath(file_path)) in shared_paths:
+            continue
+        try:
+            file_path.unlink(missing_ok=True)
+        except OSError as exc:
+            errors.append(f"{file_path}: {exc}")
+    if errors:
+        raise RuntimeError("Could not delete model-pack files: " + "; ".join(errors))
+    del manifests[pack_id]
 
 
 class DownloadProgressMonitor:
@@ -96,24 +166,167 @@ class DownloadProgressMonitor:
             last_time = now
 
 
-def _download_pack(wgp: Any, pack_id: str) -> None:
+def _create_model_manager(wgp: Any) -> Any:
+    try:
+        plugin_module = import_module("plugins.models_manager.plugin")
+    except ModuleNotFoundError as exc:
+        raise RuntimeError("Bundled WanGP Model Manager plugin is missing") from exc
+    manager = plugin_module.modelsManagerPlugin()
+    manager.setup_ui()
+    missing_globals: list[str] = []
+    for name in cast(list[str], manager.global_requests):
+        if not hasattr(wgp, name):
+            missing_globals.append(name)
+            continue
+        setattr(manager, name, getattr(wgp, name))
+    if missing_globals:
+        raise RuntimeError(
+            "Bundled WanGP Model Manager is incompatible; missing globals: "
+            + ", ".join(sorted(missing_globals))
+        )
+    return manager
+
+
+def _download_model_dependencies(wgp: Any, model_type: str) -> None:
+    """Mirror WanGP load_models download preflight without loading model weights."""
+    model_def = cast(dict[str, Any], wgp.get_model_def(model_type))
+    quantization = wgp.transformer_quantization
+    dtype_policy = wgp.transformer_dtype_policy
+    main_filename = wgp.get_model_filename(model_type, quantization, dtype_policy)
+    downloaded_main = False
+    if main_filename:
+        wgp.download_models(main_filename, model_type, file_type=0, submodel_no=1)
+        downloaded_main = True
+
+    if "URLs2" in model_def:
+        second_filename = wgp.get_model_filename(
+            model_type,
+            quantization,
+            dtype_policy,
+            submodel_no=2,
+        )
+        if second_filename:
+            wgp.download_models(second_filename, model_type, file_type=0, submodel_no=2)
+            downloaded_main = True
+
+    raw_modules = cast(
+        list[object],
+        wgp.get_model_recursive_prop(model_type, "modules", return_list=True) or [],
+    )
+    modules: list[object] = [
+        wgp.get_model_recursive_prop(module, "modules", sub_prop_name="_list", return_list=True)
+        if isinstance(module, str)
+        else module
+        for module in raw_modules
+    ]
+    for module in modules:
+        if isinstance(module, dict):
+            module_def = cast(dict[str, object], module)
+            urls1 = module_def.get("URLs")
+            urls2 = module_def.get("URLs2")
+            if urls1 is None or urls2 is None:
+                raise RuntimeError(f"WanGP module definition is missing URLs/URLs2: {module}")
+            for urls, submodel_no in ((urls1, 1), (urls2, 2)):
+                filename = wgp.get_model_filename(
+                    model_type,
+                    quantization,
+                    dtype_policy,
+                    URLs=urls,
+                )
+                if filename:
+                    wgp.download_models(filename, model_type, file_type=1, submodel_no=submodel_no)
+        else:
+            filename = wgp.get_model_filename(
+                model_type,
+                quantization,
+                dtype_policy,
+                module_type=module,
+            )
+            if filename:
+                wgp.download_models(filename, model_type, file_type=1, submodel_no=0)
+
+    if not downloaded_main:
+        wgp.download_models("", model_type, file_type=0, submodel_no=-1)
+
+    text_encoder_urls = wgp.get_model_recursive_prop(
+        model_type,
+        "text_encoder_URLs",
+        return_list=True,
+    )
+    if text_encoder_urls:
+        text_encoder_filename = wgp.get_model_filename(
+            model_type,
+            wgp.text_encoder_quantization,
+            dtype_policy,
+            URLs=text_encoder_urls,
+        )
+        if text_encoder_filename:
+            wgp.download_models(
+                text_encoder_filename,
+                model_type,
+                file_type=2,
+                submodel_no=-1,
+                force_path=model_def.get("text_encoder_folder"),
+            )
+
+
+def _download_def_paths(manager: Any, definitions: Any) -> set[Path]:
+    return {Path(path) for path in manager._collect_download_def_file_paths(definitions)}
+
+
+def _model_paths(manager: Any, model_type: str) -> set[Path]:
+    model_dropdowns = import_module("shared.model_dropdowns")
+    deps = manager._build_dropdown_deps([model_type])
+    if deps is None:
+        raise RuntimeError(f"WanGP Model Manager could not resolve model '{model_type}'")
+    entries = [
+        *model_dropdowns.get_expected_core_file_entries_for_status(deps, model_type),
+        *model_dropdowns.get_expected_secondary_file_entries_for_status(deps, model_type),
+    ]
+    paths = {
+        Path(path)
+        for entry in entries
+        if (path := manager._resolve_expected_entry_path(entry, model_type=model_type))
+    }
+    model_def = manager.get_model_def(model_type)
+    paths.update(Path(path) for path in manager._collect_handler_file_paths(model_type, model_def))
+    return paths
+
+
+def _validate_paths(pack_id: str, paths: set[Path]) -> set[Path]:
+    missing = sorted(str(path) for path in paths if not path.is_file())
+    if missing:
+        preview = ", ".join(missing[:5])
+        suffix = f" (and {len(missing) - 5} more)" if len(missing) > 5 else ""
+        raise RuntimeError(f"Model pack '{pack_id}' is incomplete; missing: {preview}{suffix}")
+    if not paths:
+        raise RuntimeError(f"Model pack '{pack_id}' resolved no required files")
+    return paths
+
+
+def _download_pack(wgp: Any, manager: Any, pack_id: str) -> set[Path]:
     pack = PACKS[pack_id]
     kind = pack["kind"]
     if kind == "utility":
-        wgp.process_files_def(**wgp.query_core_shared_model_files())
+        definition = wgp.query_core_shared_model_files()
+        wgp.process_files_def(**definition)
+        paths = _download_def_paths(manager, definition)
     elif kind == "prompt":
         assets = import_module("shared.prompt_enhancer.assets")
         definitions = cast(list[dict[str, Any]], assets.query_prompt_enhancer_download_defs())
         for definition in definitions:
             wgp.process_files_def(**definition)
+        paths = _download_def_paths(manager, definitions)
     else:
         model_type = pack["model_type"]
-        filename = wgp.get_model_filename(
-            model_type,
-            wgp.transformer_quantization,
-            wgp.transformer_dtype_policy,
-        )
-        wgp.download_models(filename, model_type, file_type=1 if kind == "lora" else 0)
+        _download_model_dependencies(wgp, model_type)
+        paths = _model_paths(manager, model_type)
+        shared_definitions = [
+            wgp.query_core_shared_model_files(),
+            wgp.query_matanyone_download_def(wgp.server_config),
+        ]
+        paths.update(_download_def_paths(manager, shared_definitions))
+    return _validate_paths(pack_id, paths)
 
 
 def main() -> int:
@@ -123,6 +336,7 @@ def main() -> int:
     parser.add_argument("--app-data-dir", required=True)
     parser.add_argument("--list", action="store_true")
     parser.add_argument("--download", nargs="*")
+    parser.add_argument("--delete", nargs="*")
     args = parser.parse_args()
 
     root = Path(args.wangp_root).resolve()
@@ -130,15 +344,25 @@ def main() -> int:
     if not (root / "wgp.py").is_file():
         raise RuntimeError("Bundled WanGP checkout is missing wgp.py")
 
-    completed = _load_state(app_data_dir)
+    manifests = _load_state(app_data_dir)
     if args.list:
-        _event("packs", packs=[{"id": key, "installed": key in completed} for key in PACKS])
+        _event(
+            "packs",
+            packs=[{"id": key, "installed": _pack_is_installed(root, manifests.get(key))} for key in PACKS],
+        )
         return 0
 
     requested = cast(list[str], args.download or [])
-    unknown = set(requested) - set(PACKS)
+    delete_requested = cast(list[str], args.delete or [])
+    unknown = (set(requested) | set(delete_requested)) - set(PACKS)
     if unknown:
         raise RuntimeError(f"Unknown model packs: {', '.join(sorted(unknown))}")
+
+    for pack_id in delete_requested:
+        _delete_pack_files(root, manifests, pack_id)
+        _save_state(app_data_dir, manifests)
+    if args.delete is not None:
+        return 0
 
     os.chdir(root)
     sys.path[:0] = [str(Path(__file__).resolve().parent), str(root)]
@@ -150,17 +374,18 @@ def main() -> int:
         wgp = import_module("wgp")
     finally:
         sys.argv = runner_argv
+    manager = _create_model_manager(wgp)
 
     for pack_id in requested:
         _event("pack-start", id=pack_id, name=PACKS[pack_id]["name"])
         monitor = DownloadProgressMonitor(root)
         monitor.start()
         try:
-            _download_pack(wgp, pack_id)
+            paths = _download_pack(wgp, manager, pack_id)
         finally:
             monitor.stop()
-        completed.add(pack_id)
-        _save_state(app_data_dir, completed)
+        manifests[pack_id] = sorted(_manifest_path(root, path) for path in paths)
+        _save_state(app_data_dir, manifests)
         _event("pack-complete", id=pack_id, name=PACKS[pack_id]["name"])
     _event("complete")
     return 0

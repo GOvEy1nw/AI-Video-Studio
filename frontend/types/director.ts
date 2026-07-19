@@ -66,6 +66,7 @@ export interface DirectorOutputSettingsV1 {
   requestedDurationSeconds: number
   durationFrames: number
   generateAudio: boolean
+  promptRelayEpsilon?: number
 }
 
 export interface DirectorSequenceV1 {
@@ -109,6 +110,7 @@ export interface GenerateDirectorRequest {
   requestedDurationSeconds: number
   durationFrames: number
   generateAudio: boolean
+  promptRelayEpsilon: number
   globalPrompt: string
   promptSegments: DirectorPromptSegmentRequest[]
   continueVideo?: DirectorContinueVideoV1 & { path: string }

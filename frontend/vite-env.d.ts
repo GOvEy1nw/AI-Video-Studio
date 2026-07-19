@@ -78,8 +78,10 @@ interface Window {
     checkPythonReady: () => Promise<{ ready: boolean }>
     startPythonSetup: () => Promise<void>
     getModelPacks: () => Promise<unknown[]>
+    getModelPackProgress: () => Promise<unknown | null>
     downloadModelPacks: (ids: string[]) => Promise<boolean>
     cancelModelPackDownload: () => Promise<void>
+    deleteModelPack: (id: string) => Promise<void>
     startPythonBackend: () => Promise<void>
     restartPythonBackend: () => Promise<void>
     getBackendHealthStatus: () => Promise<BackendHealthStatus | null>

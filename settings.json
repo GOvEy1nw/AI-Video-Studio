@@ -1,6 +1,9 @@
 {
   "keep_models_loaded": true,
   "use_torch_compile": false,
+  "attention_mode": "auto",
+  "performance_profile": 4,
+  "reduce_vram": "disabled",
   "load_on_startup": false,
   "fast_model": {
     "steps": 8,

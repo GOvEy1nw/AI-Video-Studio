@@ -8,26 +8,21 @@ import {
 } from "react";
 import {
   ChevronLeft,
-  ChevronRight,
   Copy,
   Film,
-  Image,
   Layers,
-  LayoutGrid,
-  List,
-  Music,
   Pencil,
   Plus,
   Trash2,
-  Upload,
-  Video,
   X,
 } from "lucide-react";
-import { GalleryFilters } from "@/components/GalleryFilters";
+import type { GalleryBinContextMenuState } from "@/components/GalleryBinBar";
 import {
-  GalleryBinBar,
-  type GalleryBinContextMenuState,
-} from "@/components/GalleryBinBar";
+  AssetLibraryImportButton,
+  GalleryAssetLibrary,
+} from "@/components/GalleryAssetLibrary";
+import { DeleteAssetDialog } from "@/components/DeleteAssetDialog";
+import { useAssetDeletion } from "@/hooks/use-asset-deletion";
 import { Tooltip } from "@/components/ui/tooltip";
 import {
   buildUploadedAssetFromImport,
@@ -44,12 +39,13 @@ import {
 import type { Asset, DirectorTimelineDocument } from "@/types/project";
 import { AssetContextMenu } from "@/views/editor/AssetContextMenu";
 import { VideoThumbnailCard } from "@/views/editor/VideoThumbnailCard";
-import { getColorLabel } from "@/views/editor/video-editor-utils";
 
 interface Props {
+  isActive: boolean;
   projectId: string;
   assets: Asset[];
   assetBins: string[];
+  assetBinColors: Record<string, string>;
   timelines: DirectorTimelineDocument[];
   activeTimelineId?: string;
   assetsHeight: number;
@@ -58,6 +54,7 @@ interface Props {
   onCreateBin: (name: string) => void;
   onRenameBin: (oldName: string, newName: string) => void;
   onDeleteBin: (name: string) => void;
+  onSetBinColor: (name: string, colorLabel?: string) => void;
   onAddAsset: (asset: Omit<Asset, "id" | "createdAt">) => Asset;
   onUpdateAsset: (assetId: string, updates: Partial<Asset>) => void;
   onDeleteAsset: (assetId: string) => void;
@@ -110,6 +107,8 @@ export function DirectorSidebar(props: Props) {
   );
   const [takesViewAssetId, setTakesViewAssetId] = useState<string | null>(null);
   const [assetViewMode, setAssetViewMode] = useState<"grid" | "list">("grid");
+  const [assetCardSize, setAssetCardSize] = useState(144);
+  const [showFavorites, setShowFavorites] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [timelineContextMenu, setTimelineContextMenu] = useState<{
     timelineId: string;
@@ -120,6 +119,16 @@ export function DirectorSidebar(props: Props) {
   const assetContextMenuRef = useRef<HTMLDivElement>(null);
   const timelineContextMenuRef = useRef<HTMLDivElement>(null);
   const assetUndoRef = useRef<() => void>(() => undefined);
+  const {
+    pendingAssetIds,
+    requestDeleteAssets,
+    cancelDeleteAssets,
+    confirmDeleteAssets,
+  } = useAssetDeletion({
+    projectId: props.projectId,
+    assets: props.assets,
+    deleteAsset: (_projectId, assetId) => props.onDeleteAsset(assetId),
+  });
   const bins = useMemo(
     () => collectGalleryBins(props.assets, props.assetBins),
     [props.assetBins, props.assets],
@@ -134,6 +143,7 @@ export function DirectorSidebar(props: Props) {
   );
 
   useEffect(() => {
+    if (!props.isActive) return;
     let cancelled = false;
     const generate = async () => {
       for (const asset of props.assets) {
@@ -161,19 +171,27 @@ export function DirectorSidebar(props: Props) {
     return () => {
       cancelled = true;
     };
-  }, [props.assets]);
+  }, [props.assets, props.isActive]);
 
   useEffect(() => {
     if (!assetContextMenu) return;
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (
+        assetContextMenuRef.current &&
+        !assetContextMenuRef.current.contains(event.target as Node)
+      ) {
+        setAssetContextMenu(null);
+      }
+    };
     const close = () => setAssetContextMenu(null);
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") close();
     };
-    window.addEventListener("mousedown", close);
+    window.addEventListener("mousedown", closeOnOutsideClick);
     window.addEventListener("blur", close);
     window.addEventListener("keydown", closeOnEscape);
     return () => {
-      window.removeEventListener("mousedown", close);
+      window.removeEventListener("mousedown", closeOnOutsideClick);
       window.removeEventListener("blur", close);
       window.removeEventListener("keydown", closeOnEscape);
     };
@@ -233,42 +251,6 @@ export function DirectorSidebar(props: Props) {
     }
   };
 
-  const selectAsset = (event: MouseEvent<HTMLDivElement>, asset: Asset) => {
-    event.stopPropagation();
-    if (event.ctrlKey || event.metaKey) {
-      setSelectedAssetIds((current) => {
-        const next = new Set(current);
-        if (next.has(asset.id)) next.delete(asset.id);
-        else next.add(asset.id);
-        return next;
-      });
-      return;
-    }
-    if (event.shiftKey && selectedAssetIds.size > 0) {
-      const lastId = [...selectedAssetIds].pop();
-      const lastIndex = visibleAssets.findIndex((item) => item.id === lastId);
-      const currentIndex = visibleAssets.findIndex(
-        (item) => item.id === asset.id,
-      );
-      if (lastIndex >= 0 && currentIndex >= 0) {
-        const next = new Set(selectedAssetIds);
-        for (
-          let index = Math.min(lastIndex, currentIndex);
-          index <= Math.max(lastIndex, currentIndex);
-          index += 1
-        )
-          next.add(visibleAssets[index].id);
-        setSelectedAssetIds(next);
-      }
-      return;
-    }
-    setSelectedAssetIds(
-      selectedAssetIds.has(asset.id) && selectedAssetIds.size === 1
-        ? new Set()
-        : new Set([asset.id]),
-    );
-  };
-
   const takesAsset = takesViewAssetId
     ? props.assets.find((asset) => asset.id === takesViewAssetId)
     : undefined;
@@ -278,16 +260,86 @@ export function DirectorSidebar(props: Props) {
 
   return (
     <aside className="flex h-full min-h-0 flex-col border-r border-zinc-800 bg-background">
-      <section
+      <div
         className="flex min-h-0 flex-col"
         style={{ height: props.assetsHeight }}
       >
-        <div className="flex-shrink-0 space-y-2 p-4 pb-2">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-white">
-              {takesAsset ? "Takes" : "Assets"}
-            </h3>
-            {takesAsset ? (
+        {!takesAsset ? (
+          <GalleryAssetLibrary
+            className="h-full p-4 pb-3"
+            assets={props.assets}
+            visibleAssets={visibleAssets}
+            bins={bins}
+            binColors={props.assetBinColors}
+            filter={filter}
+            onFilterChange={setFilter}
+            selectedBin={selectedBin}
+            onSelectedBinChange={setSelectedBin}
+            creatingBin={creatingBin}
+            onCreatingBinChange={setCreatingBin}
+            newBinName={newBinName}
+            onNewBinNameChange={setNewBinName}
+            onCommitNewBin={(name) => {
+              props.onCreateBin(name);
+              setSelectedBin(name);
+              setCreatingBin(false);
+              setNewBinName("");
+            }}
+            onAssignAssetToBin={(assetId, bin) =>
+              props.onAssignAssetToBin(assetId, bin)
+            }
+            onRenameBin={props.onRenameBin}
+            onDeleteBin={props.onDeleteBin}
+            onSetBinColor={props.onSetBinColor}
+            binContextMenu={binContextMenu}
+            onBinContextMenuChange={setBinContextMenu}
+            viewMode={assetViewMode}
+            onViewModeChange={setAssetViewMode}
+            cardSize={assetCardSize}
+            onCardSizeChange={setAssetCardSize}
+            cardSizeMin={96}
+            cardSizeMax={700}
+            showFavorites={showFavorites}
+            onShowFavoritesChange={setShowFavorites}
+            getThumbnailUrl={(asset) =>
+              asset.thumbnail || thumbnailMap[asset.url]
+            }
+            previewEnabled={props.isActive}
+            selectedAssetIds={selectedAssetIds}
+            onSelectedAssetIdsChange={setSelectedAssetIds}
+            onAssetDragStart={(event, asset) =>
+              startAssetDrag(event, asset, selectedAssetIds)
+            }
+            onAssetContextMenu={(event, asset) =>
+              setAssetContextMenu({
+                assetId: asset.id,
+                x: event.clientX,
+                y: event.clientY,
+              })
+            }
+            onDeleteAsset={(asset) => requestDeleteAssets([asset.id])}
+            onToggleFavorite={(asset) =>
+              props.onUpdateAsset(asset.id, { favorite: !asset.favorite })
+            }
+            onSelectTake={(asset, takeIndex) =>
+              props.onSetAssetActiveTake(asset.id, takeIndex)
+            }
+            headerAction={
+              <AssetLibraryImportButton onClick={() => void importMedia()} />
+            }
+            emptyContent={
+              <div className="py-8 text-center">
+                <p className="text-sm text-zinc-500">No assets yet</p>
+                <p className="mt-1 text-xs text-zinc-600">
+                  Generate in Gen Space or import
+                </p>
+              </div>
+            }
+          />
+        ) : (
+          <div className="flex min-h-0 flex-1 flex-col p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-white">Takes</h3>
               <button
                 type="button"
                 onClick={() => setTakesViewAssetId(null)}
@@ -296,76 +348,9 @@ export function DirectorSidebar(props: Props) {
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
-            ) : (
-              <Tooltip content="Import media" side="right">
-                <button
-                  type="button"
-                  onClick={() => void importMedia()}
-                  className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
-                >
-                  <Upload className="h-4 w-4" />
-                </button>
-              </Tooltip>
-            )}
-          </div>
-          {!takesAsset && (
-            <div className="flex items-center gap-1.5">
-              <GalleryFilters filter={filter} onChange={setFilter} />
-              <div className="min-w-0 flex-1">
-                <GalleryBinBar
-                  bins={bins}
-                  assets={props.assets}
-                  selectedBin={selectedBin}
-                  creatingBin={creatingBin}
-                  newBinName={newBinName}
-                  onSelectBin={setSelectedBin}
-                  onCreatingBinChange={setCreatingBin}
-                  onNewBinNameChange={setNewBinName}
-                  onCommitNewBin={(name) => {
-                    props.onCreateBin(name);
-                    setSelectedBin(name);
-                    setCreatingBin(false);
-                    setNewBinName("");
-                  }}
-                  onAssignAssetToBin={props.onAssignAssetToBin}
-                  onRenameBin={props.onRenameBin}
-                  onDeleteBin={props.onDeleteBin}
-                  binContextMenu={binContextMenu}
-                  onBinContextMenuChange={setBinContextMenu}
-                />
-              </div>
-              <div className="flex rounded-lg bg-zinc-900 p-0.5">
-                <button
-                  type="button"
-                  onClick={() => setAssetViewMode("grid")}
-                  className={`rounded p-1 transition-colors ${assetViewMode === "grid" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-300"}`}
-                  aria-label="Grid view"
-                >
-                  <LayoutGrid className="h-3 w-3" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAssetViewMode("list")}
-                  className={`rounded p-1 transition-colors ${assetViewMode === "list" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-300"}`}
-                  aria-label="List view"
-                >
-                  <List className="h-3 w-3" />
-                </button>
-              </div>
             </div>
-          )}
-        </div>
-
-        <div
-          className="min-h-0 flex-1 overflow-auto p-3 pt-0"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget)
-              setSelectedAssetIds(new Set());
-          }}
-        >
-          {takesAsset?.takes && takesAsset.takes.length > 1 ? (
-            <div className="grid grid-cols-2 gap-2">
-              {takesAsset.takes.map((take, index) => {
+            <div className="grid min-h-0 flex-1 grid-cols-2 content-start gap-2 overflow-auto">
+              {takesAsset.takes?.map((take, index) => {
                 const active = (takesAsset.activeTakeIndex ?? 0) === index;
                 return (
                   <button
@@ -374,7 +359,11 @@ export function DirectorSidebar(props: Props) {
                     onClick={() =>
                       props.onSetAssetActiveTake(takesAsset.id, index)
                     }
-                    className={`relative overflow-hidden rounded-lg border-2 transition-all ${active ? "border-blue-500 ring-2 ring-blue-500/40 shadow-lg shadow-blue-500/20" : "border-zinc-800 hover:border-zinc-600"}`}
+                    className={`relative overflow-hidden rounded-lg border-2 transition-all ${
+                      active
+                        ? "border-blue-500 ring-2 ring-blue-500/40"
+                        : "border-zinc-800 hover:border-zinc-600"
+                    }`}
                   >
                     {takesAsset.type === "video" ? (
                       <VideoThumbnailCard
@@ -396,168 +385,9 @@ export function DirectorSidebar(props: Props) {
                 );
               })}
             </div>
-          ) : visibleAssets.length === 0 ? (
-            <div className="py-8 text-center">
-              <p className="text-sm text-zinc-500">No assets yet</p>
-              <p className="mt-1 text-xs text-zinc-600">
-                Generate in Gen Space or import
-              </p>
-            </div>
-          ) : (
-            <div
-              className={
-                assetViewMode === "grid"
-                  ? "grid grid-cols-2 gap-2"
-                  : "flex flex-col gap-1"
-              }
-            >
-              {visibleAssets.map((asset) => {
-                const selected = selectedAssetIds.has(asset.id);
-                const color = getColorLabel(asset.colorLabel);
-                return (
-                  <div
-                    key={asset.id}
-                    data-asset-card
-                    data-asset-id={asset.id}
-                    draggable
-                    onDragStart={(event) =>
-                      startAssetDrag(event, asset, selectedAssetIds)
-                    }
-                    onClick={(event) => selectAsset(event, asset)}
-                    onContextMenu={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      if (!selected) setSelectedAssetIds(new Set([asset.id]));
-                      setAssetContextMenu({
-                        assetId: asset.id,
-                        x: event.clientX,
-                        y: event.clientY,
-                      });
-                    }}
-                    className={`relative group cursor-pointer overflow-hidden rounded-lg border-2 transition-all ${assetViewMode === "list" ? "flex min-h-12" : ""} ${selected ? "border-blue-500 ring-2 ring-blue-500/40 shadow-lg shadow-blue-500/20" : "border-zinc-800 hover:border-zinc-600"}`}
-                  >
-                    {color && (
-                      <>
-                        <div
-                          className="absolute left-0 right-0 top-0 z-10 h-[3px]"
-                          style={{ backgroundColor: color.color }}
-                        />
-                        <div
-                          className="absolute bottom-0 left-0 top-0 z-10 w-[3px]"
-                          style={{ backgroundColor: color.color }}
-                        />
-                      </>
-                    )}
-                    <div
-                      className={
-                        assetViewMode === "list" ? "w-20 flex-shrink-0" : ""
-                      }
-                    >
-                      {asset.type === "video" ? (
-                        <VideoThumbnailCard
-                          url={asset.url}
-                          thumbnailUrl={
-                            asset.thumbnail || thumbnailMap[asset.url]
-                          }
-                        />
-                      ) : asset.type === "audio" ? (
-                        <div className="flex aspect-video w-full items-center justify-center bg-gradient-to-br from-emerald-900/60 to-zinc-900">
-                          <Music className="h-6 w-6 text-emerald-400" />
-                        </div>
-                      ) : (
-                        <img
-                          src={asset.url}
-                          alt=""
-                          className="aspect-video w-full object-cover"
-                        />
-                      )}
-                    </div>
-                    {selected && (
-                      <div className="pointer-events-none absolute inset-0 z-[1] bg-blue-600/25" />
-                    )}
-                    {assetViewMode === "list" && (
-                      <div className="min-w-0 flex-1 px-2 py-1 text-[10px] text-zinc-300">
-                        <div className="truncate">
-                          {asset.path.split(/[\\/]/).pop() || asset.type}
-                        </div>
-                        <div className="text-zinc-500">
-                          {asset.type}
-                          {asset.duration
-                            ? ` · ${asset.duration.toFixed(1)}s`
-                            : ""}
-                        </div>
-                      </div>
-                    )}
-                    {asset.takes && asset.takes.length > 1 && (
-                      <div className="absolute bottom-1 right-1 z-10 flex items-center gap-0.5 rounded bg-black/80">
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            props.onSetAssetActiveTake(
-                              asset.id,
-                              Math.max(0, (asset.activeTakeIndex ?? 0) - 1),
-                            );
-                          }}
-                          disabled={(asset.activeTakeIndex ?? 0) === 0}
-                          className="p-0.5 text-blue-300 disabled:text-zinc-600"
-                        >
-                          <ChevronLeft className="h-3 w-3" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setTakesViewAssetId(asset.id);
-                            setSelectedAssetIds(new Set());
-                          }}
-                          className="flex items-center gap-1 px-0.5 text-[9px] font-medium text-blue-300"
-                        >
-                          <Layers className="h-2.5 w-2.5 text-blue-400" />
-                          {(asset.activeTakeIndex ?? 0) + 1}/
-                          {asset.takes.length}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            props.onSetAssetActiveTake(
-                              asset.id,
-                              Math.min(
-                                asset.takes!.length - 1,
-                                (asset.activeTakeIndex ?? 0) + 1,
-                              ),
-                            );
-                          }}
-                          disabled={
-                            (asset.activeTakeIndex ?? 0) >=
-                            asset.takes.length - 1
-                          }
-                          className="p-0.5 text-blue-300 disabled:text-zinc-600"
-                        >
-                          <ChevronRight className="h-3 w-3" />
-                        </button>
-                      </div>
-                    )}
-                    {assetViewMode === "grid" && (
-                      <div className="absolute bottom-1 left-1 flex items-center gap-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] text-white">
-                        {asset.type === "video" ? (
-                          <Video className="h-3 w-3" />
-                        ) : asset.type === "audio" ? (
-                          <Music className="h-3 w-3" />
-                        ) : (
-                          <Image className="h-3 w-3" />
-                        )}
-                        {asset.duration ? `${asset.duration.toFixed(1)}s` : ""}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </section>
+          </div>
+        )}
+      </div>
 
       <div
         className="group relative z-10 h-1 flex-shrink-0 cursor-row-resize bg-transparent transition-colors hover:bg-blue-500/40 active:bg-blue-500/60"
@@ -565,21 +395,30 @@ export function DirectorSidebar(props: Props) {
         role="separator"
         aria-label="Resize Asset Library"
       >
-        <div className="absolute -bottom-1 -top-1 inset-x-0" />
+        <div className="absolute inset-x-0 -bottom-1 -top-1" />
       </div>
 
-      <section className="flex min-h-0 flex-1 flex-col">
-        <div className="flex flex-shrink-0 items-center justify-between p-3 pb-2">
+      <div
+        className="flex flex-col min-h-[330px]"
+        style={
+          props.assetsHeight > 0
+            ? { flex: "1 1 0%" }
+            : { flex: "0 1 40%", minHeight: 330 }
+        }
+      >
+        <div className="p-3 pb-2 flex items-center justify-between flex-shrink-0">
           <h3 className="text-sm font-semibold text-white">Timelines</h3>
-          <Tooltip content="Add timeline" side="right">
-            <button
-              type="button"
-              onClick={props.onAddTimeline}
-              className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
-            >
-              <Plus className="h-4 w-4" />
-            </button>
-          </Tooltip>
+          <div className="relative">
+            <Tooltip content="Add timeline" side="right">
+              <button
+                type="button"
+                onClick={props.onAddTimeline}
+                className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </Tooltip>
+          </div>
         </div>
         <div className="min-h-0 flex-1 space-y-1 overflow-auto px-3 pb-3">
           {props.timelines.map((timeline) => {
@@ -677,7 +516,7 @@ export function DirectorSidebar(props: Props) {
             );
           })}
         </div>
-      </section>
+      </div>
 
       {timelineContextMenu && (
         <div
@@ -748,6 +587,7 @@ export function DirectorSidebar(props: Props) {
           assetContextMenuRef={assetContextMenuRef}
           assets={props.assets}
           bins={bins}
+          binColors={props.assetBinColors}
           isRegenerating={false}
           regeneratingAssetId={null}
           currentProjectId={props.projectId}
@@ -765,9 +605,18 @@ export function DirectorSidebar(props: Props) {
             props.onAddAsset(asset);
           }}
           deleteAsset={(_, assetId) => props.onDeleteAsset(assetId)}
+          requestDeleteAssets={requestDeleteAssets}
           deleteTakeFromAsset={(_, assetId, takeIndex) =>
             props.onDeleteTake(assetId, takeIndex)
           }
+        />
+      )}
+
+      {pendingAssetIds.length > 0 && (
+        <DeleteAssetDialog
+          assetCount={pendingAssetIds.length}
+          onCancel={cancelDeleteAssets}
+          onConfirm={() => void confirmDeleteAssets()}
         />
       )}
     </aside>

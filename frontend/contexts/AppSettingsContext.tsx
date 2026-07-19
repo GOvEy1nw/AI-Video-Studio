@@ -22,6 +22,9 @@ export interface OutputSettings {
 
 export interface AppSettings {
   useTorchCompile: boolean
+  attentionMode: 'auto' | 'sdpa' | 'flash' | 'xformers' | 'sage' | 'sage2' | 'sage3'
+  performanceProfile: 1 | 2 | 3 | 4 | 4.5 | 5
+  reduceVram: 'disabled' | '1' | '2' | '3'
   loadOnStartup: boolean
   useLocalTextEncoder: boolean
   fastModel: FastModelSettings
@@ -44,6 +47,9 @@ const DEFAULT_OUTPUT_SETTINGS: OutputSettings = {
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
   useTorchCompile: false,
+  attentionMode: 'auto',
+  performanceProfile: 4,
+  reduceVram: 'disabled',
   loadOnStartup: true,
   useLocalTextEncoder: true,
   fastModel: { useUpscaler: true },
@@ -60,6 +66,7 @@ interface AppSettingsContextValue {
   settings: AppSettings
   isLoaded: boolean
   updateSettings: (patch: Partial<AppSettings> | ((prev: AppSettings) => AppSettings)) => void
+  saveSettings: (patch: Partial<AppSettings>) => Promise<void>
   refreshSettings: () => Promise<void>
 }
 
@@ -80,6 +87,9 @@ function toBackendProcessStatus(value: unknown): BackendProcessStatus | null {
 function normalizeAppSettings(data: Partial<AppSettings>): AppSettings {
   return {
     useTorchCompile: data.useTorchCompile ?? DEFAULT_APP_SETTINGS.useTorchCompile,
+    attentionMode: data.attentionMode ?? DEFAULT_APP_SETTINGS.attentionMode,
+    performanceProfile: data.performanceProfile ?? DEFAULT_APP_SETTINGS.performanceProfile,
+    reduceVram: data.reduceVram ?? DEFAULT_APP_SETTINGS.reduceVram,
     loadOnStartup: data.loadOnStartup ?? DEFAULT_APP_SETTINGS.loadOnStartup,
     useLocalTextEncoder: data.useLocalTextEncoder ?? DEFAULT_APP_SETTINGS.useLocalTextEncoder,
     fastModel: data.fastModel ?? DEFAULT_APP_SETTINGS.fastModel,
@@ -190,14 +200,28 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
     setSettings((prev) => ({ ...prev, ...patch }))
   }, [])
 
+  const saveSettings = useCallback(async (patch: Partial<AppSettings>) => {
+    const response = await backendFetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    })
+    if (!response.ok) {
+      throw new Error(`Settings save failed with status ${response.status}`)
+    }
+    const data = await response.json()
+    setSettings(normalizeAppSettings(data))
+  }, [])
+
   const contextValue = useMemo<AppSettingsContextValue>(
     () => ({
       settings,
       isLoaded,
       updateSettings,
+      saveSettings,
       refreshSettings,
     }),
-    [isLoaded, refreshSettings, settings, updateSettings],
+    [isLoaded, refreshSettings, saveSettings, settings, updateSettings],
   )
 
   return <AppSettingsContext.Provider value={contextValue}>{children}</AppSettingsContext.Provider>

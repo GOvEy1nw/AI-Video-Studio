@@ -242,7 +242,8 @@ class VideoGenerationHandler(StateHandlerBase):
                     )
                 temp_media_paths.append(trimmed_path)
                 trimmed_media_paths[media_path] = str(trimmed_path)
-                input_media_duration = media.trimDuration
+                if media.role != "continue_video":
+                    input_media_duration = media.trimDuration
 
             if trimmed_media_paths:
                 if start_image_path in trimmed_media_paths:
@@ -322,10 +323,12 @@ class VideoGenerationHandler(StateHandlerBase):
             if source_video_frame_count is None and is_start_video and validated_start_image_path is not None:
                 source_metadata = probe_video_metadata(validated_start_image_path)
                 if source_metadata is not None:
-                    source_video_frame_count = source_metadata.frame_count
+                    source_video_frame_count = source_metadata.frame_count + duration * fps
                     logger.info(
-                        "Using continue-video frame count for WanGP video_length: frames=%s duration=%.3fs",
+                        "Extending continue-video for %ss: source_frames=%s output_frames=%s source_duration=%.3fs",
+                        duration,
                         source_metadata.frame_count,
+                        source_video_frame_count,
                         source_metadata.duration_seconds,
                     )
 

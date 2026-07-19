@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
-import { Download, Loader2, Square } from "lucide-react";
+import { Download, Loader2, Square, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
 
 interface ModelPack {
   id: string;
   name: string;
-  description: string;
   estimatedSize: string;
   installed: boolean;
 }
@@ -44,7 +43,9 @@ export function ModelPackManager({
   const [selected, setSelected] = useState<string[]>([]);
   const [progress, setProgress] = useState<PackProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const downloading = progress?.status === "downloading";
+  const busy = downloading || deleting !== null;
 
   const refresh = async () => {
     const result = await window.electronAPI.getModelPacks();
@@ -53,14 +54,25 @@ export function ModelPackManager({
 
   useEffect(() => {
     void refresh();
-    window.electronAPI.onModelPackProgress((data: unknown) =>
-      setProgress(data as PackProgress),
-    );
-    return () => window.electronAPI.removeModelPackProgress();
+    let mounted = true;
+    let receivedLiveProgress = false;
+    window.electronAPI.onModelPackProgress((data: unknown) => {
+      receivedLiveProgress = true;
+      if (mounted) setProgress(data as PackProgress);
+    });
+    void window.electronAPI.getModelPackProgress().then((current) => {
+      if (mounted && !receivedLiveProgress && current) {
+        setProgress(current as PackProgress);
+      }
+    });
+    return () => {
+      mounted = false;
+      window.electronAPI.removeModelPackProgress();
+    };
   }, []);
 
   const toggle = (id: string) => {
-    if (downloading) return;
+    if (busy) return;
     setSelected((current) =>
       current.includes(id)
         ? current.filter((value) => value !== id)
@@ -79,11 +91,40 @@ export function ModelPackManager({
       const complete = await window.electronAPI.downloadModelPacks(selected);
       await refresh();
       setSelected([]);
-      if (complete) onContinue?.();
+      if (complete) {
+        setProgress(null);
+        onContinue?.();
+      }
     } catch (reason) {
       setError(
         reason instanceof Error ? reason.message : "Model download failed.",
       );
+    }
+  };
+
+  const deletePack = async (pack: ModelPack) => {
+    if (
+      busy ||
+      !window.confirm(
+        `Delete ${pack.name}? Files shared with another model pack will be kept.`,
+      )
+    ) {
+      return;
+    }
+    setError(null);
+    setDeleting(pack.id);
+    try {
+      await window.electronAPI.deleteModelPack(pack.id);
+      await refresh();
+      setSelected((current) =>
+        current.filter((value) => value !== pack.id),
+      );
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : "Model-pack deletion failed.",
+      );
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -107,32 +148,42 @@ export function ModelPackManager({
         {packs.map((pack) => {
           const checked = selected.includes(pack.id);
           return (
-            <button
+            <div
               key={pack.id}
-              type="button"
-              onClick={() => toggle(pack.id)}
-              disabled={downloading || pack.installed}
-              className={`rounded-lg border p-3 text-left transition-colors ${pack.installed ? "border-emerald-900/70 bg-emerald-950/20" : checked ? "border-violet-500 bg-violet-950/30" : "border-zinc-700 bg-zinc-800/50 hover:border-zinc-500"}`}
+              className={`flex items-center rounded-lg border p-2 transition-colors ${pack.installed ? "border-emerald-900/70 bg-emerald-950/20" : checked ? "border-violet-500 bg-violet-950/30" : "border-zinc-700 bg-zinc-800/50 hover:border-zinc-500"}`}
             >
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-sm font-medium text-white">
+              <button
+                type="button"
+                onClick={() => toggle(pack.id)}
+                disabled={busy || pack.installed}
+                className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left disabled:cursor-default"
+              >
+                <span className="truncate text-sm font-medium text-white">
                   {pack.name}
                 </span>
                 <span
-                  className={`text-xs ${pack.installed ? "text-emerald-400" : "text-zinc-400"}`}
+                  className={`shrink-0 text-xs ${pack.installed ? "text-emerald-400" : "text-zinc-400"}`}
                 >
-                  {pack.installed
-                    ? "Ready"
-                    : checked
-                      ? "Selected"
-                      : "Not downloaded"}
+                  {pack.installed ? "Ready" : `Approx. ${pack.estimatedSize}`}
                 </span>
-              </div>
-              <p className="mt-1 text-xs text-zinc-500">{pack.description}</p>
-              <p className="mt-2 text-xs font-medium text-zinc-300">
-                Approx. {pack.estimatedSize}
-              </p>
-            </button>
+              </button>
+              {pack.installed && (
+                <button
+                  type="button"
+                  onClick={() => void deletePack(pack)}
+                  disabled={busy}
+                  className="ml-2 rounded p-1 text-zinc-500 transition-colors hover:bg-zinc-700/70 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-50"
+                  aria-label={`Delete ${pack.name}`}
+                  title={`Delete ${pack.name}`}
+                >
+                  {deleting === pack.id ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
+                </button>
+              )}
+            </div>
           );
         })}
       </div>
@@ -174,40 +225,40 @@ export function ModelPackManager({
       )}
       {error && <p className="mt-3 text-xs text-red-400">{error}</p>}
 
-      <div className="mt-4 flex justify-end gap-2">
-        {downloading ? (
-          <Button
-            variant="outline"
-            className="border-zinc-600"
-            onClick={() => void window.electronAPI.cancelModelPackDownload()}
-          >
-            <Square className="mr-2 h-3.5 w-3.5" /> Cancel download
-          </Button>
-        ) : (
-          <>
-            {firstRun && (
-              <Button
-                variant="ghost"
-                className="text-zinc-300"
-                onClick={onContinue}
-              >
-                Skip for now
-              </Button>
-            )}
+      {(downloading || firstRun || selected.length > 0) && (
+        <div className="mt-4 flex justify-end gap-2">
+          {downloading ? (
             <Button
-              className="bg-violet-600 hover:bg-violet-500"
-              onClick={downloadSelected}
+              variant="outline"
+              className="border-zinc-600"
+              onClick={() => void window.electronAPI.cancelModelPackDownload()}
             >
-              <Download className="mr-2 h-4 w-4" />{" "}
-              {selected.length
-                ? `Download ${selected.length} pack${selected.length === 1 ? "" : "s"}`
-                : firstRun
-                  ? "Continue"
-                  : "Download selected"}
+              <Square className="mr-2 h-3.5 w-3.5" /> Cancel download
             </Button>
-          </>
-        )}
-      </div>
+          ) : (
+            <>
+              {firstRun && (
+                <Button
+                  variant="ghost"
+                  className="text-zinc-300"
+                  onClick={onContinue}
+                >
+                  Skip for now
+                </Button>
+              )}
+              <Button
+                className="bg-violet-600 hover:bg-violet-500"
+                onClick={downloadSelected}
+              >
+                <Download className="mr-2 h-4 w-4" />{" "}
+                {selected.length
+                  ? `Download ${selected.length} pack${selected.length === 1 ? "" : "s"}`
+                  : "Continue"}
+              </Button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

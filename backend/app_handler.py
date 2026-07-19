@@ -69,6 +69,11 @@ class AppHandler:
         )
         self.settings.load_settings(default_settings)
         self.wangp_bridge.set_compile_enabled(self.state.app_settings.use_torch_compile)
+        self.wangp_bridge.set_runtime_preferences(
+            attention_mode=self.state.app_settings.attention_mode,
+            performance_profile=self.state.app_settings.performance_profile,
+            reduce_vram=self.state.app_settings.reduce_vram,
+        )
 
         self.generation = GenerationHandler(state=self.state, lock=self._lock)
 

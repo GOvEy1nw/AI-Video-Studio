@@ -28,8 +28,8 @@ export function DirectorInspector({ sequence, segment, onChange }: Props) {
     <textarea
       value={segment.prompt}
       onChange={(event) => update({ ...segment, prompt: event.target.value })}
-      className="min-h-0 w-full flex-1 resize-none rounded border border-zinc-700 bg-zinc-800 p-2 text-xs text-zinc-100 outline-none"
-      placeholder="Add your text prompt here…"
+      className="min-h-20 w-full resize-none rounded border border-zinc-700 bg-zinc-800 p-2 text-xs text-zinc-100 outline-none"
+      placeholder="Add your segment text prompt here…"
       aria-label="Local Prompt"
     />
   );

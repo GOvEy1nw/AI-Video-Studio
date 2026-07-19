@@ -1,31 +1,71 @@
-import React from 'react'
-import { Plus, X, RefreshCw, ChevronLeft, ChevronRight, Layers, GitMerge, FolderPlus, Folder, Trash2, FolderOpen } from 'lucide-react'
-import type { Asset } from '../../types/project'
-import { COLOR_LABELS } from './video-editor-utils'
+import React from "react";
+import {
+  Plus,
+  X,
+  RefreshCw,
+  Layers,
+  GitMerge,
+  FolderPlus,
+  Folder,
+  Trash2,
+  FolderOpen,
+  Heart,
+  Film,
+  Expand,
+  ClipboardPaste,
+} from "lucide-react";
+import type { Asset } from "../../types/project";
+import { getColorLabel } from "./video-editor-utils";
 
 export interface AssetContextMenuProps {
-  asset: Asset
-  targetIds: string[]
-  assetContextMenu: { assetId: string; x: number; y: number }
-  assetContextMenuRef: React.RefObject<HTMLDivElement>
-  assets: Asset[]
-  bins: string[]
-  isRegenerating: boolean
-  regeneratingAssetId: string | null
-  currentProjectId: string | null
-  pushAssetUndoRef?: React.RefObject<() => void>
-  addClipToTimeline?: (asset: Asset, trackIndex?: number, startTime?: number) => void
-  handleRegenerate?: (assetId: string) => void
-  handleCancelRegeneration?: () => void
-  setAssetActiveTake: (projectId: string, assetId: string, takeIndex: number) => void
-  setTakesViewAssetId: (assetId: string | null) => void
-  setSelectedAssetIds: React.Dispatch<React.SetStateAction<Set<string>>>
-  setAssetContextMenu: React.Dispatch<React.SetStateAction<{ assetId: string; x: number; y: number } | null>>
-  updateAsset: (projectId: string, assetId: string, updates: Partial<Asset>) => void
-  addAsset: (projectId: string, asset: Omit<Asset, 'id' | 'createdAt'>) => void
-  deleteAsset: (projectId: string, assetId: string) => void
-  deleteTakeFromAsset: (projectId: string, assetId: string, takeIndex: number) => void
-  setClips?: React.Dispatch<React.SetStateAction<import('../../types/project').TimelineClip[]>>
+  asset: Asset;
+  targetIds: string[];
+  assetContextMenu: { assetId: string; x: number; y: number };
+  assetContextMenuRef: React.RefObject<HTMLDivElement>;
+  assets: Asset[];
+  bins: string[];
+  binColors?: Record<string, string>;
+  isRegenerating: boolean;
+  regeneratingAssetId: string | null;
+  currentProjectId: string | null;
+  pushAssetUndoRef?: React.RefObject<() => void>;
+  addClipToTimeline?: (
+    asset: Asset,
+    trackIndex?: number,
+    startTime?: number,
+  ) => void;
+  onToggleFavorite?: (asset: Asset) => void;
+  onCreateVideo?: (asset: Asset) => void;
+  onReframe?: (asset: Asset) => void;
+  onCopySettings?: (asset: Asset) => void;
+  handleRegenerate?: (assetId: string) => void;
+  handleCancelRegeneration?: () => void;
+  setAssetActiveTake: (
+    projectId: string,
+    assetId: string,
+    takeIndex: number,
+  ) => void;
+  setTakesViewAssetId: (assetId: string | null) => void;
+  setSelectedAssetIds: React.Dispatch<React.SetStateAction<Set<string>>>;
+  setAssetContextMenu: React.Dispatch<
+    React.SetStateAction<{ assetId: string; x: number; y: number } | null>
+  >;
+  updateAsset: (
+    projectId: string,
+    assetId: string,
+    updates: Partial<Asset>,
+  ) => void;
+  addAsset: (projectId: string, asset: Omit<Asset, "id" | "createdAt">) => void;
+  deleteAsset: (projectId: string, assetId: string) => void;
+  requestDeleteAssets: (assetIds: string[]) => void;
+  deleteTakeFromAsset: (
+    projectId: string,
+    assetId: string,
+    takeIndex: number,
+  ) => void;
+  setClips?: React.Dispatch<
+    React.SetStateAction<import("../../types/project").TimelineClip[]>
+  >;
 }
 
 export function AssetContextMenu({
@@ -35,24 +75,29 @@ export function AssetContextMenu({
   assetContextMenuRef,
   assets,
   bins,
+  binColors = {},
   isRegenerating,
   regeneratingAssetId,
   currentProjectId,
   pushAssetUndoRef,
   addClipToTimeline,
+  onToggleFavorite,
+  onCreateVideo,
+  onReframe,
+  onCopySettings,
   handleRegenerate,
   handleCancelRegeneration,
-  setAssetActiveTake,
   setTakesViewAssetId,
   setSelectedAssetIds,
   setAssetContextMenu,
   updateAsset,
   addAsset,
   deleteAsset,
+  requestDeleteAssets,
   deleteTakeFromAsset,
   setClips,
 }: AssetContextMenuProps) {
-  const isMulti = targetIds.length > 1
+  const isMulti = targetIds.length > 1;
 
   return (
     <div
@@ -70,8 +115,8 @@ export function AssetContextMenu({
       {!isMulti && addClipToTimeline && (
         <button
           onClick={() => {
-            addClipToTimeline(asset, 0)
-            setAssetContextMenu(null)
+            addClipToTimeline(asset, 0);
+            setAssetContextMenu(null);
           }}
           className="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-700 flex items-center gap-3"
         >
@@ -83,13 +128,67 @@ export function AssetContextMenu({
       {!isMulti && asset.path && (
         <button
           onClick={() => {
-            window.electronAPI?.showItemInFolder(asset.path!)
-            setAssetContextMenu(null)
+            window.electronAPI?.showItemInFolder(asset.path!);
+            setAssetContextMenu(null);
           }}
           className="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-700 flex items-center gap-3"
         >
           <FolderOpen className="h-3.5 w-3.5 text-zinc-500" />
           <span>Show in Explorer</span>
+        </button>
+      )}
+
+      {!isMulti && onToggleFavorite && (
+        <button
+          onClick={() => {
+            onToggleFavorite(asset);
+            setAssetContextMenu(null);
+          }}
+          className="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-700 flex items-center gap-3"
+        >
+          <Heart
+            className={`h-3.5 w-3.5 ${asset.favorite ? "fill-current text-red-400" : "text-zinc-500"}`}
+          />
+          <span>{asset.favorite ? "Remove favorite" : "Add to favorites"}</span>
+        </button>
+      )}
+
+      {!isMulti && asset.type === "image" && onCreateVideo && (
+        <button
+          onClick={() => {
+            onCreateVideo(asset);
+            setAssetContextMenu(null);
+          }}
+          className="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-700 flex items-center gap-3"
+        >
+          <Film className="h-3.5 w-3.5 text-zinc-500" />
+          <span>Create video</span>
+        </button>
+      )}
+
+      {!isMulti && asset.type === "video" && onReframe && (
+        <button
+          onClick={() => {
+            onReframe(asset);
+            setAssetContextMenu(null);
+          }}
+          className="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-700 flex items-center gap-3"
+        >
+          <Expand className="h-3.5 w-3.5 text-zinc-500" />
+          <span>Reframe</span>
+        </button>
+      )}
+
+      {!isMulti && asset.generationParams && onCopySettings && (
+        <button
+          onClick={() => {
+            onCopySettings(asset);
+            setAssetContextMenu(null);
+          }}
+          className="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-700 flex items-center gap-3"
+        >
+          <ClipboardPaste className="h-3.5 w-3.5 text-zinc-500" />
+          <span>Copy settings</span>
         </button>
       )}
 
@@ -99,8 +198,8 @@ export function AssetContextMenu({
           {isRegenerating && regeneratingAssetId === asset.id ? (
             <button
               onClick={() => {
-                handleCancelRegeneration?.()
-                setAssetContextMenu(null)
+                handleCancelRegeneration?.();
+                setAssetContextMenu(null);
               }}
               className="w-full text-left px-3 py-1.5 text-red-400 hover:bg-zinc-700 flex items-center gap-3"
             >
@@ -110,8 +209,8 @@ export function AssetContextMenu({
           ) : (
             <button
               onClick={() => {
-                handleRegenerate(asset.id)
-                setAssetContextMenu(null)
+                handleRegenerate(asset.id);
+                setAssetContextMenu(null);
               }}
               disabled={isRegenerating}
               className="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-700 flex items-center gap-3 disabled:opacity-50"
@@ -122,49 +221,15 @@ export function AssetContextMenu({
           )}
         </>
       )}
-
       {/* Takes management - for ANY asset with multiple takes */}
       {!isMulti && asset.takes && asset.takes.length > 1 && (
         <>
-          <div className="px-3 py-1.5 flex items-center gap-2">
-            <span className="text-[10px] text-zinc-500">Take:</span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                if (currentProjectId) {
-                  pushAssetUndoRef?.current?.()
-                  const idx = Math.max(0, (asset.activeTakeIndex ?? 0) - 1)
-                  setAssetActiveTake(currentProjectId, asset.id, idx)
-                }
-              }}
-              disabled={(asset.activeTakeIndex ?? 0) === 0}
-              className="p-0.5 rounded hover:bg-zinc-600 text-zinc-400 hover:text-white disabled:text-zinc-600 disabled:hover:bg-transparent"
-            >
-              <ChevronLeft className="h-3 w-3" />
-            </button>
-            <span className="text-[10px] text-zinc-300 min-w-[28px] text-center">
-              {(asset.activeTakeIndex ?? 0) + 1}/{asset.takes.length}
-            </span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                if (currentProjectId && asset.takes) {
-                  pushAssetUndoRef?.current?.()
-                  const idx = Math.min(asset.takes.length - 1, (asset.activeTakeIndex ?? 0) + 1)
-                  setAssetActiveTake(currentProjectId, asset.id, idx)
-                }
-              }}
-              disabled={asset.takes && (asset.activeTakeIndex ?? 0) >= asset.takes.length - 1}
-              className="p-0.5 rounded hover:bg-zinc-600 text-zinc-400 hover:text-white disabled:text-zinc-600 disabled:hover:bg-transparent"
-            >
-              <ChevronRight className="h-3 w-3" />
-            </button>
-          </div>
+          <div className="h-px bg-zinc-700 my-1" />
           <button
             onClick={() => {
-              setTakesViewAssetId(asset.id)
-              setSelectedAssetIds(new Set())
-              setAssetContextMenu(null)
+              setTakesViewAssetId(asset.id);
+              setSelectedAssetIds(new Set());
+              setAssetContextMenu(null);
             }}
             className="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-700 flex items-center gap-3"
           >
@@ -173,9 +238,9 @@ export function AssetContextMenu({
           </button>
           <button
             onClick={() => {
-              if (!currentProjectId || !asset.takes) return
-              pushAssetUndoRef?.current?.()
-              asset.takes.slice(1).forEach(take => {
+              if (!currentProjectId || !asset.takes) return;
+              pushAssetUndoRef?.current?.();
+              asset.takes.slice(1).forEach((take) => {
                 addAsset(currentProjectId, {
                   type: asset.type,
                   path: take.path,
@@ -185,19 +250,26 @@ export function AssetContextMenu({
                   duration: asset.duration,
                   thumbnail: take.thumbnail,
                   generationParams: asset.generationParams,
-                  takes: [{ url: take.url, path: take.path, thumbnail: take.thumbnail, createdAt: take.createdAt }],
+                  takes: [
+                    {
+                      url: take.url,
+                      path: take.path,
+                      thumbnail: take.thumbnail,
+                      createdAt: take.createdAt,
+                    },
+                  ],
                   activeTakeIndex: 0,
-                })
-              })
-              const firstTake = asset.takes[0]
+                });
+              });
+              const firstTake = asset.takes[0];
               updateAsset(currentProjectId, asset.id, {
                 takes: [firstTake],
                 activeTakeIndex: 0,
                 url: firstTake.url,
                 path: firstTake.path,
                 thumbnail: firstTake.thumbnail || asset.thumbnail,
-              })
-              setAssetContextMenu(null)
+              });
+              setAssetContextMenu(null);
             }}
             className="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-700 flex items-center gap-3"
           >
@@ -206,24 +278,29 @@ export function AssetContextMenu({
           </button>
           <button
             onClick={() => {
-              const activeIdx = asset.activeTakeIndex ?? 0
+              const activeIdx = asset.activeTakeIndex ?? 0;
               if (confirm(`Delete take ${activeIdx + 1}?`)) {
                 if (currentProjectId && asset.takes) {
-                  pushAssetUndoRef?.current?.()
-              setClips?.(prev => prev.map(c => {
-                    if (c.assetId !== asset.id) return c
-                    const cIdx = c.takeIndex ?? (asset.activeTakeIndex ?? asset.takes!.length - 1)
-                    if (cIdx === activeIdx) {
-                      return { ...c, takeIndex: Math.max(0, activeIdx - 1) }
-                    } else if (cIdx > activeIdx) {
-                      return { ...c, takeIndex: cIdx - 1 }
-                    }
-                    return c
-                  }))
-                  deleteTakeFromAsset(currentProjectId, asset.id, activeIdx)
+                  pushAssetUndoRef?.current?.();
+                  setClips?.((prev) =>
+                    prev.map((c) => {
+                      if (c.assetId !== asset.id) return c;
+                      const cIdx =
+                        c.takeIndex ??
+                        asset.activeTakeIndex ??
+                        asset.takes!.length - 1;
+                      if (cIdx === activeIdx) {
+                        return { ...c, takeIndex: Math.max(0, activeIdx - 1) };
+                      } else if (cIdx > activeIdx) {
+                        return { ...c, takeIndex: cIdx - 1 };
+                      }
+                      return c;
+                    }),
+                  );
+                  deleteTakeFromAsset(currentProjectId, asset.id, activeIdx);
                 }
               }
-              setAssetContextMenu(null)
+              setAssetContextMenu(null);
             }}
             className="w-full text-left px-3 py-1.5 text-red-400 hover:bg-red-900/30 flex items-center gap-3"
           >
@@ -235,62 +312,20 @@ export function AssetContextMenu({
 
       <div className="h-px bg-zinc-700 my-1" />
 
-      {/* Color label picker */}
-      <div className="px-3 py-1 text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">Label</div>
-      <div className="px-3 py-1.5 flex items-center gap-1 flex-wrap">
-        {/* Clear color button */}
-        <button
-          onClick={() => {
-            if (currentProjectId) {
-              pushAssetUndoRef?.current?.()
-              targetIds.forEach(id => updateAsset(currentProjectId, id, { colorLabel: undefined }))
-              // Sync: also clear colorLabel on all timeline clips referencing these assets
-              const ids = new Set(targetIds)
-              setClips?.(prev => prev.map(c => c.assetId && ids.has(c.assetId) ? { ...c, colorLabel: undefined } : c))
-            }
-            setAssetContextMenu(null)
-          }}
-          className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${
-            !asset.colorLabel ? 'border-white scale-110' : 'border-zinc-600 hover:border-zinc-400'
-          }`}
-          title="No label"
-        >
-          <X className="h-2 w-2 text-zinc-400" />
-        </button>
-        {COLOR_LABELS.map(cl => (
-          <button
-            key={cl.id}
-            onClick={() => {
-              if (currentProjectId) {
-                pushAssetUndoRef?.current?.()
-                targetIds.forEach(id => updateAsset(currentProjectId, id, { colorLabel: cl.id }))
-                // Sync: also set colorLabel on all timeline clips referencing these assets
-                const ids = new Set(targetIds)
-                setClips?.(prev => prev.map(c => c.assetId && ids.has(c.assetId) ? { ...c, colorLabel: cl.id } : c))
-              }
-              setAssetContextMenu(null)
-            }}
-            className={`w-4 h-4 rounded-full transition-all ${
-              asset.colorLabel === cl.id ? 'ring-2 ring-white ring-offset-1 ring-offset-zinc-800 scale-110' : 'hover:scale-125'
-            }`}
-            style={{ backgroundColor: cl.color }}
-            title={cl.label}
-          />
-        ))}
+      <div className="px-3 py-1 text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">
+        Move to Bin
       </div>
-
-      <div className="h-px bg-zinc-700 my-1" />
-
-      <div className="px-3 py-1 text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">Move to Bin</div>
 
       <button
         onClick={() => {
           if (currentProjectId) {
-            pushAssetUndoRef?.current?.()
-            targetIds.forEach(id => updateAsset(currentProjectId, id, { bin: undefined }))
+            pushAssetUndoRef?.current?.();
+            targetIds.forEach((id) =>
+              updateAsset(currentProjectId, id, { bin: undefined }),
+            );
           }
-          setAssetContextMenu(null)
-          setSelectedAssetIds(new Set())
+          setAssetContextMenu(null);
+          setSelectedAssetIds(new Set());
         }}
         className="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-700 flex items-center gap-3"
       >
@@ -298,33 +333,40 @@ export function AssetContextMenu({
         <span>Remove from Bin</span>
       </button>
 
-      {bins.map(bin => (
+      {bins.map((bin) => (
         <button
           key={bin}
           onClick={() => {
             if (currentProjectId) {
-              pushAssetUndoRef?.current?.()
-              targetIds.forEach(id => updateAsset(currentProjectId, id, { bin }))
+              pushAssetUndoRef?.current?.();
+              targetIds.forEach((id) =>
+                updateAsset(currentProjectId, id, { bin }),
+              );
             }
-            setAssetContextMenu(null)
-            setSelectedAssetIds(new Set())
+            setAssetContextMenu(null);
+            setSelectedAssetIds(new Set());
           }}
           className="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-700 flex items-center gap-3"
         >
-          <Folder className="h-3.5 w-3.5 text-zinc-500" />
+          <Folder
+            className="h-3.5 w-3.5 text-zinc-500"
+            style={{ color: getColorLabel(binColors[bin])?.color }}
+          />
           <span>{bin}</span>
         </button>
       ))}
 
       <button
         onClick={() => {
-          const name = prompt('New bin name:')
+          const name = prompt("New bin name:");
           if (name?.trim() && currentProjectId) {
-            pushAssetUndoRef?.current?.()
-            targetIds.forEach(id => updateAsset(currentProjectId, id, { bin: name.trim() }))
+            pushAssetUndoRef?.current?.();
+            targetIds.forEach((id) =>
+              updateAsset(currentProjectId, id, { bin: name.trim() }),
+            );
           }
-          setAssetContextMenu(null)
-          setSelectedAssetIds(new Set())
+          setAssetContextMenu(null);
+          setSelectedAssetIds(new Set());
         }}
         className="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-700 flex items-center gap-3"
       >
@@ -337,18 +379,28 @@ export function AssetContextMenu({
           <div className="h-px bg-zinc-700 my-1" />
           <button
             onClick={() => {
-              if (!currentProjectId) return
-              const selectedAssets = assets.filter(a => targetIds.includes(a.id))
-              if (selectedAssets.length < 2) return
-              pushAssetUndoRef?.current?.()
-              const primary = selectedAssets[0]
-              const newTakes = selectedAssets.map(a => ({
-                url: a.url, path: a.path, thumbnail: a.thumbnail, createdAt: a.createdAt,
-              }))
-              updateAsset(currentProjectId, primary.id, { takes: newTakes, activeTakeIndex: 0 })
-              selectedAssets.slice(1).forEach(a => deleteAsset(currentProjectId, a.id))
-              setSelectedAssetIds(new Set())
-              setAssetContextMenu(null)
+              if (!currentProjectId) return;
+              const selectedAssets = assets.filter((a) =>
+                targetIds.includes(a.id),
+              );
+              if (selectedAssets.length < 2) return;
+              pushAssetUndoRef?.current?.();
+              const primary = selectedAssets[0];
+              const newTakes = selectedAssets.map((a) => ({
+                url: a.url,
+                path: a.path,
+                thumbnail: a.thumbnail,
+                createdAt: a.createdAt,
+              }));
+              updateAsset(currentProjectId, primary.id, {
+                takes: newTakes,
+                activeTakeIndex: 0,
+              });
+              selectedAssets
+                .slice(1)
+                .forEach((a) => deleteAsset(currentProjectId, a.id));
+              setSelectedAssetIds(new Set());
+              setAssetContextMenu(null);
             }}
             className="w-full text-left px-3 py-1.5 text-blue-300 hover:bg-zinc-700 flex items-center gap-3"
           >
@@ -357,8 +409,8 @@ export function AssetContextMenu({
           </button>
           <button
             onClick={() => {
-              setSelectedAssetIds(new Set())
-              setAssetContextMenu(null)
+              setSelectedAssetIds(new Set());
+              setAssetContextMenu(null);
             }}
             className="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-700 flex items-center gap-3"
           >
@@ -372,18 +424,17 @@ export function AssetContextMenu({
 
       <button
         onClick={() => {
-          if (currentProjectId) {
-            pushAssetUndoRef?.current?.()
-            targetIds.forEach(id => deleteAsset(currentProjectId, id))
-          }
-          setAssetContextMenu(null)
-          setSelectedAssetIds(new Set())
+          requestDeleteAssets(targetIds);
+          setAssetContextMenu(null);
+          setSelectedAssetIds(new Set());
         }}
         className="w-full text-left px-3 py-1.5 text-red-400 hover:bg-zinc-700 flex items-center gap-3"
       >
         <Trash2 className="h-3.5 w-3.5" />
-        <span>{isMulti ? `Delete ${targetIds.length} Assets` : 'Delete Asset'}</span>
+        <span>
+          {isMulti ? `Delete ${targetIds.length} Assets` : "Delete Asset"}
+        </span>
       </button>
     </div>
-  )
+  );
 }

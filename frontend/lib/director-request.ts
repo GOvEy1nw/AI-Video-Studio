@@ -29,6 +29,7 @@ export function buildDirectorRequest(
     requestedDurationSeconds: sequence.output.requestedDurationSeconds,
     durationFrames: sequence.output.durationFrames,
     generateAudio: sequence.output.generateAudio,
+    promptRelayEpsilon: sequence.output.promptRelayEpsilon ?? 0.001,
     globalPrompt: sequence.globalPrompt,
     promptSegments: sequence.promptSegments.map((segment) => ({
       ...segment,

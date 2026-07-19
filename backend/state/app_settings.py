@@ -89,6 +89,9 @@ class OutputSettings(SettingsBaseModel):
 
 class AppSettings(SettingsBaseModel):
     use_torch_compile: bool = False
+    attention_mode: Literal["auto", "sdpa", "flash", "xformers", "sage", "sage2", "sage3"] = "auto"
+    performance_profile: float = 4.0
+    reduce_vram: Literal["disabled", "1", "2", "3"] = "disabled"
     load_on_startup: bool = False
     use_local_text_encoder: bool = False
     fast_model: FastModelSettings = Field(default_factory=FastModelSettings)
@@ -104,6 +107,14 @@ class AppSettings(SettingsBaseModel):
     @classmethod
     def _clamp_prompt_cache_size(cls, value: Any) -> int:
         return _clamp_int(value, minimum=0, maximum=1000, default=100)
+
+    @field_validator("performance_profile", mode="before")
+    @classmethod
+    def _validate_performance_profile(cls, value: Any) -> float:
+        parsed = float(value)
+        if parsed not in {1.0, 2.0, 3.0, 4.0, 4.5, 5.0}:
+            raise ValueError("Performance profile must be 1, 2, 3, 4, 4.5, or 5")
+        return parsed
 
     @field_validator("locked_seed", mode="before")
     @classmethod
@@ -157,6 +168,9 @@ UpdateSettingsRequest = AppSettingsPatch
 
 class SettingsResponse(SettingsBaseModel):
     use_torch_compile: bool = False
+    attention_mode: Literal["auto", "sdpa", "flash", "xformers", "sage", "sage2", "sage3"] = "auto"
+    performance_profile: float = 4.0
+    reduce_vram: Literal["disabled", "1", "2", "3"] = "disabled"
     load_on_startup: bool = False
     use_local_text_encoder: bool = False
     fast_model: FastModelSettings = Field(default_factory=FastModelSettings)

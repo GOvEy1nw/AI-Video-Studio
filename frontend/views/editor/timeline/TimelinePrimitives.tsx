@@ -81,7 +81,7 @@ export const TimelineSegmentFrame = forwardRef<HTMLDivElement, HTMLAttributes<HT
   className,
   ...props
 }, ref) {
-  return <div ref={ref} className={cn('overflow-hidden rounded border select-none', className)} {...props} />
+  return <div ref={ref} className={cn('overflow-hidden rounded border select-none outline-none', className)} {...props} />
 })
 
 interface TimelineTrackRowProps {

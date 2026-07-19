@@ -2,6 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+.asset-library-card {
+  container-type: inline-size;
+  container-name: asset-library-card;
+}
+
+/* 374px wide is ~210px high for the fixed 16:9 card surface. */
+@container asset-library-card (max-width: 374px) {
+  .asset-card-hover-actions {
+    display: none;
+  }
+}
+
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }

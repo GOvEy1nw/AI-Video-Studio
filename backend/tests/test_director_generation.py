@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from api_types import GenerateDirectorRequest
+from model_profiles import get_video_profile
+from services.director_compiler import compile_director_request
+
 
 def _payload() -> dict[str, object]:
     return {
@@ -13,7 +17,7 @@ def _payload() -> dict[str, object]:
         "generateAudio": True,
         "globalPrompt": "cinematic scene",
         "promptSegments": [
-            {"id": "one", "startFrame": 0, "endFrameExclusive": 121, "prompt": "walk"}
+            {"id": "one", "startFrame": 0, "endFrameExclusive": 120, "prompt": "walk"}
         ],
     }
 
@@ -24,12 +28,89 @@ def test_director_generation_uses_shared_state_and_bridge(client, enable_wangp) 
     body = response.json()
     assert body["status"] == "complete"
     assert body["resolvedFrameCount"] == 121
-    assert body["compiledPrompt"] == "cinematic scene\n[1:121] walk"
+    assert body["compiledPrompt"] == "cinematic scene\n[1:120] walk"
     settings = enable_wangp.director_calls[0].settings
     assert settings["model_type"] == "ltx2_22B_distilled_1_1"
     assert settings["multi_prompts_gen_type"] == "FG"
     assert settings["video_length"] == 121
+    assert settings["custom_settings"] == {"prompt_relay_epsilon": 0.001}
     assert "activated_loras" not in settings
+
+
+def test_director_settings_exclude_continue_video_prefix(test_state) -> None:
+    payload = _payload()
+    payload.update(
+        requestedDurationSeconds=12,
+        durationFrames=289,
+        promptSegments=[
+            {"id": "one", "startFrame": 48, "endFrameExclusive": 168, "prompt": "first"},
+            {"id": "two", "startFrame": 168, "endFrameExclusive": 288, "prompt": "second"},
+        ],
+        continueVideo={
+            "path": "source.mp4",
+            "timelineDurationFrames": 49,
+            "trimDuration": 2,
+        },
+    )
+    profile = get_video_profile("ltx2_22b_distilled")
+    assert profile is not None
+    plan = compile_director_request(
+        GenerateDirectorRequest.model_validate(payload), profile.director
+    )
+
+    settings = test_state.director_generation._build_settings(
+        plan,
+        profile.wangp_model_type,
+        "1280x720",
+        24,
+        1,
+        profile.wangp_default_settings,
+        0.99,
+    )
+
+    assert plan.output_frame_count == 289
+    assert settings["video_length"] == 241
+    assert settings["duration_seconds"] == 10
+    assert settings["prompt"].endswith("[1:120] first\n[121:240] second")
+
+
+def test_director_passes_custom_prompt_relay_epsilon(client, enable_wangp) -> None:
+    payload = _payload()
+    payload["promptRelayEpsilon"] = 0.25
+    response = client.post("/api/director/generate", json=payload)
+    assert response.status_code == 200
+    assert enable_wangp.director_calls[0].settings["custom_settings"] == {
+        "prompt_relay_epsilon": 0.25
+    }
+
+
+def test_director_omits_relay_epsilon_without_prompt_relay(client, enable_wangp) -> None:
+    payload = _payload()
+    payload["promptSegments"] = [
+        {"id": "one", "startFrame": 0, "endFrameExclusive": 120, "prompt": ""}
+    ]
+    response = client.post("/api/director/generate", json=payload)
+    assert response.status_code == 200
+    settings = enable_wangp.director_calls[0].settings
+    assert settings["prompt"] == "cinematic scene"
+    assert "custom_settings" not in settings
+
+
+def test_director_rejects_invalid_prompt_relay_epsilon(client, enable_wangp) -> None:
+    payload = _payload()
+    payload["promptRelayEpsilon"] = 1.0
+    response = client.post("/api/director/generate", json=payload)
+    assert response.status_code == 422
+    assert enable_wangp.director_calls == []
+
+
+def test_director_uses_locked_seed(client, enable_wangp, test_state) -> None:
+    test_state.state.app_settings.seed_locked = True
+    test_state.state.app_settings.locked_seed = 123
+    response = client.post("/api/director/generate", json=_payload())
+    assert response.status_code == 200
+    assert response.json()["seed"] == 123
+    assert enable_wangp.director_calls[0].settings["seed"] == 123
 
 
 def test_director_rejects_unknown_profile(client, enable_wangp) -> None:
@@ -98,7 +179,7 @@ def test_director_reports_missing_continue_video(client, enable_wangp, tmp_path)
         "trimDuration": 1,
     }
     payload["promptSegments"] = [
-        {"id": "one", "startFrame": 33, "endFrameExclusive": 121, "prompt": "walk"}
+        {"id": "one", "startFrame": 32, "endFrameExclusive": 120, "prompt": "walk"}
     ]
 
     response = client.post("/api/director/generate", json=payload)

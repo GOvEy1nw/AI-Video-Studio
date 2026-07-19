@@ -1,60 +1,64 @@
-import { useState, useEffect } from 'react'
-import { Loader2, AlertCircle } from 'lucide-react'
-import { useBackend } from '../hooks/use-backend'
+import { useState, useEffect } from "react";
+import { Loader2, AlertCircle } from "lucide-react";
+import { useBackend } from "../hooks/use-backend";
 
-export type ConnectionState = 'connecting' | 'ready' | 'disconnected'
+export type ConnectionState = "connecting" | "ready" | "disconnected";
 
 interface ConnectionIndicatorProps {
-  className?: string
-  reconnecting?: boolean
+  className?: string;
+  reconnecting?: boolean;
 }
 
-export function ConnectionIndicator({ className = '', reconnecting = false }: ConnectionIndicatorProps) {
-  const { status, processStatus } = useBackend()
-  const [connectionState, setConnectionState] = useState<ConnectionState>('connecting')
+export function ConnectionIndicator({
+  className = "",
+  reconnecting = false,
+}: ConnectionIndicatorProps) {
+  const { status, processStatus } = useBackend();
+  const [connectionState, setConnectionState] =
+    useState<ConnectionState>("connecting");
 
-  const bridgeReady = status.connected && processStatus === 'alive'
-  const wangpReady = bridgeReady && status.modelsLoaded && !reconnecting
-  const readyCount = (bridgeReady ? 1 : 0) + (wangpReady ? 1 : 0)
-  const isReady = readyCount === 2
+  const bridgeReady = status.connected && processStatus === "alive";
+  const wangpReady = bridgeReady && status.modelsLoaded && !reconnecting;
+  const readyCount = (bridgeReady ? 1 : 0) + (wangpReady ? 1 : 0);
+  const isReady = readyCount === 2;
 
   // Watch ready state
   useEffect(() => {
     if (isReady) {
-      setConnectionState('ready')
-    } else if (processStatus === 'dead' && !reconnecting) {
-      setConnectionState('disconnected')
+      setConnectionState("ready");
+    } else if (processStatus === "dead" && !reconnecting) {
+      setConnectionState("disconnected");
     } else {
-      setConnectionState('connecting')
+      setConnectionState("connecting");
     }
-  }, [isReady, processStatus, reconnecting])
+  }, [isReady, processStatus, reconnecting]);
 
   // Timer for 60 seconds limit on backend connection. WanGP preload can take longer.
   useEffect(() => {
-    if (connectionState !== 'connecting' || bridgeReady) return
+    if (connectionState !== "connecting" || bridgeReady) return;
 
     const timer = setTimeout(() => {
       if (!bridgeReady) {
-        setConnectionState('disconnected')
+        setConnectionState("disconnected");
       }
-    }, 60000)
+    }, 60000);
 
-    return () => clearTimeout(timer)
-  }, [bridgeReady, connectionState])
+    return () => clearTimeout(timer);
+  }, [bridgeReady, connectionState]);
 
   const label =
-    connectionState === 'ready'
-      ? 'Ready'
-      : connectionState === 'connecting'
-        ? `Connecting ${readyCount}/2`
-        : 'Disconnected'
+    connectionState === "ready"
+      ? "Inference Engine Ready"
+      : connectionState === "connecting"
+        ? `Launching Inference Engine ${readyCount}/2`
+        : "Inference Engine Disconnected";
 
   const title =
-    connectionState === 'ready'
-      ? 'Bridge connected. WanGP runtime ready.'
-      : connectionState === 'disconnected'
-        ? 'Bridge disconnected. WanGP unavailable.'
-      : `Bridge ${bridgeReady ? 'connected' : 'connecting'}; WanGP ${wangpReady ? 'ready' : 'preloading'}`
+    connectionState === "ready"
+      ? "Inference Engine Ready."
+      : connectionState === "disconnected"
+        ? "Inference Engine Disconnected."
+        : `Bridge ${bridgeReady ? "connected" : "connecting"}; Inference Engine ${wangpReady ? "ready" : "preloading"}`;
 
   return (
     <div
@@ -62,23 +66,27 @@ export function ConnectionIndicator({ className = '', reconnecting = false }: Co
       aria-label={title}
       className={`
         flex items-center gap-2 px-3 py-1.5 rounded-lg select-none text-xs font-medium
-        ${connectionState === 'ready' ? 'bg-green-500/10 text-green-400' :
-          connectionState === 'connecting' ? 'bg-amber-500/10 text-amber-400' :
-          'bg-red-500/10 text-red-400'}
+        ${
+          connectionState === "ready"
+            ? "bg-green-500/10 text-green-400"
+            : connectionState === "connecting"
+              ? "bg-amber-500/10 text-amber-400"
+              : "bg-red-500/10 text-red-400"
+        }
         ${className}
       `}
     >
-      {connectionState === 'connecting' && (
+      {connectionState === "connecting" && (
         <Loader2 className="h-3.5 w-3.5 text-amber-400 animate-spin" />
       )}
-      {connectionState === 'ready' && (
+      {connectionState === "ready" && (
         <div className="w-2 h-2 bg-green-500 rounded-full" />
       )}
-      {connectionState === 'disconnected' && (
+      {connectionState === "disconnected" && (
         <AlertCircle className="h-3.5 w-3.5 text-red-400" />
       )}
 
       <span>{label}</span>
     </div>
-  )
+  );
 }

@@ -23,6 +23,7 @@ from model_profiles.profiles import AspectRatio, ModelProfile, ResolutionTier
 # smaller pixel count when multiple candidates exist.
 _RESOLUTION_TABLE: dict[tuple[str, ResolutionTier, AspectRatio], tuple[int, int]] = {
     # Z-Image Turbo
+    ("z_image_turbo", "540p", "1:1"): (544, 544),
     ("z_image_turbo", "540p", "16:9"): (960, 544),
     ("z_image_turbo", "540p", "9:16"): (544, 960),
     ("z_image_turbo", "720p", "1:1"): (1024, 1024),
@@ -32,6 +33,7 @@ _RESOLUTION_TABLE: dict[tuple[str, ResolutionTier, AspectRatio], tuple[int, int]
     ("z_image_turbo", "1080p", "16:9"): (1920, 1088),
     ("z_image_turbo", "1080p", "9:16"): (1088, 1920),
     # Krea 2 Turbo (same resolution table; capped at 1440p per profile)
+    ("krea2_turbo", "540p", "1:1"): (544, 544),
     ("krea2_turbo", "540p", "16:9"): (960, 544),
     ("krea2_turbo", "540p", "9:16"): (544, 960),
     ("krea2_turbo", "720p", "1:1"): (1024, 1024),
@@ -44,6 +46,7 @@ _RESOLUTION_TABLE: dict[tuple[str, ResolutionTier, AspectRatio], tuple[int, int]
     ("krea2_turbo", "1440p", "16:9"): (2560, 1440),
     ("krea2_turbo", "1440p", "9:16"): (1440, 2560),
     # Flux 2 Klein 4B (no WanGP resolution cap; same curated WxH)
+    ("flux2_klein_4b", "540p", "1:1"): (544, 544),
     ("flux2_klein_4b", "540p", "16:9"): (960, 544),
     ("flux2_klein_4b", "540p", "9:16"): (544, 960),
     ("flux2_klein_4b", "720p", "1:1"): (1024, 1024),
@@ -56,6 +59,7 @@ _RESOLUTION_TABLE: dict[tuple[str, ResolutionTier, AspectRatio], tuple[int, int]
     ("flux2_klein_4b", "1440p", "16:9"): (2560, 1440),
     ("flux2_klein_4b", "1440p", "9:16"): (1440, 2560),
     # HiDream O1 Dev (no WanGP resolution cap; same curated WxH)
+    ("hidream_o1_dev", "540p", "1:1"): (544, 544),
     ("hidream_o1_dev", "540p", "16:9"): (960, 544),
     ("hidream_o1_dev", "540p", "9:16"): (544, 960),
     ("hidream_o1_dev", "720p", "1:1"): (1024, 1024),
@@ -68,7 +72,7 @@ _RESOLUTION_TABLE: dict[tuple[str, ResolutionTier, AspectRatio], tuple[int, int]
     ("hidream_o1_dev", "1440p", "16:9"): (2560, 1440),
     ("hidream_o1_dev", "1440p", "9:16"): (1440, 2560),
     # LTX 2.3 Fast video
-    ("ltx2_22b_distilled", "540p", "1:1"): (320, 320),
+    ("ltx2_22b_distilled", "540p", "1:1"): (544, 544),
     ("ltx2_22b_distilled", "540p", "16:9"): (960, 544),
     ("ltx2_22b_distilled", "540p", "9:16"): (544, 960),
     ("ltx2_22b_distilled", "720p", "1:1"): (1024, 1024),

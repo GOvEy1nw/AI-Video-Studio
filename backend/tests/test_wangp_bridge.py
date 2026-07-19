@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sys
 import os
 from pathlib import Path
@@ -37,6 +38,48 @@ def test_non_qwen_image_resolution_is_left_unchanged() -> None:
     bridge = _make_bridge(image_model_type="z_image")
 
     assert bridge._map_image_resolution(1920, 1072) == (1920, 1072)
+
+
+def test_runtime_preferences_update_wangp_config(tmp_path: Path) -> None:
+    config_path = tmp_path / "wgp_config.json"
+    config_path.write_text(json.dumps({"existing": "kept"}), encoding="utf-8")
+    bridge = WanGPBridge(
+        enabled=True,
+        root=tmp_path,
+        python_executable=None,
+        config_dir=tmp_path / "config",
+        output_dir=tmp_path / "outputs",
+        video_model_type="ltx2_22B_distilled_1_1",
+        image_model_type="z_image",
+        camera_motion_prompts={},
+        extra_args=(),
+    )
+
+    bridge.set_runtime_preferences(
+        attention_mode="sage2",
+        performance_profile=4.5,
+        reduce_vram="2",
+    )
+
+    saved = json.loads(config_path.read_text(encoding="utf-8"))
+    assert saved["existing"] == "kept"
+    assert saved["attention_mode"] == "sage2"
+    assert saved["profile"] == 4.5
+    assert saved["video_profile"] == 4.5
+    assert saved["image_profile"] == 4.5
+    assert saved["audio_profile"] == 4.5
+    assert saved["vae_config"] == 2
+    assert saved["boost"] == 2
+
+    bridge.set_runtime_preferences(
+        attention_mode="auto",
+        performance_profile=4,
+        reduce_vram="disabled",
+    )
+
+    saved = json.loads(config_path.read_text(encoding="utf-8"))
+    assert saved["vae_config"] == 0
+    assert saved["boost"] == 1
 
 
 def test_z_image_uses_eight_step_floor() -> None:

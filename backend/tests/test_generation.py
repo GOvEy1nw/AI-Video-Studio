@@ -333,6 +333,51 @@ class TestGenerate:
         assert call.control_video_path == str(clipped)
         assert call.video_length_frames == 97
 
+    def test_continue_video_duration_extends_trimmed_source(
+        self, client, enable_wangp: FakeWanGPBridge, tmp_path: Path, monkeypatch
+    ):
+        video = tmp_path / "source.mp4"
+        video.write_bytes(b"fake-video")
+        clipped = tmp_path / "source_trimmed.mp4"
+        clipped.write_bytes(b"fake-video")
+
+        monkeypatch.setattr(
+            "handlers.video_generation_handler.extract_video_clip",
+            lambda *_args, **_kwargs: clipped,
+        )
+        monkeypatch.setattr(
+            "handlers.video_generation_handler.probe_video_metadata",
+            lambda _path: VideoMetadata(frame_count=97, duration_seconds=4.0),
+        )
+
+        response = client.post(
+            "/api/generate",
+            json={
+                "prompt": "Keep walking",
+                "resolution": "540p",
+                "modelProfileId": "ltx2_22b_distilled",
+                "duration": "5",
+                "fps": "24",
+                "cameraMotion": "none",
+                "inputMedia": [
+                    {
+                        "role": "continue_video",
+                        "path": str(video),
+                        "type": "video",
+                        "trimStartTime": 0,
+                        "trimDuration": 4.0,
+                    },
+                ],
+            },
+        )
+
+        assert response.status_code == 200
+        call = enable_wangp.video_calls[0]
+        assert call.duration_seconds == 5
+        assert call.start_image_path == str(clipped)
+        assert call.image_prompt_type == "V"
+        assert call.video_length_frames == 217
+
     def test_retake_routes_through_wangp_control_video(
         self, client, enable_wangp: FakeWanGPBridge, tmp_path: Path, monkeypatch
     ):

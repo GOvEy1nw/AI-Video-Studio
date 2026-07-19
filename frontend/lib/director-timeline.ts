@@ -39,6 +39,10 @@ export function snapLtxFramesDown(requestedFrames: number): number {
   return Math.max(9, Math.floor((safe - 1) / 8) * 8 + 1)
 }
 
+export function ltxFrameCountToTimelineFrames(frameCount: number): number {
+  return Math.max(0, frameCount - 1)
+}
+
 export function resolveKeyframeFrame(segment: DirectorPromptSegmentV1): number {
   if (!segment.keyframe) throw new Error('Segment does not contain a keyframe')
   const lastFrame = segment.endFrameExclusive - 1
@@ -68,11 +72,12 @@ export function createDirectorSequence(
       requestedDurationSeconds,
       durationFrames,
       generateAudio: true,
+      promptRelayEpsilon: 0.001,
     },
     promptSegments: [{
       id: crypto.randomUUID(),
       startFrame: 0,
-      endFrameExclusive: durationFrames,
+      endFrameExclusive: durationFrames - 1,
       prompt: '',
     }],
     updatedAt: Date.now(),
@@ -86,6 +91,16 @@ export function normalizeDirectorSequence(
     return undefined
   }
   const durationFrames = snapLtxFramesUp(value.output.durationFrames)
+  const continueVideo = value.continueVideo ? { ...value.continueVideo } : undefined
+  const firstPromptFrame = Math.min(
+    Number.POSITIVE_INFINITY,
+    ...value.promptSegments.map((segment) => segment.startFrame),
+  )
+  const legacyContinueOffset = continueVideo
+    && firstPromptFrame === continueVideo.timelineDurationFrames
+    ? -1
+    : 0
+  const timelineEndFrame = durationFrames - 1
   return {
     ...value,
     schemaVersion: 1,
@@ -94,12 +109,22 @@ export function normalizeDirectorSequence(
       fps: 24,
       durationFrames,
       requestedDurationSeconds: Math.max(1 / 24, value.output.requestedDurationSeconds),
+      promptRelayEpsilon: Math.min(
+        0.99,
+        Math.max(0.0001, value.output.promptRelayEpsilon ?? 0.001),
+      ),
     },
-    promptSegments: value.promptSegments.map((segment) => ({
-      ...segment,
-      keyframe: segment.keyframe ? { ...segment.keyframe } : undefined,
-    })),
-    continueVideo: value.continueVideo ? { ...value.continueVideo } : undefined,
+    promptSegments: value.promptSegments.map((segment) => {
+      const startFrame = segment.startFrame + legacyContinueOffset
+      const shiftedEndFrame = segment.endFrameExclusive + legacyContinueOffset
+      return {
+        ...segment,
+        startFrame,
+        endFrameExclusive: Math.min(timelineEndFrame, shiftedEndFrame),
+        keyframe: segment.keyframe ? { ...segment.keyframe } : undefined,
+      }
+    }),
+    continueVideo,
     guideAudio: value.guideAudio ? { ...value.guideAudio } : undefined,
     guidance: value.guidance ? { ...value.guidance } : undefined,
   }
@@ -199,17 +224,19 @@ export function resizeDirectorDuration(
   const durationFrames = snapLtxFramesUp(
     requestedDurationSeconds * sequence.output.fps,
   )
-  const minimumStart = sequence.continueVideo?.timelineDurationFrames ?? 0
+  const minimumStart = sequence.continueVideo
+    ? ltxFrameCountToTimelineFrames(sequence.continueVideo.timelineDurationFrames)
+    : 0
   const segments = sequence.promptSegments.map((segment) => ({ ...segment }))
   if (segments.length === 0) {
     segments.push({
       id: crypto.randomUUID(),
       startFrame: minimumStart,
-      endFrameExclusive: durationFrames,
+      endFrameExclusive: durationFrames - 1,
       prompt: '',
     })
   } else {
-    segments[segments.length - 1].endFrameExclusive = durationFrames
+    segments[segments.length - 1].endFrameExclusive = durationFrames - 1
   }
   return {
     ...sequence,

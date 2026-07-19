@@ -67,6 +67,7 @@ export function DirectorEditor() {
     createAssetBin,
     renameAssetBin,
     deleteAssetBin,
+    setAssetBinColor,
     addDirectorTimeline,
     deleteDirectorTimeline,
     renameDirectorTimeline,
@@ -194,9 +195,11 @@ export function DirectorEditor() {
         style={{ width: layout.leftWidth }}
       >
         <DirectorSidebar
+          isActive={currentTab === "director"}
           projectId={currentProjectId}
           assets={currentProject.assets}
           assetBins={currentProject.assetBins || []}
+          assetBinColors={currentProject.assetBinColors || {}}
           timelines={timelines}
           activeTimelineId={activeTimeline?.id}
           assetsHeight={layout.assetsHeight}
@@ -217,6 +220,9 @@ export function DirectorEditor() {
             renameAssetBin(currentProjectId, oldName, newName)
           }
           onDeleteBin={(name) => deleteAssetBin(currentProjectId, name)}
+          onSetBinColor={(name, colorLabel) =>
+            setAssetBinColor(currentProjectId, name, colorLabel)
+          }
           onAddAsset={(asset) => addAsset(currentProjectId, asset)}
           onUpdateAsset={(assetId, updates) =>
             updateAsset(currentProjectId, assetId, updates)

@@ -94,6 +94,7 @@ class FakeWanGPBridge:
     session_ready: bool = False
     preload_calls: int = 0
     compile_enabled: bool = False
+    runtime_preferences: dict[str, object] = field(default_factory=dict)
 
     video_calls: list[FakeWangpVideoCall] = field(default_factory=list)
     image_calls: list[FakeWangpImageCall] = field(default_factory=list)
@@ -123,6 +124,19 @@ class FakeWanGPBridge:
 
     def set_compile_enabled(self, enabled: bool) -> None:
         self.compile_enabled = enabled
+
+    def set_runtime_preferences(
+        self,
+        *,
+        attention_mode: str,
+        performance_profile: float,
+        reduce_vram: str,
+    ) -> None:
+        self.runtime_preferences = {
+            "attention_mode": attention_mode,
+            "performance_profile": performance_profile,
+            "reduce_vram": reduce_vram,
+        }
 
     def generate_video(
         self,

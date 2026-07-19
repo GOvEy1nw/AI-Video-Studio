@@ -2,6 +2,8 @@
 import os
 import sys
 import shlex
+import json
+from typing import cast
 
 if os.environ.get("BACKEND_DEBUG") == "1":
     try:
@@ -41,10 +43,6 @@ console_handler.setLevel(logging.INFO)
 
 logging.basicConfig(level=logging.INFO, handlers=[console_handler])
 logger = logging.getLogger(__name__)
-
-# WanGP selects compatible attention kernels per model. AiVS must not replace
-# torch's global SDPA function because that can override WanGP's own choice.
-use_sage_attention = False
 
 # ============================================================
 # Constants & Paths
@@ -139,6 +137,25 @@ def _resolve_wangp_extra_args() -> tuple[str, ...]:
         return ()
     return tuple(shlex.split(raw_args))
 
+
+def _resolve_wangp_attention_mode(root: Path | None, extra_args: tuple[str, ...]) -> str:
+    for index, arg in enumerate(extra_args):
+        if arg == "--attention" and index + 1 < len(extra_args):
+            return extra_args[index + 1].strip().lower()
+        if arg.startswith("--attention="):
+            return arg.partition("=")[2].strip().lower()
+
+    if root is not None:
+        try:
+            raw_object: object = json.loads((root / "wgp_config.json").read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            raw_object = {}
+        if isinstance(raw_object, dict):
+            mode = cast(dict[str, object], raw_object).get("attention_mode")
+            if isinstance(mode, str) and mode.strip():
+                return mode.strip().lower()
+    return "auto"
+
 # ============================================================
 # Settings
 # ============================================================
@@ -160,6 +177,10 @@ WANGP_CONFIG_DIR = APP_DATA_DIR / "wangp_bridge"
 WANGP_VIDEO_MODEL_TYPE = os.environ.get("WANGP_VIDEO_MODEL_TYPE", "ltx2_22B_distilled_1_1")
 WANGP_IMAGE_MODEL_TYPE = os.environ.get("WANGP_IMAGE_MODEL_TYPE", "z_image")
 WANGP_EXTRA_ARGS = _resolve_wangp_extra_args()
+WANGP_ATTENTION_MODE = _resolve_wangp_attention_mode(WANGP_ROOT, WANGP_EXTRA_ARGS)
+# WanGP owns model-aware kernel selection. This flag reports its configured
+# mode only; AiVS must not replace torch's global SDPA implementation.
+use_sage_attention = WANGP_ATTENTION_MODE in {"sage", "sage2", "sage3", "radial"}
 
 
 CAMERA_MOTION_PROMPTS = {
@@ -229,7 +250,11 @@ def log_hardware_info() -> None:
     logger.info(f"Platform: {platform.system()} ({platform.machine()})")
     logger.info(f"Device: {DEVICE}  |  Dtype: {DTYPE}")
     logger.info(f"GPU: {gpu_info['name']}  |  VRAM: {vram_gb} GB")
-    logger.info(f"SageAttention: {'enabled' if use_sage_attention else 'disabled'}")
+    logger.info(
+        "SageAttention: %s  |  WanGP attention mode: %s",
+        "enabled" if use_sage_attention else "disabled",
+        WANGP_ATTENTION_MODE,
+    )
     if WANGP_ENABLED:
         logger.info("WanGP bridge: enabled  |  Root: %s  |  Python: %s", WANGP_ROOT, WANGP_PYTHON)
     else:
@@ -243,7 +268,7 @@ if __name__ == "__main__":
 
     port = int(os.environ.get("AIVS_PORT") or os.environ.get("LTX_PORT", "") or PORT)
     logger.info("=" * 60)
-    logger.info("LTX-2 Video Generation Server (FastAPI + Uvicorn)")
+    logger.info("AiVS (FastAPI + Uvicorn)")
     log_hardware_info()
     logger.info("=" * 60)
 

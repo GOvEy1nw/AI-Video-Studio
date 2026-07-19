@@ -9,14 +9,12 @@ import {
 } from "react";
 import {
   Trash2,
-  Download,
   Image,
   Video,
   Play,
   Pause,
   X,
   Heart,
-  Film,
   Volume2,
   VolumeX,
   Sparkles,
@@ -36,7 +34,6 @@ import {
   Pencil,
   LoaderCircle,
   ListFilter,
-  List,
   Folder,
 } from "lucide-react";
 import { useProjects } from "../contexts/ProjectContext";
@@ -51,19 +48,15 @@ import type { Asset } from "../types/project";
 import type { ModelProfile } from "../types/model-profiles";
 import { GenerationErrorDialog } from "../components/GenerationErrorDialog";
 import { DuplicateFilenameDialog } from "../components/DuplicateFilenameDialog";
-import { GalleryFilters } from "../components/GalleryFilters";
-import { GalleryBinBar } from "../components/GalleryBinBar";
+import { DeleteAssetDialog } from "../components/DeleteAssetDialog";
+import {
+  AssetLibraryImportButton,
+  GalleryAssetLibrary,
+} from "../components/GalleryAssetLibrary";
 import type { GalleryBinContextMenuState } from "../components/GalleryBinBar";
-import {
-  GalleryAssetContextMenu,
-  type GalleryAssetContextMenuState,
-} from "../components/GalleryAssetContextMenu";
+import { AssetContextMenu } from "./editor/AssetContextMenu";
 import { copyToAssetFolder } from "../lib/asset-copy";
-import {
-  collectAssetFilePaths,
-  deleteProjectAssetFilesFromDisk,
-  waitForMediaFileHandlesReleased,
-} from "../lib/asset-delete";
+import { useAssetDeletion } from "../hooks/use-asset-deletion";
 import {
   importGalleryFile,
   ensureGalleryAssetForInputFile,
@@ -74,8 +67,6 @@ import {
   filterGalleryAssets,
   isGalleryFilterActive,
   getAssetDisplayFileName,
-  inferAssetSource,
-  GALLERY_SOURCE_OPTIONS,
   collectGalleryBins,
   filterGalleryAssetsByBin,
   type GalleryFilterState,
@@ -306,480 +297,6 @@ function MediaInputTrimEditor({
           Confirm
         </button>
       </div>
-    </div>
-  );
-}
-
-// Asset card with hover overlays
-function AssetCard({
-  asset,
-  onDelete,
-  onPlay,
-  onDragStart,
-  onCreateVideo,
-  onRetake,
-  retakeDisabled = false,
-  onReframe,
-  onApplyPrompt,
-  onToggleFavorite,
-  onContextMenu,
-}: {
-  asset: Asset;
-  onDelete: () => void;
-  onPlay: () => void;
-  onDragStart: (e: React.DragEvent, asset: Asset) => void;
-  onCreateVideo?: (asset: Asset) => void;
-  onRetake?: (asset: Asset) => void;
-  retakeDisabled?: boolean;
-  onReframe?: (asset: Asset) => void;
-  onApplyPrompt?: (asset: Asset) => void;
-  onToggleFavorite?: () => void;
-  onContextMenu?: (e: React.MouseEvent, asset: Asset) => void;
-}) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const [isHovered, setIsHovered] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [isMuted, setIsMuted] = useState(true);
-  const isFavorite = asset.favorite || false;
-  const displayFileName = getAssetDisplayFileName(asset);
-  const canApplyPrompt = !!asset.generationParams;
-
-  useEffect(() => {
-    if (asset.type === "video" && videoRef.current) {
-      if (isHovered) {
-        videoRef.current.play().catch(() => {});
-      } else {
-        videoRef.current.pause();
-        videoRef.current.currentTime = 0;
-        setCurrentTime(0);
-      }
-    }
-  }, [isHovered, asset.type]);
-
-  useEffect(() => {
-    if (asset.type === "audio" && audioRef.current) {
-      if (isHovered) {
-        audioRef.current.play().catch(() => {});
-      } else {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-      }
-    }
-  }, [isHovered, asset.type]);
-
-  const handleTimeUpdate = () => {
-    if (videoRef.current) {
-      setCurrentTime(videoRef.current.currentTime);
-    }
-  };
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-  };
-
-  const handleDownload = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const a = document.createElement("a");
-    a.href = asset.url;
-    a.download = asset.path.split("/").pop() || `${asset.type}-${asset.id}`;
-    a.click();
-  };
-
-  const isDraggable =
-    asset.type === "image" || asset.type === "video" || asset.type === "audio";
-
-  return (
-    <div
-      className="relative group cursor-pointer rounded-xl overflow-hidden bg-zinc-900"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      onClick={onPlay}
-      onContextMenu={(e) => {
-        e.preventDefault();
-        onContextMenu?.(e, asset);
-      }}
-      draggable={isDraggable}
-      onDragStart={(e) => {
-        if (!isDraggable) return;
-        onDragStart(e, asset);
-      }}
-    >
-      <div className="relative aspect-video bg-zinc-900">
-        {asset.type === "video" ? (
-          <video
-            key={asset.url}
-            ref={videoRef}
-            src={asset.url}
-            preload="metadata"
-            className="h-full w-full object-contain"
-            muted={isMuted}
-            loop
-            onTimeUpdate={handleTimeUpdate}
-          />
-        ) : asset.type === "audio" ? (
-          <>
-            <audio
-              key={asset.url}
-              ref={audioRef}
-              src={asset.url}
-              preload="metadata"
-              loop
-              className="hidden"
-            />
-            <div
-              className={`flex h-full w-full items-center justify-center bg-zinc-800 transition-colors ${
-                isHovered ? "bg-emerald-950/40" : ""
-              }`}
-            >
-              <Music
-                className={`h-10 w-10 transition-colors ${
-                  isHovered ? "text-emerald-300" : "text-emerald-400"
-                }`}
-              />
-            </div>
-          </>
-        ) : (
-          <img
-            key={asset.url}
-            src={asset.url}
-            alt=""
-            className="h-full w-full object-contain"
-          />
-        )}
-
-        {/* Favorite heart - always visible when favorited */}
-        {isFavorite && !isHovered && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleFavorite?.();
-            }}
-            className="absolute top-2 left-2 p-1.5 rounded-lg bg-black/40 backdrop-blur-md text-white transition-colors z-10"
-          >
-            <Heart className="h-3.5 w-3.5 fill-current" />
-          </button>
-        )}
-
-        {/* Hover overlay */}
-        <div
-          className={`absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 transition-opacity duration-200 ${
-            isHovered ? "opacity-100" : "opacity-0"
-          }`}
-        >
-          {/* Top buttons */}
-          <div className="absolute top-2 left-2 right-2 flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleFavorite?.();
-                }}
-                className={`p-1.5 rounded-lg backdrop-blur-md transition-colors ${
-                  isFavorite
-                    ? "bg-white/20 text-white"
-                    : "bg-black/40 text-white hover:bg-black/60"
-                }`}
-              >
-                <Heart
-                  className={`h-3.5 w-3.5 ${isFavorite ? "fill-current" : ""}`}
-                />
-              </button>
-
-              {asset.type === "image" && (
-                <>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onCreateVideo?.(asset);
-                    }}
-                    className="px-2.5 py-1.5 rounded-lg bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-colors flex items-center gap-1.5 text-xs font-medium whitespace-nowrap"
-                  >
-                    <Film className="h-3 w-3" />
-                    Create video
-                  </button>
-                  {canApplyPrompt && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onApplyPrompt?.(asset);
-                      }}
-                      className="p-1.5 rounded-lg bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-colors"
-                      title="Apply prompt"
-                      aria-label="Apply prompt"
-                    >
-                      <ClipboardPaste className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </>
-              )}
-              {asset.type === "video" && (
-                <>
-                  <button
-                    disabled={retakeDisabled || !onRetake}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onRetake?.(asset);
-                    }}
-                    className="px-2.5 py-1.5 rounded-lg bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-colors flex items-center gap-1.5 text-xs font-medium whitespace-nowrap disabled:cursor-not-allowed disabled:text-zinc-500 disabled:hover:bg-black/40"
-                    title={retakeDisabled ? "Retake is coming soon" : undefined}
-                  >
-                    <Scissors className="h-3 w-3" />
-                    Retake{retakeDisabled ? " (soon)" : ""}
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onReframe?.(asset);
-                    }}
-                    className="px-2.5 py-1.5 rounded-lg bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-colors flex items-center gap-1.5 text-xs font-medium whitespace-nowrap"
-                  >
-                    <Expand className="h-3 w-3" />
-                    Reframe
-                  </button>
-                  {canApplyPrompt && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onApplyPrompt?.(asset);
-                      }}
-                      className="p-1.5 rounded-lg bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-colors"
-                      title="Apply prompt"
-                      aria-label="Apply prompt"
-                    >
-                      <ClipboardPaste className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={handleDownload}
-                className="p-1.5 rounded-lg bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-colors"
-              >
-                <Download className="h-3.5 w-3.5" />
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete();
-                }}
-                className="p-1.5 rounded-lg bg-black/40 backdrop-blur-md text-white/70 hover:bg-red-500/80 hover:text-white transition-colors"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          </div>
-
-          {/* Bottom controls for video */}
-          {asset.type === "video" && (
-            <div className="absolute bottom-9 left-2 right-2 flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <div className="px-2 py-1 rounded-lg bg-black/50 backdrop-blur-md text-white text-xs font-mono">
-                  {formatTime(currentTime)}
-                </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsMuted(!isMuted);
-                  }}
-                  className="p-1.5 rounded-lg bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-colors"
-                >
-                  {isMuted ? (
-                    <VolumeX className="h-3.5 w-3.5" />
-                  ) : (
-                    <Volume2 className="h-3.5 w-3.5" />
-                  )}
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Filename overlay — hover only */}
-        <div
-          className={`pointer-events-none absolute inset-x-0 bottom-0 z-20 bg-black/60 px-2.5 py-1.5 transition-opacity duration-200 ${
-            isHovered ? "opacity-100" : "opacity-0"
-          }`}
-          title={displayFileName}
-        >
-          <p className="truncate text-xs text-zinc-100">{displayFileName}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AssetListRow({
-  asset,
-  onDelete,
-  onPlay,
-  onDragStart,
-  onApplyPrompt,
-  onToggleFavorite,
-  onContextMenu,
-}: {
-  asset: Asset;
-  onDelete: () => void;
-  onPlay: () => void;
-  onDragStart: (e: React.DragEvent, asset: Asset) => void;
-  onApplyPrompt?: (asset: Asset) => void;
-  onToggleFavorite?: () => void;
-  onContextMenu?: (e: React.MouseEvent, asset: Asset) => void;
-}) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const [isHovered, setIsHovered] = useState(false);
-  const isFavorite = asset.favorite || false;
-  const displayFileName = getAssetDisplayFileName(asset);
-  const sourceLabel =
-    GALLERY_SOURCE_OPTIONS.find(
-      (option) => option.value === inferAssetSource(asset),
-    )?.label ?? "Unknown";
-  const typeLabel = asset.type.charAt(0).toUpperCase() + asset.type.slice(1);
-
-  useEffect(() => {
-    if (asset.type === "video" && videoRef.current) {
-      if (isHovered) {
-        videoRef.current.play().catch(() => {});
-      } else {
-        videoRef.current.pause();
-        videoRef.current.currentTime = 0;
-      }
-    }
-  }, [isHovered, asset.type]);
-
-  useEffect(() => {
-    if (asset.type === "audio" && audioRef.current) {
-      if (isHovered) {
-        audioRef.current.play().catch(() => {});
-      } else {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-      }
-    }
-  }, [isHovered, asset.type]);
-
-  const isDraggable =
-    asset.type === "image" || asset.type === "video" || asset.type === "audio";
-
-  return (
-    <div
-      className="group flex cursor-pointer items-center gap-4 rounded-lg px-3 py-2 transition-colors hover:bg-zinc-800/60"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      onClick={onPlay}
-      onContextMenu={(e) => {
-        e.preventDefault();
-        onContextMenu?.(e, asset);
-      }}
-      draggable={isDraggable}
-      onDragStart={(e) => {
-        if (!isDraggable) return;
-        onDragStart(e, asset);
-      }}
-    >
-      <div className="relative h-12 w-20 flex-shrink-0 overflow-hidden rounded-md bg-zinc-800">
-        {asset.type === "video" ? (
-          <video
-            key={asset.url}
-            ref={videoRef}
-            src={asset.url}
-            preload="metadata"
-            className="h-full w-full object-cover"
-            muted
-            loop
-          />
-        ) : asset.type === "audio" ? (
-          <>
-            <audio
-              key={asset.url}
-              ref={audioRef}
-              src={asset.url}
-              preload="metadata"
-              loop
-              className="hidden"
-            />
-            <div
-              className={`flex h-full w-full items-center justify-center transition-colors ${
-                isHovered ? "bg-emerald-950/40" : "bg-zinc-800"
-              }`}
-            >
-              <Music
-                className={`h-5 w-5 transition-colors ${
-                  isHovered ? "text-emerald-300" : "text-emerald-400"
-                }`}
-              />
-            </div>
-          </>
-        ) : (
-          <img
-            key={asset.url}
-            src={asset.url}
-            alt=""
-            className="h-full w-full object-cover"
-          />
-        )}
-      </div>
-
-      <p
-        className="min-w-0 flex-1 truncate text-sm text-zinc-200"
-        title={displayFileName}
-      >
-        {displayFileName}
-      </p>
-
-      <span className="w-16 flex-shrink-0 text-sm text-zinc-400">
-        {typeLabel}
-      </span>
-
-      <span className="w-24 flex-shrink-0 text-sm text-zinc-400">
-        {sourceLabel}
-      </span>
-
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggleFavorite?.();
-        }}
-        className={`flex-shrink-0 rounded-md p-2 transition-colors ${
-          isFavorite
-            ? "text-red-400 hover:text-red-300"
-            : "text-zinc-500 hover:bg-zinc-700 hover:text-zinc-300"
-        }`}
-        aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
-      >
-        <Heart className={`h-4 w-4 ${isFavorite ? "fill-current" : ""}`} />
-      </button>
-
-      {asset.generationParams && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onApplyPrompt?.(asset);
-          }}
-          className="flex-shrink-0 rounded-md p-2 text-zinc-500 transition-colors hover:bg-zinc-700 hover:text-zinc-200"
-          title="Apply prompt"
-          aria-label="Apply prompt"
-        >
-          <ClipboardPaste className="h-4 w-4" />
-        </button>
-      )}
-
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete();
-        }}
-        className="flex-shrink-0 rounded-md p-2 text-zinc-500 transition-colors hover:bg-red-500/20 hover:text-red-400"
-        aria-label="Remove asset"
-      >
-        <Trash2 className="h-4 w-4" />
-      </button>
     </div>
   );
 }
@@ -1671,7 +1188,21 @@ function PromptBar({
 
     if (item) {
       return (
-        <div key={roleName} className="relative">
+        <div
+          key={roleName}
+          className="relative"
+          onDragOver={(event) => {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = "copy";
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            const asset = readGalleryAssetFromDrop(event);
+            if (asset?.type === mediaType) {
+              setSlotMedia(asset.url, roleName, mediaType);
+            }
+          }}
+        >
           {isActive && (
             <div
               data-media-menu
@@ -1757,6 +1288,11 @@ function PromptBar({
         }}
         onDrop={(e) => {
           e.preventDefault();
+          const asset = readGalleryAssetFromDrop(e);
+          if (asset?.type === mediaType) {
+            setSlotMedia(asset.url, roleName, mediaType);
+            return;
+          }
           const file = e.dataTransfer.files?.[0];
           if (file) {
             const filePath = (file as any).path as string | undefined;
@@ -2021,6 +1557,9 @@ function PromptBar({
             (item.type === "video" || item.type === "audio"),
         )
       : undefined;
+  const isContinueVideo = guideItemForTrim?.role === "continue_video";
+  const durationFollowsGuideTrim =
+    Boolean(guideItemForTrim) && !isContinueVideo;
   const updateGuideTrim = useCallback(
     (id: string, patch: Partial<ImageInputItem>) => {
       onImageInputsChange((items) =>
@@ -2565,7 +2104,7 @@ function PromptBar({
 
             <div className="w-px h-4 bg-zinc-700 mx-0.5" />
 
-            {guideItemForTrim ? (
+            {durationFollowsGuideTrim ? (
               <button
                 type="button"
                 disabled
@@ -2582,19 +2121,22 @@ function PromptBar({
               </button>
             ) : (
               <SettingsDropdown
-                title="DURATION"
+                title={isContinueVideo ? "EXTEND BY" : "DURATION"}
                 value={String(settings.duration)}
                 onChange={(v) =>
                   onSettingsChange({ ...settings, duration: parseFloat(v) })
                 }
                 options={videoDurationOptions.map((value) => ({
                   value: String(value),
-                  label: `${value} Sec`,
+                  label: `${isContinueVideo ? "+" : ""}${value} Sec`,
                 }))}
                 trigger={
                   <>
                     <Clock className="h-3.5 w-3.5" />
-                    <span>{settings.duration}s</span>
+                    <span>
+                      {isContinueVideo ? "+" : ""}
+                      {settings.duration}s
+                    </span>
                   </>
                 }
               />
@@ -2673,64 +2215,6 @@ function PromptBar({
   );
 }
 
-// Gallery size icon components
-function GridSmallIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-      <rect x="2" y="2" width="4" height="4" rx="0.5" />
-      <rect x="8" y="2" width="4" height="4" rx="0.5" />
-      <rect x="14" y="2" width="4" height="4" rx="0.5" />
-      <rect x="20" y="2" width="2" height="4" rx="0.5" />
-      <rect x="2" y="8" width="4" height="4" rx="0.5" />
-      <rect x="8" y="8" width="4" height="4" rx="0.5" />
-      <rect x="14" y="8" width="4" height="4" rx="0.5" />
-      <rect x="20" y="8" width="2" height="4" rx="0.5" />
-      <rect x="2" y="14" width="4" height="4" rx="0.5" />
-      <rect x="8" y="14" width="4" height="4" rx="0.5" />
-      <rect x="14" y="14" width="4" height="4" rx="0.5" />
-      <rect x="20" y="14" width="2" height="4" rx="0.5" />
-    </svg>
-  );
-}
-
-function GridMediumIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-      <rect x="2" y="2" width="6" height="6" rx="1" />
-      <rect x="10" y="2" width="6" height="6" rx="1" />
-      <rect x="18" y="2" width="4" height="6" rx="1" />
-      <rect x="2" y="10" width="6" height="6" rx="1" />
-      <rect x="10" y="10" width="6" height="6" rx="1" />
-      <rect x="18" y="10" width="4" height="6" rx="1" />
-      <rect x="2" y="18" width="6" height="4" rx="1" />
-      <rect x="10" y="18" width="6" height="4" rx="1" />
-      <rect x="18" y="18" width="4" height="4" rx="1" />
-    </svg>
-  );
-}
-
-function GridLargeIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-      <rect x="2" y="2" width="9" height="9" rx="1.5" />
-      <rect x="13" y="2" width="9" height="9" rx="1.5" />
-      <rect x="2" y="13" width="9" height="9" rx="1.5" />
-      <rect x="13" y="13" width="9" height="9" rx="1.5" />
-    </svg>
-  );
-}
-
-type GallerySize = "small" | "medium" | "large" | "list";
-
-const gallerySizeClasses: Record<Exclude<GallerySize, "list">, string> = {
-  small:
-    "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7",
-  medium:
-    "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5",
-  large:
-    "grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3",
-};
-
 const GALLERY_BOTTOM_FADE_HEIGHT_PX = 160;
 
 const DEFAULT_VIDEO_SETTINGS = {
@@ -2753,14 +2237,18 @@ export function GenSpace() {
   const {
     currentProject,
     currentProjectId,
+    currentTab,
     addAsset,
     addTakeToAsset,
+    deleteTakeFromAsset,
+    setAssetActiveTake,
     deleteAsset,
     updateAsset,
     toggleFavorite,
     createAssetBin,
     renameAssetBin,
     deleteAssetBin,
+    setAssetBinColor,
     genSpaceEditImageUrl,
     setGenSpaceEditImageUrl,
     setGenSpaceEditMode,
@@ -2772,7 +2260,7 @@ export function GenSpace() {
     updateProjectGenSpaceSeed,
   } = useProjects();
   const { updateSettings, isLoaded: appSettingsLoaded } = useAppSettings();
-  const [mode, setMode] = useState<GenSpaceMode>("video");
+  const [mode, setMode] = useState<GenSpaceMode>("image");
   const [videoMode, setVideoMode] = useState<VideoProcessMode>("generate");
   const [prompt, setPrompt] = useState("");
   const [inputImage, setInputImage] = useState<string | null>(null);
@@ -2787,15 +2275,29 @@ export function GenSpace() {
   const [galleryFilter, setGalleryFilter] = useState<GalleryFilterState>(
     DEFAULT_GALLERY_FILTER,
   );
-  const [gallerySize, setGallerySize] = useState<GallerySize>("medium");
-  const [showSizeMenu, setShowSizeMenu] = useState(false);
+  const [galleryViewMode, setGalleryViewMode] = useState<"grid" | "list">(
+    "grid",
+  );
+  const [galleryCardSize, setGalleryCardSize] = useState(340);
+  const [isDocumentVisible, setIsDocumentVisible] = useState(
+    () => !document.hidden,
+  );
   const [selectedBin, setSelectedBin] = useState<string | null>(null);
   const [creatingBin, setCreatingBin] = useState(false);
   const [newBinName, setNewBinName] = useState("");
   const [binContextMenu, setBinContextMenu] =
     useState<GalleryBinContextMenuState | null>(null);
-  const [assetContextMenu, setAssetContextMenu] =
-    useState<GalleryAssetContextMenuState | null>(null);
+  const [assetContextMenu, setAssetContextMenu] = useState<{
+    assetId: string;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [contextSelectedAssetIds, setContextSelectedAssetIds] = useState<
+    Set<string>
+  >(new Set());
+  const [takesViewAssetId, setTakesViewAssetId] = useState<string | null>(null);
+  const assetContextMenuRef = useRef<HTMLDivElement>(null);
+  const galleryFileInputRef = useRef<HTMLInputElement>(null);
   const [isGalleryDragOver, setIsGalleryDragOver] = useState(false);
   const [isGalleryImporting, setIsGalleryImporting] = useState(false);
   const [galleryToast, setGalleryToast] = useState<string | null>(null);
@@ -2805,7 +2307,6 @@ export function GenSpace() {
     fileName: string;
     resolve: (choice: DuplicateFilenameChoice) => void;
   } | null>(null);
-  const sizeMenuRef = useRef<HTMLDivElement>(null);
   const prevProjectIdRef = useRef<string | null>(null);
   const pendingInputRestoreRef = useRef<{
     imageInputs: ImageInputItem[];
@@ -2874,8 +2375,8 @@ export function GenSpace() {
     videoDuration: 0,
     ready: false,
   });
-  const [retakePanelKey, setRetakePanelKey] = useState(0);
-  const [retakeInitial, setRetakeInitial] = useState<{
+  const [retakePanelKey] = useState(0);
+  const [retakeInitial] = useState<{
     videoUrl: string | null;
     videoPath: string | null;
     duration?: number;
@@ -2930,7 +2431,9 @@ export function GenSpace() {
   useEffect(() => {
     if (!genSpaceRetakeSource) return;
     setGenSpaceRetakeSource(null);
-    setLocalError("Retake is coming soon and is not yet compatible with WanGP.");
+    setLocalError(
+      "Retake is coming soon and is not yet compatible with WanGP.",
+    );
   }, [genSpaceRetakeSource, setGenSpaceRetakeSource]);
 
   useEffect(() => {
@@ -2943,6 +2446,41 @@ export function GenSpace() {
   const assets = (currentProject?.assets || []).filter(
     (a) => a.type === "image" || a.type === "video" || a.type === "audio",
   );
+  const handleBeforeAssetDelete = useCallback((assetIds: string[]) => {
+    const ids = new Set(assetIds);
+    setSelectedAsset((current) =>
+      current && ids.has(current.id) ? null : current,
+    );
+    setTakesViewAssetId((current) =>
+      current && ids.has(current) ? null : current,
+    );
+    setContextSelectedAssetIds(new Set());
+  }, []);
+  const {
+    pendingAssetIds,
+    requestDeleteAssets,
+    cancelDeleteAssets,
+    confirmDeleteAssets,
+  } = useAssetDeletion({
+    projectId: currentProjectId,
+    assets,
+    deleteAsset,
+    beforeDelete: handleBeforeAssetDelete,
+  });
+
+  useEffect(() => {
+    const syncVisibility = () => setIsDocumentVisible(!document.hidden);
+    document.addEventListener("visibilitychange", syncVisibility);
+    return () =>
+      document.removeEventListener("visibilitychange", syncVisibility);
+  }, []);
+
+  const contextAsset = assetContextMenu
+    ? assets.find((asset) => asset.id === assetContextMenu.assetId)
+    : undefined;
+  const takesViewAsset = takesViewAssetId
+    ? assets.find((asset) => asset.id === takesViewAssetId)
+    : undefined;
   const [lastPrompt, setLastPrompt] = useState("");
 
   const seedLocked = currentProject?.genSpaceSeedLocked ?? false;
@@ -3533,23 +3071,6 @@ export function GenSpace() {
     }
   };
 
-  const handleDelete = async (assetId: string) => {
-    if (!currentProjectId) return;
-
-    const asset = assets.find((entry) => entry.id === assetId);
-    const pathsToTrash = asset ? collectAssetFilePaths(asset) : [];
-
-    if (selectedAsset?.id === assetId) {
-      setSelectedAsset(null);
-    }
-    deleteAsset(currentProjectId, assetId);
-
-    if (pathsToTrash.length > 0) {
-      await waitForMediaFileHandlesReleased();
-      await deleteProjectAssetFilesFromDisk(currentProjectId, pathsToTrash);
-    }
-  };
-
   const handleDragStart = (e: React.DragEvent, asset: Asset) => {
     e.dataTransfer.setData("asset", JSON.stringify(asset));
     e.dataTransfer.setData("assetId", asset.id);
@@ -3623,13 +3144,8 @@ export function GenSpace() {
     setIsGalleryDragOver(false);
   };
 
-  const handleGalleryDrop = async (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsGalleryDragOver(false);
-    if (e.dataTransfer.types.includes("asset")) return;
+  const importFilesToGallery = async (files: File[]) => {
     if (!currentProjectId) return;
-
-    const files = Array.from(e.dataTransfer.files);
     if (files.length === 0) return;
 
     setIsGalleryImporting(true);
@@ -3679,24 +3195,18 @@ export function GenSpace() {
     }
   };
 
+  const handleGalleryDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsGalleryDragOver(false);
+    if (e.dataTransfer.types.includes("asset")) return;
+    await importFilesToGallery(Array.from(e.dataTransfer.files));
+  };
+
   const handleCreateVideo = (imageAsset: Asset) => {
     setMode("video");
     setVideoMode("generate");
     setInputImage(imageAsset.url);
     setPrompt(`${imageAsset.prompt || "The scene comes to life..."}`);
-  };
-
-  const handleRetake = (videoAsset: Asset) => {
-    setMode("video");
-    setVideoMode("retake");
-    setPrompt("");
-    setActiveRetakeSource(null);
-    setRetakeInitial({
-      videoUrl: videoAsset.url,
-      videoPath: videoAsset.path,
-      duration: videoAsset.duration,
-    });
-    setRetakePanelKey((prev) => prev + 1);
   };
 
   const handleReframe = (videoAsset: Asset) => {
@@ -3732,7 +3242,7 @@ export function GenSpace() {
     }
   }, []);
 
-  const handleApplyPrompt = useCallback(
+  const handleCopySettings = useCallback(
     (asset: Asset) => {
       const params = asset.generationParams;
       if (!params) return;
@@ -3896,22 +3406,6 @@ export function GenSpace() {
     </div>
   ) : null;
 
-  // Close size menu on click outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        sizeMenuRef.current &&
-        !sizeMenuRef.current.contains(e.target as Node)
-      ) {
-        setShowSizeMenu(false);
-      }
-    };
-    if (showSizeMenu) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showSizeMenu]);
-
   const filteredAssets = useMemo(() => {
     let list = filterGalleryAssets(assets, galleryFilter);
     if (selectedBin !== null) {
@@ -3936,14 +3430,17 @@ export function GenSpace() {
     [currentProjectId, updateAsset],
   );
 
-  const handleCommitNewBin = useCallback((name: string) => {
-    const trimmed = name.trim();
-    if (!trimmed || !currentProjectId) return;
-    createAssetBin(currentProjectId, trimmed);
-    setSelectedBin(trimmed);
-    setCreatingBin(false);
-    setNewBinName("");
-  }, [createAssetBin, currentProjectId]);
+  const handleCommitNewBin = useCallback(
+    (name: string) => {
+      const trimmed = name.trim();
+      if (!trimmed || !currentProjectId) return;
+      createAssetBin(currentProjectId, trimmed);
+      setSelectedBin(trimmed);
+      setCreatingBin(false);
+      setNewBinName("");
+    },
+    [createAssetBin, currentProjectId],
+  );
 
   const handleRenameBin = useCallback(
     (oldName: string, newName: string) => {
@@ -3971,11 +3468,26 @@ export function GenSpace() {
 
   const handleAssetContextMenu = useCallback(
     (e: React.MouseEvent, asset: Asset) => {
-      setAssetContextMenu({ asset, x: e.clientX, y: e.clientY });
+      setAssetContextMenu({ assetId: asset.id, x: e.clientX, y: e.clientY });
+      setContextSelectedAssetIds(new Set([asset.id]));
       setBinContextMenu(null);
     },
     [],
   );
+
+  useEffect(() => {
+    if (!assetContextMenu) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        assetContextMenuRef.current &&
+        !assetContextMenuRef.current.contains(event.target as Node)
+      ) {
+        setAssetContextMenu(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [assetContextMenu]);
 
   const galleryFilterActive = isGalleryFilterActive(galleryFilter);
 
@@ -4101,310 +3613,196 @@ export function GenSpace() {
           </div>
         )}
 
-      {/* Assets area — full width, no background, above the prompt bar */}
       {(assets.length > 0 || isGenerating) && (
-        <div className="absolute inset-x-0 top-0 bottom-0 flex flex-col px-4 pt-4">
-          {/* Top bar — filter + favorites + bins left, view right */}
-          <div className="flex items-center justify-between gap-3 pb-2">
-            <div className="flex min-w-0 flex-1 items-center gap-2">
-              <GalleryFilters
-                filter={galleryFilter}
-                onChange={setGalleryFilter}
+        <GalleryAssetLibrary
+          className="absolute inset-x-0 top-0 bottom-0 px-4 pt-4"
+          assets={assets}
+          visibleAssets={filteredAssets}
+          bins={galleryBins}
+          binColors={currentProject?.assetBinColors ?? {}}
+          filter={galleryFilter}
+          onFilterChange={setGalleryFilter}
+          selectedBin={selectedBin}
+          onSelectedBinChange={setSelectedBin}
+          creatingBin={creatingBin}
+          onCreatingBinChange={setCreatingBin}
+          newBinName={newBinName}
+          onNewBinNameChange={setNewBinName}
+          onCommitNewBin={handleCommitNewBin}
+          onAssignAssetToBin={handleAssignAssetToBin}
+          onRenameBin={handleRenameBin}
+          onDeleteBin={handleDeleteBin}
+          onSetBinColor={(bin, colorLabel) => {
+            if (currentProjectId) {
+              setAssetBinColor(currentProjectId, bin, colorLabel);
+            }
+          }}
+          binContextMenu={binContextMenu}
+          onBinContextMenuChange={setBinContextMenu}
+          viewMode={galleryViewMode}
+          onViewModeChange={setGalleryViewMode}
+          cardSize={galleryCardSize}
+          onCardSizeChange={setGalleryCardSize}
+          cardSizeMin={96}
+          cardSizeMax={700}
+          showFavorites={showFavorites}
+          onShowFavoritesChange={setShowFavorites}
+          getThumbnailUrl={(asset) => asset.thumbnail}
+          previewEnabled={currentTab === "gen-space" && isDocumentVisible}
+          onAssetClick={(event, asset) => {
+            event.stopPropagation();
+            setSelectedAsset(asset);
+          }}
+          onAssetDragStart={handleDragStart}
+          onAssetContextMenu={handleAssetContextMenu}
+          onDeleteAsset={(asset) => requestDeleteAssets([asset.id])}
+          onToggleFavorite={(asset) => {
+            if (currentProjectId) toggleFavorite(currentProjectId, asset.id);
+          }}
+          onCreateVideo={handleCreateVideo}
+          onReframe={handleReframe}
+          onCopySettings={handleCopySettings}
+          onSelectTake={(asset, takeIndex) => {
+            if (currentProjectId) {
+              setAssetActiveTake(currentProjectId, asset.id, takeIndex);
+            }
+          }}
+          headerAction={
+            <>
+              <AssetLibraryImportButton
+                onClick={() => galleryFileInputRef.current?.click()}
               />
+              <input
+                ref={galleryFileInputRef}
+                type="file"
+                accept="video/*,audio/*,image/*"
+                multiple
+                className="hidden"
+                onChange={(event) => {
+                  void importFilesToGallery(
+                    Array.from(event.target.files ?? []),
+                  );
+                  event.target.value = "";
+                }}
+              />
+            </>
+          }
+          listActions={(asset) => (
+            <>
               <button
                 type="button"
-                onClick={() => setShowFavorites(!showFavorites)}
-                className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md border transition-colors ${
-                  showFavorites
-                    ? "border-red-500/30 bg-red-500/20 text-red-400"
-                    : "border-transparent text-zinc-400 hover:bg-zinc-800 hover:text-white"
-                }`}
-                aria-label="Show favorites"
-                aria-pressed={showFavorites}
-                title="Show favorites"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (currentProjectId) {
+                    toggleFavorite(currentProjectId, asset.id);
+                  }
+                }}
+                className={
+                  asset.favorite
+                    ? "p-1 text-red-400"
+                    : "p-1 text-zinc-600 hover:text-zinc-300"
+                }
+                aria-label="Toggle favorite"
               >
                 <Heart
-                  className={`h-4 w-4 ${showFavorites ? "fill-current" : ""}`}
+                  className={`h-3 w-3 ${asset.favorite ? "fill-current" : ""}`}
                 />
               </button>
-              <div className="min-w-0 flex-1">
-                <GalleryBinBar
-                  bins={galleryBins}
-                  assets={assets}
-                  selectedBin={selectedBin}
-                  creatingBin={creatingBin}
-                  newBinName={newBinName}
-                  onSelectBin={setSelectedBin}
-                  onCreatingBinChange={setCreatingBin}
-                  onNewBinNameChange={setNewBinName}
-                  onCommitNewBin={handleCommitNewBin}
-                  onAssignAssetToBin={(assetId, bin) =>
-                    handleAssignAssetToBin(assetId, bin)
-                  }
-                  onRenameBin={handleRenameBin}
-                  onDeleteBin={handleDeleteBin}
-                  binContextMenu={binContextMenu}
-                  onBinContextMenuChange={setBinContextMenu}
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-shrink-0 items-center gap-2">
-              <div ref={sizeMenuRef} className="relative">
+              {asset.generationParams && (
                 <button
-                  onClick={() => setShowSizeMenu(!showSizeMenu)}
-                  className={`p-2 rounded-md transition-colors ${
-                    showSizeMenu
-                      ? "bg-zinc-800 text-white"
-                      : "text-zinc-400 hover:text-white hover:bg-zinc-800"
-                  }`}
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    handleCopySettings(asset);
+                  }}
+                  className="p-1 text-zinc-600 hover:text-zinc-300"
+                  aria-label="Copy settings"
                 >
-                  {gallerySize === "list" ? (
-                    <List className="h-4 w-4" />
-                  ) : gallerySize === "small" ? (
-                    <GridSmallIcon className="h-4 w-4" />
-                  ) : gallerySize === "medium" ? (
-                    <GridMediumIcon className="h-4 w-4" />
-                  ) : (
-                    <GridLargeIcon className="h-4 w-4" />
-                  )}
+                  <ClipboardPaste className="h-3 w-3" />
                 </button>
-
-                {showSizeMenu && (
-                  <div className="absolute top-full mt-2 right-0 bg-zinc-800 border border-zinc-700 rounded-md p-2 min-w-[160px] shadow-xl z-50">
-                    {[
-                      {
-                        value: "small" as GallerySize,
-                        label: "Small",
-                        icon: GridSmallIcon,
-                      },
-                      {
-                        value: "medium" as GallerySize,
-                        label: "Medium",
-                        icon: GridMediumIcon,
-                      },
-                      {
-                        value: "large" as GallerySize,
-                        label: "Large",
-                        icon: GridLargeIcon,
-                      },
-                      {
-                        value: "list" as GallerySize,
-                        label: "List",
-                        icon: List,
-                      },
-                    ].map((option) => (
-                      <button
-                        key={option.value}
-                        onClick={() => {
-                          setGallerySize(option.value);
-                          setShowSizeMenu(false);
-                        }}
-                        className={`w-full flex items-center justify-between px-2 py-2.5 rounded-md transition-colors text-left ${gallerySize === option.value ? "bg-white/20 hover:bg-white/25" : "hover:bg-zinc-700"}`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <option.icon
-                            className={`h-4 w-4 ${gallerySize === option.value ? "text-white" : "text-zinc-500"}`}
-                          />
+              )}
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  requestDeleteAssets([asset.id]);
+                }}
+                className="p-1 text-zinc-600 hover:text-red-400"
+                aria-label="Delete asset"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </>
+          )}
+          leadingContent={
+            <>
+              {isGenerating && (
+                <div className="relative aspect-video overflow-hidden rounded-xl bg-zinc-800">
+                  {previewUrl && (
+                    <img
+                      src={previewUrl}
+                      alt=""
+                      className="absolute inset-0 h-full w-full object-cover"
+                    />
+                  )}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/35 px-4">
+                    {!previewUrl && (
+                      <LoaderCircle className="mb-3 h-8 w-8 animate-spin text-violet-400" />
+                    )}
+                    <p className="max-w-full truncate text-sm text-zinc-200">
+                      {statusMessage || "Generating..."}
+                    </p>
+                    {generationBadges.length > 0 && (
+                      <div className="mt-2 flex max-w-full flex-wrap justify-center gap-1">
+                        {generationBadges.map((badge) => (
                           <span
-                            className={`text-sm ${gallerySize === option.value ? "text-white font-medium" : "text-zinc-400"}`}
+                            key={badge}
+                            className="rounded bg-black/50 px-1.5 py-0.5 text-[10px] text-zinc-300"
                           >
-                            {option.label}
+                            {badge}
                           </span>
-                        </div>
-                        {gallerySize === option.value && (
-                          <svg
-                            className="w-4 h-4 text-white"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M5 13l4 4L19 7"
-                            />
-                          </svg>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Assets grid — fills remaining space, scrollable */}
-          <div
-            className="overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable] flex-1"
-            style={{ paddingBottom: GALLERY_BOTTOM_FADE_HEIGHT_PX }}
-          >
-            <div
-              className={
-                gallerySize === "list"
-                  ? "flex flex-col gap-0.5"
-                  : `grid ${gallerySizeClasses[gallerySize]} gap-4`
-              }
-            >
-              {isGenerating &&
-                (gallerySize === "list" ? (
-                  <div className="flex items-center gap-4 rounded-lg px-3 py-3">
-                    <div className="relative h-12 w-20 flex-shrink-0 overflow-hidden rounded-md bg-zinc-800">
-                      {previewUrl ? (
-                        <img
-                          src={previewUrl}
-                          alt=""
-                          className="h-full w-full object-cover"
+                        ))}
+                      </div>
+                    )}
+                    {progress > 0 && (
+                      <div className="mt-2 h-1 w-32 overflow-hidden rounded-full bg-zinc-800">
+                        <div
+                          className="h-full bg-violet-500 transition-all"
+                          style={{ width: `${progress}%` }}
                         />
-                      ) : (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <LoaderCircle className="h-5 w-5 animate-spin text-violet-400" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm text-zinc-400">
-                        {statusMessage || "Generating..."}
-                      </p>
-                      {generationBadges.length > 0 && (
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {generationBadges.map((badge) => (
-                            <span
-                              key={badge}
-                              className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-500"
-                            >
-                              {badge}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                     <button
                       type="button"
                       onClick={() => void cancel()}
                       disabled={isCancelling}
-                      className="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-300 transition-colors hover:bg-zinc-800 disabled:cursor-wait disabled:opacity-50"
+                      className="mt-3 rounded-md border border-white/15 bg-black/30 px-2 py-1 text-xs text-zinc-200 transition-colors hover:bg-black/50 disabled:cursor-wait disabled:opacity-60"
                     >
                       {isCancelling ? "Cancelling..." : "Cancel"}
                     </button>
                   </div>
-                ) : (
-                  <div className="relative rounded-xl overflow-hidden bg-zinc-800 aspect-video">
-                    {previewUrl && (
-                      <img
-                        src={previewUrl}
-                        alt=""
-                        className="absolute inset-0 h-full w-full object-cover"
-                      />
-                    )}
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/35 px-4">
-                      {!previewUrl && (
-                        <div className="relative w-16 h-16 mb-3">
-                          <div className="absolute inset-0 rounded-full border-2 border-violet-500/30" />
-                          <div className="absolute inset-0 rounded-full border-2 border-violet-500 border-t-transparent animate-spin" />
-                          <div className="absolute inset-2 rounded-full bg-zinc-800 flex items-center justify-center">
-                            <Sparkles className="h-6 w-6 text-violet-400" />
-                          </div>
-                        </div>
-                      )}
-                      <p className="max-w-full truncate text-sm text-zinc-200">
-                        {statusMessage || "Generating..."}
-                      </p>
-                      {generationBadges.length > 0 && (
-                        <div className="mt-2 flex max-w-full flex-wrap justify-center gap-1">
-                          {generationBadges.map((badge) => (
-                            <span
-                              key={badge}
-                              className="rounded bg-black/50 px-1.5 py-0.5 text-[10px] text-zinc-300"
-                            >
-                              {badge}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      {progress > 0 && (
-                        <div className="w-32 h-1 bg-zinc-800 rounded-full mt-2 overflow-hidden">
-                          <div
-                            className="h-full bg-violet-500 transition-all"
-                            style={{ width: `${progress}%` }}
-                          />
-                        </div>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => void cancel()}
-                        disabled={isCancelling}
-                        className="mt-3 rounded-md border border-white/15 bg-black/30 px-2 py-1 text-xs text-zinc-200 transition-colors hover:bg-black/50 disabled:cursor-wait disabled:opacity-60"
-                      >
-                        {isCancelling ? "Cancelling..." : "Cancel"}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              {isGalleryImporting &&
-                (gallerySize === "list" ? (
-                  <div className="flex items-center gap-4 rounded-lg px-3 py-3">
-                    <div className="relative h-12 w-20 flex-shrink-0 overflow-hidden rounded-md bg-zinc-800">
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <LoaderCircle className="h-5 w-5 animate-spin text-violet-400" />
-                      </div>
-                    </div>
+                </div>
+              )}
+              {isGalleryImporting && (
+                <div className="relative aspect-video overflow-hidden rounded-xl bg-zinc-800">
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <LoaderCircle className="mb-2 h-8 w-8 animate-spin text-violet-400" />
                     <p className="text-sm text-zinc-400">Importing...</p>
                   </div>
-                ) : (
-                  <div className="relative rounded-xl overflow-hidden bg-zinc-800 aspect-video">
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <LoaderCircle className="h-8 w-8 animate-spin text-violet-400 mb-2" />
-                      <p className="text-sm text-zinc-400">Importing...</p>
-                    </div>
-                  </div>
-                ))}
-              {filteredAssets.map((asset) =>
-                gallerySize === "list" ? (
-                  <AssetListRow
-                    key={asset.id}
-                    asset={asset}
-                    onDelete={() => handleDelete(asset.id)}
-                    onPlay={() => setSelectedAsset(asset)}
-                    onDragStart={handleDragStart}
-                    onContextMenu={handleAssetContextMenu}
-                    onApplyPrompt={handleApplyPrompt}
-                    onToggleFavorite={() =>
-                      currentProjectId &&
-                      toggleFavorite(currentProjectId, asset.id)
-                    }
-                  />
-                ) : (
-                  <AssetCard
-                    key={asset.id}
-                    asset={asset}
-                    onDelete={() => handleDelete(asset.id)}
-                    onPlay={() => setSelectedAsset(asset)}
-                    onDragStart={handleDragStart}
-                    onContextMenu={handleAssetContextMenu}
-                    onCreateVideo={handleCreateVideo}
-                    onRetake={handleRetake}
-                    retakeDisabled={!RETAKE_AVAILABLE}
-                    onReframe={handleReframe}
-                    onApplyPrompt={handleApplyPrompt}
-                    onToggleFavorite={() =>
-                      currentProjectId &&
-                      toggleFavorite(currentProjectId, asset.id)
-                    }
-                  />
-                ),
+                </div>
               )}
-            </div>
-          </div>
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black to-transparent"
-            style={{ height: GALLERY_BOTTOM_FADE_HEIGHT_PX }}
-          />
-        </div>
+            </>
+          }
+          scrollStyle={{ paddingBottom: GALLERY_BOTTOM_FADE_HEIGHT_PX }}
+          footerOverlay={
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black to-transparent"
+              style={{ height: GALLERY_BOTTOM_FADE_HEIGHT_PX }}
+            />
+          }
+        />
       )}
-
       {/* Floating prompt panel — wider, responsive, centered */}
       <div className="absolute bottom-5 left-1/2 z-20 w-[min(700px,calc(100%-2rem))] -translate-x-1/2">
         {/* Prompt bar */}
@@ -4569,18 +3967,122 @@ export function GenSpace() {
         />
       )}
 
-      {assetContextMenu && (
-        <GalleryAssetContextMenu
-          menu={assetContextMenu}
+      {takesViewAsset?.takes && takesViewAsset.takes.length > 1 && (
+        <div
+          className="fixed inset-0 z-[55] flex items-center justify-center bg-black/75 p-8 backdrop-blur-sm"
+          onClick={() => setTakesViewAssetId(null)}
+        >
+          <div
+            className="flex max-h-[80vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-zinc-700 bg-zinc-900 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
+              <div>
+                <h2 className="text-sm font-semibold text-white">All Takes</h2>
+                <p className="text-xs text-zinc-500">
+                  {takesViewAsset.takes.length} takes
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTakesViewAssetId(null)}
+                className="rounded p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                aria-label="Close takes"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="grid min-h-0 grid-cols-2 gap-3 overflow-y-auto p-4 md:grid-cols-3">
+              {takesViewAsset.takes.map((take, index) => {
+                const active = (takesViewAsset.activeTakeIndex ?? 0) === index;
+                return (
+                  <button
+                    key={`${take.createdAt}-${index}`}
+                    type="button"
+                    onClick={() => {
+                      if (currentProjectId) {
+                        setAssetActiveTake(
+                          currentProjectId,
+                          takesViewAsset.id,
+                          index,
+                        );
+                      }
+                    }}
+                    className={`relative overflow-hidden rounded-lg border-2 bg-zinc-950 transition-colors ${
+                      active
+                        ? "border-blue-500 ring-2 ring-blue-500/30"
+                        : "border-zinc-800 hover:border-zinc-600"
+                    }`}
+                  >
+                    {takesViewAsset.type === "video" ? (
+                      <video
+                        src={take.url}
+                        preload="metadata"
+                        muted
+                        className="aspect-video w-full object-contain"
+                      />
+                    ) : takesViewAsset.type === "audio" ? (
+                      <div className="flex aspect-video items-center justify-center bg-emerald-950/40">
+                        <Music className="h-8 w-8 text-emerald-300" />
+                      </div>
+                    ) : (
+                      <img
+                        src={take.url}
+                        alt=""
+                        className="aspect-video w-full object-contain"
+                      />
+                    )}
+                    <span className="absolute bottom-1 left-1 rounded bg-black/80 px-1.5 py-0.5 text-[10px] text-white">
+                      Take {index + 1}
+                      {active ? " · Active" : ""}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {assetContextMenu && contextAsset && (
+        <AssetContextMenu
+          asset={contextAsset}
+          targetIds={
+            contextSelectedAssetIds.has(contextAsset.id)
+              ? [...contextSelectedAssetIds]
+              : [contextAsset.id]
+          }
+          assetContextMenu={assetContextMenu}
+          assetContextMenuRef={assetContextMenuRef}
+          assets={assets}
           bins={galleryBins}
-          onClose={() => setAssetContextMenu(null)}
-          onAssignBin={(bin) => {
-            handleAssignAssetToBin(assetContextMenu.asset.id, bin);
+          binColors={currentProject?.assetBinColors}
+          isRegenerating={false}
+          regeneratingAssetId={null}
+          currentProjectId={currentProjectId}
+          onToggleFavorite={(asset) => {
+            if (currentProjectId) toggleFavorite(currentProjectId, asset.id);
           }}
-          onCreateBin={(name) => {
-            handleCommitNewBin(name);
-            handleAssignAssetToBin(assetContextMenu.asset.id, name);
-          }}
+          onCreateVideo={handleCreateVideo}
+          onReframe={handleReframe}
+          onCopySettings={handleCopySettings}
+          setAssetActiveTake={setAssetActiveTake}
+          setTakesViewAssetId={setTakesViewAssetId}
+          setSelectedAssetIds={setContextSelectedAssetIds}
+          setAssetContextMenu={setAssetContextMenu}
+          updateAsset={updateAsset}
+          addAsset={addAsset}
+          deleteAsset={deleteAsset}
+          requestDeleteAssets={requestDeleteAssets}
+          deleteTakeFromAsset={deleteTakeFromAsset}
+        />
+      )}
+
+      {pendingAssetIds.length > 0 && (
+        <DeleteAssetDialog
+          assetCount={pendingAssetIds.length}
+          onCancel={cancelDeleteAssets}
+          onConfirm={() => void confirmDeleteAssets()}
         />
       )}
 

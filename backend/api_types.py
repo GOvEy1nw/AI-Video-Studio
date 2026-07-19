@@ -420,6 +420,7 @@ class GenerateDirectorRequest(BaseModel):
     requestedDurationSeconds: float = Field(gt=0)
     durationFrames: int = Field(gt=0)
     generateAudio: bool = True
+    promptRelayEpsilon: float = Field(default=1e-3, ge=1e-4, le=0.99)
     globalPrompt: str = ""
     promptSegments: list[DirectorPromptSegmentInput]
     continueVideo: DirectorContinueVideoInput | None = None

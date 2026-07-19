@@ -1,9 +1,19 @@
-import { Folder, HardDriveDownload, Info, Settings, X } from "lucide-react";
+import {
+  Folder,
+  Info,
+  RefreshCw,
+  Settings,
+  SlidersHorizontal,
+  X,
+} from "lucide-react";
 
 import { useEffect, useState } from "react";
 import { Button } from "./ui/button";
 import { logger } from "../lib/logger";
-import { useAppSettings } from "../contexts/AppSettingsContext";
+import {
+  useAppSettings,
+  type AppSettings,
+} from "../contexts/AppSettingsContext";
 import { AivsLogo } from "./AivsLogo";
 import { ModelPackManager } from "./ModelPackManager";
 
@@ -13,14 +23,29 @@ interface SettingsModalProps {
   initialTab?: TabId;
 }
 
-type TabId = "general" | "models" | "outputs" | "about";
+export type SettingsTabId = "general" | "advanced" | "outputs" | "about";
+type TabId = SettingsTabId;
+
+type AdvancedSettings = Pick<
+  AppSettings,
+  "useTorchCompile" | "attentionMode" | "performanceProfile" | "reduceVram"
+>;
+
+function getAdvancedSettings(settings: AppSettings): AdvancedSettings {
+  return {
+    useTorchCompile: settings.useTorchCompile,
+    attentionMode: settings.attentionMode,
+    performanceProfile: settings.performanceProfile,
+    reduceVram: settings.reduceVram,
+  };
+}
 
 export function SettingsModal({
   isOpen,
   onClose,
   initialTab,
 }: SettingsModalProps) {
-  const { settings, updateSettings } = useAppSettings();
+  const { settings, updateSettings, saveSettings } = useAppSettings();
   const [activeTab, setActiveTab] = useState<TabId>("general");
   const [appVersion, setAppVersion] = useState("");
   const [noticesText, setNoticesText] = useState<string | null>(null);
@@ -30,6 +55,14 @@ export function SettingsModal({
   const [modelLicenseLoading, setModelLicenseLoading] = useState(false);
   const [showModelLicense, setShowModelLicense] = useState(false);
   const [projectAssetsPath, setProjectAssetsPath] = useState("");
+  const [advancedSettings, setAdvancedSettings] = useState<AdvancedSettings>(
+    () => getAdvancedSettings(settings),
+  );
+  const [advancedSaving, setAdvancedSaving] = useState(false);
+  const [advancedSaveError, setAdvancedSaveError] = useState<string | null>(
+    null,
+  );
+  const [advancedReloaded, setAdvancedReloaded] = useState(false);
 
   useEffect(() => {
     if (isOpen && initialTab) {
@@ -52,6 +85,44 @@ export function SettingsModal({
       .then((p: string) => setProjectAssetsPath(p))
       .catch(() => {});
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setAdvancedSettings(getAdvancedSettings(settings));
+    setAdvancedSaveError(null);
+    setAdvancedReloaded(false);
+  }, [
+    isOpen,
+    settings.attentionMode,
+    settings.performanceProfile,
+    settings.reduceVram,
+    settings.useTorchCompile,
+  ]);
+
+  const advancedDirty =
+    advancedSettings.useTorchCompile !== settings.useTorchCompile ||
+    advancedSettings.attentionMode !== settings.attentionMode ||
+    advancedSettings.performanceProfile !== settings.performanceProfile ||
+    advancedSettings.reduceVram !== settings.reduceVram;
+
+  const handleSaveAdvancedSettings = async () => {
+    setAdvancedSaving(true);
+    setAdvancedSaveError(null);
+    setAdvancedReloaded(false);
+    try {
+      await saveSettings(advancedSettings);
+      await window.electronAPI.restartPythonBackend();
+      setAdvancedReloaded(true);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error(
+        `Failed to save advanced settings and reload inference engine: ${message}`,
+      );
+      setAdvancedSaveError(message);
+    } finally {
+      setAdvancedSaving(false);
+    }
+  };
 
   const handleLoadModelLicense = async () => {
     setModelLicenseLoading(true);
@@ -81,7 +152,7 @@ export function SettingsModal({
 
   const tabs = [
     { id: "general" as TabId, label: "General", icon: Settings },
-    { id: "models" as TabId, label: "Models", icon: HardDriveDownload },
+    { id: "advanced" as TabId, label: "Advanced", icon: SlidersHorizontal },
     { id: "outputs" as TabId, label: "Outputs", icon: Folder },
     { id: "about" as TabId, label: "About", icon: Info },
   ];
@@ -176,44 +247,44 @@ export function SettingsModal({
                 </div>
               </div>
 
+              <div className="pt-4 border-t border-zinc-800">
+                <ModelPackManager />
+              </div>
+            </>
+          )}
+
+          {activeTab === "advanced" && (
+            <div className="space-y-5">
               {/* Torch Compile */}
-              <div className="space-y-3 pt-4 border-t border-zinc-800">
+              <div className="space-y-3">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <svg
-                        className="h-4 w-4 text-orange-400"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-                      </svg>
                       <label className="text-sm font-medium text-white">
                         Torch Compile
                       </label>
                     </div>
-                    <p className="text-xs text-zinc-500 leading-relaxed">
-                      Uses WanGP's compile flag. Restart backend before
-                      generating if WanGP is already connected.
-                    </p>
                   </div>
                   <button
                     type="button"
-                    onClick={() =>
-                      updateSettings({
-                        useTorchCompile: !settings.useTorchCompile,
-                      })
-                    }
+                    disabled={advancedSaving}
+                    onClick={() => {
+                      setAdvancedSettings((current) => ({
+                        ...current,
+                        useTorchCompile: !current.useTorchCompile,
+                      }));
+                      setAdvancedReloaded(false);
+                    }}
                     className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${
-                      settings.useTorchCompile ? "bg-blue-600" : "bg-zinc-700"
+                      advancedSettings.useTorchCompile
+                        ? "bg-blue-600"
+                        : "bg-zinc-700"
                     }`}
-                    aria-pressed={settings.useTorchCompile}
+                    aria-pressed={advancedSettings.useTorchCompile}
                   >
                     <span
                       className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                        settings.useTorchCompile
+                        advancedSettings.useTorchCompile
                           ? "translate-x-5"
                           : "translate-x-0"
                       }`}
@@ -221,7 +292,123 @@ export function SettingsModal({
                   </button>
                 </div>
               </div>
-            </>
+
+              <div className="space-y-4 pt-4 border-t border-zinc-800">
+                <label className="block space-y-1.5">
+                  <span className="text-sm font-medium text-white">
+                    Attention Mode
+                  </span>
+                  <select
+                    value={advancedSettings.attentionMode}
+                    disabled={advancedSaving}
+                    onChange={(event) => {
+                      setAdvancedSettings((current) => ({
+                        ...current,
+                        attentionMode: event.target
+                          .value as AdvancedSettings["attentionMode"],
+                      }));
+                      setAdvancedReloaded(false);
+                    }}
+                    className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white"
+                  >
+                    <option value="auto">Auto (Recommended)</option>
+                    <option value="sdpa">PyTorch (Compatible)</option>
+                    <option value="flash">Flash Attention</option>
+                    <option value="xformers">xFormers (Lower VRAM)</option>
+                    <option value="sage">SageAttention</option>
+                    <option value="sage2">SageAttention 2</option>
+                    <option value="sage3">SageAttention 3</option>
+                  </select>
+                </label>
+
+                <label className="block space-y-1.5">
+                  <span className="text-sm font-medium text-white">
+                    Performance Profile
+                  </span>
+                  <select
+                    value={advancedSettings.performanceProfile}
+                    disabled={advancedSaving}
+                    onChange={(event) => {
+                      setAdvancedSettings((current) => ({
+                        ...current,
+                        performanceProfile: Number(
+                          event.target.value,
+                        ) as AdvancedSettings["performanceProfile"],
+                      }));
+                      setAdvancedReloaded(false);
+                    }}
+                    className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white"
+                  >
+                    <option value="1">1 — Fastest (High RAM + VRAM)</option>
+                    <option value="2">2 — Fast (High RAM)</option>
+                    <option value="3">3 — Full Model in VRAM (24GB+)</option>
+                    <option value="4">4 — Balanced (Recommended)</option>
+                    <option value="4.5">4+ — Lower VRAM</option>
+                    <option value="5">5 — Minimum RAM</option>
+                  </select>
+                </label>
+
+                <label className="block space-y-1.5">
+                  <span className="text-sm font-medium text-white">
+                    Reduce VRAM
+                  </span>
+                  <select
+                    value={advancedSettings.reduceVram}
+                    disabled={advancedSaving}
+                    onChange={(event) => {
+                      setAdvancedSettings((current) => ({
+                        ...current,
+                        reduceVram: event.target
+                          .value as AdvancedSettings["reduceVram"],
+                      }));
+                      setAdvancedReloaded(false);
+                    }}
+                    className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white"
+                  >
+                    <option value="disabled">Disabled</option>
+                    <option value="1">Level 1 (16GB+)</option>
+                    <option value="2">Level 2 (8GB+)</option>
+                    <option value="3">Level 3 (6GB+)</option>
+                  </select>
+                </label>
+                <p className="text-xs text-zinc-500">
+                  Higher levels save more VRAM but may run slower or add tiling
+                  artifacts.
+                </p>
+              </div>
+
+              <div className="space-y-3 pt-4 border-t border-zinc-800">
+                <p className="text-xs text-zinc-500 leading-relaxed">
+                  Changes stay pending until saved. Reloading inference engine
+                  interrupts any active generation.
+                </p>
+                <Button
+                  type="button"
+                  onClick={() => void handleSaveAdvancedSettings()}
+                  disabled={
+                    advancedSaving || (!advancedDirty && !advancedSaveError)
+                  }
+                  className="w-full"
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 ${advancedSaving ? "animate-spin" : ""}`}
+                  />
+                  {advancedSaving
+                    ? "Saving & Reloading…"
+                    : "Save & Reload Inference Engine"}
+                </Button>
+                {advancedSaveError && (
+                  <p className="text-xs text-red-400" role="alert">
+                    Save or reload failed: {advancedSaveError}
+                  </p>
+                )}
+                {advancedReloaded && (
+                  <p className="text-xs text-emerald-400" role="status">
+                    Settings saved. Inference engine reloaded.
+                  </p>
+                )}
+              </div>
+            </div>
           )}
 
           {activeTab === "outputs" && (
@@ -235,18 +422,24 @@ export function SettingsModal({
                     <span className="text-xs text-zinc-500">Container</span>
                     <select
                       value={settings.outputSettings.videoContainer}
-                      onChange={(event) =>
+                      onChange={(event) => {
+                        const videoContainer = event.target.value as
+                          | "mp4"
+                          | "mov"
+                          | "mkv";
                         updateSettings((prev) => ({
                           ...prev,
                           outputSettings: {
                             ...prev.outputSettings,
-                            videoContainer: event.target.value as
-                              | "mp4"
-                              | "mov"
-                              | "mkv",
+                            videoContainer,
+                            videoCodec:
+                              videoContainer === "mp4" &&
+                              prev.outputSettings.videoCodec === "prores_422"
+                                ? "libx264_8"
+                                : prev.outputSettings.videoCodec,
                           },
-                        }))
-                      }
+                        }));
+                      }}
                       className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white"
                     >
                       <option value="mp4">MP4</option>
@@ -391,8 +584,6 @@ export function SettingsModal({
               </div>
             </div>
           )}
-
-          {activeTab === "models" && <ModelPackManager />}
 
           {activeTab === "about" && (
             <>
@@ -543,16 +734,7 @@ export function SettingsModal({
                         Powered by WanGP
                       </span>
                     </div>
-                    <p className="text-xs text-zinc-400">
-                      All generation runs locally through WanGP. No cloud API
-                      required.
-                    </p>
                   </div>
-
-                  {/* Copyright */}
-                  <p className="text-center text-xs text-zinc-600">
-                    Built on the LTX-Desktop-WanGP open-source project
-                  </p>
                 </div>
               )}
             </>
@@ -572,5 +754,3 @@ export function SettingsModal({
     </div>
   );
 }
-
-export type { TabId as SettingsTabId };

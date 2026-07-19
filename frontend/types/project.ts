@@ -437,6 +437,7 @@ export interface Project {
   updatedAt: number
   assets: Asset[]
   assetBins?: string[]
+  assetBinColors?: Record<string, string>
   thumbnail?: string
   timelines: Timeline[]
   activeTimelineId?: string

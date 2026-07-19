@@ -19,6 +19,7 @@ export function DirectorPromptSegment({
   onMoveStart,
 }: Props) {
   const point = segment.keyframe?.point;
+  const frameCount = segment.endFrameExclusive - segment.startFrame;
   const keyframeLabel =
     point === "start"
       ? "Start"
@@ -66,11 +67,14 @@ export function DirectorPromptSegment({
           >
             {segment.prompt.trim() || "Add your text prompt here…"}
           </div>
-          {keyframeLabel && (
-            <div className="truncate text-[10px] text-zinc-300">
-              Key Frame ({keyframeLabel})
-            </div>
-          )}
+          <div className="flex items-center justify-between gap-2 text-[10px] text-zinc-300">
+            {keyframeLabel && (
+              <span className="truncate">Key Frame ({keyframeLabel})</span>
+            )}
+            <span className="ml-auto flex-shrink-0 tabular-nums text-zinc-400">
+              {frameCount}f
+            </span>
+          </div>
         </div>
       </div>
     </TimelineSegmentFrame>

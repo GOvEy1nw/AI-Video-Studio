@@ -7,6 +7,9 @@ import logging
 from pathlib import Path
 from threading import RLock
 
+from pydantic import ValidationError
+
+from _routes._errors import HTTPError
 from state.app_settings import AppSettings, UpdateSettingsRequest
 from handlers._settings_utils import (
     collect_changed_paths,
@@ -68,7 +71,12 @@ class SettingsHandler(StateHandlerBase):
 
         if patch_payload:
             merged_payload = deep_merge_dicts(before_payload, patch_payload)
-            self.state.app_settings = AppSettings.model_validate(merged_payload)
+            try:
+                updated_settings = AppSettings.model_validate(merged_payload)
+            except ValidationError as exc:
+                detail = str(exc.errors(include_url=False)[0]["msg"])
+                raise HTTPError(422, detail) from exc
+            self.state.app_settings = updated_settings
 
         after = self.state.app_settings.model_copy(deep=True)
         after_payload = ensure_json_object(after.model_dump(by_alias=False))

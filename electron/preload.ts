@@ -117,8 +117,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   checkPythonReady: (): Promise<{ ready: boolean }> => ipcRenderer.invoke('check-python-ready'),
   startPythonSetup: (): Promise<void> => ipcRenderer.invoke('start-python-setup'),
   getModelPacks: (): Promise<unknown[]> => ipcRenderer.invoke('get-model-packs'),
+  getModelPackProgress: (): Promise<unknown | null> => ipcRenderer.invoke('get-model-pack-progress'),
   downloadModelPacks: (ids: string[]): Promise<boolean> => ipcRenderer.invoke('download-model-packs', ids),
   cancelModelPackDownload: (): Promise<void> => ipcRenderer.invoke('cancel-model-pack-download'),
+  deleteModelPack: (id: string): Promise<void> => ipcRenderer.invoke('delete-model-pack', id),
   startPythonBackend: (): Promise<void> => ipcRenderer.invoke('start-python-backend'),
   restartPythonBackend: (): Promise<void> => ipcRenderer.invoke('restart-python-backend'),
   getBackendHealthStatus: (): Promise<BackendHealthStatus | null> => ipcRenderer.invoke('get-backend-health-status'),
@@ -234,8 +236,10 @@ declare global {
       checkPythonReady: () => Promise<{ ready: boolean }>
       startPythonSetup: () => Promise<void>
       getModelPacks: () => Promise<unknown[]>
+      getModelPackProgress: () => Promise<unknown | null>
       downloadModelPacks: (ids: string[]) => Promise<boolean>
       cancelModelPackDownload: () => Promise<void>
+      deleteModelPack: (id: string) => Promise<void>
       startPythonBackend: () => Promise<void>
       restartPythonBackend: () => Promise<void>
       getBackendHealthStatus: () => Promise<BackendHealthStatus | null>

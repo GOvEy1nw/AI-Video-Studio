@@ -24,7 +24,7 @@ export function Project() {
   const tabs: { id: ProjectTab; label: string; icon: React.ReactNode }[] = [
     {
       id: "gen-space",
-      label: "Gen Space",
+      label: "Quick Gen",
       icon: <Sparkles className="h-4 w-4" />,
     },
     {
@@ -80,20 +80,23 @@ export function Project() {
         <div className="flex-1" />
       </header>
 
-      {/* Main Content - both views stay mounted to preserve state */}
+      {/* Workspaces stay mounted for state, but inactive compositor layers do not render. */}
       <main className="flex-1 overflow-hidden relative">
         <div
-          className={`absolute inset-0 ${currentTab === "gen-space" ? "" : "invisible pointer-events-none"}`}
+          hidden={currentTab !== "gen-space"}
+          className="absolute inset-0 z-10 bg-zinc-950"
         >
           <GenSpace />
         </div>
         <div
-          className={`absolute inset-0 ${currentTab === "director" ? "" : "invisible pointer-events-none"}`}
+          hidden={currentTab !== "director"}
+          className="absolute inset-0 z-10 bg-zinc-950"
         >
           <DirectorEditor />
         </div>
         <div
-          className={`absolute inset-0 ${currentTab === "video-editor" ? "" : "invisible pointer-events-none"}`}
+          hidden={currentTab !== "video-editor"}
+          className="absolute inset-0 z-10 bg-zinc-950"
         >
           <VideoEditor />
         </div>
