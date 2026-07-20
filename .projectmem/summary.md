@@ -1,11 +1,15 @@
 # projectmem - AI-Video-Studio
 
-_Last updated: 2026-07-18_
+_Last updated: 2026-07-20_
 
 ## Project purpose
 AI Video Studio (AiVS) is a local-first desktop app for AI image, video, and future audio/TTS generation. It is forked from `deepbeepmeep/LTX-Desktop-WanGP` and is being reshaped into a Freepik/Higgsfield-style creative studio powered by WanGP / Wan2GP. The project is community-focused, not commercial.
 
 ## Recent issues
+- [DONE] #0050 Final validation cannot read uv cache .git metadata inside managed sandbox (Access denied). [backend/.venv] -> Ran validation from backend with approved uv-cache access; Pyright and 217 backend tests pass. [backend/pyrightconfig.json] (fixed)
+  - Failed attempt: Ran pyright, backend pytest, and Vite validation inside sandbox; uv failed before checks with cache access denied. [backend/.venv]
+  - Failed attempt: Elevated combined check started Pyright from repo root, so it scanned bundled WanGP; stopped exact Pyright child and will rerun from backend. [backend/pyrightconfig.json]
+- [DONE] #0049 TypeScript validation fails because SettingsModal imports unused RefreshCw. [frontend/components/SettingsModal.tsx] -> Removed unused SettingsModal RefreshCw import; TypeScript validation passes. [frontend/components/SettingsModal.tsx] (fixed)
 - [DONE] #0048 Added shared GalleryAssetLibrary/GalleryAssetCard source and size-container rule; caller migration and compile verification remain. [frontend/components/GalleryAssetLibrary.tsx] -> Extracted one GalleryAssetLibrary/GalleryAssetCard used by Gen Space, Director, and Video Editor; shared toolbar, filters, bins, grid/list, takes, aspect-aware media, and compact-size hover suppression verified by TypeScript, Vite build, and native Electron QA. [frontend/components/GalleryAssetLibrary.tsx] (fixed)
   - Partial attempt: Added shared GalleryAssetLibrary/GalleryAssetCard source and size-container rule; caller migration and compile verification remain. [frontend/components/GalleryAssetLibrary.tsx]
 - [DONE] #0047 Asset cards always render blurred media regardless of aspect ratio and may contribute to slow restore/loading. Gen Space duplicates media elements for blur; hidden Director and Video Editor remain mounted and both generate thumbnails for all videos without sharing in-flight work. Implement aspect-aware blur and eliminate duplicate/background media decoding. [frontend/views/GenSpace.tsx] -> #0047: Video cards now retain static thumbnails through renderer/compositor changes, decode live video only on hover, apply blur only for materially non-16:9 media, deduplicate thumbnail work, and gate warming to active tabs. Inactive workspace layers no longer render, preventing asset/timeline residue during tab switches. [frontend/views/Project.tsx] (fixed)
@@ -126,11 +130,10 @@ AI Video Studio (AiVS) is a local-first desktop app for AI image, video, and fut
 - Bin colors use media-type badge backgrounds on grid cards and colored folder icons in bin menus; card borders remain neutral so selection state stays visually distinct. [frontend/views/editor/AssetContextMenu.tsx]
 - Asset video cards are thumbnail-first: idle cards never own a live visible video surface; live video loads only on hover. Blur is used only when source aspect differs from 16:9 by more than 5%. Inactive workspaces stay mounted but use display:none via hidden containers to prevent stale compositor layers. [frontend/lib/media-aspect.ts]
 - Use one controlled GalleryAssetLibrary component for Gen Space, Director, and Video Editor. Shared component owns identical toolbar/grid/list/card rendering; each workspace supplies only data, persistence, selection, and workspace-specific action callbacks. Hide card hover action rail with a size container query below its usable height. [frontend/components/GalleryAssetLibrary.tsx]
+- AiVS keeps WanGP bundled for offline/reproducible installs, while GOvEy1nw/Wan2GP AiVS is source of truth; scripts/wangp-source.json pins an exact commit and immutable AiVS tag. [scripts/wangp-source.json]
+- WanGP updates use transactional scripts/update-wangp.ps1: check AiVS branch head, report sensitive bridge/dependency/model/default changes, validate, and roll back checkout plus manifest on failure. [scripts/update-wangp.ps1]
 
 ## Notes
-- Reframe tests: test_reframe_wangp_mapping.py (padding→WanGP outpaint mapping), test_generation.py reframe branches (internal padding up to 200, requires options payload). Run: cd backend && uv run pytest tests/test_reframe_wangp_mapping.py tests/test_generation.py -v --tb=short [backend/tests/test_reframe_wangp_mapping.py]
-- Director prompt segments have in/out handles, free movement, gaps, order swapping, empty-space add buttons, right-click split/delete, and Shift-drag ripple resizing. Continue Video is the only position-locked segment and remains anchored at frame zero; prompt relay boundaries close the prior prompt at the next segment even across visual gaps. [frontend/views/director/DirectorTimeline.tsx]
-- Director segment controls are selection-local: media browse/asset drag-drop plus local prompt; one media item per segment. Key frames use Start/Middle/End chips and shared Strength. Continue Video disables local prompt, exposes trim handles and source-audio toggle, and removing its media reverts the segment to a regular prompt segment. [frontend/views/director/DirectorWorkspacePanel.tsx]
 - Director generations auto-populate a visibility-toggleable Generated track and shared asset library. Regenerations become takes; each timeline defaults to the newest take but permits take selection and generated-segment deletion. Preview supports scrubbing, playback, default looping, replay-from-end, and prompt/keyframe/Continue Video fallback when Generated is hidden. [frontend/views/director/]
 - Director timeline UI mirrors Video Editor colors/chrome, uses seconds:frames ruler labels, defaults fully zoomed out across the full 20-second ruler, keeps horizontal scroll and zoom/generate controls at the bottom, and places full-width playback transport directly above the timeline resize handle. [frontend/views/director/]
 - Director uses the same project asset gallery, persistent bins, filters, selection, take controls, and asset context menu as GenSpace/Video Editor, except Add to Timeline is intentionally omitted. Director timeline list supports create, rename, duplicate, close, and delete context actions. [frontend/views/director/DirectorView.tsx]
@@ -138,6 +141,9 @@ AI Video Studio (AiVS) is a local-first desktop app for AI image, video, and fut
 - Director transport's yellow current timecode includes the 0-based absolute frame as `(Frame N)`, matching Director's frame-zero timeline semantics. [frontend/views/director/DirectorWorkspacePanel.tsx]
 - AiVS is an Electron desktop app. Always use Computer Use to open, inspect, and visually validate the running app; do not use browser or in-app browser tooling for app viewing. [electron/main.ts]
 - On Windows, pjm show can fail under CP1252 when summary contains Unicode arrows (UnicodeEncodeError). Set PYTHONIOENCODING=utf-8 for pjm CLI calls. [.projectmem/summary.md]
+- WanGP source is pinned to fork commit 38b9ea381b3808290702068bda569fab89c24286 (WanGP 12.34, tag aivs-wangp-12.34.0); mmgp runtime requirement is 3.7.10. [scripts/wangp-source.json]
+- Future WanGP cadence commands: pnpm wangp:check compares the pin to fork AiVS head; pnpm wangp:update applies focused validation; pnpm wangp:update:full adds typecheck, backend tests, and frontend build. [package.json]
+- Prompt-relay changes were split upstream: WanGP PR #2018 fixes latent-frame quantization and PR #2019 exposes editable epsilon while preserving the 1e-3 default. [Wan2GP/shared/prompt_relay.py]
 
 ## Key files
 - `LTX-2.3_Cinematic_hardcut.safetensors`

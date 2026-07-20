@@ -2,6 +2,18 @@
 
 This backend can delegate `/api/generate` and `/api/generate-image` to an existing WanGP installation instead of using the bundled LTX/ZIT pipelines.
 
+## Source and updates
+
+AiVS packages WanGP for offline, reproducible startup, but the source of truth is the
+`AiVS` branch of `GOvEy1nw/Wan2GP`. `scripts/wangp-source.json` records the human-readable
+branch/tag and the immutable commit used by development and installer builds.
+
+Use `pnpm wangp:check` to inspect the fork branch head without changing the checkout.
+Use `pnpm wangp:update -- -Revision <full-sha>` for focused validation, or add `-Full`
+before promotion. Dependency changes are reported and require `-InstallPythonDeps` before
+GPU testing. Production builds always consume the exact manifest revision, never a floating
+branch head.
+
 ## Required
 
 - `WANGP_ROOT`

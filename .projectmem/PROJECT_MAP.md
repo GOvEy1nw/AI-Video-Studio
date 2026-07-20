@@ -1,6 +1,6 @@
 # Project Map - AI Video Studio
 
-Status: Updated 2026-07-16 after Director prompt-timeline UI implementation.
+Status: Updated 2026-07-20 after WanGP 12.34 source and update-workflow integration.
 
 ## Purpose
 
@@ -43,11 +43,11 @@ Files, dialogs, ffmpeg, backend process management
 - `electron/` - Electron main process, preload bridge, app lifecycle, IPC, export, backend supervision.
 - `backend/` - FastAPI server, handlers, services, state, runtime config, tests.
 - `backend/model_profiles/` - backend-owned curated AiVS model profiles and resolution resolver.
-- `scripts/` - dev setup, build scripts, WanGP GPU stack installer.
+- `scripts/` - dev setup, build scripts, WanGP source/update workflow, GPU stack installer.
 - `docs/` - phase docs, WanGP docs, installer/backend docs.
 - `resources/` - app/build resources.
 - `.projectmem/` - project memory snapshots for agents.
-- `Wan2GP/` - optional repo-local WanGP checkout, untracked.
+- `Wan2GP/` - bundled WanGP source, mirrored from the fork's `AiVS` branch at the exact revision in `scripts/wangp-source.json`.
 
 ## Frontend map
 
@@ -203,6 +203,10 @@ Profile response includes:
 
 - Python version pinned to 3.11.9.
 - `backend/pyproject.toml` pins torch stack versions aligned with installer.
+- `scripts/wangp-source.json` is the WanGP source-of-truth manifest: fork repository, `AiVS` branch, exact commit, WanGP version, and immutable AiVS tag.
+- `scripts/ensure-wan2gp.ps1` / `.sh` fetch the exact manifest revision, reject dirty tracked source, use detached checkout, and verify `WanGP_version`.
+- `scripts/update-wangp.ps1` performs check-only comparison or transactional updates with sensitive-file reporting, focused/full validation, and rollback on failure.
+- Bundled source is pinned to WanGP 12.34 commit `38b9ea381b3808290702068bda569fab89c24286`, tag `aivs-wangp-12.34.0`, from `GOvEy1nw/Wan2GP`.
 - `scripts/wangp-stacks.json` is the curated GPU stack source.
 - `scripts/install-wangp-stack.ps1` detects GPU generation and installs compatible torch/performance wheels.
 - Setup scripts and backend tests use `uv sync --inexact` to avoid pruning WanGP requirements/performance wheels from `backend/.venv`.
@@ -221,11 +225,12 @@ Profile response includes:
 - `backend/tests/test_pyright.py` enforces pyright strict mode.
 - `backend/tests/test_director_compiler.py` covers frame/keyframe/prompt/audio/guidance compilation.
 - `backend/tests/test_director_generation.py` covers semantic endpoint and shared bridge/state flow.
-- `backend/tests/fixtures/wangp/director/` pins sanitized WanGP 12.3 Director settings contracts.
+- `backend/tests/fixtures/wangp/director/` pins sanitized WanGP 12.34 Director settings contracts.
+- `backend/tests/test_wangp_source.py` verifies source manifest, bundled checkout version, mmgp requirement alignment, and bridge method contracts.
 
 Current verified checks:
 
-- `uv run pytest -q --tb=short` -> 190 passed.
+- Backend pytest -> 217 passed.
 - `uv run pyright` -> 0 errors.
 - TypeScript `tsc --noEmit` -> passed.
 - `pnpm run build:frontend` via direct pnpm -> passed.
@@ -241,6 +246,9 @@ Current verified checks:
 | `pnpm typecheck:py`               | Pyright only                                       |
 | `pnpm backend:test`               | Backend pytest                                     |
 | `pnpm build:frontend`             | Renderer/Electron build                            |
+| `pnpm wangp:check`                | Compare pinned WanGP revision with fork AiVS head  |
+| `pnpm wangp:update`               | Update WanGP transactionally with focused checks   |
+| `pnpm wangp:update:full`          | Update WanGP and run full project validation       |
 | `pnpm setup:dev:win`              | Windows setup                                      |
 | `scripts/install-wangp-stack.ps1` | Install/refresh WanGP GPU stack                    |
 
@@ -299,6 +307,8 @@ Then run scripts through the same direct pnpm entry if needed.
 9. `frontend/lib/media-import.ts`
 10. `frontend/lib/gallery-filters.ts`
 11. `backend/architecture.md`
-12. `backend/services/reframe_wangp_mapping.py` (reframe work)
-13. `backend/model_profiles/profiles.py`
-14. `backend/services/wangp_bridge.py`
+12. `backend/WANGP_BACKEND.md` (WanGP source/update contract)
+13. `scripts/wangp-source.json` (exact bundled source pin)
+14. `backend/services/reframe_wangp_mapping.py` (reframe work)
+15. `backend/model_profiles/profiles.py`
+16. `backend/services/wangp_bridge.py`

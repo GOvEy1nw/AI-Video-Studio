@@ -1,8 +1,8 @@
 # WanGP Director settings contracts
 
 - AiVS commit inspected: `07ac96392c096f101c2b3ab6d54e9f4042b451dd`
-- Wan2GP commit: `c3232fca9916f06c2386fbf1419b65894b9261f3`
-- WanGP version: `12.3`
+- Wan2GP commit: `38b9ea381b3808290702068bda569fab89c24286`
+- WanGP version: `12.34`
 - settings schema: `2.66`
 
 Fixtures are sanitized public settings contracts. Keys and values were checked against current Wan2GP UI choices in `models/ltx2/ltx2_handler.py`, request parsing in `wgp.py`, and Prompt Relay parsing in `shared/prompt_relay.py`. `$...` values replace local paths.

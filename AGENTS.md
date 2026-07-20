@@ -32,6 +32,8 @@ powered exclusively by WanGP. Three-layer architecture inherited from the fork:
 | `pnpm build:mac` / `pnpm build:win` | Full platform builds |
 | `pnpm setup:dev:mac` / `pnpm setup:dev:win` | One-time dev environment setup |
 | `scripts/install-wangp-stack.ps1` | Install/refresh the single Torch 2.10/CUDA 13 WanGP stack. Requires RTX 20/30/40/50 series and NVIDIA driver 580+. Use `-List` to validate hardware. |
+| `pnpm wangp:check` | Compare fork `AiVS` head with pinned WanGP without changing files. |
+| `pnpm wangp:update -- -Revision <sha>` | Pin and run focused compatibility checks against a fork candidate. Add `-Full` before promotion. |
 
 Run a single backend test: `cd backend && uv run pytest tests/test_generation.py -v --tb=short`
 
@@ -97,6 +99,7 @@ Key patterns:
 - **Project memory:** `.projectmem/summary.md` (auto-generated) + `.projectmem/PROJECT_MAP.md` (structural map)
 - Backend architecture doc: `backend/architecture.md`
 - WanGP bridge docs: `backend/WANGP_BACKEND.md`
+- WanGP source manifest: `scripts/wangp-source.json` (fork branch plus immutable revision)
 - Default app settings schema: `settings.json`
 - Electron builder config: `electron-builder.yml`
 - Video editor (largest frontend file): `frontend/views/VideoEditor.tsx`

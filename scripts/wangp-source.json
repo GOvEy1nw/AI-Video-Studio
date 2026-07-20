@@ -1,0 +1,8 @@
+{
+    "repository":  "https://github.com/GOvEy1nw/Wan2GP.git",
+    "upstreamRepository":  "https://github.com/deepbeepmeep/Wan2GP.git",
+    "branch":  "AiVS",
+    "revision":  "38b9ea381b3808290702068bda569fab89c24286",
+    "wangpVersion":  "12.34",
+    "aivsTag":  "aivs-wangp-12.34.0"
+}

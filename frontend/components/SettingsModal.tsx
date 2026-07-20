@@ -1,11 +1,4 @@
-import {
-  Folder,
-  Info,
-  RefreshCw,
-  Settings,
-  SlidersHorizontal,
-  X,
-} from "lucide-react";
+import { Folder, Info, Settings, SlidersHorizontal, X } from "lucide-react";
 
 import { useEffect, useState } from "react";
 import { Button } from "./ui/button";
