@@ -2,6 +2,23 @@ import { useState, useCallback, useRef } from "react";
 import { GenerationSettings } from "../components/SettingsPanel";
 import { backendFetch } from "../lib/backend";
 import type { GenerateDirectorRequest, GenerateDirectorResponse } from "../types/director";
+import type { GenerateMusicRequest } from "../types/music";
+
+export interface MusicOutput {
+  path: string;
+  durationSeconds?: number;
+  sampleRate?: number;
+  channels?: number;
+  format?: string;
+  variationIndex: number;
+  seed?: number;
+}
+
+export interface GenerateMusicResult {
+  outputs: MusicOutput[];
+  resolvedLyrics?: string;
+  warnings: string[];
+}
 
 interface GenerationState {
   isGenerating: boolean;
@@ -22,6 +39,7 @@ interface GenerationState {
   imagePath: string | null; // Original file path for first image
   imageUrls: string[]; // For multiple image variations
   imagePaths: string[]; // Original file paths for all images
+  musicResult: GenerateMusicResult | null;
   error: string | null;
   directorResult?: GenerateDirectorResponse | null;
 }
@@ -90,8 +108,18 @@ interface UseGenerationReturn extends GenerationState {
     settings: GenerationSettings,
     inputMedia?: InputMediaRequest[],
   ) => Promise<void>;
+  generateMusic: (
+    request: GenerateMusicRequest,
+  ) => Promise<GenerateMusicResult | null>;
   cancel: () => Promise<void>;
   reset: () => void;
+}
+
+export function generatedPathToFileUrl(path: string): string {
+  const normalized = path.replace(/\\/g, "/");
+  return normalized.startsWith("/")
+    ? `file://${normalized}`
+    : `file:///${normalized}`;
 }
 
 const IMAGE_SHORT_SIDE_BY_RESOLUTION: Record<string, number> = {
@@ -144,6 +172,14 @@ function getPhaseMessage(phase: string): string {
       return "Uploading image...";
     case "uploading_audio":
       return "Uploading audio...";
+    case "composing_lyrics":
+      return "Writing lyrics...";
+    case "preparing_music":
+      return "Preparing music...";
+    case "generating_music":
+      return "Generating music...";
+    case "saving_output":
+      return "Saving audio...";
     case "preparing_model":
       return "Preparing model...";
     case "downloading_model":
@@ -191,6 +227,7 @@ export function useGeneration(): UseGenerationReturn {
     imagePath: null,
     imageUrls: [],
     imagePaths: [],
+    musicResult: null,
     error: null,
   });
 
@@ -233,6 +270,7 @@ export function useGeneration(): UseGenerationReturn {
         imagePath: null,
         imageUrls: [],
         imagePaths: [],
+        musicResult: null,
         error: null,
       });
 
@@ -360,11 +398,7 @@ export function useGeneration(): UseGenerationReturn {
         const result = await response.json();
 
         if (result.status === "complete" && result.video_path) {
-          // Convert Windows path to proper file:// URL
-          const videoPathNormalized = result.video_path.replace(/\\/g, "/");
-          const fileUrl = videoPathNormalized.startsWith("/")
-            ? `file://${videoPathNormalized}`
-            : `file:///${videoPathNormalized}`;
+          const fileUrl = generatedPathToFileUrl(result.video_path);
 
           setState({
             isGenerating: false,
@@ -384,7 +418,8 @@ export function useGeneration(): UseGenerationReturn {
             imageUrl: null,
             imagePath: null,
             imageUrls: [],
-            imagePaths: [],
+              imagePaths: [],
+              musicResult: null,
             error: null,
             directorResult: directorRequest ? result as GenerateDirectorResponse : null,
           });
@@ -474,6 +509,7 @@ export function useGeneration(): UseGenerationReturn {
         imagePath: null,
         imageUrls: [],
         imagePaths: [],
+        musicResult: null,
         error: null,
         phaseIndex: null,
         phaseCount: null,
@@ -589,12 +625,7 @@ export function useGeneration(): UseGenerationReturn {
 
           if (rawPaths.length > 0) {
             // Convert all paths to file URLs
-            const fileUrls = rawPaths.map((path: string) => {
-              const imagePath = path.replace(/\\/g, "/");
-              return imagePath.startsWith("/")
-                ? `file://${imagePath}`
-                : `file:///${imagePath}`;
-            });
+            const fileUrls = rawPaths.map(generatedPathToFileUrl);
 
             setState({
               isGenerating: false,
@@ -607,6 +638,7 @@ export function useGeneration(): UseGenerationReturn {
               imagePath: rawPaths[0], // First image path
               imageUrls: fileUrls, // All images
               imagePaths: rawPaths, // All image paths
+              musicResult: null,
               error: null,
               phaseIndex: null,
               phaseCount: null,
@@ -653,6 +685,101 @@ export function useGeneration(): UseGenerationReturn {
     [],
   );
 
+  const generateMusic = useCallback(
+    async (
+      request: GenerateMusicRequest,
+    ): Promise<GenerateMusicResult | null> => {
+      setState((prev) => ({
+        ...prev,
+        isGenerating: true,
+        isCancelling: false,
+        progress: 0,
+        statusMessage: "Preparing music...",
+        error: null,
+        musicResult: null,
+        previewUrl: null,
+      }));
+      abortControllerRef.current = new AbortController();
+      let progressInterval: ReturnType<typeof setInterval> | null = null;
+      try {
+        progressInterval = setInterval(async () => {
+          try {
+            const response = await backendFetch("/api/generation/progress");
+            if (!response.ok) return;
+            const data: GenerationProgress = await response.json();
+            setState((prev) => ({
+              ...prev,
+              progress: data.progress,
+              phaseIndex: data.phaseIndex ?? null,
+              phaseCount: data.phaseCount ?? null,
+              currentStep: data.currentStep ?? null,
+              totalSteps: data.totalSteps ?? null,
+              sectionIndex: data.sectionIndex ?? null,
+              sectionCount: data.sectionCount ?? null,
+              statusDetail: data.statusDetail ?? null,
+              statusMessage:
+                data.sectionIndex && data.sectionCount
+                  ? `${getPhaseMessage(data.phase)} Variation ${data.sectionIndex} of ${data.sectionCount}`
+                  : getPhaseMessage(data.phase),
+            }));
+          } catch {
+            // Shared generation state may be briefly unavailable during shutdown.
+          }
+        }, 500);
+        const response = await backendFetch("/api/generate-music", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(request),
+          signal: abortControllerRef.current.signal,
+        });
+        if (!response.ok) {
+          const payload: unknown = await response.json().catch(() => null);
+          const message =
+            payload && typeof payload === "object" && "error" in payload
+              ? String(payload.error)
+              : "Music generation failed";
+          throw new Error(message);
+        }
+        const payload = (await response.json()) as {
+          outputs: MusicOutput[];
+          resolvedLyrics?: string | null;
+          warnings?: string[];
+        };
+        const result: GenerateMusicResult = {
+          outputs: payload.outputs,
+          resolvedLyrics: payload.resolvedLyrics ?? undefined,
+          warnings: payload.warnings ?? [],
+        };
+        setState((prev) => ({
+          ...prev,
+          isGenerating: false,
+          isCancelling: false,
+          progress: 100,
+          statusMessage: "Complete!",
+          musicResult: result,
+        }));
+        return result;
+      } catch (error) {
+        const cancelled = error instanceof Error && error.name === "AbortError";
+        setState((prev) => ({
+          ...prev,
+          isGenerating: false,
+          isCancelling: false,
+          statusMessage: cancelled ? "Cancelled" : prev.statusMessage,
+          error: cancelled
+            ? null
+            : error instanceof Error
+              ? error.message
+              : "Music generation failed",
+        }));
+        return null;
+      } finally {
+        if (progressInterval) clearInterval(progressInterval);
+      }
+    },
+    [],
+  );
+
   const reset = useCallback(() => {
     setState({
       isGenerating: false,
@@ -673,6 +800,7 @@ export function useGeneration(): UseGenerationReturn {
       imagePath: null,
       imageUrls: [],
       imagePaths: [],
+      musicResult: null,
       error: null,
     });
   }, []);
@@ -682,6 +810,7 @@ export function useGeneration(): UseGenerationReturn {
     generate,
     generateDirector,
     generateImage,
+    generateMusic,
     cancel,
     reset,
   };

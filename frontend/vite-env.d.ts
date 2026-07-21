@@ -82,6 +82,9 @@ interface Window {
     getModelPackProgress: () => Promise<unknown | null>
     getCheckpointsLocation: () => Promise<{ path: string; custom: boolean; defaultPath: string }>
     setCheckpointsLocation: (value: string | null) => Promise<{ path: string; custom: boolean; defaultPath: string }>
+    getLorasLocation: () => Promise<{ path: string; custom: boolean; defaultPath: string }>
+    setLorasLocation: (value: string | null) => Promise<{ path: string; custom: boolean; defaultPath: string }>
+    openWanGP: () => Promise<void>
     downloadModelPacks: (ids: string[]) => Promise<boolean>
     cancelModelPackDownload: () => Promise<void>
     deleteModelPack: (id: string) => Promise<void>

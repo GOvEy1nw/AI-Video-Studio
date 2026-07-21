@@ -78,6 +78,7 @@ def test_state(tmp_path: Path, fake_services: FakeServices):
     handler.video_generation._wangp_bridge = fake_wangp_bridge  # type: ignore[attr-defined]
     handler.director_generation._wangp_bridge = fake_wangp_bridge  # type: ignore[attr-defined]
     handler.image_generation._wangp_bridge = fake_wangp_bridge  # type: ignore[attr-defined]
+    handler.music_generation._wangp_bridge = fake_wangp_bridge  # type: ignore[attr-defined]
     handler.prompt_enhancement._wangp_bridge = fake_wangp_bridge  # type: ignore[attr-defined]
     handler.health._wangp_bridge = fake_wangp_bridge  # type: ignore[attr-defined]
     handler.model_profiles._wangp_bridge = fake_wangp_bridge  # type: ignore[attr-defined]
@@ -119,9 +120,13 @@ def enable_wangp(test_state, wangp_bridge):
     wangp_bridge.video_calls.clear()
     wangp_bridge.image_calls.clear()
     wangp_bridge.director_calls.clear()
+    wangp_bridge.music_calls.clear()
+    wangp_bridge.compose_music_lyrics_calls.clear()
     wangp_bridge.raise_on_video = None
     wangp_bridge.raise_on_images = None
     wangp_bridge.raise_on_director = None
+    wangp_bridge.raise_on_music = None
+    wangp_bridge.raise_on_compose_music_lyrics = None
     yield wangp_bridge
     test_state.config.wangp_enabled = False
 

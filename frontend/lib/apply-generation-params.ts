@@ -1,4 +1,5 @@
 import type { Asset, GenerationParams } from '../types/project'
+import type { MusicSettings, MusicTimeSignature, MusicVocalMode } from '../types/music'
 import { fileUrlToPath } from './url-to-path'
 
 export type GenSpaceImageInput = {
@@ -327,9 +328,53 @@ export function resolveLegacyInputMedia(
 
 export function genSpaceModeFromParams(
   params: GenerationParams,
-): 'image' | 'video' | 'retake' | 'reframe' {
+): 'image' | 'video' | 'music' | 'retake' | 'reframe' {
   if (params.mode === 'text-to-image') return 'image'
+  if (params.mode === 'text-to-music') return 'music'
   if (params.mode === 'retake') return 'retake'
   if (params.mode === 'reframe') return 'reframe'
   return 'video'
+}
+
+const MUSIC_PROFILE_IDS = new Set(['ace_step_15_turbo', 'ace_step_15_xl_turbo'])
+const MUSIC_VOCAL_MODES = new Set<MusicVocalMode>([
+  'instrumental',
+  'auto-lyrics',
+  'custom-lyrics',
+])
+const MUSIC_TIME_SIGNATURES = new Set<MusicTimeSignature>([
+  '2/4',
+  '3/4',
+  '4/4',
+  '6/8',
+])
+
+export function musicSettingsFromGenerationParams(
+  params: GenerationParams,
+  current: MusicSettings,
+): MusicSettings {
+  const music = params.music
+  const profileId = music?.profileId ?? params.model
+  const vocalMode = music?.vocalMode ?? 'instrumental'
+  const duration = music?.requestedDurationSeconds ?? params.duration
+  return {
+    ...current,
+    profileId: MUSIC_PROFILE_IDS.has(profileId) ? profileId : current.profileId,
+    vocalMode: MUSIC_VOCAL_MODES.has(vocalMode) ? vocalMode : 'instrumental',
+    customLyrics: music?.requestedLyrics ?? '',
+    durationSeconds: Number.isFinite(duration)
+      ? Math.min(360, Math.max(5, Math.round(duration)))
+      : current.durationSeconds,
+    bpm:
+      music?.bpm !== undefined && Number.isInteger(music.bpm)
+        ? Math.min(300, Math.max(30, music.bpm))
+        : null,
+    timeSignature:
+      music?.timeSignature && MUSIC_TIME_SIGNATURES.has(music.timeSignature)
+        ? music.timeSignature
+        : null,
+    keyScale: music?.keyScale?.trim() || null,
+    autoFillMetadata: music?.autoFillMetadata ?? true,
+    variations: Math.min(4, Math.max(1, music?.variationCount ?? 1)),
+  }
 }

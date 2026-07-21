@@ -121,6 +121,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getModelPackProgress: (): Promise<unknown | null> => ipcRenderer.invoke('get-model-pack-progress'),
   getCheckpointsLocation: (): Promise<{ path: string; custom: boolean; defaultPath: string }> => ipcRenderer.invoke('get-checkpoints-location'),
   setCheckpointsLocation: (value: string | null): Promise<{ path: string; custom: boolean; defaultPath: string }> => ipcRenderer.invoke('set-checkpoints-location', value),
+  getLorasLocation: (): Promise<{ path: string; custom: boolean; defaultPath: string }> => ipcRenderer.invoke('get-loras-location'),
+  setLorasLocation: (value: string | null): Promise<{ path: string; custom: boolean; defaultPath: string }> => ipcRenderer.invoke('set-loras-location', value),
+  openWanGP: (): Promise<void> => ipcRenderer.invoke('open-wangp'),
   downloadModelPacks: (ids: string[]): Promise<boolean> => ipcRenderer.invoke('download-model-packs', ids),
   cancelModelPackDownload: (): Promise<void> => ipcRenderer.invoke('cancel-model-pack-download'),
   deleteModelPack: (id: string): Promise<void> => ipcRenderer.invoke('delete-model-pack', id),
@@ -243,6 +246,9 @@ declare global {
       getModelPackProgress: () => Promise<unknown | null>
       getCheckpointsLocation: () => Promise<{ path: string; custom: boolean; defaultPath: string }>
       setCheckpointsLocation: (value: string | null) => Promise<{ path: string; custom: boolean; defaultPath: string }>
+      getLorasLocation: () => Promise<{ path: string; custom: boolean; defaultPath: string }>
+      setLorasLocation: (value: string | null) => Promise<{ path: string; custom: boolean; defaultPath: string }>
+      openWanGP: () => Promise<void>
       downloadModelPacks: (ids: string[]) => Promise<boolean>
       cancelModelPackDownload: () => Promise<void>
       deleteModelPack: (id: string) => Promise<void>

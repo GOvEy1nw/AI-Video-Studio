@@ -21,6 +21,8 @@ PACKS: dict[str, dict[str, str]] = {
     "krea2_turbo": {"name": "Krea 2 Turbo", "kind": "model", "model_type": "krea2_turbo"},
     "hidream_o1": {"name": "HiDream O1", "kind": "model", "model_type": "hidream_o1_dev"},
     "ltx2_turbo": {"name": "LTX 2.3 Turbo 1.1", "kind": "model", "model_type": "ltx2_22B_distilled_1_1"},
+    "ace_step_15_turbo": {"name": "ACE-Step 1.5 Fast", "kind": "model", "model_type": "ace_step_v1_5_turbo_lm_1_7b"},
+    "ace_step_15_xl_turbo": {"name": "ACE-Step 1.5 XL", "kind": "model", "model_type": "ace_step_v1_5_xl_turbo_lm_1_7b"},
     "prompt_enhancer": {"name": "Prompt Enhancer", "kind": "prompt"},
 }
 
@@ -331,18 +333,7 @@ def _resolve_pack_paths(wgp: Any, manager: Any, pack_id: str) -> set[Path]:
         definitions = cast(list[dict[str, Any]], assets.query_prompt_enhancer_download_defs())
         return _download_def_paths(manager, definitions)
 
-    model_type = pack["model_type"]
-    paths = _model_paths(manager, model_type)
-    paths.update(
-        _download_def_paths(
-            manager,
-            [
-                wgp.query_core_shared_model_files(),
-                wgp.query_matanyone_download_def(wgp.server_config),
-            ],
-        )
-    )
-    return paths
+    return _model_paths(manager, pack["model_type"])
 
 
 def main() -> int:

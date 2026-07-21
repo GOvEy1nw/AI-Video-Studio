@@ -2,9 +2,27 @@
 
 import type { DirectorGenerationMetadata, DirectorSequenceV1 } from './director'
 
+export type MusicVocalMode = 'instrumental' | 'auto-lyrics' | 'custom-lyrics'
+
+export interface MusicGenerationMetadata {
+  schemaVersion: 1
+  profileId: string
+  description: string
+  vocalMode: MusicVocalMode
+  requestedLyrics?: string
+  resolvedLyrics?: string
+  requestedDurationSeconds: number
+  actualDurationSeconds?: number
+  bpm?: number
+  timeSignature?: '2/4' | '3/4' | '4/4' | '6/8'
+  keyScale?: string
+  autoFillMetadata: boolean
+  variationCount: number
+}
+
 // Parameters needed to regenerate a shot
 export interface GenerationParams {
-  mode: 'text-to-video' | 'image-to-video' | 'audio-to-video' | 'text-to-image' | 'retake' | 'reframe'
+  mode: 'text-to-video' | 'image-to-video' | 'audio-to-video' | 'text-to-image' | 'text-to-music' | 'retake' | 'reframe'
   prompt: string
   model: string
   duration: number
@@ -39,6 +57,7 @@ export interface GenerationParams {
   reframeStartTime?: number
   reframeDuration?: number
   reframeVideoPath?: string
+  music?: MusicGenerationMetadata
 }
 
 // A single "take" (version) of a generated asset
@@ -47,6 +66,9 @@ export interface AssetTake {
   path: string
   thumbnail?: string
   createdAt: number
+  duration?: number
+  seed?: number
+  variationIndex?: number
 }
 
 export interface Asset {
@@ -56,7 +78,7 @@ export interface Asset {
   url: string
   prompt: string
   resolution: string
-  duration?: number // For videos
+  duration?: number // For audio and video
   createdAt: number
   thumbnail?: string
   favorite?: boolean

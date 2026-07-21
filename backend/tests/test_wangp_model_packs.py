@@ -6,10 +6,19 @@ from pathlib import Path
 from typing import Any
 
 from wangp_model_packs import (
+    PACKS,
     _delete_pack_files,
     _download_model_dependencies,
     _load_state,
 )
+
+
+def test_music_packs_use_verified_wangp_model_types() -> None:
+    assert PACKS["ace_step_15_turbo"]["model_type"] == "ace_step_v1_5_turbo_lm_1_7b"
+    assert (
+        PACKS["ace_step_15_xl_turbo"]["model_type"]
+        == "ace_step_v1_5_xl_turbo_lm_1_7b"
+    )
 
 
 class FakeWanGP:

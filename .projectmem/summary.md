@@ -1,11 +1,29 @@
 # projectmem - AI-Video-Studio
 
-_Last updated: 2026-07-20_
+_Last updated: 2026-07-21_
 
 ## Project purpose
 AI Video Studio (AiVS) is a local-first desktop app for AI image, video, and future audio/TTS generation. It is forked from `deepbeepmeep/LTX-Desktop-WanGP` and is being reshaped into a Freepik/Higgsfield-style creative studio powered by WanGP / Wan2GP. The project is community-focused, not commercial.
 
 ## Recent issues
+- [DONE] #0060 final nested Wan2GP HEAD/status check failed under sandbox dubious-ownership protection without per-command safe.directory [Wan2GP/.git] -> verified nested Wan2GP state using scoped safe.directory without changing global Git configuration [Wan2GP/.git] (fixed)
+  - Failed attempt: ran nested git verification without the updater's per-command safe.directory override; sandbox rejected ownership [Wan2GP/.git]
+- [DONE] #0059 PowerShell path inspection command parsed an empty pipeline after foreach output [Wan2GP/] -> corrected PowerShell inspection shape and confirmed no partial backup directory exists [Wan2GP/] (fixed)
+  - Failed attempt: piped foreach output directly to Format-Table; PowerShell rejected the expression [Wan2GP/]
+- [DONE] #0058 sandboxed Move-Item partially split the transient Wan2GP .git directory into C:\tmp before access-denied errors [Wan2GP/] -> confirmed failed move caused no filesystem split; transient checkout remains intact at Wan2GP/.git [Wan2GP/] (fixed)
+- [DONE] #0057 ensure-wan2gp rejects its own fresh --no-checkout clone as dirty because all tracked files are absent [scripts/ensure-wan2gp.ps1] -> fresh setup clones the configured AiVS branch with a populated worktree before exact-pin verification [scripts/ensure-wan2gp.ps1] (fixed)
+  - Partial attempt: changed fresh clone to check out the configured branch instead of creating an intentionally empty worktree [scripts/ensure-wan2gp.ps1]
+- [DONE] #0056 tracked Wan2GP checkout is entirely missing before requested pin update while the main worktree has unrelated edits [Wan2GP/] -> restored the tracked Wan2GP checkout at its prior pinned revision without touching unrelated worktree edits [Wan2GP/] (fixed)
+  - Failed attempt: ensure-wan2gp clone failed inside sandbox because github.com:443 was blocked [Wan2GP/]
+  - Partial attempt: network-enabled ensure clone created the nested Git repository but stopped before checkout because the fresh no-checkout clone appeared dirty [Wan2GP/]
+  - Failed attempt: attempted to preserve the transient empty clone in C:\tmp before rerunning setup; sandbox permissions caused a partial move and did not restore Wan2GP [Wan2GP/]
+- [DONE] #0055 projectmem get_project_map hung for over a minute and required termination during session start [.projectmem/PROJECT_MAP.md] -> mandatory project map read completed successfully on retry after terminating the stalled call [.projectmem/PROJECT_MAP.md] (fixed)
+- [DONE] #0054 After restart and refresh, UI still marks downloaded ACE-Step packs unready while standalone scanner reports installed. [electron/python-setup.ts; frontend/components/ModelPackManager.tsx] -> Dev model-pack operations now use backend .venv rather than stale python-embed; live model state recognizes both ACE-Step packs. [electron/python-setup.ts] (fixed)
+  - Partial attempt: Routed dev model-pack refresh/download/delete through backend .venv instead of stale python-embed; packaged builds still use bundled runtime. [electron/python-setup.ts]
+- [DONE] #0053 ACE-Step packs are omitted or misdetected by model-pack download/readiness flow despite generation-time auto-download. [backend/wangp_model_packs.py; electron/python-setup.ts] -> Model-pack validation now checks only each pack's own WanGP dependencies; existing ACE-Step Fast and XL files are detected as ready. [backend/wangp_model_packs.py] (fixed)
+  - Partial attempt: Stopped model packs from requiring the separate Utility/MatAnyone file set during download validation and readiness scans. [backend/wangp_model_packs.py]
+- [DONE] #0052 Music prompt controls diverge from image/video selector and duration styling; settings button is oversized. [frontend/components/music/MusicModeControls.tsx] -> Music model/vocal controls now reuse the shared GenSpace dropdown; duration uses clock/seconds with a single-thumb slider; settings is cog-only. [frontend/components/music/MusicModeControls.tsx] (fixed)
+  - Partial attempt: Extracted the existing GenSpace dropdown and reused it for music model/vocal controls; replaced duration presets with a native single-thumb slider and settings text with a cog. [frontend/components/music/MusicModeControls.tsx; frontend/components/SettingsDropdown.tsx; frontend/views/GenSpace.tsx]
 - [DONE] #0051 Windows installer release build fails through default sandbox/package script route before NSIS completion. [scripts/local-build.ps1] -> Use escalated/network-enabled PowerShell 7 direct script route: & 'C:\Program Files\PowerShell\7\pwsh.exe' -NoProfile -File 'scripts\local-build.ps1'. Verified release\AiVS-Setup.exe at 336031723 bytes (320.46 MiB), latest.yml matching size, SHA-256 1E671112A38CF8B3FA35D2707935BCEE60B0BFA4A68C10E09F5D0DB952B75FF7. Installer is not Authenticode-signed. [release/AiVS-Setup.exe] (fixed)
   - Failed attempt: FAILED: Explicit C:\Users\rais\AppData\Roaming\npm\pnpm.cmd plus PATH override was still intercepted before shell execution and produced same pnpm signature/network error. PATH/shim changes do not bypass runtime package-manager verification. [package.json#packageManager]
   - Failed attempt: FAILED: Invoking installed pnpm.mjs directly with node was also intercepted and failed registry signature verification. Runtime interception occurs before the intended Node entrypoint; do not use this workaround. [package.json#packageManager]
@@ -136,10 +154,9 @@ AI Video Studio (AiVS) is a local-first desktop app for AI image, video, and fut
 - Use one controlled GalleryAssetLibrary component for Gen Space, Director, and Video Editor. Shared component owns identical toolbar/grid/list/card rendering; each workspace supplies only data, persistence, selection, and workspace-specific action callbacks. Hide card hover action rail with a size container query below its usable height. [frontend/components/GalleryAssetLibrary.tsx]
 - AiVS keeps WanGP bundled for offline/reproducible installs, while GOvEy1nw/Wan2GP AiVS is source of truth; scripts/wangp-source.json pins an exact commit and immutable AiVS tag. [scripts/wangp-source.json]
 - WanGP updates use transactional scripts/update-wangp.ps1: check AiVS branch head, report sensitive bridge/dependency/model/default changes, validate, and roll back checkout plus manifest on failure. [scripts/update-wangp.ps1]
+- Pin bundled WanGP to GOvEy1nw/Wan2GP AiVS commit da205e246f4139601c829fefb8c25d2e2e6d6857 (WanGP 12.34) after focused and full compatibility validation. [scripts/wangp-source.json]
 
 ## Notes
-- AiVS is an Electron desktop app. Always use Computer Use to open, inspect, and visually validate the running app; do not use browser or in-app browser tooling for app viewing. [electron/main.ts]
-- On Windows, pjm show can fail under CP1252 when summary contains Unicode arrows (UnicodeEncodeError). Set PYTHONIOENCODING=utf-8 for pjm CLI calls. [.projectmem/summary.md]
 - WanGP source is pinned to fork commit 38b9ea381b3808290702068bda569fab89c24286 (WanGP 12.34, tag aivs-wangp-12.34.0); mmgp runtime requirement is 3.7.10. [scripts/wangp-source.json]
 - Future WanGP cadence commands: pnpm wangp:check compares the pin to fork AiVS head; pnpm wangp:update applies focused validation; pnpm wangp:update:full adds typecheck, backend tests, and frontend build. [package.json]
 - Prompt-relay changes were split upstream: WanGP PR #2018 fixes latent-frame quantization and PR #2019 exposes editable epsilon while preserving the 1e-3 default. [Wan2GP/shared/prompt_relay.py]
@@ -148,6 +165,8 @@ AI Video Studio (AiVS) is a local-first desktop app for AI image, video, and fut
 - Recent validation command gotchas: Windows PowerShell 5.1 does not accept `&&`; use `;` plus `$LASTEXITCODE`. From repo root, backend pytest needs explicit `backend/tests`, otherwise run from `backend/` with `tests`. Query mmgp using `uv run --project backend python -c "import importlib.metadata as m; print(m.version('mmgp'))"`; `mmgp.__version__` is absent and prior `uv pip --python ... show` forms were invalid here. [AGENTS.md]
 - Windows signing research (2026-07-20): SignPath Foundation offers free public-trust Authenticode signing for qualifying OSS via controlled GitHub-hosted builds; Certum lists OSS cloud signing from $58/year and hardware set from $89 but both product pages currently say out of stock; Azure Artifact Signing Basic is $9.99/month and UK public-trust eligibility currently covers organizations, not individual developers. [electron-builder.yml]
 - Windows installer build route (verified 2026-07-20): from repo root, run network-approved PowerShell 7 directly: & 'C:\Program Files\PowerShell\7\pwsh.exe' -NoProfile -File 'scripts\local-build.ps1'. Reuse existing python-bootstrap/git-bootstrap; do not add -Clean unless rebuild is required. Avoid sandboxed pnpm (registry signature verification cannot reach registry), AppData pnpm/PATH or pnpm.mjs bypass attempts (still intercepted), and pnpm build:win via package.json on this host (launches Windows PowerShell 5.1 and fails Microsoft.PowerShell.Security/Get-AuthenticodeSignature). [scripts/local-build.ps1]
+- gotcha: WanGP exits with code 0 after rejecting an incompatible mmgp version, so Electron must select the same Python runtime as generation rather than trusting subprocess exit status alone. [electron/python-setup.ts]
+- WanGP source is now pinned to fork commit da205e246f4139601c829fefb8c25d2e2e6d6857 (WanGP 12.34); aivsTag is intentionally blank until an immutable release tag is assigned. [scripts/wangp-source.json]
 
 ## Key files
 - `LTX-2.3_Cinematic_hardcut.safetensors`

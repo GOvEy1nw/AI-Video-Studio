@@ -21,6 +21,7 @@ AspectRatio = Literal["1:1", "16:9", "9:16"]
 ResolutionTier = Literal["540p", "720p", "1080p", "1440p", "2160p"]
 ProfileStatus = Literal["stable", "experimental", "hidden"]
 LoraSupport = Literal["supported", "unsupported", "future", "experimental"]
+MusicVocalMode = Literal["instrumental", "auto-lyrics", "custom-lyrics"]
 ImageInputRole = Literal[
     "reference_subject",
     "reference_people_objects",
@@ -67,6 +68,39 @@ class DirectorPolicy:
     allow_keyframes_with_video_guidance: bool = False
     allow_keyframes_with_ingredients: bool = False
     allow_guide_audio_with_guidance: bool = False
+
+
+@dataclass(frozen=True)
+class MusicPolicy:
+    enabled: bool = False
+    supports_instrumental: bool = False
+    supports_auto_lyrics: bool = False
+    supports_custom_lyrics: bool = False
+    auto_lyrics_requires_prompt_enhancer: bool = False
+    auto_fill_metadata: bool = False
+    duration_min_seconds: int = 5
+    duration_max_seconds: int = 360
+    duration_step_seconds: int = 1
+    default_duration_seconds: int = 30
+    supports_bpm: bool = False
+    bpm_min: int = 30
+    bpm_max: int = 300
+    supports_key_scale: bool = False
+    supports_time_signature: bool = False
+    time_signatures: tuple[str, ...] = ()
+    default_vocal_mode: MusicVocalMode = "instrumental"
+    max_variations: int = 1
+
+
+@dataclass(frozen=True)
+class ModelLicenseInfo:
+    project_license: str
+    weights_license: str
+    commercial_use: Literal["permitted", "restricted", "unknown"]
+    attribution_required: bool
+    source_project: str
+    source_revision: str | None = None
+    notes: str = ""
 
 
 @dataclass(frozen=True)
@@ -128,6 +162,8 @@ class ModelProfile:
     video_to_video: bool = False
     audio_to_video: bool = False
     audio_output: bool = False
+    text_to_audio: bool = False
+    audio_to_audio: bool = False
     start_image: bool = False
     end_image: bool = False
     control_video: bool = False
@@ -152,6 +188,8 @@ class ModelProfile:
     max_parallel_images: int = 1
     max_total_variations: int = 12
     director: DirectorPolicy = field(default_factory=DirectorPolicy)
+    music: MusicPolicy = field(default_factory=MusicPolicy)
+    license: ModelLicenseInfo | None = None
 
 
 REFERENCE_SUBJECT_ROLE = InputMediaRole(
@@ -970,6 +1008,142 @@ VIDEO_PROFILES: tuple[ModelProfile, ...] = (
 )
 
 
+_ACE_STEP_LICENSE = ModelLicenseInfo(
+    project_license="MIT",
+    weights_license="MIT",
+    commercial_use="permitted",
+    attribution_required=True,
+    source_project="ACE-Step 1.5",
+    notes=(
+        "Licence metadata is informational, not legal advice. Users remain "
+        "responsible for originality and permissions for generated music."
+    ),
+)
+
+
+def _ace_step_metadata(*, base_model_type: str) -> WanGPModelMetadata:
+    return WanGPModelMetadata(
+        family="music",
+        family_label="Music",
+        base_model_type=base_model_type,
+        finetune=False,
+        main_output=("audio",),
+        outputs=("audio",),
+        inputs=("text", "audio"),
+        media_inputs={
+            "image": {
+                "start": False,
+                "end": False,
+                "reference": False,
+                "single_reference": False,
+                "multiple_references": False,
+                "background": False,
+                "injected_frames": False,
+                "control": False,
+                "mask": False,
+            },
+            "video": {
+                "continue": False,
+                "last": False,
+                "control": False,
+                "mask": False,
+            },
+            "audio": {"prompt": True, "output": True},
+        },
+        capabilities={
+            "text_to_video": False,
+            "image_to_video": False,
+            "video_to_video": False,
+            "text_to_image": False,
+            "image_to_image": False,
+            "text_to_audio": True,
+            "audio_to_audio": True,
+            "audio_to_video": False,
+            "audio_output": True,
+            "inpainting": False,
+            "outpainting": False,
+            "reference_images": False,
+            "background_image": False,
+            "injected_frames": False,
+            "control_image": False,
+            "control_video": False,
+            "video_continuation": False,
+            "sliding_window": False,
+            "lora": True,
+        },
+        setting_values={
+            "duration_seconds": {"min": 5, "max": 360, "increment": 1, "default": 20},
+            "custom_settings": ["bpm", "keyscale", "timesignature"],
+            "model_mode": [0, 1, 2, 3, 4],
+            "prompt_enhancer": "Compose Lyrics",
+        },
+    )
+
+
+_ACE_STEP_MUSIC_POLICY = MusicPolicy(
+    enabled=True,
+    supports_instrumental=True,
+    supports_auto_lyrics=True,
+    supports_custom_lyrics=True,
+    auto_lyrics_requires_prompt_enhancer=True,
+    auto_fill_metadata=True,
+    duration_min_seconds=5,
+    duration_max_seconds=360,
+    duration_step_seconds=1,
+    default_duration_seconds=30,
+    supports_bpm=True,
+    bpm_min=30,
+    bpm_max=300,
+    supports_key_scale=True,
+    supports_time_signature=True,
+    time_signatures=("2/4", "3/4", "4/4", "6/8"),
+    default_vocal_mode="instrumental",
+    max_variations=4,
+)
+
+
+MUSIC_PROFILES: tuple[ModelProfile, ...] = (
+    ModelProfile(
+        id="ace_step_15_turbo",
+        display_name="ACE-Step 1.5 Fast",
+        media_type="audio",
+        visible=True,
+        status="stable",
+        wangp_model_type="ace_step_v1_5_turbo_lm_1_7b",
+        wangp_metadata=_ace_step_metadata(base_model_type="ace_step_v1_5"),
+        wangp_default_settings={
+            "num_inference_steps": 8,
+            "audio_prompt_type": "",
+            "repeat_generation": 1,
+        },
+        text_to_audio=True,
+        audio_output=True,
+        lora="future",
+        music=_ACE_STEP_MUSIC_POLICY,
+        license=_ACE_STEP_LICENSE,
+    ),
+    ModelProfile(
+        id="ace_step_15_xl_turbo",
+        display_name="ACE-Step 1.5 XL",
+        media_type="audio",
+        visible=True,
+        status="stable",
+        wangp_model_type="ace_step_v1_5_xl_turbo_lm_1_7b",
+        wangp_metadata=_ace_step_metadata(base_model_type="ace_step_v1_5_xl"),
+        wangp_default_settings={
+            "num_inference_steps": 8,
+            "audio_prompt_type": "",
+            "repeat_generation": 1,
+        },
+        text_to_audio=True,
+        audio_output=True,
+        lora="future",
+        music=_ACE_STEP_MUSIC_POLICY,
+        license=_ACE_STEP_LICENSE,
+    ),
+)
+
+
 def get_image_profile(profile_id: str) -> ModelProfile | None:
     """Return the image profile with the given id, or None if not curated."""
     for profile in IMAGE_PROFILES:
@@ -986,6 +1160,14 @@ def get_video_profile(profile_id: str) -> ModelProfile | None:
     return None
 
 
+def get_music_profile(profile_id: str) -> ModelProfile | None:
+    """Return the music profile with the given id, or None if not curated."""
+    for profile in MUSIC_PROFILES:
+        if profile.id == profile_id:
+            return profile
+    return None
+
+
 def get_visible_image_profiles() -> list[ModelProfile]:
     """Return visible image profiles in display order."""
     return [profile for profile in IMAGE_PROFILES if profile.visible]
@@ -994,3 +1176,8 @@ def get_visible_image_profiles() -> list[ModelProfile]:
 def get_visible_video_profiles() -> list[ModelProfile]:
     """Return visible video profiles in display order."""
     return [profile for profile in VIDEO_PROFILES if profile.visible]
+
+
+def get_visible_music_profiles() -> list[ModelProfile]:
+    """Return visible music profiles in display order."""
+    return [profile for profile in MUSIC_PROFILES if profile.visible]

@@ -1,9 +1,9 @@
 import { spawn, type ChildProcess } from 'child_process'
 import crypto from 'crypto'
-import { app } from 'electron'
+import { app, shell } from 'electron'
 import fs from 'fs'
 import path from 'path'
-import { getCustomCheckpointsPath, setCustomCheckpointsPath } from './app-state'
+import { getCustomCheckpointsPath, getCustomLorasPath, setCustomCheckpointsPath, setCustomLorasPath } from './app-state'
 import { isDev } from './config'
 import { logger } from './logger'
 
@@ -42,6 +42,8 @@ const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
   { id: 'krea2_turbo', name: 'Krea 2 Turbo', estimatedSize: '20.5 GB' },
   { id: 'hidream_o1', name: 'HiDream O1', estimatedSize: '15.4 GB' },
   { id: 'ltx2_turbo', name: 'LTX 2.3 Turbo 1.1', estimatedSize: '42.8 GB' },
+  { id: 'ace_step_15_turbo', name: 'ACE-Step 1.5 Fast', estimatedSize: '12.0 GB' },
+  { id: 'ace_step_15_xl_turbo', name: 'ACE-Step 1.5 XL', estimatedSize: '20.0 GB' },
   { id: 'prompt_enhancer', name: 'Prompt Enhancer', estimatedSize: '36.0 GB' },
 ]
 
@@ -50,8 +52,9 @@ let activeModelPackDeleteProcess: ChildProcess | null = null
 let activeModelPackRefreshProcess: ChildProcess | null = null
 let activeModelPackRefreshPromise: Promise<ModelPack[]> | null = null
 let activeModelPackProgress: ModelPackProgress | null = null
+let activeWanGPProcess: ChildProcess | null = null
 
-export interface CheckpointsLocation {
+export interface FolderLocation {
   path: string
   custom: boolean
   defaultPath: string
@@ -61,7 +64,7 @@ function getWanGPRoot(): string {
   return path.join(isDev ? process.cwd() : process.resourcesPath, 'Wan2GP')
 }
 
-export function getCheckpointsLocation(): CheckpointsLocation {
+export function getCheckpointsLocation(): FolderLocation {
   const customPath = getCustomCheckpointsPath()
   const defaultPath = path.join(getWanGPRoot(), 'ckpts')
   return {
@@ -71,7 +74,7 @@ export function getCheckpointsLocation(): CheckpointsLocation {
   }
 }
 
-export function setCheckpointsLocation(value: string | null): CheckpointsLocation {
+export function setCheckpointsLocation(value: string | null): FolderLocation {
   if (value !== null) {
     const resolved = path.resolve(value)
     if (!fs.statSync(resolved).isDirectory()) throw new Error('Checkpoint path must be a folder.')
@@ -80,6 +83,90 @@ export function setCheckpointsLocation(value: string | null): CheckpointsLocatio
     setCustomCheckpointsPath(null)
   }
   return getCheckpointsLocation()
+}
+
+export function getLorasLocation(): FolderLocation {
+  const customPath = getCustomLorasPath()
+  const defaultPath = path.join(getWanGPRoot(), 'loras')
+  return {
+    path: customPath ?? defaultPath,
+    custom: customPath !== null,
+    defaultPath,
+  }
+}
+
+export function setLorasLocation(value: string | null): FolderLocation {
+  if (value !== null) {
+    const resolved = path.resolve(value)
+    if (!fs.statSync(resolved).isDirectory()) throw new Error('LoRA path must be a folder.')
+    setCustomLorasPath(resolved)
+  } else {
+    setCustomLorasPath(null)
+  }
+  return getLorasLocation()
+}
+
+function getWanGPPythonExecutable(): string {
+  const developmentPython = process.platform === 'win32'
+    ? path.join(process.cwd(), 'backend', '.venv', 'Scripts', 'python.exe')
+    : path.join(process.cwd(), 'backend', '.venv', 'bin', 'python')
+  if (isDev && fs.existsSync(developmentPython)) return developmentPython
+
+  const bundledPython = process.platform === 'win32'
+    ? path.join(getPythonDir(), 'python.exe')
+    : path.join(getPythonDir(), 'bin', 'python3')
+  if (fs.existsSync(bundledPython)) return bundledPython
+  return process.platform === 'win32' ? 'python' : 'python3'
+}
+
+export async function openWanGP(): Promise<void> {
+  const port = process.env.SERVER_PORT || '7860'
+  if (activeWanGPProcess) {
+    await shell.openExternal(`http://127.0.0.1:${port}`)
+    return
+  }
+
+  const wangpRoot = getWanGPRoot()
+  const script = path.join(wangpRoot, 'wgp.py')
+  if (!fs.existsSync(script)) throw new Error('WanGP GUI entrypoint is missing.')
+
+  const guiArgs = [
+    '--open-browser',
+    '--config', path.join(app.getPath('userData'), 'wangp_bridge'),
+    '--loras', getLorasLocation().path,
+  ]
+  const pythonArgs = !isDev && process.platform === 'win32'
+    ? [
+        '-u',
+        '-c',
+        `import sys; sys.path.insert(0, r"${wangpRoot}"); import runpy; runpy.run_path(r"${script}", run_name="__main__")`,
+        ...guiArgs,
+      ]
+    : ['-u', script, ...guiArgs]
+
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn(getWanGPPythonExecutable(), pythonArgs, {
+      cwd: wangpRoot,
+      env: getRuntimeEnvironment(),
+      windowsHide: true,
+      stdio: 'ignore',
+    })
+    activeWanGPProcess = child
+    child.once('spawn', resolve)
+    child.once('error', (error) => {
+      if (activeWanGPProcess === child) activeWanGPProcess = null
+      reject(new Error(`WanGP GUI failed to start: ${error.message}`))
+    })
+    child.once('exit', (code, signal) => {
+      if (activeWanGPProcess === child) activeWanGPProcess = null
+      logger.info(`[WanGP GUI] exited (code ${code ?? 'null'}, signal ${signal ?? 'none'})`)
+    })
+  })
+}
+
+export function stopWanGP(): void {
+  activeWanGPProcess?.kill('SIGTERM')
+  activeWanGPProcess = null
 }
 
 function getRuntimeFiles(): string[] {
@@ -136,6 +223,7 @@ function findBundledGitExecutable(): string | null {
 export function getRuntimeEnvironment(): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env }
   env.WANGP_CHECKPOINTS_DIR = getCheckpointsLocation().path
+  env.WANGP_LORAS_DIR = getLorasLocation().path
   const gitExe = findBundledGitExecutable()
   if (!gitExe) {
     if (!isDev && process.platform === 'win32') throw new Error('Bundled Git runtime is missing.')
@@ -327,7 +415,7 @@ export function refreshModelPacks(): Promise<ModelPack[]> {
   if (activeModelPackProcess || activeModelPackDeleteProcess) {
     throw new Error('Another model-pack operation is already running.')
   }
-  const pythonExe = path.join(getPythonDir(), 'python.exe')
+  const pythonExe = getWanGPPythonExecutable()
   const runner = path.join(isDev ? process.cwd() : process.resourcesPath, 'backend', 'wangp_model_packs.py')
   const wangpRoot = getWanGPRoot()
   const checkpointsDir = getCheckpointsLocation().path
@@ -402,7 +490,7 @@ export function downloadModelPacks(
 ): Promise<boolean> {
   if (!ids.length) return Promise.resolve(true)
   if (activeModelPackProcess || activeModelPackDeleteProcess || activeModelPackRefreshProcess) throw new Error('Another model-pack operation is already running.')
-  const pythonExe = path.join(getPythonDir(), 'python.exe')
+  const pythonExe = getWanGPPythonExecutable()
   const runner = path.join(isDev ? process.cwd() : process.resourcesPath, 'backend', 'wangp_model_packs.py')
   const wangpRoot = getWanGPRoot()
   const checkpointsDir = getCheckpointsLocation().path
@@ -514,7 +602,7 @@ export function cancelModelPackDownload(): void {
 export function deleteModelPack(id: string): Promise<void> {
   if (!MODEL_PACKS.some((pack) => pack.id === id)) throw new Error(`Unknown model pack: ${id}`)
   if (activeModelPackProcess || activeModelPackDeleteProcess || activeModelPackRefreshProcess) throw new Error('Another model-pack operation is already running.')
-  const pythonExe = path.join(getPythonDir(), 'python.exe')
+  const pythonExe = getWanGPPythonExecutable()
   const runner = path.join(isDev ? process.cwd() : process.resourcesPath, 'backend', 'wangp_model_packs.py')
   const wangpRoot = getWanGPRoot()
   const checkpointsDir = getCheckpointsLocation().path

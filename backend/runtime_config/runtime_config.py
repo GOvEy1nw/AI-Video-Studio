@@ -23,4 +23,5 @@ class RuntimeConfig:
     wangp_image_model_type: str
     wangp_extra_args: tuple[str, ...]
     wangp_checkpoints_dir: Path | None = None
+    wangp_loras_dir: Path | None = None
 

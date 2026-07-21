@@ -40,6 +40,67 @@ def test_non_qwen_image_resolution_is_left_unchanged() -> None:
     assert bridge._map_image_resolution(1920, 1072) == (1920, 1072)
 
 
+def test_generate_music_maps_verified_wangp_settings() -> None:
+    bridge = _make_bridge()
+    captured: dict[str, object] = {}
+
+    def fake_run_manifest(*, manifest, media_suffixes, on_progress, is_cancelled):  # type: ignore[no-untyped-def]
+        del on_progress, is_cancelled
+        captured["manifest"] = manifest
+        captured["media_suffixes"] = media_suffixes
+        return [r"E:\tmp\song.wav"]
+
+    bridge._run_manifest = fake_run_manifest  # type: ignore[method-assign]
+
+    output = bridge.generate_music(
+        description="Warm cinematic ambient music",
+        lyrics="[Verse]\nHello",
+        duration_seconds=45,
+        bpm=96,
+        key_scale="A minor",
+        time_signature="6/8",
+        auto_fill_metadata=True,
+        seed=42,
+        model_type="ace_step_v1_5_turbo_lm_1_7b",
+        default_settings={"num_inference_steps": 8, "duration_seconds": 99},
+        on_progress=lambda *_args: None,
+        is_cancelled=lambda: False,
+    )
+
+    assert output == r"E:\tmp\song.wav"
+    assert captured["manifest"] == [
+        {
+            "id": 1,
+            "params": {
+                "model_type": "ace_step_v1_5_turbo_lm_1_7b",
+                "prompt": "[Verse]\nHello",
+                "alt_prompt": "Warm cinematic ambient music",
+                "duration_seconds": 45,
+                "audio_prompt_type": "",
+                "repeat_generation": 1,
+                "multi_prompts_gen_type": "FG",
+                "num_inference_steps": 8,
+                "custom_settings": {
+                    "bpm": 96,
+                    "keyscale": "A minor",
+                    "timesignature": 6,
+                },
+                "model_mode": 0,
+                "seed": 42,
+            },
+            "plugin_data": {},
+        }
+    ]
+    assert captured["media_suffixes"] == {
+        ".wav",
+        ".mp3",
+        ".flac",
+        ".ogg",
+        ".m4a",
+        ".aac",
+    }
+
+
 def test_runtime_preferences_update_wangp_config(tmp_path: Path) -> None:
     config_path = tmp_path / "wgp_config.json"
     config_path.write_text(json.dumps({"existing": "kept"}), encoding="utf-8")
@@ -98,6 +159,24 @@ def test_custom_checkpoints_directory_updates_wangp_config(tmp_path: Path) -> No
 
     saved = json.loads((tmp_path / "config" / "wgp_config.json").read_text(encoding="utf-8"))
     assert saved["checkpoints_paths"] == [str(checkpoints_dir.resolve()), "."]
+
+
+def test_custom_loras_directory_updates_wangp_config(tmp_path: Path) -> None:
+    loras_dir = tmp_path / "existing-wangp" / "loras"
+    WanGPBridge(
+        enabled=True,
+        root=tmp_path,
+        python_executable=None,
+        config_dir=tmp_path / "config",
+        output_dir=tmp_path / "outputs",
+        video_model_type="ltx2_22B_distilled_1_1",
+        image_model_type="z_image",
+        camera_motion_prompts={},
+        loras_dir=loras_dir,
+    )
+
+    saved = json.loads((tmp_path / "config" / "wgp_config.json").read_text(encoding="utf-8"))
+    assert saved["loras_root"] == str(loras_dir.resolve())
 
 
 def test_z_image_uses_eight_step_floor() -> None:

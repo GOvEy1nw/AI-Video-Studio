@@ -14,11 +14,21 @@ interface SetupProgress {
   detail?: string;
 }
 
+interface FolderLocation {
+  path: string;
+  custom: boolean;
+  defaultPath: string;
+}
+
 export function PythonSetup({ onReady }: PythonSetupProps) {
   const [progress, setProgress] = useState<SetupProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [runtimeReady, setRuntimeReady] = useState(false);
   const [projectAssetsPath, setProjectAssetsPath] = useState("");
+  const [checkpointsLocation, setCheckpointsLocation] =
+    useState<FolderLocation | null>(null);
+  const [lorasLocation, setLorasLocation] =
+    useState<FolderLocation | null>(null);
   const [setupStage, setSetupStage] = useState<"packs" | "projects">("packs");
   const started = useRef(false);
 
@@ -47,6 +57,23 @@ export function PythonSetup({ onReady }: PythonSetupProps) {
     void startSetup();
   }, []);
 
+  useEffect(() => {
+    if (!runtimeReady) return;
+    void Promise.all([
+      window.electronAPI.getCheckpointsLocation(),
+      window.electronAPI.getLorasLocation(),
+    ])
+      .then(([checkpoints, loras]) => {
+        setCheckpointsLocation(checkpoints);
+        setLorasLocation(loras);
+      })
+      .catch((reason: unknown) => {
+        setError(
+          reason instanceof Error ? reason.message : "Model folders could not be loaded.",
+        );
+      });
+  }, [runtimeReady]);
+
   const label = progress?.message ?? "Preparing AiVS";
   const detail =
     progress?.detail ??
@@ -58,6 +85,40 @@ export function PythonSetup({ onReady }: PythonSetupProps) {
       title: "Choose AiVS projects folder",
     });
     if (selected) setProjectAssetsPath(selected);
+  };
+  const chooseModelFolder = async (kind: "checkpoints" | "loras") => {
+    const selected = await window.electronAPI.showOpenDirectoryDialog({
+      title: kind === "checkpoints"
+        ? "Choose WanGP checkpoints folder"
+        : "Choose WanGP LoRAs folder",
+    });
+    if (!selected) return;
+    setError(null);
+    try {
+      if (kind === "checkpoints") {
+        setCheckpointsLocation(
+          await window.electronAPI.setCheckpointsLocation(selected),
+        );
+      } else {
+        setLorasLocation(await window.electronAPI.setLorasLocation(selected));
+      }
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Model folder could not be saved.");
+    }
+  };
+  const useDefaultModelFolder = async (kind: "checkpoints" | "loras") => {
+    setError(null);
+    try {
+      if (kind === "checkpoints") {
+        setCheckpointsLocation(
+          await window.electronAPI.setCheckpointsLocation(null),
+        );
+      } else {
+        setLorasLocation(await window.electronAPI.setLorasLocation(null));
+      }
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Model folder could not be reset.");
+    }
   };
   const finishSetup = async () => {
     if (projectAssetsPath)
@@ -114,14 +175,59 @@ export function PythonSetup({ onReady }: PythonSetupProps) {
                   Skip this step to download a model pack automatically when you
                   first use it.
                 </p>
+                <div className="mt-6 space-y-3 rounded-lg border border-zinc-800 bg-zinc-900/60 p-4">
+                  <div>
+                    <h2 className="text-sm font-semibold text-white">Model folders</h2>
+                    <p className="mt-1 text-xs text-zinc-400">
+                      Choose where WanGP checkpoints and LoRAs are stored.
+                    </p>
+                  </div>
+                  {[
+                    { kind: "checkpoints" as const, label: "Checkpoints", location: checkpointsLocation },
+                    { kind: "loras" as const, label: "LoRAs", location: lorasLocation },
+                  ].map(({ kind, label, location }) => (
+                    <div key={kind} className="space-y-1.5">
+                      <span className="text-xs font-medium text-zinc-300">{label}</span>
+                      <div className="flex gap-2">
+                        <div
+                          className="min-w-0 flex-1 truncate rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-300 select-text"
+                          title={location?.path}
+                        >
+                          {location?.path ?? "Loading…"}
+                        </div>
+                        {location?.custom && (
+                          <button
+                            type="button"
+                            className="shrink-0 rounded-lg px-3 text-xs text-zinc-300 hover:bg-zinc-800"
+                            onClick={() => void useDefaultModelFolder(kind)}
+                          >
+                            Use default
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          disabled={!location}
+                          className="shrink-0 rounded-lg border border-zinc-600 px-3 text-xs text-zinc-200 hover:bg-zinc-800 disabled:opacity-50"
+                          onClick={() => void chooseModelFolder(kind)}
+                        >
+                          Browse
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {error && <p className="mt-3 text-xs text-red-400">{error}</p>}
                 <div className="mt-6">
-                  <ModelPackManager
-                    firstRun
-                    onContinue={() => {
-                      void loadProjectAssetsPath();
-                      setSetupStage("projects");
-                    }}
-                  />
+                  {checkpointsLocation && lorasLocation && (
+                    <ModelPackManager
+                      key={checkpointsLocation.path}
+                      firstRun
+                      onContinue={() => {
+                        void loadProjectAssetsPath();
+                        setSetupStage("projects");
+                      }}
+                    />
+                  )}
                 </div>
               </>
             ) : (

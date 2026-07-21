@@ -5,6 +5,7 @@ import path from 'path'
 export interface AppState {
   projectAssetsPath?: string
   checkpointsPath?: string
+  lorasPath?: string
   [key: string]: unknown
 }
 
@@ -58,5 +59,17 @@ export function setCustomCheckpointsPath(value: string | null): void {
   const state = readAppState()
   if (value) state.checkpointsPath = value
   else delete state.checkpointsPath
+  writeAppState(state)
+}
+
+export function getCustomLorasPath(): string | null {
+  const value = readAppState().lorasPath
+  return typeof value === 'string' && value.trim() ? value : null
+}
+
+export function setCustomLorasPath(value: string | null): void {
+  const state = readAppState()
+  if (value) state.lorasPath = value
+  else delete state.lorasPath
   writeAppState(state)
 }

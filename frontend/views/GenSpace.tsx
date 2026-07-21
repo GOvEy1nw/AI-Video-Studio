@@ -38,14 +38,22 @@ import {
 } from "lucide-react";
 import { useProjects } from "../contexts/ProjectContext";
 import type { GenSpaceRetakeSource } from "../contexts/ProjectContext";
-import { useGeneration } from "../hooks/use-generation";
+import { generatedPathToFileUrl, useGeneration } from "../hooks/use-generation";
 import { useRetake } from "../hooks/use-retake";
 import {
   useImageProfiles,
+  useMusicProfiles,
   useVideoProfiles,
 } from "../hooks/use-image-profiles";
 import type { Asset } from "../types/project";
 import type { ModelProfile } from "../types/model-profiles";
+import {
+  DEFAULT_MUSIC_SETTINGS,
+  type MusicSettings,
+} from "../types/music";
+import { MusicModeControls } from "../components/music/MusicModeControls";
+import { MusicLyricsInput } from "../components/music/MusicLyricsInput";
+import { SettingsDropdown } from "../components/SettingsDropdown";
 import { GenerationErrorDialog } from "../components/GenerationErrorDialog";
 import { DuplicateFilenameDialog } from "../components/DuplicateFilenameDialog";
 import { DeleteAssetDialog } from "../components/DeleteAssetDialog";
@@ -91,6 +99,7 @@ import {
   resolveLegacyInputMedia,
   resolveInputMediaPath,
   settingsPatchFromGenerationParams,
+  musicSettingsFromGenerationParams,
   toStoredInputMediaEntry,
 } from "../lib/apply-generation-params";
 import {
@@ -98,7 +107,7 @@ import {
   DEFAULT_GENSPACE_LOCKED_SEED,
 } from "../types/project";
 
-type GenSpaceMode = "image" | "video";
+type GenSpaceMode = "image" | "video" | "music";
 type VideoProcessMode = "generate" | "reframe" | "retake";
 
 const RETAKE_AVAILABLE = false;
@@ -297,120 +306,6 @@ function MediaInputTrimEditor({
           Confirm
         </button>
       </div>
-    </div>
-  );
-}
-
-// Dropdown component for settings
-function SettingsDropdown({
-  trigger,
-  options,
-  value,
-  onChange,
-  title,
-}: {
-  trigger: React.ReactNode;
-  options: {
-    value: string;
-    label: string;
-    disabled?: boolean;
-    tooltip?: string;
-    icon?: React.ReactNode;
-  }[];
-  value: string;
-  onChange: (value: string) => void;
-  title: string;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(e.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    };
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen]);
-
-  return (
-    <div ref={dropdownRef} className="relative">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className={`flex shrink-0 items-center gap-1 whitespace-nowrap px-2 py-1.5 rounded-md transition-colors ${isOpen ? "bg-zinc-700 hover:bg-zinc-700" : "hover:bg-zinc-800"}`}
-      >
-        {trigger}
-      </button>
-
-      {isOpen && (
-        <div className="absolute bottom-full left-0 mb-2 bg-zinc-800 border border-zinc-700 rounded-md p-2 min-w-[160px] shadow-xl z-[9999]">
-          <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">
-            {title}
-          </div>
-          <div className="space-y-1">
-            {options.map((option) => (
-              <div key={option.value} className="relative group/option">
-                <button
-                  onClick={() => {
-                    if (!option.disabled) {
-                      onChange(option.value);
-                      setIsOpen(false);
-                    }
-                  }}
-                  className={`w-full flex items-center justify-between px-2 py-2 rounded-md transition-colors text-left ${
-                    option.disabled
-                      ? "cursor-not-allowed"
-                      : value === option.value
-                        ? "bg-white/20 hover:bg-white/25"
-                        : "hover:bg-zinc-700"
-                  }`}
-                >
-                  <span
-                    className={`flex items-center gap-2.5 text-sm ${
-                      option.disabled
-                        ? "text-zinc-600"
-                        : value === option.value
-                          ? "text-white"
-                          : "text-zinc-400"
-                    }`}
-                  >
-                    {option.icon && (
-                      <span className="flex-shrink-0">{option.icon}</span>
-                    )}
-                    {option.label}
-                  </span>
-                  {value === option.value && !option.disabled && (
-                    <svg
-                      className="w-5 h-5 text-white"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                  )}
-                </button>
-                {option.disabled && option.tooltip && (
-                  <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-zinc-700 rounded text-xs text-zinc-300 whitespace-nowrap opacity-0 group-hover/option:opacity-100 pointer-events-none z-[10000] transition-opacity">
-                    {option.tooltip}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -620,6 +515,9 @@ function PromptBar({
   buttonIcon,
   imageProfiles,
   videoProfiles,
+  musicProfiles,
+  musicSettings,
+  onMusicSettingsChange,
   useAudioTrack,
   onUseAudioTrackChange,
   syncInputFileToGallery,
@@ -666,6 +564,9 @@ function PromptBar({
   onSettingsChange: (settings: any) => void;
   imageProfiles: ModelProfile[];
   videoProfiles: ModelProfile[];
+  musicProfiles: ModelProfile[];
+  musicSettings: MusicSettings;
+  onMusicSettingsChange: (settings: MusicSettings) => void;
   useAudioTrack: boolean;
   onUseAudioTrackChange: (v: boolean) => void;
   syncInputFileToGallery?: (file: File) => Promise<string | null>;
@@ -1904,10 +1805,18 @@ function PromptBar({
                   ? "Describe what should happen in the selected section..."
                   : mode === "image"
                     ? "A close-up of a woman talking on the phone..."
-                    : "The woman sips from a cup of coffee..."
+                    : mode === "music"
+                      ? "Warm cinematic ambient music with soft piano and strings..."
+                      : "The woman sips from a cup of coffee..."
             }
             className="w-full bg-transparent text-white text-sm placeholder:text-zinc-500 focus:outline-none px-2 py-2 resize-none overflow-y-auto h-[70px] leading-5"
           />
+          {mode === "music" && (
+            <MusicLyricsInput
+              settings={musicSettings}
+              onChange={onMusicSettingsChange}
+            />
+          )}
           {!isPanelMode && (
             <div className="flex items-center justify-end gap-2 px-2 pb-0.5 pt-1">
               <div className="flex items-center gap-2">
@@ -1917,7 +1826,7 @@ function PromptBar({
                   onChange={onSeedChange}
                   disabled={isGenerating}
                 />
-                <button
+                {mode !== "music" && <button
                   type="button"
                   onClick={onEnhancePrompt}
                   disabled={isGenerating || isEnhancingPrompt || !prompt.trim()}
@@ -1930,7 +1839,7 @@ function PromptBar({
                     <Sparkles className="h-3.5 w-3.5" />
                   )}
                   Enhance
-                </button>
+                </button>}
               </div>
             </div>
           )}
@@ -1955,16 +1864,23 @@ function PromptBar({
               label: "Video",
               icon: <Video className="h-4 w-4" />,
             },
+            {
+              value: "music",
+              label: "Music",
+              icon: <Music className="h-4 w-4" />,
+            },
           ]}
           trigger={
             <>
               {mode === "image" ? (
                 <Image className="h-3.5 w-3.5" />
+              ) : mode === "music" ? (
+                <Music className="h-3.5 w-3.5" />
               ) : (
                 <Video className="h-3.5 w-3.5" />
               )}
               <span className="text-zinc-300 font-medium">
-                {mode === "image" ? "Image" : "Video"}
+                {mode === "image" ? "Image" : mode === "music" ? "Music" : "Video"}
               </span>
               <ChevronUp className="h-3 w-3 text-zinc-500" />
             </>
@@ -2070,6 +1986,12 @@ function PromptBar({
             settings={settings}
             onSettingsChange={onSettingsChange}
             imageProfiles={imageProfiles}
+          />
+        ) : mode === "music" ? (
+          <MusicModeControls
+            settings={musicSettings}
+            onChange={onMusicSettingsChange}
+            profiles={musicProfiles}
           />
         ) : (
           <>
@@ -2315,6 +2237,12 @@ export function GenSpace() {
   } | null>(null);
   const persistedVideoKeyRef = useRef<string | null>(null);
   const persistedImageKeyRef = useRef<string | null>(null);
+  const persistedMusicKeyRef = useRef<string | null>(null);
+  const musicSubmissionRef = useRef<{
+    projectId: string;
+    prompt: string;
+    settings: MusicSettings;
+  } | null>(null);
   const retakeSubmissionRef = useRef<{
     prompt: string;
     input: {
@@ -2327,6 +2255,9 @@ export function GenSpace() {
   const [settings, setSettings] = useState(() => ({
     ...DEFAULT_VIDEO_SETTINGS,
   }));
+  const [musicSettings, setMusicSettings] = useState<MusicSettings>(() => ({
+    ...DEFAULT_MUSIC_SETTINGS,
+  }));
   const reframeSubmissionRef = useRef<{
     input: ReframePanelState;
     settings: typeof settings;
@@ -2335,6 +2266,7 @@ export function GenSpace() {
   const {
     generate,
     generateImage,
+    generateMusic,
     isGenerating,
     isCancelling,
     progress,
@@ -2350,6 +2282,7 @@ export function GenSpace() {
     videoPath,
     imageUrls,
     imagePaths,
+    musicResult,
     error,
     cancel,
     reset,
@@ -2357,6 +2290,36 @@ export function GenSpace() {
 
   const { profiles: imageProfiles } = useImageProfiles();
   const { profiles: videoProfiles } = useVideoProfiles();
+  const { profiles: musicProfiles } = useMusicProfiles();
+
+  useEffect(() => {
+    const profile =
+      musicProfiles.find((candidate) => candidate.id === musicSettings.profileId) ??
+      musicProfiles[0];
+    if (!profile) return;
+    setMusicSettings((current) => {
+      const policy = profile.music;
+      const vocalMode =
+        (current.vocalMode === "instrumental" && policy.supportsInstrumental) ||
+        (current.vocalMode === "auto-lyrics" && policy.supportsAutoLyrics) ||
+        (current.vocalMode === "custom-lyrics" && policy.supportsCustomLyrics)
+          ? current.vocalMode
+          : "instrumental";
+      return {
+        ...current,
+        profileId: profile.id,
+        vocalMode,
+        durationSeconds: Math.min(
+          policy.durationMaxSeconds,
+          Math.max(policy.durationMinSeconds, current.durationSeconds),
+        ),
+        variations: Math.min(policy.maxVariations, current.variations),
+        bpm: policy.supportsBpm ? current.bpm : null,
+        timeSignature: policy.supportsTimeSignature ? current.timeSignature : null,
+        keyScale: policy.supportsKeyScale ? current.keyScale : null,
+      };
+    });
+  }, [musicProfiles, musicSettings.profileId]);
 
   const {
     submitRetake,
@@ -2837,6 +2800,86 @@ export function GenSpace() {
     reset,
   ]);
 
+  // Music variations are one project asset with explicit takes.
+  useEffect(() => {
+    if (!musicResult || isGenerating) return;
+    const submission = musicSubmissionRef.current;
+    if (!submission) return;
+    const generationKey = musicResult.outputs.map((output) => output.path).join("|");
+    if (!generationKey || persistedMusicKeyRef.current === generationKey) return;
+    persistedMusicKeyRef.current = generationKey;
+    const { projectId, prompt: submittedPrompt, settings: submittedSettings } = submission;
+
+    void (async () => {
+      try {
+        const takes = [];
+        for (const output of musicResult.outputs) {
+          const copied = await copyToAssetFolder(output.path, projectId);
+          const path = copied?.path ?? output.path;
+          takes.push({
+            path,
+            url: copied?.url ?? generatedPathToFileUrl(path),
+            createdAt: Date.now(),
+            duration: output.durationSeconds,
+            seed: output.seed,
+            variationIndex: output.variationIndex,
+          });
+        }
+        const first = takes[0];
+        if (!first) return;
+        addAsset(projectId, {
+          type: "audio",
+          path: first.path,
+          url: first.url,
+          prompt: submittedPrompt,
+          resolution: "",
+          duration: first.duration ?? submittedSettings.durationSeconds,
+          source: "generated",
+          generationParams: {
+            mode: "text-to-music",
+            prompt: submittedPrompt,
+            model: submittedSettings.profileId,
+            duration: submittedSettings.durationSeconds,
+            resolution: "",
+            fps: 0,
+            audio: true,
+            cameraMotion: "none",
+            music: {
+              schemaVersion: 1,
+              profileId: submittedSettings.profileId,
+              description: submittedPrompt,
+              vocalMode: submittedSettings.vocalMode,
+              requestedLyrics:
+                submittedSettings.vocalMode === "custom-lyrics"
+                  ? submittedSettings.customLyrics.trim()
+                  : undefined,
+              resolvedLyrics: musicResult.resolvedLyrics,
+              requestedDurationSeconds: submittedSettings.durationSeconds,
+              actualDurationSeconds: first.duration,
+              bpm: submittedSettings.bpm ?? undefined,
+              timeSignature: submittedSettings.timeSignature ?? undefined,
+              keyScale: submittedSettings.keyScale ?? undefined,
+              autoFillMetadata: submittedSettings.autoFillMetadata,
+              variationCount: submittedSettings.variations,
+            },
+          },
+          takes,
+          activeTakeIndex: 0,
+        });
+        musicSubmissionRef.current = null;
+        reset();
+      } catch (err) {
+        persistedMusicKeyRef.current = null;
+        logger.error(`Failed to persist generated music asset: ${err}`);
+      }
+    })();
+  }, [
+    musicResult,
+    isGenerating,
+    addAsset,
+    reset,
+  ]);
+
   const handleGenerate = async () => {
     if (mode === "video" && videoMode === "reframe") {
       if (!reframeInput.videoPath || reframeInput.duration < 2) return;
@@ -2906,6 +2949,33 @@ export function GenSpace() {
 
     // Save the prompt before generation starts
     setLastPrompt(prompt);
+
+    if (mode === "music") {
+      if (!currentProjectId) return;
+      const submittedSettings = { ...musicSettings };
+      const submittedPrompt = prompt.trim();
+      musicSubmissionRef.current = {
+        projectId: currentProjectId,
+        prompt: submittedPrompt,
+        settings: submittedSettings,
+      };
+      await generateMusic({
+        modelProfileId: submittedSettings.profileId,
+        description: submittedPrompt,
+        vocalMode: submittedSettings.vocalMode,
+        lyrics:
+          submittedSettings.vocalMode === "custom-lyrics"
+            ? submittedSettings.customLyrics.trim()
+            : undefined,
+        durationSeconds: submittedSettings.durationSeconds,
+        bpm: submittedSettings.bpm ?? undefined,
+        timeSignature: submittedSettings.timeSignature ?? undefined,
+        keyScale: submittedSettings.keyScale ?? undefined,
+        autoFillMetadata: submittedSettings.autoFillMetadata,
+        variations: submittedSettings.variations,
+      });
+      return;
+    }
 
     if (mode === "image") {
       const inputMedia = imageInputs.flatMap((item) => {
@@ -3025,6 +3095,7 @@ export function GenSpace() {
     const trimmedPrompt = prompt.trim();
     if (
       !trimmedPrompt ||
+      mode === "music" ||
       (mode === "video" && videoMode !== "generate") ||
       promptGenerating ||
       isEnhancingPrompt
@@ -3232,6 +3303,11 @@ export function GenSpace() {
       );
       setInputAudio(null);
     }
+    if (nextMode === "music") {
+      setImageInputs([]);
+      setInputImage(null);
+      setInputAudio(null);
+    }
   }, []);
 
   const handleVideoModeChange = useCallback((nextMode: VideoProcessMode) => {
@@ -3264,10 +3340,13 @@ export function GenSpace() {
       setImageInputs([]);
       setInputImage(null);
       setInputAudio(null);
-      setMode(nextMode === "image" ? "image" : "video");
+      setMode(nextMode === "image" ? "image" : nextMode === "music" ? "music" : "video");
       setVideoMode(nextMode === "reframe" ? "reframe" : "generate");
       setPrompt(params.prompt);
       setSettings((prev) => settingsPatchFromGenerationParams(params, prev));
+      if (nextMode === "music") {
+        setMusicSettings((prev) => musicSettingsFromGenerationParams(params, prev));
+      }
       setInputRestoreVersion((version) => version + 1);
 
       if (nextMode === "reframe") {
@@ -3362,7 +3441,12 @@ export function GenSpace() {
     ? reframeInput.ready && !!reframeInput.videoPath && !isGenerating
     : isRetakeMode
       ? retakeInput.ready && !!retakeInput.videoPath && !isRetaking
-      : !!prompt.trim();
+      : mode === "music"
+        ? !!prompt.trim() &&
+          musicProfiles.length > 0 &&
+          (musicSettings.vocalMode !== "custom-lyrics" ||
+            !!musicSettings.customLyrics.trim())
+        : !!prompt.trim();
   const promptButtonLabel = isReframeMode
     ? "Reframe"
     : isRetakeMode
@@ -3833,6 +3917,9 @@ export function GenSpace() {
           onSettingsChange={setSettings}
           imageProfiles={imageProfiles}
           videoProfiles={videoProfiles}
+          musicProfiles={musicProfiles}
+          musicSettings={musicSettings}
+          onMusicSettingsChange={setMusicSettings}
           useAudioTrack={useAudioTrack}
           onUseAudioTrackChange={setUseAudioTrack}
           syncInputFileToGallery={syncInputFileToGallery}

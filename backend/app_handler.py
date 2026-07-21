@@ -12,6 +12,7 @@ from handlers import (
     HealthHandler,
     ImageGenerationHandler,
     ModelProfilesHandler,
+    MusicGenerationHandler,
     PromptEnhancementHandler,
     RetakeHandler,
     SettingsHandler,
@@ -49,6 +50,7 @@ class AppHandler:
             camera_motion_prompts=config.camera_motion_prompts,
             extra_args=config.wangp_extra_args,
             checkpoints_dir=config.wangp_checkpoints_dir,
+            loras_dir=config.wangp_loras_dir,
         )
 
         self._lock = threading.RLock()
@@ -109,6 +111,14 @@ class AppHandler:
             lock=self._lock,
             generation_handler=self.generation,
             config=config,
+            wangp_bridge=self.wangp_bridge,
+        )
+
+        self.music_generation = MusicGenerationHandler(
+            state=self.state,
+            lock=self._lock,
+            generation_handler=self.generation,
+            outputs_dir=config.outputs_dir,
             wangp_bridge=self.wangp_bridge,
         )
 

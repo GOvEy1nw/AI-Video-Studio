@@ -11,6 +11,7 @@ bridge's contract.
 from __future__ import annotations
 
 import uuid
+import wave
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -70,6 +71,20 @@ class FakeWangpDirectorCall:
 
 
 @dataclass
+class FakeWangpMusicCall:
+    description: str
+    lyrics: str
+    duration_seconds: int
+    bpm: int | None
+    key_scale: str | None
+    time_signature: str | None
+    auto_fill_metadata: bool
+    seed: int | None
+    model_type: str
+    default_settings: dict[str, object]
+
+
+@dataclass
 class FakeWanGPBridge:
     """Test stand-in for ``WanGPBridge``.
 
@@ -100,10 +115,14 @@ class FakeWanGPBridge:
     image_calls: list[FakeWangpImageCall] = field(default_factory=list)
     enhance_prompt_calls: list[FakeWangpEnhancePromptCall] = field(default_factory=list)
     director_calls: list[FakeWangpDirectorCall] = field(default_factory=list)
+    music_calls: list[FakeWangpMusicCall] = field(default_factory=list)
+    compose_music_lyrics_calls: list[tuple[str, int, str]] = field(default_factory=list)
     raise_on_video: Exception | None = None
     raise_on_images: Exception | None = None
     raise_on_enhance_prompt: Exception | None = None
     raise_on_director: Exception | None = None
+    raise_on_music: Exception | None = None
+    raise_on_compose_music_lyrics: Exception | None = None
 
     def get_status(self) -> WanGPBridgeStatus:
         return WanGPBridgeStatus(
@@ -249,6 +268,62 @@ class FakeWanGPBridge:
         output_path = self.output_dir / f"fake_wangp_director_{uuid.uuid4().hex[:8]}.mp4"
         output_path.write_bytes(b"fake-wangp-director")
         return str(output_path)
+
+    def generate_music(
+        self,
+        *,
+        description: str,
+        lyrics: str,
+        duration_seconds: int,
+        bpm: int | None,
+        key_scale: str | None,
+        time_signature: str | None,
+        auto_fill_metadata: bool,
+        seed: int | None,
+        model_type: str,
+        default_settings: dict[str, object] | None,
+        on_progress: ProgressCallback,
+        is_cancelled: Callable[[], bool],
+    ) -> str:
+        self.music_calls.append(
+            FakeWangpMusicCall(
+                description=description,
+                lyrics=lyrics,
+                duration_seconds=duration_seconds,
+                bpm=bpm,
+                key_scale=key_scale,
+                time_signature=time_signature,
+                auto_fill_metadata=auto_fill_metadata,
+                seed=seed,
+                model_type=model_type,
+                default_settings=dict(default_settings) if default_settings else {},
+            )
+        )
+        if self.raise_on_music is not None:
+            raise self.raise_on_music
+        if is_cancelled():
+            raise RuntimeError("Generation was cancelled")
+        on_progress("generating_music", 50)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = self.output_dir / f"fake_wangp_music_{uuid.uuid4().hex[:8]}.wav"
+        with wave.open(str(output_path), "wb") as output:
+            output.setnchannels(2)
+            output.setsampwidth(2)
+            output.setframerate(8_000)
+            output.writeframes(b"\x00\x00" * 2 * 800)
+        return str(output_path)
+
+    def compose_music_lyrics(
+        self,
+        *,
+        description: str,
+        duration_seconds: int,
+        model_type: str,
+    ) -> str:
+        self.compose_music_lyrics_calls.append((description, duration_seconds, model_type))
+        if self.raise_on_compose_music_lyrics is not None:
+            raise self.raise_on_compose_music_lyrics
+        return "[Verse]\nLocally composed lyrics"
 
     def enhance_prompt(
         self,

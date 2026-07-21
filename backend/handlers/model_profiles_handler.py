@@ -16,13 +16,19 @@ from api_types import (
     ModelProfileDirectorPolicy,
     ModelProfileInputMedia,
     ModelProfileInputMediaRole,
+    ModelProfileLicenseInfo,
     ModelProfileListResponse,
     ModelProfileResponse,
+    ModelProfileMusicPolicy,
     ModelProfileUi,
     ModelProfileWanGPMetadata,
 )
 from handlers.base import StateHandlerBase
-from model_profiles import get_visible_image_profiles, get_visible_video_profiles
+from model_profiles import (
+    get_visible_image_profiles,
+    get_visible_music_profiles,
+    get_visible_video_profiles,
+)
 from model_profiles.profiles import ModelProfile
 from services.wangp_bridge import WanGPBridge
 from state.app_state_types import AppState
@@ -46,7 +52,11 @@ class ModelProfilesHandler(StateHandlerBase):
     def list_profiles(self) -> ModelProfileListResponse:
         bridge_available = self._wangp_bridge.get_status().available
         responses: list[ModelProfileResponse] = []
-        for profile in [*get_visible_image_profiles(), *get_visible_video_profiles()]:
+        for profile in [
+            *get_visible_image_profiles(),
+            *get_visible_video_profiles(),
+            *get_visible_music_profiles(),
+        ]:
             responses.append(self._to_response(profile, bridge_available))
         return ModelProfileListResponse(profiles=responses)
 
@@ -82,6 +92,8 @@ class ModelProfilesHandler(StateHandlerBase):
                 videoToVideo=profile.video_to_video,
                 audioToVideo=profile.audio_to_video,
                 audioOutput=profile.audio_output,
+                textToAudio=profile.text_to_audio,
+                audioToAudio=profile.audio_to_audio,
                 startImage=profile.start_image,
                 endImage=profile.end_image,
                 controlVideo=profile.control_video,
@@ -127,6 +139,35 @@ class ModelProfilesHandler(StateHandlerBase):
                 allowKeyframesWithIngredients=profile.director.allow_keyframes_with_ingredients,
                 allowGuideAudioWithGuidance=profile.director.allow_guide_audio_with_guidance,
             ),
+            music=ModelProfileMusicPolicy(
+                enabled=profile.music.enabled,
+                supportsInstrumental=profile.music.supports_instrumental,
+                supportsAutoLyrics=profile.music.supports_auto_lyrics,
+                supportsCustomLyrics=profile.music.supports_custom_lyrics,
+                autoLyricsRequiresPromptEnhancer=profile.music.auto_lyrics_requires_prompt_enhancer,
+                autoFillMetadata=profile.music.auto_fill_metadata,
+                durationMinSeconds=profile.music.duration_min_seconds,
+                durationMaxSeconds=profile.music.duration_max_seconds,
+                durationStepSeconds=profile.music.duration_step_seconds,
+                defaultDurationSeconds=profile.music.default_duration_seconds,
+                supportsBpm=profile.music.supports_bpm,
+                bpmMin=profile.music.bpm_min,
+                bpmMax=profile.music.bpm_max,
+                supportsKeyScale=profile.music.supports_key_scale,
+                supportsTimeSignature=profile.music.supports_time_signature,
+                timeSignatures=list(profile.music.time_signatures),
+                defaultVocalMode=profile.music.default_vocal_mode,
+                maxVariations=profile.music.max_variations,
+            ),
+            license=ModelProfileLicenseInfo(
+                projectLicense=profile.license.project_license,
+                weightsLicense=profile.license.weights_license,
+                commercialUse=profile.license.commercial_use,
+                attributionRequired=profile.license.attribution_required,
+                sourceProject=profile.license.source_project,
+                sourceRevision=profile.license.source_revision,
+                notes=profile.license.notes,
+            ) if profile.license is not None else None,
             availability=availability,
         )
 

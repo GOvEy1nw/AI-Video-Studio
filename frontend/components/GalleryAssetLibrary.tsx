@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import type { Asset } from "../types/project";
 import type { GalleryFilterState } from "../lib/gallery-filters";
+import { ClipWaveform } from "./AudioWaveform";
 import { needsBlurredBackdrop } from "../lib/media-aspect";
 import { GalleryAssetList } from "./GalleryAssetList";
 import { GalleryFilters } from "./GalleryFilters";
@@ -299,8 +300,9 @@ export function GalleryAssetCard({
               loop
               className="hidden"
             />
-            <div className="flex h-full w-full items-center justify-center bg-zinc-800 transition-colors hover:bg-emerald-950/40">
-              <Music className="h-10 w-10 text-emerald-400" />
+            <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-zinc-950 transition-colors hover:bg-emerald-950/40">
+              <ClipWaveform url={asset.url} />
+              <Music className="relative z-10 h-7 w-7 text-emerald-300/80" />
             </div>
           </>
         ) : asset.type === "adjustment" ? (

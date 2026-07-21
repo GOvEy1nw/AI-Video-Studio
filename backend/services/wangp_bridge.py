@@ -64,6 +64,7 @@ class WanGPBridge:
         camera_motion_prompts: dict[str, str],
         extra_args: Iterable[str] = (),
         checkpoints_dir: Path | None = None,
+        loras_dir: Path | None = None,
     ) -> None:
         self._enabled = enabled
         self._root = root
@@ -78,10 +79,13 @@ class WanGPBridge:
         self._submitted_manifest_once = False
         self._session_lock = threading.Lock()
         self._last_preview_write_at = 0.0
+        runtime_overrides: dict[str, object] = {}
         if checkpoints_dir is not None:
-            self._write_runtime_config(
-                {"checkpoints_paths": [str(checkpoints_dir.resolve()), "."]}
-            )
+            runtime_overrides["checkpoints_paths"] = [str(checkpoints_dir.resolve()), "."]
+        if loras_dir is not None:
+            runtime_overrides["loras_root"] = str(loras_dir.resolve())
+        if runtime_overrides:
+            self._write_runtime_config(runtime_overrides)
 
     def set_compile_enabled(self, enabled: bool) -> None:
         with self._session_lock:
@@ -376,6 +380,95 @@ class WanGPBridge:
             raise RuntimeError("WanGP completed without producing any images")
         return outputs
 
+    def generate_music(
+        self,
+        *,
+        description: str,
+        lyrics: str,
+        duration_seconds: int,
+        bpm: int | None,
+        key_scale: str | None,
+        time_signature: str | None,
+        auto_fill_metadata: bool,
+        seed: int | None,
+        model_type: str,
+        default_settings: dict[str, object] | None,
+        on_progress: ProgressCallback,
+        is_cancelled: CancelledCallback,
+    ) -> str:
+        settings: dict[str, object] = {
+            "model_type": model_type,
+            "prompt": lyrics,
+            "alt_prompt": description,
+            "duration_seconds": duration_seconds,
+            "audio_prompt_type": "",
+            "repeat_generation": 1,
+            "multi_prompts_gen_type": "FG",
+        }
+        if default_settings:
+            for key, value in default_settings.items():
+                settings.setdefault(key, value)
+
+        custom_settings: dict[str, object] = {}
+        if bpm is not None:
+            custom_settings["bpm"] = bpm
+        if key_scale is not None:
+            custom_settings["keyscale"] = key_scale
+        if time_signature is not None:
+            custom_settings["timesignature"] = {
+                "2/4": 2,
+                "3/4": 3,
+                "4/4": 4,
+                "6/8": 6,
+            }[time_signature]
+        settings["custom_settings"] = custom_settings or None
+        settings["model_mode"] = (
+            1
+            if auto_fill_metadata
+            and (bpm is None or key_scale is None or time_signature is None)
+            else 0
+        )
+        if seed is not None:
+            settings["seed"] = seed
+
+        outputs = self._run_manifest(
+            manifest=[{"id": 1, "params": settings, "plugin_data": {}}],
+            media_suffixes={".wav", ".mp3", ".flac", ".ogg", ".m4a", ".aac"},
+            on_progress=on_progress,
+            is_cancelled=is_cancelled,
+        )
+        if not outputs:
+            raise RuntimeError("WanGP completed without producing music")
+        return self._select_final_output(outputs)
+
+    def compose_music_lyrics(
+        self,
+        *,
+        description: str,
+        duration_seconds: int,
+        model_type: str,
+    ) -> str:
+        prompt = (
+            f"Song description:\n{description}\n\n"
+            f"Target duration:\n{duration_seconds} seconds\n\n"
+            "Write complete, singable lyrics with suitable section headers. "
+            "Return lyrics only."
+        )
+        lyrics = self._run_prompt_enhancer(
+            prompt=prompt,
+            model_type=model_type,
+            mode="audio",
+            image_path=None,
+        ).strip()
+        if not lyrics or lyrics.casefold() == "[instrumental]":
+            raise RuntimeError("WanGP did not produce usable lyrics")
+        lowered = lyrics.casefold()
+        if lowered.startswith(("here are", "here's", "sure,")):
+            raise RuntimeError("WanGP returned explanatory text instead of lyrics")
+        if len(lyrics) > 4096:
+            raise RuntimeError("WanGP lyrics exceed the supported 4096 character limit")
+        return lyrics
+
     def enhance_prompt(
         self,
         *,
@@ -383,6 +476,21 @@ class WanGPBridge:
         mode: str,
         model_type: str,
         image_path: str | None = None,
+    ) -> str:
+        return self._run_prompt_enhancer(
+            prompt=prompt,
+            mode=mode,
+            model_type=model_type,
+            image_path=image_path,
+        )
+
+    def _run_prompt_enhancer(
+        self,
+        *,
+        prompt: str,
+        mode: str,
+        model_type: str,
+        image_path: str | None,
     ) -> str:
         session = self._get_session()
         runtime = session._ensure_runtime()

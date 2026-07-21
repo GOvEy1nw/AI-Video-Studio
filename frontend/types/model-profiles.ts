@@ -23,6 +23,8 @@ export interface ModelProfileCapabilities {
   videoToVideo: boolean
   audioToVideo: boolean
   audioOutput: boolean
+  textToAudio: boolean
+  audioToAudio: boolean
   startImage: boolean
   endImage: boolean
   controlVideo: boolean
@@ -71,6 +73,37 @@ export interface ModelProfileDirectorPolicy {
   allowGuideAudioWithGuidance: boolean
 }
 
+export interface ModelProfileMusicPolicy {
+  enabled: boolean
+  supportsInstrumental: boolean
+  supportsAutoLyrics: boolean
+  supportsCustomLyrics: boolean
+  autoLyricsRequiresPromptEnhancer: boolean
+  autoFillMetadata: boolean
+  durationMinSeconds: number
+  durationMaxSeconds: number
+  durationStepSeconds: number
+  defaultDurationSeconds: number
+  supportsBpm: boolean
+  bpmMin: number
+  bpmMax: number
+  supportsKeyScale: boolean
+  supportsTimeSignature: boolean
+  timeSignatures: string[]
+  defaultVocalMode: string
+  maxVariations: number
+}
+
+export interface ModelProfileLicenseInfo {
+  projectLicense: string
+  weightsLicense: string
+  commercialUse: 'permitted' | 'restricted' | 'unknown'
+  attributionRequired: boolean
+  sourceProject: string
+  sourceRevision: string | null
+  notes: string
+}
+
 export type ModelProfileJsonValue =
   | string
   | number
@@ -105,6 +138,8 @@ export interface ModelProfile {
   ui: ModelProfileUi
   inputMedia: ModelProfileInputMedia
   director: ModelProfileDirectorPolicy
+  music: ModelProfileMusicPolicy
+  license: ModelProfileLicenseInfo | null
   availability: ModelProfileAvailability
 }
 

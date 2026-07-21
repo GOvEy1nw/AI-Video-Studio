@@ -50,6 +50,8 @@ class ModelDownloadState(TypedDict):
 
 
 JsonObject: TypeAlias = dict[str, object]
+MusicVocalMode = Literal["instrumental", "auto-lyrics", "custom-lyrics"]
+MusicTimeSignature = Literal["2/4", "3/4", "4/4", "6/8"]
 VideoCameraMotion = Literal[
     "none",
     "dolly_in",
@@ -143,6 +145,23 @@ class GenerateImageResponse(BaseModel):
     image_paths: list[str] | None = None
 
 
+class MusicOutputResponse(BaseModel):
+    path: str
+    durationSeconds: float | None = None
+    sampleRate: int | None = None
+    channels: int | None = None
+    format: str | None = None
+    variationIndex: int
+    seed: int | None = None
+
+
+class GenerateMusicResponse(BaseModel):
+    status: str
+    outputs: list[MusicOutputResponse]
+    resolvedLyrics: str | None = None
+    warnings: list[str] = Field(default_factory=list)
+
+
 class EnhancePromptRequest(BaseModel):
     prompt: NonEmptyPrompt
     mode: Literal["image", "video"]
@@ -200,6 +219,8 @@ class ModelProfileCapabilities(BaseModel):
     videoToVideo: bool
     audioToVideo: bool
     audioOutput: bool
+    textToAudio: bool
+    audioToAudio: bool
     startImage: bool
     endImage: bool
     controlVideo: bool
@@ -248,6 +269,37 @@ class ModelProfileDirectorPolicy(BaseModel):
     allowGuideAudioWithGuidance: bool
 
 
+class ModelProfileMusicPolicy(BaseModel):
+    enabled: bool
+    supportsInstrumental: bool
+    supportsAutoLyrics: bool
+    supportsCustomLyrics: bool
+    autoLyricsRequiresPromptEnhancer: bool
+    autoFillMetadata: bool
+    durationMinSeconds: int
+    durationMaxSeconds: int
+    durationStepSeconds: int
+    defaultDurationSeconds: int
+    supportsBpm: bool
+    bpmMin: int
+    bpmMax: int
+    supportsKeyScale: bool
+    supportsTimeSignature: bool
+    timeSignatures: list[str]
+    defaultVocalMode: str
+    maxVariations: int
+
+
+class ModelProfileLicenseInfo(BaseModel):
+    projectLicense: str
+    weightsLicense: str
+    commercialUse: Literal["permitted", "restricted", "unknown"]
+    attributionRequired: bool
+    sourceProject: str
+    sourceRevision: str | None = None
+    notes: str = ""
+
+
 class ModelProfileWanGPMetadata(BaseModel):
     modelType: str
     family: str
@@ -274,6 +326,8 @@ class ModelProfileResponse(BaseModel):
     ui: ModelProfileUi
     inputMedia: ModelProfileInputMedia
     director: ModelProfileDirectorPolicy
+    music: ModelProfileMusicPolicy
+    license: ModelProfileLicenseInfo | None
     availability: str = "available"
 
 
@@ -284,6 +338,37 @@ class ModelProfileListResponse(BaseModel):
 # ============================================================
 # Request Models
 # ============================================================
+
+
+class GenerateMusicRequest(BaseModel):
+    modelProfileId: str
+    description: Annotated[
+        str,
+        StringConstraints(strip_whitespace=True, min_length=1, max_length=512),
+    ]
+    vocalMode: MusicVocalMode
+    lyrics: str | None = None
+    durationSeconds: int = Field(ge=1, le=3600)
+    bpm: int | None = None
+    timeSignature: MusicTimeSignature | None = None
+    keyScale: str | None = None
+    autoFillMetadata: bool = True
+    variations: int = Field(default=1, ge=1, le=4)
+
+    @model_validator(mode="after")
+    def validate_vocal_mode(self) -> "GenerateMusicRequest":
+        lyrics = self.lyrics.strip() if self.lyrics is not None else ""
+        key_scale = self.keyScale.strip() if self.keyScale is not None else ""
+        self.lyrics = lyrics or None
+        self.keyScale = key_scale or None
+        if self.vocalMode == "custom-lyrics":
+            if self.lyrics is None:
+                raise ValueError("Custom Lyrics requires lyrics")
+            if len(self.lyrics) > 4096:
+                raise ValueError("Custom lyrics must be 4096 characters or fewer")
+        elif self.lyrics is not None:
+            raise ValueError("Lyrics are only accepted in Custom Lyrics mode")
+        return self
 
 
 class GenerateVideoInputMedia(BaseModel):
