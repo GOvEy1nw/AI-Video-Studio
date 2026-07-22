@@ -25,14 +25,26 @@ export interface ModelPack {
 }
 
 export interface ModelPackProgress {
-  status: 'downloading' | 'complete' | 'cancelled' | 'error'
-  packId?: string
-  packName?: string
-  file?: string
-  percent?: number
-  downloadedBytes?: number
-  totalBytes?: number
-  speed?: number
+  status: 'preparing' | 'downloading' | 'complete' | 'cancelled' | 'error'
+  packId: string | null
+  packName: string | null
+  packIndex: number | null
+  packCount: number | null
+  message: string | null
+  transfer: {
+    phase: string | null
+    source: string | null
+    repoId: string | null
+    filename: string | null
+    unit: 'bytes' | 'files'
+    current: number
+    total: number | null
+    percent: number | null
+    speedBps: number | null
+    etaSeconds: number | null
+    fileIndex: number | null
+    fileCount: number | null
+  } | null
 }
 
 const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
@@ -470,16 +482,71 @@ function parseByteSize(value: string): number {
   return Number(match[1]) * 1024 ** units.indexOf(normalized)
 }
 
-function parseTransferProgress(line: string): Omit<ModelPackProgress, 'status'> | null {
+function nonNegativeNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null
+}
+
+function optionalText(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null
+}
+
+function normalizeTransfer(value: unknown): NonNullable<ModelPackProgress['transfer']> | null {
+  if (!value || typeof value !== 'object') return null
+  const data = value as Record<string, unknown>
+  if (data.unit !== 'bytes' && data.unit !== 'files') return null
+  const current = nonNegativeNumber(data.current)
+  if (current === null) return null
+  const rawTotal = nonNegativeNumber(data.total)
+  const total = rawTotal && rawTotal > 0 ? rawTotal : null
+  return {
+    phase: optionalText(data.phase),
+    source: optionalText(data.source),
+    repoId: optionalText(data.repoId),
+    filename: optionalText(data.filename),
+    unit: data.unit,
+    current,
+    total,
+    percent: total ? Math.max(0, Math.min(100, current / total * 100)) : null,
+    speedBps: nonNegativeNumber(data.speedBps),
+    etaSeconds: nonNegativeNumber(data.etaSeconds),
+    fileIndex: nonNegativeNumber(data.fileIndex),
+    fileCount: nonNegativeNumber(data.fileCount),
+  }
+}
+
+function packProgress(
+  status: ModelPackProgress['status'],
+  values: Partial<Omit<ModelPackProgress, 'status'>> = {},
+): ModelPackProgress {
+  return {
+    status,
+    packId: null,
+    packName: null,
+    packIndex: null,
+    packCount: null,
+    message: null,
+    transfer: null,
+    ...values,
+  }
+}
+
+function parseTransferProgress(line: string): ModelPackProgress['transfer'] {
   const match = /^(.+?):\s*\[[^\]]*\]\s*([\d.]+)%\s*\(([\d.]+\s*[KMGT]?B)\/([\d.]+\s*[KMGT]?B)\)(?:\s*@\s*([\d.]+\s*[KMGT]?B)\/s)?/i.exec(line.trim())
     ?? /^(.+?):\s*([\d.]+)%\|[^|]*\|\s*([\d.]+\s*[KMGT]?B?)\/([\d.]+\s*[KMGT]?B?)(?:\s*\[[^,\]]*,\s*([\d.]+\s*[KMGT]?B?)\/s)?/i.exec(line.trim())
   if (!match) return null
   return {
-    file: path.basename(match[1]),
-    percent: Number(match[2]),
-    downloadedBytes: parseByteSize(match[3]),
-    totalBytes: parseByteSize(match[4]),
-    speed: match[5] ? parseByteSize(match[5]) : 0,
+    phase: 'downloading',
+    source: null,
+    repoId: null,
+    filename: path.basename(match[1]),
+    unit: 'bytes',
+    current: parseByteSize(match[3]),
+    total: parseByteSize(match[4]),
+    percent: Math.max(0, Math.min(100, Number(match[2]))),
+    speedBps: match[5] ? parseByteSize(match[5]) : null,
+    etaSeconds: null,
+    fileIndex: null,
+    fileCount: null,
   }
 }
 
@@ -496,9 +563,15 @@ export function downloadModelPacks(
   const checkpointsDir = getCheckpointsLocation().path
 
   return new Promise((resolve, reject) => {
-    let activePack: Pick<ModelPackProgress, 'packId' | 'packName'> = {}
+    let activePack: Pick<ModelPackProgress, 'packId' | 'packName' | 'packIndex' | 'packCount'> = {
+      packId: null,
+      packName: null,
+      packIndex: null,
+      packCount: null,
+    }
     let cancelled = false
     let spawnFailed = false
+    let structuredProgressSeen = false
     const remainders = { stdout: '', stderr: '' }
     const diagnosticLines: string[] = []
     const emitProgress = (progress: ModelPackProgress): void => {
@@ -516,43 +589,46 @@ export function downloadModelPacks(
       { windowsHide: true, cwd: wangpRoot, env: getRuntimeEnvironment() },
     )
     activeModelPackProcess = child
-    emitProgress({ status: 'downloading' })
+    emitProgress(packProgress('preparing'))
     const consumeLine = (raw: string): void => {
       const line = raw.trim()
       if (!line) return
-        const event = /^AIVS_PACK:(.+)$/.exec(line)
-        if (event) {
-          try {
-            const data = JSON.parse(event[1]) as {
-              event: string
-              id?: string
-              name?: string
-              file?: string
-              downloadedBytes?: number
-              totalBytes?: number
-              speed?: number
+      const event = /^AIVS_PACK:(.+)$/.exec(line)
+      if (event) {
+        try {
+          const data = JSON.parse(event[1]) as Record<string, unknown>
+          const eventName = optionalText(data.event)
+          const context = {
+            packId: optionalText(data.id) ?? activePack.packId,
+            packName: optionalText(data.name) ?? activePack.packName,
+            packIndex: nonNegativeNumber(data.packIndex) ?? activePack.packIndex,
+            packCount: nonNegativeNumber(data.packCount) ?? activePack.packCount,
+          }
+          if (eventName === 'pack-start') {
+            activePack = context
+            emitProgress(packProgress('downloading', activePack))
+          } else if (eventName === 'pack-complete') {
+            activePack = context
+            emitProgress(packProgress('downloading', {
+              ...activePack,
+              message: `${activePack.packName ?? 'Model pack'} complete`,
+            }))
+          } else if (eventName === 'transfer') {
+            const transfer = normalizeTransfer(data.transfer)
+            if (transfer) {
+              structuredProgressSeen = true
+              activePack = context
+              emitProgress(packProgress('downloading', { ...activePack, transfer }))
             }
-            if (data.event === 'pack-start') {
-              activePack = { packId: data.id, packName: data.name }
-              emitProgress({ status: 'downloading', ...activePack })
-            } else if (data.event === 'pack-complete') {
-              emitProgress({ status: 'complete', packId: data.id, packName: data.name, percent: 100 })
-            } else if (data.event === 'transfer') {
-              emitProgress({
-                status: 'downloading',
-                ...activePack,
-                file: data.file,
-                downloadedBytes: data.downloadedBytes,
-                totalBytes: data.totalBytes,
-                speed: data.speed,
-              })
-            }
-          } catch { /* Ignore malformed third-party output. */ }
+          } else if (eventName === 'complete') {
+            emitProgress(packProgress('complete', { ...activePack, message: 'Download complete' }))
+          }
+        } catch { /* Ignore malformed third-party output. */ }
         return
       }
-      const transfer = parseTransferProgress(line)
-      if (transfer) {
-        emitProgress({ status: 'downloading', ...activePack, ...transfer })
+      const transfer = structuredProgressSeen ? null : parseTransferProgress(line)
+      if (transfer !== null) {
+        emitProgress(packProgress('downloading', { ...activePack, transfer }))
         return
       }
       recordDiagnostic(line)
@@ -567,9 +643,9 @@ export function downloadModelPacks(
     child.once('error', (error) => {
       spawnFailed = true
       activeModelPackProcess = null
-      emitProgress({ status: 'error', ...activePack })
-      activeModelPackProgress = null
+      emitProgress(packProgress('error', { ...activePack, message: error.message }))
       reject(new Error(`Model-pack download failed to start: ${error.message}`))
+      activeModelPackProgress = null
     })
     child.once('close', (code) => {
       if (spawnFailed) return
@@ -577,18 +653,22 @@ export function downloadModelPacks(
       consumeLine(remainders.stdout)
       consumeLine(remainders.stderr)
       if (cancelled) {
-        emitProgress({ status: 'cancelled', ...activePack })
-        activeModelPackProgress = null
+        emitProgress(packProgress('cancelled', activePack))
         resolve(false)
+        activeModelPackProgress = null
       } else if (code === 0) {
-        activeModelPackProgress = null
+        if (activeModelPackProgress?.status !== 'complete') {
+          emitProgress(packProgress('complete', { ...activePack, message: 'Download complete' }))
+        }
         resolve(true)
-      } else {
-        emitProgress({ status: 'error', ...activePack })
         activeModelPackProgress = null
+      } else {
         logger.error(`[model-pack] Downloader output:\n${diagnosticLines.join('\n')}`)
         const details = diagnosticLines.slice(-12).join(' ')
-        reject(new Error(`Model-pack download failed (exit code ${code ?? 'unknown'}): ${details || 'No diagnostic output.'}`))
+        const message = `Model-pack download failed (exit code ${code ?? 'unknown'}): ${details || 'No diagnostic output.'}`
+        emitProgress(packProgress('error', { ...activePack, message }))
+        reject(new Error(message))
+        activeModelPackProgress = null
       }
     })
     ;(child as ChildProcess & { aivsCancel?: () => void }).aivsCancel = () => { cancelled = true; child.kill() }

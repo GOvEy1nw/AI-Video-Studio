@@ -11,6 +11,8 @@ interface BackendHealthStatus {
   exitCode?: number | null
 }
 
+type ModelPackProgress = import('./types/progress').ModelPackProgress
+
 interface Window {
   electronAPI: {
     getBackend: () => Promise<{ url: string; token: string }>
@@ -79,7 +81,7 @@ interface Window {
     startPythonSetup: () => Promise<void>
     getModelPacks: () => Promise<unknown[]>
     refreshModelPacks: () => Promise<unknown[]>
-    getModelPackProgress: () => Promise<unknown | null>
+    getModelPackProgress: () => Promise<ModelPackProgress | null>
     getCheckpointsLocation: () => Promise<{ path: string; custom: boolean; defaultPath: string }>
     setCheckpointsLocation: (value: string | null) => Promise<{ path: string; custom: boolean; defaultPath: string }>
     getLorasLocation: () => Promise<{ path: string; custom: boolean; defaultPath: string }>
@@ -93,7 +95,7 @@ interface Window {
     getBackendHealthStatus: () => Promise<BackendHealthStatus | null>
     onPythonSetupProgress: (cb: (data: unknown) => void) => void
     removePythonSetupProgress: () => void
-    onModelPackProgress: (cb: (data: unknown) => void) => void
+    onModelPackProgress: (cb: (data: ModelPackProgress) => void) => void
     removeModelPackProgress: () => void
     onBackendHealthStatus: (cb: (data: BackendHealthStatus) => void) => (() => void)
     extractVideoFrame: (videoUrl: string, seekTime: number, width?: number, quality?: number) => Promise<{ path: string; url: string }>

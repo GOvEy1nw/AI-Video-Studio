@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Download, Loader2, RefreshCw, Square, Trash2 } from "lucide-react";
+import type { ModelPackProgress } from "@/types/progress";
+import { DownloadProgressView } from "./DownloadProgressView";
 import { Button } from "./ui/button";
 
 interface ModelPack {
@@ -9,31 +11,10 @@ interface ModelPack {
   installed: boolean;
 }
 
-interface PackProgress {
-  status: "downloading" | "complete" | "cancelled" | "error";
-  packId?: string;
-  packName?: string;
-  file?: string;
-  percent?: number;
-  downloadedBytes?: number;
-  totalBytes?: number;
-  speed?: number;
-}
-
 interface ModelPackManagerProps {
   firstRun?: boolean;
   onContinue?: () => void;
 }
-
-const formatBytes = (bytes?: number): string => {
-  if (!bytes) return "";
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  const index = Math.min(
-    Math.floor(Math.log(bytes) / Math.log(1024)),
-    units.length - 1,
-  );
-  return `${(bytes / 1024 ** index).toFixed(1)} ${units[index]}`;
-};
 
 export function ModelPackManager({
   firstRun = false,
@@ -41,12 +22,14 @@ export function ModelPackManager({
 }: ModelPackManagerProps) {
   const [packs, setPacks] = useState<ModelPack[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
-  const [progress, setProgress] = useState<PackProgress | null>(null);
+  const [progress, setProgress] = useState<ModelPackProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
-  const downloading = progress?.status === "downloading";
-  const busy = downloading || deleting !== null || checking;
+  const [operationActive, setOperationActive] = useState(false);
+  const downloading =
+    progress?.status === "preparing" || progress?.status === "downloading";
+  const busy = operationActive || downloading || deleting !== null || checking;
 
   const refresh = async (scan = false) => {
     const result = scan
@@ -59,13 +42,13 @@ export function ModelPackManager({
     void refresh();
     let mounted = true;
     let receivedLiveProgress = false;
-    window.electronAPI.onModelPackProgress((data: unknown) => {
+    window.electronAPI.onModelPackProgress((data) => {
       receivedLiveProgress = true;
-      if (mounted) setProgress(data as PackProgress);
+      if (mounted) setProgress(data);
     });
     void window.electronAPI.getModelPackProgress().then((current) => {
       if (mounted && !receivedLiveProgress && current) {
-        setProgress(current as PackProgress);
+        setProgress(current);
       }
     });
     return () => {
@@ -89,7 +72,16 @@ export function ModelPackManager({
       return;
     }
     setError(null);
-    setProgress({ status: "downloading" });
+    setOperationActive(true);
+    setProgress({
+      status: "preparing",
+      packId: null,
+      packName: null,
+      packIndex: null,
+      packCount: null,
+      message: null,
+      transfer: null,
+    });
     try {
       const complete = await window.electronAPI.downloadModelPacks(selected);
       await refresh();
@@ -102,6 +94,8 @@ export function ModelPackManager({
       setError(
         reason instanceof Error ? reason.message : "Model download failed.",
       );
+    } finally {
+      setOperationActive(false);
     }
   };
 
@@ -130,12 +124,6 @@ export function ModelPackManager({
       setDeleting(null);
     }
   };
-
-  const currentFile = progress?.file
-    ? `${progress.file}${progress.percent !== undefined ? ` — ${Math.round(progress.percent)}%` : ""}`
-    : progress?.packName
-      ? `Downloading ${progress.packName}`
-      : "Preparing download";
 
   return (
     <div className={firstRun ? "w-full max-w-3xl" : "space-y-4"}>
@@ -210,36 +198,41 @@ export function ModelPackManager({
 
       {progress && (
         <div className="mt-4 rounded-lg border border-zinc-700 bg-zinc-800/60 p-3">
-          <div className="flex items-center justify-between gap-3 text-xs">
-            <span className="truncate text-zinc-200">{currentFile}</span>
-            {downloading && (
-              <Loader2 className="h-4 w-4 shrink-0 animate-spin text-violet-300" />
-            )}
-          </div>
-          {progress.percent !== undefined ? (
-            <div className="mt-2 h-1.5 overflow-hidden rounded bg-zinc-700">
-              <div
-                className="h-full bg-violet-500 transition-[width]"
-                style={{ width: `${progress.percent}%` }}
-              />
-            </div>
-          ) : (
-            downloading && (
-              <div className="mt-2 h-1.5 overflow-hidden rounded bg-zinc-700">
-                <div className="h-full w-1/3 animate-pulse rounded bg-violet-500" />
-              </div>
-            )
-          )}
-          {progress.downloadedBytes !== undefined && (
-            <p className="mt-2 text-xs text-zinc-400">
-              {formatBytes(progress.downloadedBytes)}
-              {progress.totalBytes
-                ? ` / ${formatBytes(progress.totalBytes)}`
-                : " downloaded"}
-              {progress.speed
-                ? ` · ${(progress.speed / 1024 / 1024).toFixed(1)} MB/s`
-                : ""}
+          {progress.packIndex !== null && progress.packCount !== null && (
+            <p className="mb-2 text-[10px] uppercase tracking-wide text-zinc-500">
+              Pack {progress.packIndex} of {progress.packCount}
             </p>
+          )}
+          {progress.transfer ? (
+            <DownloadProgressView
+              title={`Downloading ${progress.packName ?? "model pack"}`}
+              transfer={progress.transfer}
+            />
+          ) : (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-3 text-xs">
+                <span className="truncate text-zinc-200">
+                  {progress.message ??
+                    (progress.packName
+                      ? `Downloading ${progress.packName}`
+                      : progress.status === "cancelled"
+                        ? "Download cancelled"
+                        : "Preparing download")}
+                </span>
+                {downloading && (
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin text-violet-300" />
+                )}
+              </div>
+              {downloading && (
+                <div
+                  className="h-1.5 overflow-hidden rounded bg-zinc-700"
+                  role="progressbar"
+                  aria-label="Preparing model download"
+                >
+                  <div className="h-full w-1/3 animate-pulse rounded bg-violet-500" />
+                </div>
+              )}
+            </div>
           )}
         </div>
       )}
@@ -247,7 +240,7 @@ export function ModelPackManager({
 
       {(downloading || firstRun || selected.length > 0) && (
         <div className="mt-4 flex justify-end gap-2">
-          {downloading ? (
+          {operationActive || downloading ? (
             <Button
               variant="outline"
               className="border-zinc-600"

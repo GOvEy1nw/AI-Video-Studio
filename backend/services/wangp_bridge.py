@@ -5,15 +5,19 @@ from __future__ import annotations
 import importlib
 import json
 import logging
+import math
 import re
 import sys
 import threading
 import time
 from collections import deque
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
+from numbers import Real
 from pathlib import Path
 from typing import Any, cast
+
+from progress_types import DownloadUnit, ModelDownloadProgress
 
 logger = logging.getLogger(__name__)
 
@@ -721,23 +725,28 @@ class WanGPBridge:
 
         if kind == "progress":
             phase = str(getattr(data, "phase", "inference"))
-            raw_progress = int(getattr(data, "progress", 0))
-            current_step = getattr(data, "current_step", None)
-            total_steps = getattr(data, "total_steps", None)
+            raw_progress = self._optional_non_negative_int(getattr(data, "progress", 0)) or 0
+            current_step = self._optional_non_negative_int(getattr(data, "current_step", None))
+            total_steps = self._optional_non_negative_int(getattr(data, "total_steps", None))
             status_text = str(getattr(data, "status", "")).strip()
-            progress = self._scale_phase_progress(
-                phase,
-                raw_progress,
-                current_step if isinstance(current_step, int) else None,
-                total_steps if isinstance(total_steps, int) else None,
+            progress_unit, model_download = self._extract_model_download_progress(
+                data,
+                phase=phase,
+                current_step=current_step,
+                total_steps=total_steps,
+            )
+            progress = (
+                max(0, min(100, raw_progress))
+                if progress_unit is not None
+                else self._scale_phase_progress(phase, raw_progress, current_step, total_steps)
             )
             detail = self._parse_progress_detail(status_text, phase)
             self._emit_console_progress(
                 console_progress,
                 phase,
                 progress,
-                current_step if isinstance(current_step, int) else None,
-                total_steps if isinstance(total_steps, int) else None,
+                None if progress_unit is not None else current_step,
+                None if progress_unit is not None else total_steps,
                 status_text,
             )
             on_progress(
@@ -750,6 +759,14 @@ class WanGPBridge:
                 detail["section_index"],
                 detail["section_count"],
                 status_text or None,
+                None,
+                model_download.filename if model_download is not None else None,
+                round(model_download.percent)
+                if model_download is not None and model_download.percent is not None
+                else None,
+                None,
+                progress_unit,
+                model_download,
             )
             return
 
@@ -829,7 +846,11 @@ class WanGPBridge:
             return "inference_stage_2"
         if "denoising third pass" in lowered or "denoising 3rd pass" in lowered:
             return "inference_stage_3"
-        if "loading" in lowered:
+        if "checking model files" in lowered:
+            return "checking_model_files"
+        if "downloading model" in lowered:
+            return "downloading_model"
+        if "loading model" in lowered or "model loaded" in lowered or lowered.startswith("loading"):
             return "loading_model"
         if "enhancing prompt" in lowered or "encoding" in lowered:
             return "encoding_text"
@@ -842,10 +863,97 @@ class WanGPBridge:
         return "inference"
 
     @staticmethod
+    def _optional_non_negative_int(value: object) -> int | None:
+        if isinstance(value, bool) or not isinstance(value, Real):
+            return None
+        number = float(value)
+        return int(number) if math.isfinite(number) and number >= 0 else None
+
+    @staticmethod
+    def _optional_non_negative_float(value: object) -> float | None:
+        if isinstance(value, bool) or not isinstance(value, Real):
+            return None
+        number = float(value)
+        return number if math.isfinite(number) and number >= 0 else None
+
+    @staticmethod
+    def _optional_string(value: object) -> str | None:
+        return value.strip() if isinstance(value, str) and value.strip() else None
+
+    def _extract_model_download_progress(
+        self,
+        data: object,
+        *,
+        phase: str,
+        current_step: int | None,
+        total_steps: int | None,
+    ) -> tuple[DownloadUnit | None, ModelDownloadProgress | None]:
+        raw_details = getattr(data, "details", None)
+        details: Mapping[object, object] = (
+            cast(Mapping[object, object], raw_details)
+            if isinstance(raw_details, Mapping)
+            else cast(Mapping[object, object], {})
+        )
+        unit_value = getattr(data, "unit", None)
+        unit: DownloadUnit | None = (
+            unit_value if unit_value == "bytes" or unit_value == "files" else None
+        )
+        if unit is None or not (
+            details.get("kind") == "model_download" or phase == "downloading_model"
+        ):
+            return None, None
+
+        if unit == "bytes":
+            current = current_step
+            if current is None:
+                current = self._optional_non_negative_int(details.get("downloaded_bytes"))
+            total = total_steps
+            if total is None:
+                total = self._optional_non_negative_int(details.get("total_bytes"))
+        else:
+            current = current_step
+            if current is None:
+                current = self._optional_non_negative_int(details.get("completed_files"))
+            total = total_steps
+            if total is None:
+                total = self._optional_non_negative_int(details.get("total_files"))
+
+        if total is not None and total <= 0:
+            total = None
+        current = current or 0
+        percent = min(100.0, current / total * 100) if total is not None else None
+        return unit, ModelDownloadProgress(
+            phase=self._optional_string(details.get("phase")),
+            model_type=self._optional_string(details.get("model_type")),
+            model_name=self._optional_string(details.get("model_name")),
+            source=self._optional_string(details.get("source")),
+            repo_id=self._optional_string(details.get("repo_id")),
+            filename=self._optional_string(details.get("filename")),
+            unit=unit,
+            current=current,
+            total=total,
+            percent=percent,
+            speed_bps=(
+                self._optional_non_negative_float(details.get("speed_bps"))
+                if unit == "bytes"
+                else None
+            ),
+            eta_seconds=(
+                self._optional_non_negative_float(details.get("eta_seconds"))
+                if unit == "bytes"
+                else None
+            ),
+            file_index=self._optional_non_negative_int(details.get("file_index")),
+            file_count=self._optional_non_negative_int(details.get("file_count")),
+        )
+
+    @staticmethod
     def _estimate_progress(phase: str, current_step: int | None, total_steps: int | None) -> int:
         if total_steps is None or total_steps <= 0 or current_step is None:
             if phase == "preparing_model":
                 return 4
+            if phase == "checking_model_files":
+                return 3
             if phase == "downloading_model":
                 return 5
             if phase == "loading_model":
@@ -868,6 +976,8 @@ class WanGPBridge:
         ratio = max(0.0, min(1.0, current_step / total_steps))
         if phase == "preparing_model":
             return min(6, 2 + int(ratio * 4))
+        if phase == "checking_model_files":
+            return min(4, 2 + int(ratio * 2))
         if phase == "downloading_model":
             return min(9, 3 + int(ratio * 6))
         if phase == "loading_model":
@@ -896,6 +1006,7 @@ class WanGPBridge:
         ratio = max(0.0, min(1.0, raw_progress / 100))
         ranges = {
             "preparing_model": (2, 6),
+            "checking_model_files": (2, 4),
             "downloading_model": (3, 9),
             "loading_model": (5, 15),
             "encoding_text": (12, 22),
@@ -959,6 +1070,7 @@ class WanGPBridge:
         labels = {
             "starting_wangp": "Starting WanGP",
             "preparing_model": "Preparing model",
+            "checking_model_files": "Checking model files",
             "downloading_model": "Downloading model",
             "loading_model": "Loading model",
             "encoding_text": "Encoding text",

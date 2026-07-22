@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 from wangp_model_packs import (
@@ -10,6 +11,8 @@ from wangp_model_packs import (
     _delete_pack_files,
     _download_model_dependencies,
     _load_state,
+    _pack_progress_callback,
+    _process_download_definitions,
 )
 
 
@@ -28,6 +31,7 @@ class FakeWanGP:
 
     def __init__(self) -> None:
         self.downloads: list[tuple[str, str, int, int, str | None]] = []
+        self.callbacks: list[object] = []
 
     def get_model_def(self, model_type: str) -> dict[str, Any]:
         assert model_type == "example"
@@ -77,14 +81,17 @@ class FakeWanGP:
         file_type: int,
         submodel_no: int = 1,
         force_path: str | None = None,
+        progress_callback: object = None,
     ) -> None:
         self.downloads.append((filename, model_type, file_type, submodel_no, force_path))
+        self.callbacks.append(progress_callback)
 
 
 def test_download_model_dependencies_matches_wangp_generation_preflight() -> None:
     wgp = FakeWanGP()
+    callback = lambda _update: None
 
-    _download_model_dependencies(wgp, "example")
+    _download_model_dependencies(wgp, "example", callback)
 
     assert wgp.downloads == [
         ("main:1", "example", 0, 1, None),
@@ -94,6 +101,53 @@ def test_download_model_dependencies_matches_wangp_generation_preflight() -> Non
         ("urls:['right']", "example", 1, 2, None),
         ("urls:['text_encoder']", "example", 2, -1, "text_encoder"),
     ]
+    assert wgp.callbacks == [callback] * len(wgp.downloads)
+
+
+def test_process_download_definitions_forwards_callback() -> None:
+    calls: list[dict[str, object]] = []
+
+    class FakeDefinitionsWanGP:
+        def process_files_def(self, **values: object) -> None:
+            calls.append(values)
+
+    callback = lambda _update: None
+    _process_download_definitions(
+        FakeDefinitionsWanGP(),
+        [{"repoId": "one"}, {"repoId": "two"}],
+        callback,
+    )
+
+    assert calls == [
+        {"repoId": "one", "progress_callback": callback},
+        {"repoId": "two", "progress_callback": callback},
+    ]
+
+
+def test_pack_progress_callback_emits_safe_structured_event(capsys) -> None:
+    callback = _pack_progress_callback("ltx2_turbo", "LTX 2.3 Fast", 2, 3)
+    callback(
+        SimpleNamespace(
+            phase="downloading",
+            source="huggingface",
+            repo_id="owner/repo",
+            filename="model.safetensors",
+            unit="bytes",
+            current=50,
+            total=100,
+            speed_bps=25.0,
+            eta_seconds=2.0,
+            file_index=1,
+            file_count=2,
+        )
+    )
+
+    line = capsys.readouterr().out.strip()
+    assert line.startswith("AIVS_PACK:")
+    assert '"packIndex": 2' in line
+    assert '"packCount": 3' in line
+    assert '"repoId": "owner/repo"' in line
+    assert '"filename": "model.safetensors"' in line
 
 
 def test_legacy_completion_marker_is_not_treated_as_verified(tmp_path: Path) -> None:

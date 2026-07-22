@@ -3,9 +3,124 @@ from __future__ import annotations
 import json
 import sys
 import os
+from collections import deque
 from pathlib import Path
+from types import SimpleNamespace
 
 from services.wangp_bridge import WanGPBridge
+
+
+def _capture_progress_event(data: object) -> tuple[object, ...]:
+    captured: list[tuple[object, ...]] = []
+    _make_bridge()._handle_event(
+        SimpleNamespace(kind="progress", data=data),
+        lambda *args: captured.append(args),
+        deque(),
+        {"phase": "", "progress": -1, "logged_at": 0.0},
+    )
+    return captured[-1]
+
+
+def test_structured_model_download_preserves_exact_transfer_progress() -> None:
+    args = _capture_progress_event(
+        SimpleNamespace(
+            phase="downloading_model",
+            progress=10,
+            current_step=6_895_321_088,
+            total_steps=12_992_123_904,
+            unit="bytes",
+            status="Downloading LTX 2.3",
+            details={
+                "kind": "model_download",
+                "phase": "downloading",
+                "model_type": "ltx2_22B_distilled_1_1",
+                "model_name": "LTX 2.3 Fast",
+                "source": "huggingface",
+                "repo_id": "owner/repo",
+                "filename": "model-00003-of-00006.safetensors",
+                "speed_bps": 88_080_384.0,
+                "eta_seconds": 68.0,
+                "file_index": 3,
+                "file_count": 6,
+            },
+        )
+    )
+
+    transfer = args[14]
+    assert args[:4] == ("downloading_model", 10, 6_895_321_088, 12_992_123_904)
+    assert args[13] == "bytes"
+    assert transfer.filename == "model-00003-of-00006.safetensors"
+    assert transfer.repo_id == "owner/repo"
+    assert transfer.speed_bps == 88_080_384.0
+    assert transfer.eta_seconds == 68.0
+    assert round(transfer.percent, 1) == 53.1
+
+
+def test_structured_model_download_supports_file_counts_and_unknown_totals() -> None:
+    file_args = _capture_progress_event(
+        SimpleNamespace(
+            phase="downloading_model",
+            progress=10,
+            current_step=None,
+            total_steps=None,
+            unit="files",
+            status="Downloading snapshot",
+            details={
+                "kind": "model_download",
+                "completed_files": 3,
+                "total_files": 8,
+                "speed_bps": 99,
+            },
+        )
+    )
+    unknown_args = _capture_progress_event(
+        SimpleNamespace(
+            phase="downloading_model",
+            progress=10,
+            current_step=None,
+            total_steps=None,
+            unit="bytes",
+            status="Downloading file",
+            details={"kind": "model_download", "downloaded_bytes": 1234},
+        )
+    )
+
+    files = file_args[14]
+    unknown = unknown_args[14]
+    assert (files.unit, files.current, files.total, files.percent) == ("files", 3, 8, 37.5)
+    assert files.speed_bps is None
+    assert (unknown.current, unknown.total, unknown.percent) == (1234, None, None)
+
+
+def test_model_download_optional_details_are_defensive() -> None:
+    args = _capture_progress_event(
+        SimpleNamespace(
+            phase="downloading_model",
+            progress=10,
+            current_step=5,
+            total_steps=10,
+            unit="bytes",
+            status="Downloading model",
+            details={
+                "kind": "model_download",
+                "speed_bps": float("nan"),
+                "eta_seconds": -1,
+                "file_index": "bad",
+            },
+        )
+    )
+
+    transfer = args[14]
+    assert transfer.speed_bps is None
+    assert transfer.eta_seconds is None
+    assert transfer.file_index is None
+
+
+def test_model_lifecycle_phase_classification_is_specific() -> None:
+    assert WanGPBridge._classify_phase("Checking model files for X...") == "checking_model_files"
+    assert WanGPBridge._classify_phase("Downloading model X...") == "downloading_model"
+    assert WanGPBridge._classify_phase("Loading model X into memory...") == "loading_model"
+    assert WanGPBridge._classify_phase("Model loaded") == "loading_model"
 
 
 def _make_bridge(*, image_model_type: str = "z_image") -> WanGPBridge:

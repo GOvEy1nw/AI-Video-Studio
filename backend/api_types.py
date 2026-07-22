@@ -101,6 +101,23 @@ class GpuInfoResponse(BaseModel):
     gpu_info: GpuTelemetry
 
 
+class ModelDownloadProgressResponse(BaseModel):
+    phase: str | None = None
+    modelType: str | None = None
+    modelName: str | None = None
+    source: str | None = None
+    repoId: str | None = None
+    filename: str | None = None
+    unit: Literal["bytes", "files"]
+    current: int = Field(ge=0)
+    total: int | None = Field(default=None, ge=0)
+    percent: float | None = Field(default=None, ge=0, le=100)
+    speedBps: float | None = Field(default=None, ge=0)
+    etaSeconds: float | None = Field(default=None, ge=0)
+    fileIndex: int | None = Field(default=None, ge=0)
+    fileCount: int | None = Field(default=None, ge=0)
+
+
 class GenerationProgressResponse(BaseModel):
     status: str
     phase: str
@@ -116,6 +133,8 @@ class GenerationProgressResponse(BaseModel):
     downloadCurrentFile: str | None = None
     downloadCurrentFileProgress: int | None = None
     downloadTotalProgress: int | None = None
+    progressUnit: Literal["bytes", "files"] | None = None
+    modelDownload: ModelDownloadProgressResponse | None = None
 
 
 class IcLoraModel(BaseModel):

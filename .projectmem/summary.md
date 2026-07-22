@@ -6,6 +6,12 @@ _Last updated: 2026-07-21_
 AI Video Studio (AiVS) is a local-first desktop app for AI image, video, and future audio/TTS generation. It is forked from `deepbeepmeep/LTX-Desktop-WanGP` and is being reshaped into a Freepik/Higgsfield-style creative studio powered by WanGP / Wan2GP. The project is community-focused, not commercial.
 
 ## Recent issues
+- [DONE] #0065 Electron production build reports missing closing brace in model-pack JSON event parser [electron/python-setup.ts:637] -> Model-pack JSON event parser syntax corrected; full Vite/Electron build passes [electron/python-setup.ts:626] (fixed)
+- [DONE] #0064 Frontend Vite build cannot read parent directory/config inside managed sandbox [vite.config.ts] -> Approved build route bypasses managed-sandbox esbuild config access restriction [vite.config.ts] (fixed)
+- [DONE] #0063 Pyright rejects broad string download units and partially unknown Mapping normalization in structured progress implementation [backend/handlers/generation_handler.py:127; backend/services/wangp_bridge.py:892] -> Structured progress units and external detail mappings are strictly typed; Pyright passes [backend/progress_types.py; backend/services/wangp_bridge.py:892] (fixed)
+  - Partial attempt: Narrowed progress units to a Literal alias and cast external mappings; unit errors cleared but empty mapping branch remained partially unknown [backend/progress_types.py; backend/services/wangp_bridge.py:892]
+- [DONE] #0062 Focused backend tests cannot read uv cache metadata inside managed sandbox [backend/.venv] -> Focused validation confirmed with approved uv-cache access; 39 backend progress tests pass [backend/.venv] (fixed)
+- [DONE] #0061 Baseline pnpm typecheck/backend:test blocked by registry signature verification in managed sandbox [package.json#packageManager] -> Baseline validation confirmed by rerunning pnpm checks with approved registry access; typecheck and 232 backend tests pass [package.json#packageManager] (fixed)
 - [DONE] #0060 final nested Wan2GP HEAD/status check failed under sandbox dubious-ownership protection without per-command safe.directory [Wan2GP/.git] -> verified nested Wan2GP state using scoped safe.directory without changing global Git configuration [Wan2GP/.git] (fixed)
   - Failed attempt: ran nested git verification without the updater's per-command safe.directory override; sandbox rejected ownership [Wan2GP/.git]
 - [DONE] #0059 PowerShell path inspection command parsed an empty pipeline after foreach output [Wan2GP/] -> corrected PowerShell inspection shape and confirmed no partial backup directory exists [Wan2GP/] (fixed)
@@ -155,9 +161,9 @@ AI Video Studio (AiVS) is a local-first desktop app for AI image, video, and fut
 - AiVS keeps WanGP bundled for offline/reproducible installs, while GOvEy1nw/Wan2GP AiVS is source of truth; scripts/wangp-source.json pins an exact commit and immutable AiVS tag. [scripts/wangp-source.json]
 - WanGP updates use transactional scripts/update-wangp.ps1: check AiVS branch head, report sensitive bridge/dependency/model/default changes, validate, and roll back checkout plus manifest on failure. [scripts/update-wangp.ps1]
 - Pin bundled WanGP to GOvEy1nw/Wan2GP AiVS commit da205e246f4139601c829fefb8c25d2e2e6d6857 (WanGP 12.34) after focused and full compatibility validation. [scripts/wangp-source.json]
+- WanGP model download progress keeps existing transport ownership: generation events flow through backend polling, model packs through Electron IPC; both normalize to one renderer transfer shape and shared progress view. [backend/progress_types.py; frontend/types/progress.ts; frontend/components/DownloadProgressView.tsx]
 
 ## Notes
-- WanGP source is pinned to fork commit 38b9ea381b3808290702068bda569fab89c24286 (WanGP 12.34, tag aivs-wangp-12.34.0); mmgp runtime requirement is 3.7.10. [scripts/wangp-source.json]
 - Future WanGP cadence commands: pnpm wangp:check compares the pin to fork AiVS head; pnpm wangp:update applies focused validation; pnpm wangp:update:full adds typecheck, backend tests, and frontend build. [package.json]
 - Prompt-relay changes were split upstream: WanGP PR #2018 fixes latent-frame quantization and PR #2019 exposes editable epsilon while preserving the 1e-3 default. [Wan2GP/shared/prompt_relay.py]
 - Windows validation recipe: from repo root run `.\node_modules\.bin\tsc.cmd --noEmit` and `.\node_modules\.bin\vite.cmd build`; from `backend/` run `uv run pyright` then `uv run rtk pytest -q tests --tb=short`. Never start Pyright from repo root: it scans bundled Wan2GP instead of using backend/pyrightconfig.json. If managed sandbox blocks the uv cache, rerun the same backend commands with approved external cache access; do not reinstall dependencies. [backend/pyrightconfig.json]
@@ -167,6 +173,7 @@ AI Video Studio (AiVS) is a local-first desktop app for AI image, video, and fut
 - Windows installer build route (verified 2026-07-20): from repo root, run network-approved PowerShell 7 directly: & 'C:\Program Files\PowerShell\7\pwsh.exe' -NoProfile -File 'scripts\local-build.ps1'. Reuse existing python-bootstrap/git-bootstrap; do not add -Clean unless rebuild is required. Avoid sandboxed pnpm (registry signature verification cannot reach registry), AppData pnpm/PATH or pnpm.mjs bypass attempts (still intercepted), and pnpm build:win via package.json on this host (launches Windows PowerShell 5.1 and fails Microsoft.PowerShell.Security/Get-AuthenticodeSignature). [scripts/local-build.ps1]
 - gotcha: WanGP exits with code 0 after rejecting an incompatible mmgp version, so Electron must select the same Python runtime as generation rather than trusting subprocess exit status alone. [electron/python-setup.ts]
 - WanGP source is now pinned to fork commit da205e246f4139601c829fefb8c25d2e2e6d6857 (WanGP 12.34); aivsTag is intentionally blank until an immutable release tag is assigned. [scripts/wangp-source.json]
+- Pinned WanGP revision c30e876232af065c5c30266daae4ced859568c7f is a descendant of both structured progress commits 69dd2cf and 5585a15; no pin update was required. [scripts/wangp-source.json]
 
 ## Key files
 - `LTX-2.3_Cinematic_hardcut.safetensors`

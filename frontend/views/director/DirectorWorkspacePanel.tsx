@@ -1151,6 +1151,14 @@ export function DirectorWorkspacePanel(props: Props) {
                 }
                 progress={generation.progress}
                 statusMessage={generation.statusMessage}
+                phase={
+                  generationBelongsToCurrentTimeline ? generation.phase : ""
+                }
+                modelDownload={
+                  generationBelongsToCurrentTimeline
+                    ? generation.modelDownload
+                    : null
+                }
                 isGenerating={
                   generationBelongsToCurrentTimeline && generation.isGenerating
                 }

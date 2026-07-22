@@ -1,5 +1,6 @@
 // Using require for Electron preload compatibility
 const { contextBridge, ipcRenderer } = require('electron')
+type ModelPackProgress = import('./python-setup').ModelPackProgress
 
 // Expose protected methods to the renderer process
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -118,7 +119,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   startPythonSetup: (): Promise<void> => ipcRenderer.invoke('start-python-setup'),
   getModelPacks: (): Promise<unknown[]> => ipcRenderer.invoke('get-model-packs'),
   refreshModelPacks: (): Promise<unknown[]> => ipcRenderer.invoke('refresh-model-packs'),
-  getModelPackProgress: (): Promise<unknown | null> => ipcRenderer.invoke('get-model-pack-progress'),
+  getModelPackProgress: (): Promise<ModelPackProgress | null> => ipcRenderer.invoke('get-model-pack-progress'),
   getCheckpointsLocation: (): Promise<{ path: string; custom: boolean; defaultPath: string }> => ipcRenderer.invoke('get-checkpoints-location'),
   setCheckpointsLocation: (value: string | null): Promise<{ path: string; custom: boolean; defaultPath: string }> => ipcRenderer.invoke('set-checkpoints-location', value),
   getLorasLocation: (): Promise<{ path: string; custom: boolean; defaultPath: string }> => ipcRenderer.invoke('get-loras-location'),
@@ -136,8 +137,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   removePythonSetupProgress: () => {
     ipcRenderer.removeAllListeners('python-setup-progress')
   },
-  onModelPackProgress: (cb: (data: unknown) => void) => {
-    ipcRenderer.on('model-pack-progress', (_: unknown, data: unknown) => cb(data))
+  onModelPackProgress: (cb: (data: ModelPackProgress) => void) => {
+    ipcRenderer.on('model-pack-progress', (_: unknown, data: ModelPackProgress) => cb(data))
   },
   removeModelPackProgress: () => {
     ipcRenderer.removeAllListeners('model-pack-progress')

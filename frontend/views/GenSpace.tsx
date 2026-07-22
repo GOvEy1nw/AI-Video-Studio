@@ -55,6 +55,7 @@ import { MusicModeControls } from "../components/music/MusicModeControls";
 import { MusicLyricsInput } from "../components/music/MusicLyricsInput";
 import { SettingsDropdown } from "../components/SettingsDropdown";
 import { GenerationErrorDialog } from "../components/GenerationErrorDialog";
+import { DownloadProgressView } from "../components/DownloadProgressView";
 import { DuplicateFilenameDialog } from "../components/DuplicateFilenameDialog";
 import { DeleteAssetDialog } from "../components/DeleteAssetDialog";
 import {
@@ -2270,6 +2271,9 @@ export function GenSpace() {
     isGenerating,
     isCancelling,
     progress,
+    phase,
+    progressUnit,
+    modelDownload,
     statusMessage,
     phaseIndex,
     phaseCount,
@@ -3582,10 +3586,18 @@ export function GenSpace() {
   const canGoPrev = selectedIndex > 0;
   const canGoNext =
     selectedIndex >= 0 && selectedIndex < filteredAssets.length - 1;
+  const transferActive =
+    modelDownload !== null || progressUnit === "bytes" || progressUnit === "files";
+  const modelLifecycleActive =
+    phase === "checking_model_files" || phase === "loading_model";
   const generationBadges = [
-    phaseIndex && phaseCount ? `Phase ${phaseIndex}/${phaseCount}` : null,
-    currentStep && totalSteps ? `Step ${currentStep}/${totalSteps}` : null,
-    sectionIndex && sectionCount
+    phaseIndex !== null && phaseCount !== null
+      ? `Phase ${phaseIndex}/${phaseCount}`
+      : null,
+    !transferActive && currentStep !== null && totalSteps !== null
+      ? `Step ${currentStep}/${totalSteps}`
+      : null,
+    sectionIndex !== null && sectionCount !== null
       ? `Section ${sectionIndex}/${sectionCount}`
       : null,
   ].filter(Boolean) as string[];
@@ -3830,31 +3842,42 @@ export function GenSpace() {
                     />
                   )}
                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/35 px-4">
-                    {!previewUrl && (
+                    {modelDownload === null &&
+                      (!previewUrl || modelLifecycleActive) && (
                       <LoaderCircle className="mb-3 h-8 w-8 animate-spin text-violet-400" />
                     )}
-                    <p className="max-w-full truncate text-sm text-zinc-200">
-                      {statusMessage || "Generating..."}
-                    </p>
-                    {generationBadges.length > 0 && (
-                      <div className="mt-2 flex max-w-full flex-wrap justify-center gap-1">
-                        {generationBadges.map((badge) => (
-                          <span
-                            key={badge}
-                            className="rounded bg-black/50 px-1.5 py-0.5 text-[10px] text-zinc-300"
-                          >
-                            {badge}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    {progress > 0 && (
-                      <div className="mt-2 h-1 w-32 overflow-hidden rounded-full bg-zinc-800">
-                        <div
-                          className="h-full bg-violet-500 transition-all"
-                          style={{ width: `${progress}%` }}
-                        />
-                      </div>
+                    {modelDownload ? (
+                      <DownloadProgressView
+                        className="w-full max-w-72 rounded-lg bg-black/55 p-2"
+                        title={`Downloading ${modelDownload.modelName ?? "model files"}`}
+                        transfer={modelDownload}
+                      />
+                    ) : (
+                      <>
+                        <p className="max-w-full truncate text-sm text-zinc-200">
+                          {statusMessage || "Generating..."}
+                        </p>
+                        {generationBadges.length > 0 && (
+                          <div className="mt-2 flex max-w-full flex-wrap justify-center gap-1">
+                            {generationBadges.map((badge) => (
+                              <span
+                                key={badge}
+                                className="rounded bg-black/50 px-1.5 py-0.5 text-[10px] text-zinc-300"
+                              >
+                                {badge}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {progress > 0 && !modelLifecycleActive && (
+                          <div className="mt-2 h-1 w-32 overflow-hidden rounded-full bg-zinc-800">
+                            <div
+                              className="h-full bg-violet-500 transition-all"
+                              style={{ width: `${progress}%` }}
+                            />
+                          </div>
+                        )}
+                      </>
                     )}
                     <button
                       type="button"

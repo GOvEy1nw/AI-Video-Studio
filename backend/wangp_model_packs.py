@@ -5,13 +5,13 @@ from __future__ import annotations
 import argparse
 from importlib import import_module
 import json
+import math
 import os
 import sys
-import threading
-import time
 import warnings
+from numbers import Real
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Callable, cast
 
 
 PACKS: dict[str, dict[str, str]] = {
@@ -119,53 +119,63 @@ def _delete_pack_files(
     del manifests[pack_id]
 
 
-class DownloadProgressMonitor:
-    """Report growing WanGP checkpoint files when Hugging Face hides its TTY bar."""
+def _non_negative_number(value: object) -> float | None:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        return None
+    number = float(value)
+    return number if math.isfinite(number) and number >= 0 else None
 
-    def __init__(self, checkpoints_dir: Path) -> None:
-        self._root = checkpoints_dir
-        self._previous: dict[Path, int] = {}
-        self._stop = threading.Event()
-        self._thread = threading.Thread(target=self._watch, daemon=True)
 
-    def start(self) -> None:
-        self._previous = self._snapshot()
-        self._thread.start()
+def _safe_text(value: object) -> str | None:
+    return value.strip() if isinstance(value, str) and value.strip() else None
 
-    def stop(self) -> None:
-        self._stop.set()
-        self._thread.join(timeout=2)
 
-    def _snapshot(self) -> dict[Path, int]:
-        if not self._root.is_dir():
-            return {}
-        files: dict[Path, int] = {}
-        for file_path in self._root.rglob("*"):
-            if not file_path.is_file():
-                continue
-            try:
-                files[file_path] = file_path.stat().st_size
-            except OSError:
-                continue
-        return files
+def _transfer_event(update: object) -> dict[str, object] | None:
+    unit = getattr(update, "unit", None)
+    if unit not in {"bytes", "files"}:
+        return None
+    current = _non_negative_number(getattr(update, "current", None))
+    if current is None:
+        return None
+    total = _non_negative_number(getattr(update, "total", None))
+    if total is not None and total <= 0:
+        total = None
+    file_index = _non_negative_number(getattr(update, "file_index", None))
+    file_count = _non_negative_number(getattr(update, "file_count", None))
+    return {
+        "phase": _safe_text(getattr(update, "phase", None)),
+        "source": _safe_text(getattr(update, "source", None)),
+        "repoId": _safe_text(getattr(update, "repo_id", None)),
+        "filename": _safe_text(getattr(update, "filename", None)),
+        "unit": unit,
+        "current": int(current),
+        "total": int(total) if total is not None else None,
+        "speedBps": _non_negative_number(getattr(update, "speed_bps", None)),
+        "etaSeconds": _non_negative_number(getattr(update, "eta_seconds", None)),
+        "fileIndex": int(file_index) if file_index is not None else None,
+        "fileCount": int(file_count) if file_count is not None else None,
+    }
 
-    def _watch(self) -> None:
-        last_time = time.monotonic()
-        while not self._stop.wait(0.5):
-            now = time.monotonic()
-            current = self._snapshot()
-            for file_path, size in current.items():
-                previous_size = self._previous.get(file_path, 0)
-                if size <= previous_size:
-                    continue
-                _event(
-                    "transfer",
-                    file=file_path.name.removesuffix(".incomplete"),
-                    downloadedBytes=size,
-                    speed=(size - previous_size) / max(now - last_time, 0.001),
-                )
-            self._previous = current
-            last_time = now
+
+def _pack_progress_callback(
+    pack_id: str,
+    pack_name: str,
+    pack_index: int,
+    pack_count: int,
+) -> Callable[[object], None]:
+    def callback(update: object) -> None:
+        transfer = _transfer_event(update)
+        if transfer is not None:
+            _event(
+                "transfer",
+                id=pack_id,
+                name=pack_name,
+                packIndex=pack_index,
+                packCount=pack_count,
+                transfer=transfer,
+            )
+
+    return callback
 
 
 def _create_model_manager(wgp: Any) -> Any:
@@ -189,7 +199,11 @@ def _create_model_manager(wgp: Any) -> Any:
     return manager
 
 
-def _download_model_dependencies(wgp: Any, model_type: str) -> None:
+def _download_model_dependencies(
+    wgp: Any,
+    model_type: str,
+    progress_callback: Callable[[object], None] | None = None,
+) -> None:
     """Mirror WanGP load_models download preflight without loading model weights."""
     model_def = cast(dict[str, Any], wgp.get_model_def(model_type))
     quantization = wgp.transformer_quantization
@@ -197,7 +211,13 @@ def _download_model_dependencies(wgp: Any, model_type: str) -> None:
     main_filename = wgp.get_model_filename(model_type, quantization, dtype_policy)
     downloaded_main = False
     if main_filename:
-        wgp.download_models(main_filename, model_type, file_type=0, submodel_no=1)
+        wgp.download_models(
+            main_filename,
+            model_type,
+            file_type=0,
+            submodel_no=1,
+            progress_callback=progress_callback,
+        )
         downloaded_main = True
 
     if "URLs2" in model_def:
@@ -208,7 +228,13 @@ def _download_model_dependencies(wgp: Any, model_type: str) -> None:
             submodel_no=2,
         )
         if second_filename:
-            wgp.download_models(second_filename, model_type, file_type=0, submodel_no=2)
+            wgp.download_models(
+                second_filename,
+                model_type,
+                file_type=0,
+                submodel_no=2,
+                progress_callback=progress_callback,
+            )
             downloaded_main = True
 
     raw_modules = cast(
@@ -236,7 +262,13 @@ def _download_model_dependencies(wgp: Any, model_type: str) -> None:
                     URLs=urls,
                 )
                 if filename:
-                    wgp.download_models(filename, model_type, file_type=1, submodel_no=submodel_no)
+                    wgp.download_models(
+                        filename,
+                        model_type,
+                        file_type=1,
+                        submodel_no=submodel_no,
+                        progress_callback=progress_callback,
+                    )
         else:
             filename = wgp.get_model_filename(
                 model_type,
@@ -245,10 +277,22 @@ def _download_model_dependencies(wgp: Any, model_type: str) -> None:
                 module_type=module,
             )
             if filename:
-                wgp.download_models(filename, model_type, file_type=1, submodel_no=0)
+                wgp.download_models(
+                    filename,
+                    model_type,
+                    file_type=1,
+                    submodel_no=0,
+                    progress_callback=progress_callback,
+                )
 
     if not downloaded_main:
-        wgp.download_models("", model_type, file_type=0, submodel_no=-1)
+        wgp.download_models(
+            "",
+            model_type,
+            file_type=0,
+            submodel_no=-1,
+            progress_callback=progress_callback,
+        )
 
     text_encoder_urls = wgp.get_model_recursive_prop(
         model_type,
@@ -269,6 +313,7 @@ def _download_model_dependencies(wgp: Any, model_type: str) -> None:
                 file_type=2,
                 submodel_no=-1,
                 force_path=model_def.get("text_encoder_folder"),
+                progress_callback=progress_callback,
             )
 
 
@@ -306,19 +351,32 @@ def _validate_paths(pack_id: str, paths: set[Path]) -> set[Path]:
     return paths
 
 
-def _download_pack(wgp: Any, manager: Any, pack_id: str) -> set[Path]:
+def _process_download_definitions(
+    wgp: Any,
+    definitions: dict[str, Any] | list[dict[str, Any]],
+    progress_callback: Callable[[object], None] | None,
+) -> None:
+    for definition in definitions if isinstance(definitions, list) else [definitions]:
+        wgp.process_files_def(**definition, progress_callback=progress_callback)
+
+
+def _download_pack(
+    wgp: Any,
+    manager: Any,
+    pack_id: str,
+    progress_callback: Callable[[object], None] | None = None,
+) -> set[Path]:
     pack = PACKS[pack_id]
     kind = pack["kind"]
     if kind == "utility":
         definition = wgp.query_core_shared_model_files()
-        wgp.process_files_def(**definition)
+        _process_download_definitions(wgp, definition, progress_callback)
     elif kind == "prompt":
         assets = import_module("shared.prompt_enhancer.assets")
         definitions = cast(list[dict[str, Any]], assets.query_prompt_enhancer_download_defs())
-        for definition in definitions:
-            wgp.process_files_def(**definition)
+        _process_download_definitions(wgp, definitions, progress_callback)
     else:
-        _download_model_dependencies(wgp, pack["model_type"])
+        _download_model_dependencies(wgp, pack["model_type"], progress_callback)
     return _validate_paths(pack_id, _resolve_pack_paths(wgp, manager, pack_id))
 
 
@@ -400,17 +458,25 @@ def main() -> int:
         _event("packs", packs=installed_packs)
         return 0
 
-    for pack_id in requested:
-        _event("pack-start", id=pack_id, name=PACKS[pack_id]["name"])
-        monitor = DownloadProgressMonitor(checkpoints_dir)
-        monitor.start()
-        try:
-            paths = _download_pack(wgp, manager, pack_id)
-        finally:
-            monitor.stop()
+    pack_count = len(requested)
+    for pack_index, pack_id in enumerate(requested, start=1):
+        pack_name = PACKS[pack_id]["name"]
+        context = {
+            "id": pack_id,
+            "name": pack_name,
+            "packIndex": pack_index,
+            "packCount": pack_count,
+        }
+        _event("pack-start", **context)
+        paths = _download_pack(
+            wgp,
+            manager,
+            pack_id,
+            _pack_progress_callback(pack_id, pack_name, pack_index, pack_count),
+        )
         manifests[pack_id] = sorted(_manifest_path(root, path) for path in paths)
         _save_state(app_data_dir, manifests)
-        _event("pack-complete", id=pack_id, name=PACKS[pack_id]["name"])
+        _event("pack-complete", **context)
     _event("complete")
     return 0
 
