@@ -6,6 +6,8 @@ export function SettingsDropdown({
   value,
   onChange,
   title,
+  placement = "top",
+  variant = "default",
 }: {
   trigger: ReactNode;
   options: {
@@ -18,6 +20,8 @@ export function SettingsDropdown({
   value: string;
   onChange: (value: string) => void;
   title: string;
+  placement?: "top" | "bottom";
+  variant?: "default" | "model";
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -33,17 +37,30 @@ export function SettingsDropdown({
   }, [isOpen]);
 
   return (
-    <div ref={dropdownRef} className="relative">
+    <div
+      ref={dropdownRef}
+      className={`relative ${variant === "model" ? "w-full" : ""}`}
+    >
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-2 py-1.5 transition-colors ${isOpen ? "bg-zinc-700 hover:bg-zinc-700" : "hover:bg-zinc-800"}`}
+        className={`flex shrink-0 items-center whitespace-nowrap transition-colors ${
+          variant === "model"
+            ? "w-full justify-between rounded-xl border border-zinc-700 bg-zinc-800/70 px-3 py-2.5 text-left hover:border-zinc-600 hover:bg-zinc-800"
+            : "gap-1 rounded-md px-2 py-1.5 hover:bg-zinc-800"
+        } ${isOpen ? "border-zinc-600 bg-zinc-700 hover:bg-zinc-700" : ""}`}
       >
         {trigger}
       </button>
 
       {isOpen && (
-        <div className="absolute bottom-full left-0 z-[9999] mb-2 min-w-[160px] rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl">
+        <div
+          className={`absolute left-0 z-[9999] min-w-[160px] rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl ${
+            variant === "model" ? "right-0" : ""
+          } ${
+            placement === "bottom" ? "top-full mt-2" : "bottom-full mb-2"
+          }`}
+        >
           <div className="mb-2 text-[10px] uppercase tracking-wider text-zinc-500">
             {title}
           </div>

@@ -20,8 +20,6 @@ import {
   Sparkles,
   Clock,
   Monitor,
-  ChevronUp,
-  ChevronDown,
   Scissors,
   Expand,
   Music,
@@ -47,10 +45,9 @@ import {
 } from "../hooks/use-image-profiles";
 import type { Asset } from "../types/project";
 import type { ModelProfile } from "../types/model-profiles";
-import {
-  DEFAULT_MUSIC_SETTINGS,
-  type MusicSettings,
-} from "../types/music";
+import type { ModelDownloadProgress } from "../types/progress";
+import { DEFAULT_MUSIC_SETTINGS, type MusicSettings } from "../types/music";
+import { ModelDropdownTrigger } from "../components/ModelDropdownTrigger";
 import { MusicModeControls } from "../components/music/MusicModeControls";
 import { MusicLyricsInput } from "../components/music/MusicLyricsInput";
 import { SettingsDropdown } from "../components/SettingsDropdown";
@@ -356,6 +353,9 @@ function ImageModeControls({
   settings,
   onSettingsChange,
   imageProfiles,
+  section = "all",
+  menuPlacement = "top",
+  modelDownload,
 }: {
   settings: {
     imageResolution: string;
@@ -365,6 +365,9 @@ function ImageModeControls({
   };
   onSettingsChange: (settings: any) => void;
   imageProfiles: ModelProfile[];
+  section?: "all" | "model" | "output";
+  menuPlacement?: "top" | "bottom";
+  modelDownload?: ModelDownloadProgress | null;
 }) {
   const selectedProfileId = settings.imageProfileId || "z_image_turbo";
   const selectedProfile =
@@ -375,7 +378,7 @@ function ImageModeControls({
   // every render but only emits a change when the values actually need
   // to shift, so it won't loop.
   useEffect(() => {
-    if (!selectedProfile) return;
+    if (!selectedProfile || section === "output") return;
     const allowedAspects = selectedProfile.ui.allowedAspectRatios;
     const allowedTiers = selectedProfile.ui.allowedResolutionTiers;
     const next: any = { ...settings, imageProfileId: selectedProfile.id };
@@ -391,7 +394,7 @@ function ImageModeControls({
     if (changed) {
       onSettingsChange(next);
     }
-  }, [selectedProfile, settings, onSettingsChange]);
+  }, [section, selectedProfile, settings, onSettingsChange]);
 
   if (!selectedProfile) {
     // Profiles not loaded yet — show a placeholder.
@@ -403,8 +406,6 @@ function ImageModeControls({
     );
   }
 
-  const isAvailable = selectedProfile.availability === "available";
-  const isExperimental = selectedProfile.availability === "experimental";
   const modelOptions = imageProfiles.map((p) => ({
     value: p.id,
     label:
@@ -422,66 +423,66 @@ function ImageModeControls({
 
   return (
     <>
-      <SettingsDropdown
-        title="IMAGE MODEL"
-        value={selectedProfile.id}
-        onChange={(v) => onSettingsChange({ ...settings, imageProfileId: v })}
-        options={modelOptions}
-        trigger={
-          <>
-            <Sparkles className="h-3.5 w-3.5" />
-            <span className="text-zinc-300 font-medium">
-              {selectedProfile.displayName}
-            </span>
-            {isExperimental && (
-              <span className="text-[9px] uppercase tracking-wider text-amber-500">
-                exp
-              </span>
-            )}
-            <ChevronUp className="h-3 w-3 text-zinc-500" />
-          </>
-        }
-      />
+      {section !== "output" && (
+        <>
+          <SettingsDropdown
+            title="IMAGE MODEL"
+            value={selectedProfile.id}
+            onChange={(v) =>
+              onSettingsChange({ ...settings, imageProfileId: v })
+            }
+            options={modelOptions}
+            placement={menuPlacement}
+            variant="model"
+            trigger={
+              <ModelDropdownTrigger
+                profile={selectedProfile}
+                modelDownload={modelDownload}
+                icon={<Sparkles className="h-5 w-5" />}
+              />
+            }
+          />
+        </>
+      )}
 
-      <div className="w-px h-4 bg-zinc-700 mx-0.5" />
+      {section !== "model" && (
+        <>
+          <SettingsDropdown
+            title="RESOLUTION"
+            value={settings.imageResolution}
+            onChange={(v) =>
+              onSettingsChange({ ...settings, imageResolution: v })
+            }
+            options={selectedProfile.ui.allowedResolutionTiers.map((tier) => ({
+              value: tier,
+              label: tier,
+            }))}
+            trigger={
+              <>
+                <Monitor className="h-3.5 w-3.5" />
+                <span>{settings.imageResolution.replace("p", "")}</span>
+              </>
+            }
+          />
 
-      <SettingsDropdown
-        title="RESOLUTION"
-        value={settings.imageResolution}
-        onChange={(v) => onSettingsChange({ ...settings, imageResolution: v })}
-        options={selectedProfile.ui.allowedResolutionTiers.map((tier) => ({
-          value: tier,
-          label: tier,
-        }))}
-        trigger={
-          <>
-            <Monitor className="h-3.5 w-3.5" />
-            <span>{settings.imageResolution.replace("p", "")}</span>
-          </>
-        }
-      />
-
-      <SettingsDropdown
-        title="ASPECT RATIO"
-        value={settings.imageAspectRatio}
-        onChange={(v) => onSettingsChange({ ...settings, imageAspectRatio: v })}
-        options={selectedProfile.ui.allowedAspectRatios.map((ratio) => ({
-          value: ratio,
-          label: ratio,
-        }))}
-        trigger={
-          <>
-            <AspectIcon className="h-3.5 w-3.5" />
-            <span>{settings.imageAspectRatio}</span>
-          </>
-        }
-      />
-
-      {!isAvailable && !isExperimental && (
-        <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-amber-500/10 text-amber-400 text-[10px]">
-          <AlertCircle className="h-3 w-3" />
-          <span>Model files missing</span>
-        </div>
+          <SettingsDropdown
+            title="ASPECT RATIO"
+            value={settings.imageAspectRatio}
+            onChange={(v) =>
+              onSettingsChange({ ...settings, imageAspectRatio: v })
+            }
+            options={selectedProfile.ui.allowedAspectRatios.map((ratio) => ({
+              value: ratio,
+              label: ratio,
+            }))}
+            trigger={
+              <>
+                <AspectIcon className="h-3.5 w-3.5" />
+                <span>{settings.imageAspectRatio}</span>
+              </>
+            }
+          />
+        </>
       )}
     </>
   );
@@ -517,12 +518,12 @@ function PromptBar({
   imageProfiles,
   videoProfiles,
   musicProfiles,
+  modelDownload,
   musicSettings,
   onMusicSettingsChange,
   useAudioTrack,
   onUseAudioTrackChange,
   syncInputFileToGallery,
-  mediaInputsExpandKey = 0,
   reframeDurationSeconds,
   videoToolPanel,
 }: {
@@ -566,12 +567,12 @@ function PromptBar({
   imageProfiles: ModelProfile[];
   videoProfiles: ModelProfile[];
   musicProfiles: ModelProfile[];
+  modelDownload: ModelDownloadProgress | null;
   musicSettings: MusicSettings;
   onMusicSettingsChange: (settings: MusicSettings) => void;
   useAudioTrack: boolean;
   onUseAudioTrackChange: (v: boolean) => void;
   syncInputFileToGallery?: (file: File) => Promise<string | null>;
-  mediaInputsExpandKey?: number;
   reframeDurationSeconds?: number;
   videoToolPanel?: React.ReactNode;
 }) {
@@ -581,7 +582,6 @@ function PromptBar({
   const [isDragOver, setIsDragOver] = useState(false);
   const [isAudioDragOver, setIsAudioDragOver] = useState(false);
   const [isGuideDragOver, setIsGuideDragOver] = useState(false);
-  const [mediaInputsExpanded, setMediaInputsExpanded] = useState(false);
   const [activeImageInputId, setActiveImageInputId] = useState<string | null>(
     null,
   );
@@ -755,7 +755,6 @@ function PromptBar({
     };
     onImageInputsChange([...filtered, newItem]);
     if (isGuideRole && mode === "video" && videoMode === "generate") {
-      setMediaInputsExpanded(true);
       setEditingGuideTrimId(newItem.id);
     }
   };
@@ -1072,9 +1071,6 @@ function PromptBar({
           ? "Experimental — may be less stable."
           : undefined,
   }));
-  const selectedVideoIsExperimental =
-    selectedVideoProfile?.availability === "experimental";
-
   const renderVideoSlot = (
     roleName: string,
     label: string,
@@ -1323,7 +1319,6 @@ function PromptBar({
                 <div className="h-px bg-zinc-700 my-1" />
                 <button
                   onClick={() => {
-                    setMediaInputsExpanded(true);
                     setEditingGuideTrimId(guideItem.id);
                     setActiveImageInputId(null);
                   }}
@@ -1480,12 +1475,6 @@ function PromptBar({
     );
 
   useEffect(() => {
-    if (mediaInputsExpandKey > 0) {
-      setMediaInputsExpanded(true);
-    }
-  }, [mediaInputsExpandKey]);
-
-  useEffect(() => {
     if (!activeImageInputId) return;
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target;
@@ -1499,167 +1488,277 @@ function PromptBar({
   }, [activeImageInputId]);
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-visible">
+    <div className="flex h-full flex-col overflow-y-auto border-r border-zinc-800 bg-zinc-900">
+      <div className="sticky top-0 z-30 border-b border-zinc-800 bg-zinc-900 p-3">
+        <div
+          role="tablist"
+          aria-label="Generation type"
+          className="grid grid-cols-3 gap-1 rounded-lg bg-zinc-950 p-1"
+        >
+          {(
+            [
+              ["image", "Image", Image],
+              ["video", "Video", Video],
+              ["music", "Music", Music],
+            ] as const
+          ).map(([value, label, Icon]) => (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={mode === value}
+              onClick={() => onModeChange(value)}
+              className={`flex items-center justify-center gap-1.5 rounded-md px-2 py-2 text-xs font-medium transition-colors ${
+                mode === value
+                  ? "bg-zinc-800 text-white shadow-sm"
+                  : "text-zinc-500 hover:bg-zinc-800/60 hover:text-zinc-200"
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="border-b border-zinc-800/60 px-4 py-3 text-xs text-zinc-400">
+        <div className="mb-2 text-[10px] font-medium uppercase tracking-wider text-zinc-500">
+          Model
+        </div>
+        <div>
+          {mode === "image" ? (
+            <ImageModeControls
+              settings={settings}
+              onSettingsChange={onSettingsChange}
+              imageProfiles={imageProfiles}
+              section="model"
+              menuPlacement="bottom"
+              modelDownload={modelDownload}
+            />
+          ) : mode === "music" ? (
+            <MusicModeControls
+              settings={musicSettings}
+              onChange={onMusicSettingsChange}
+              profiles={musicProfiles}
+              section="model"
+              menuPlacement="bottom"
+              modelDownload={modelDownload}
+            />
+          ) : selectedVideoProfile ? (
+            <SettingsDropdown
+              title="VIDEO MODEL"
+              value={selectedVideoProfile.id}
+              onChange={(v) =>
+                onSettingsChange({ ...settings, videoProfileId: v })
+              }
+              options={videoModelOptions}
+              placement="bottom"
+              variant="model"
+              trigger={
+                <ModelDropdownTrigger
+                  profile={selectedVideoProfile}
+                  modelDownload={modelDownload}
+                  icon={<LightricksIcon className="h-5 w-5" />}
+                />
+              }
+            />
+          ) : (
+            <div className="flex items-center gap-1.5 rounded-md bg-zinc-800/50 px-2 py-1.5 text-zinc-500">
+              <AlertCircle className="h-3.5 w-3.5" />
+              <span>Loading models…</span>
+            </div>
+          )}
+        </div>
+      </div>
+      {mode === "video" && (
+        <div className="border-b border-zinc-800/60 px-4 py-3 text-xs text-zinc-400">
+          <div className="mb-2 text-[10px] font-medium uppercase tracking-wider text-zinc-500">
+            Mode
+          </div>
+          <div>
+            <div
+              role="tablist"
+              aria-label="Video mode"
+              className="grid grid-cols-3 gap-1 rounded-lg bg-zinc-950 p-1"
+            >
+              {(
+                [
+                  ["generate", "Generate", Sparkles, false],
+                  ["reframe", "Reframe", Expand, false],
+                  ["retake", "Retake", Scissors, !RETAKE_AVAILABLE],
+                ] as const
+              ).map(([value, label, Icon, disabled]) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="tab"
+                  aria-selected={videoMode === value}
+                  disabled={disabled}
+                  title={
+                    disabled ? "Retake is not yet compatible with WanGP" : label
+                  }
+                  onClick={() => onVideoModeChange(value)}
+                  className={`flex items-center justify-center gap-1 rounded-md px-1.5 py-2 text-[11px] font-medium transition-colors ${
+                    videoMode === value
+                      ? "bg-zinc-800 text-white shadow-sm"
+                      : disabled
+                        ? "cursor-not-allowed text-zinc-700"
+                        : "text-zinc-500 hover:bg-zinc-800/60 hover:text-zinc-200"
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
       {supportsInputStrip && (
         <div className="border-b border-zinc-800/60">
-          <button
-            type="button"
-            onClick={() => setMediaInputsExpanded((expanded) => !expanded)}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-zinc-400 transition-colors hover:bg-zinc-800/40 hover:text-zinc-200"
-            aria-expanded={mediaInputsExpanded}
-          >
-            {mediaInputsExpanded ? (
-              <ChevronUp className="h-3.5 w-3.5 flex-shrink-0" />
-            ) : (
-              <ChevronDown className="h-3.5 w-3.5 flex-shrink-0" />
-            )}
-            <span className="font-medium text-zinc-300">Media inputs</span>
+          <div className="flex w-full items-center gap-2 px-4 pt-3 text-left text-xs text-zinc-400">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">
+              Media inputs
+            </span>
             {attachedMediaCount > 0 ? (
               <span className="rounded-full bg-zinc-700 px-1.5 py-0.5 text-[10px] text-zinc-300">
                 {attachedMediaCount}
               </span>
-            ) : (
-              <span className="text-[10px] text-zinc-500">Optional</span>
-            )}
-          </button>
-          {mediaInputsExpanded && (
-            <div className="px-2 pt-1 pb-2">
-              {guideItemForTrim &&
-              editingGuideTrimId === guideItemForTrim.id ? (
-                <MediaInputTrimEditor
-                  item={guideItemForTrim}
-                  onChange={(patch) =>
-                    updateGuideTrim(guideItemForTrim.id, patch)
-                  }
-                  onConfirm={() => setEditingGuideTrimId(null)}
-                />
-              ) : null}
-              <div className="relative flex items-center gap-2 overflow-visible">
-                {mode === "image" ? (
-                  <>
-                    {imageInputs.map((item) => {
-                      const role = imageInputPolicy?.roles.find(
-                        (candidate) => candidate.role === item.role,
-                      );
-                      const isActive = activeImageInputId === item.id;
-                      return (
-                        <div key={item.id} className="relative">
-                          {isActive && imageInputPolicy && (
-                            <div
-                              data-media-menu
-                              className="absolute bottom-full left-0 mb-2 w-56 rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl z-[10000]"
-                            >
-                              <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">
-                                Image input
-                              </div>
-                              <div className="space-y-1">
-                                {imageInputPolicy.roles.map((option) => (
-                                  <button
-                                    key={option.role}
-                                    onClick={() =>
-                                      updateImageInputRole(item.id, option.role)
-                                    }
-                                    className={`w-full flex items-center gap-2 px-2 py-2 rounded-md text-left transition-colors ${
-                                      item.role === option.role
-                                        ? "bg-white/20 text-white"
-                                        : "text-zinc-400 hover:bg-zinc-700"
-                                    }`}
-                                    title={option.description}
-                                  >
-                                    <Image className="h-3.5 w-3.5 flex-shrink-0" />
-                                    <span className="text-xs">
-                                      {option.label}
-                                    </span>
-                                  </button>
-                                ))}
-                                <div className="h-px bg-zinc-700 my-1" />
-                                <button
-                                  onPointerDown={(event) => {
-                                    event.preventDefault();
-                                    event.stopPropagation();
-                                    removeImageInput(item.id);
-                                  }}
-                                  onMouseDown={(event) => {
-                                    event.preventDefault();
-                                    event.stopPropagation();
-                                    removeImageInput(item.id);
-                                  }}
-                                  onClick={(event) => {
-                                    if (event.detail === 0) {
-                                      removeImageInput(item.id);
-                                    }
-                                  }}
-                                  className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-left text-red-300 hover:bg-red-500/15 transition-colors"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5 flex-shrink-0" />
-                                  <span className="text-xs">Remove</span>
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setActiveImageInputId(isActive ? null : item.id)
-                            }
-                            className="group relative h-14 w-14 overflow-hidden rounded-lg border border-zinc-700 bg-zinc-800 flex items-center justify-center flex-shrink-0"
-                            title={
-                              role?.label || imageInputPolicy?.tooltipLabel
-                            }
+            ) : null}
+          </div>
+          <div className="px-4 pb-3 pt-2">
+            {guideItemForTrim && editingGuideTrimId === guideItemForTrim.id ? (
+              <MediaInputTrimEditor
+                item={guideItemForTrim}
+                onChange={(patch) =>
+                  updateGuideTrim(guideItemForTrim.id, patch)
+                }
+                onConfirm={() => setEditingGuideTrimId(null)}
+              />
+            ) : null}
+            <div className="relative flex items-center gap-2 overflow-visible">
+              {mode === "image" ? (
+                <>
+                  {imageInputs.map((item) => {
+                    const role = imageInputPolicy?.roles.find(
+                      (candidate) => candidate.role === item.role,
+                    );
+                    const isActive = activeImageInputId === item.id;
+                    return (
+                      <div key={item.id} className="relative">
+                        {isActive && imageInputPolicy && (
+                          <div
+                            data-media-menu
+                            className="absolute bottom-full left-0 mb-2 w-56 rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl z-[10000]"
                           >
-                            <img
-                              src={item.url}
-                              alt=""
-                              className="h-full w-full object-cover"
-                            />
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
-                              <Pencil className="h-4 w-4 text-white" />
+                            <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">
+                              Image input
                             </div>
-                          </button>
-                        </div>
-                      );
-                    })}
-                    {canAddImageInput && (
-                      <div
-                        className={`relative h-14 w-14 rounded-lg border-2 border-dashed transition-colors flex items-center justify-center flex-shrink-0 cursor-pointer ${
-                          isDragOver
-                            ? "border-blue-500 bg-blue-500/10"
-                            : "border-zinc-700 hover:border-zinc-500"
-                        }`}
-                        onDragOver={(e) => {
-                          e.preventDefault();
-                          setIsDragOver(true);
-                        }}
-                        onDragLeave={() => setIsDragOver(false)}
-                        onDrop={handleDrop}
-                        onClick={() => inputRef.current?.click()}
-                        title={imageInputPolicy?.tooltipLabel}
-                      >
-                        <Image className="h-4 w-4 text-zinc-500" />
+                            <div className="space-y-1">
+                              {imageInputPolicy.roles.map((option) => (
+                                <button
+                                  key={option.role}
+                                  onClick={() =>
+                                    updateImageInputRole(item.id, option.role)
+                                  }
+                                  className={`w-full flex items-center gap-2 px-2 py-2 rounded-md text-left transition-colors ${
+                                    item.role === option.role
+                                      ? "bg-white/20 text-white"
+                                      : "text-zinc-400 hover:bg-zinc-700"
+                                  }`}
+                                  title={option.description}
+                                >
+                                  <Image className="h-3.5 w-3.5 flex-shrink-0" />
+                                  <span className="text-xs">
+                                    {option.label}
+                                  </span>
+                                </button>
+                              ))}
+                              <div className="h-px bg-zinc-700 my-1" />
+                              <button
+                                onPointerDown={(event) => {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  removeImageInput(item.id);
+                                }}
+                                onMouseDown={(event) => {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  removeImageInput(item.id);
+                                }}
+                                onClick={(event) => {
+                                  if (event.detail === 0) {
+                                    removeImageInput(item.id);
+                                  }
+                                }}
+                                className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-left text-red-300 hover:bg-red-500/15 transition-colors"
+                              >
+                                <Trash2 className="h-3.5 w-3.5 flex-shrink-0" />
+                                <span className="text-xs">Remove</span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setActiveImageInputId(isActive ? null : item.id)
+                          }
+                          className="group relative h-14 w-14 overflow-hidden rounded-lg border border-zinc-700 bg-zinc-800 flex items-center justify-center flex-shrink-0"
+                          title={role?.label || imageInputPolicy?.tooltipLabel}
+                        >
+                          <img
+                            src={item.url}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                            <Pencil className="h-4 w-4 text-white" />
+                          </div>
+                        </button>
                       </div>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    {renderVideoSlot(
-                      "start_image",
-                      "Image 1 (Start)",
+                    );
+                  })}
+                  {canAddImageInput && (
+                    <div
+                      className={`relative h-14 w-14 rounded-lg border-2 border-dashed transition-colors flex items-center justify-center flex-shrink-0 cursor-pointer ${
+                        isDragOver
+                          ? "border-blue-500 bg-blue-500/10"
+                          : "border-zinc-700 hover:border-zinc-500"
+                      }`}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setIsDragOver(true);
+                      }}
+                      onDragLeave={() => setIsDragOver(false)}
+                      onDrop={handleDrop}
+                      onClick={() => inputRef.current?.click()}
+                      title={imageInputPolicy?.tooltipLabel}
+                    >
+                      <Image className="h-4 w-4 text-zinc-500" />
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  {renderVideoSlot(
+                    "start_image",
+                    "Image 1 (Start)",
+                    "image",
+                    inputRef,
+                  )}
+                  {imageInputs.some((x) => x.role === "start_image") &&
+                    renderVideoSlot(
+                      "end_image",
+                      "Image 2 (End)",
                       "image",
                       inputRef,
                     )}
-                    {imageInputs.some((x) => x.role === "start_image") &&
-                      renderVideoSlot(
-                        "end_image",
-                        "Image 2 (End)",
-                        "image",
-                        inputRef,
-                      )}
-                    {renderCombinedGuideSlot()}
-                  </>
-                )}
-              </div>
+                  {renderCombinedGuideSlot()}
+                </>
+              )}
             </div>
-          )}
+          </div>
           <input
             ref={inputRef}
             type="file"
@@ -1690,276 +1789,179 @@ function PromptBar({
         </div>
       ) : null}
 
-      {/* Top row: media inputs | Prompt */}
-      <div className="flex items-start">
-        {/* Input image drop zone — video mode only (I2V) */}
-        {mode === "video" &&
-          !isPanelMode &&
-          !selectedVideoProfile?.inputMedia?.supportsImageInputs && (
-            <div
-              className={`relative w-10 h-10 mx-2 mt-2 rounded-lg border-2 border-dashed transition-colors flex items-center justify-center flex-shrink-0 cursor-pointer ${
-                isDragOver
-                  ? "border-blue-500 bg-blue-500/10"
-                  : "border-zinc-700 hover:border-zinc-500"
-              }`}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setIsDragOver(true);
-              }}
-              onDragLeave={() => setIsDragOver(false)}
-              onDrop={handleDrop}
-              onClick={() => inputRef.current?.click()}
-              title="Attach image for I2V"
-            >
-              {inputImage ? (
-                <>
-                  <img
-                    src={inputImage}
-                    alt=""
-                    className="w-full h-full object-cover rounded-md"
-                  />
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onInputImageChange(null);
-                      resetImageFileInput();
-                    }}
-                    className="absolute -top-1 -right-1 p-0.5 rounded-full bg-zinc-800 text-zinc-400 hover:text-white z-10"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </>
-              ) : (
-                <Image className="h-4 w-4 text-zinc-500" />
-              )}
-              <input
-                ref={inputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
-            </div>
-          )}
-
-        {/* Audio drop zone — only in video mode */}
-        {mode === "video" &&
-          !isPanelMode &&
-          !selectedVideoProfile?.inputMedia?.supportsImageInputs && (
-            <div
-              className={`relative w-10 h-10 mt-2 rounded-lg border-2 border-dashed transition-colors flex items-center justify-center flex-shrink-0 cursor-pointer ${
-                isAudioDragOver
-                  ? "border-emerald-500 bg-emerald-500/10"
-                  : inputAudio
-                    ? "border-emerald-600"
+      <div className="border-b border-zinc-800/60 px-4 py-3">
+        <div className="mb-2 text-[10px] font-medium uppercase tracking-wider text-zinc-500">
+          Prompt
+        </div>
+        <div className="flex items-start rounded-lg border border-zinc-800 bg-zinc-950/35">
+          {/* Input image drop zone — video mode only (I2V) */}
+          {mode === "video" &&
+            !isPanelMode &&
+            !selectedVideoProfile?.inputMedia?.supportsImageInputs && (
+              <div
+                className={`relative w-10 h-10 mx-2 mt-2 rounded-lg border-2 border-dashed transition-colors flex items-center justify-center flex-shrink-0 cursor-pointer ${
+                  isDragOver
+                    ? "border-blue-500 bg-blue-500/10"
                     : "border-zinc-700 hover:border-zinc-500"
-              }`}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setIsAudioDragOver(true);
-              }}
-              onDragLeave={() => setIsAudioDragOver(false)}
-              onDrop={handleAudioDrop}
-              onClick={() => audioInputRef.current?.click()}
-              title={
-                inputAudio
-                  ? "Audio attached — click to change"
-                  : "Attach audio for A2V"
-              }
-            >
-              {inputAudio ? (
-                <>
-                  <Music className="h-4 w-4 text-emerald-400" />
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onInputAudioChange(null);
-                    }}
-                    className="absolute -top-1 -right-1 p-0.5 rounded-full bg-zinc-800 text-zinc-400 hover:text-white z-10"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </>
-              ) : (
-                <Music className="h-4 w-4 text-zinc-500" />
-              )}
-              <input
-                ref={audioInputRef}
-                type="file"
-                accept=".mp3,.wav,.ogg,.aac,.flac,.m4a"
-                onChange={handleAudioFileSelect}
-                className="hidden"
-              />
-            </div>
-          )}
-
-        {/* Prompt input - fills remaining width */}
-        <div className="flex flex-1 min-w-0 flex-col py-1">
-          <textarea
-            value={prompt}
-            onChange={(e) => onPromptChange(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={
-              isReframe
-                ? "optional text prompt to drive outpainting..."
-                : isRetake
-                  ? "Describe what should happen in the selected section..."
-                  : mode === "image"
-                    ? "A close-up of a woman talking on the phone..."
-                    : mode === "music"
-                      ? "Warm cinematic ambient music with soft piano and strings..."
-                      : "The woman sips from a cup of coffee..."
-            }
-            className="w-full bg-transparent text-white text-sm placeholder:text-zinc-500 focus:outline-none px-2 py-2 resize-none overflow-y-auto h-[70px] leading-5"
-          />
-          {mode === "music" && (
-            <MusicLyricsInput
-              settings={musicSettings}
-              onChange={onMusicSettingsChange}
-            />
-          )}
-          {!isPanelMode && (
-            <div className="flex items-center justify-end gap-2 px-2 pb-0.5 pt-1">
-              <div className="flex items-center gap-2">
-                <SeedControl
-                  seedLocked={seedLocked}
-                  lockedSeed={lockedSeed}
-                  onChange={onSeedChange}
-                  disabled={isGenerating}
+                }`}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDragOver(true);
+                }}
+                onDragLeave={() => setIsDragOver(false)}
+                onDrop={handleDrop}
+                onClick={() => inputRef.current?.click()}
+                title="Attach image for I2V"
+              >
+                {inputImage ? (
+                  <>
+                    <img
+                      src={inputImage}
+                      alt=""
+                      className="w-full h-full object-cover rounded-md"
+                    />
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onInputImageChange(null);
+                        resetImageFileInput();
+                      }}
+                      className="absolute -top-1 -right-1 p-0.5 rounded-full bg-zinc-800 text-zinc-400 hover:text-white z-10"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </>
+                ) : (
+                  <Image className="h-4 w-4 text-zinc-500" />
+                )}
+                <input
+                  ref={inputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                  className="hidden"
                 />
-                {mode !== "music" && <button
-                  type="button"
-                  onClick={onEnhancePrompt}
-                  disabled={isGenerating || isEnhancingPrompt || !prompt.trim()}
-                  className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-zinc-400 transition-colors"
-                  title="Enhance prompt"
-                >
-                  {isEnhancingPrompt ? (
-                    <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Sparkles className="h-3.5 w-3.5" />
-                  )}
-                  Enhance
-                </button>}
               </div>
-            </div>
-          )}
+            )}
+
+          {/* Audio drop zone — only in video mode */}
+          {mode === "video" &&
+            !isPanelMode &&
+            !selectedVideoProfile?.inputMedia?.supportsImageInputs && (
+              <div
+                className={`relative w-10 h-10 mt-2 rounded-lg border-2 border-dashed transition-colors flex items-center justify-center flex-shrink-0 cursor-pointer ${
+                  isAudioDragOver
+                    ? "border-emerald-500 bg-emerald-500/10"
+                    : inputAudio
+                      ? "border-emerald-600"
+                      : "border-zinc-700 hover:border-zinc-500"
+                }`}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsAudioDragOver(true);
+                }}
+                onDragLeave={() => setIsAudioDragOver(false)}
+                onDrop={handleAudioDrop}
+                onClick={() => audioInputRef.current?.click()}
+                title={
+                  inputAudio
+                    ? "Audio attached — click to change"
+                    : "Attach audio for A2V"
+                }
+              >
+                {inputAudio ? (
+                  <>
+                    <Music className="h-4 w-4 text-emerald-400" />
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onInputAudioChange(null);
+                      }}
+                      className="absolute -top-1 -right-1 p-0.5 rounded-full bg-zinc-800 text-zinc-400 hover:text-white z-10"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </>
+                ) : (
+                  <Music className="h-4 w-4 text-zinc-500" />
+                )}
+                <input
+                  ref={audioInputRef}
+                  type="file"
+                  accept=".mp3,.wav,.ogg,.aac,.flac,.m4a"
+                  onChange={handleAudioFileSelect}
+                  className="hidden"
+                />
+              </div>
+            )}
+
+          {/* Prompt input - fills remaining width */}
+          <div className="flex flex-1 min-w-0 flex-col py-1">
+            <textarea
+              value={prompt}
+              onChange={(e) => onPromptChange(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={
+                isReframe
+                  ? "optional text prompt to drive outpainting..."
+                  : isRetake
+                    ? "Describe what should happen in the selected section..."
+                    : mode === "image"
+                      ? "A close-up of a woman talking on the phone..."
+                      : mode === "music"
+                        ? "Warm cinematic ambient music with soft piano and strings..."
+                        : "The woman sips from a cup of coffee..."
+              }
+              className="h-36 w-full resize-none overflow-y-auto bg-transparent px-3 py-3 text-sm leading-5 text-white placeholder:text-zinc-500 focus:outline-none"
+            />
+            {mode === "music" && (
+              <MusicLyricsInput
+                settings={musicSettings}
+                onChange={onMusicSettingsChange}
+              />
+            )}
+            {!isPanelMode && (
+              <div className="flex items-center justify-end gap-2 px-2 pb-0.5 pt-1">
+                <div className="flex items-center gap-2">
+                  <SeedControl
+                    seedLocked={seedLocked}
+                    lockedSeed={lockedSeed}
+                    onChange={onSeedChange}
+                    disabled={isGenerating}
+                  />
+                  {mode !== "music" && (
+                    <button
+                      type="button"
+                      onClick={onEnhancePrompt}
+                      disabled={
+                        isGenerating || isEnhancingPrompt || !prompt.trim()
+                      }
+                      className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-zinc-400 transition-colors"
+                      title="Enhance prompt"
+                    >
+                      {isEnhancingPrompt ? (
+                        <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-3.5 w-3.5" />
+                      )}
+                      Enhance
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Bottom row: Mode selector + Settings */}
-      <div className="flex items-center gap-0.5 px-1.5 py-1.5 border-t border-zinc-800/60 text-xs text-zinc-400">
-        {/* Mode dropdown */}
-        <SettingsDropdown
-          title="MODE"
-          value={mode}
-          onChange={(v) => onModeChange(v as GenSpaceMode)}
-          options={[
-            {
-              value: "image",
-              label: "Image",
-              icon: <Image className="h-4 w-4" />,
-            },
-            {
-              value: "video",
-              label: "Video",
-              icon: <Video className="h-4 w-4" />,
-            },
-            {
-              value: "music",
-              label: "Music",
-              icon: <Music className="h-4 w-4" />,
-            },
-          ]}
-          trigger={
-            <>
-              {mode === "image" ? (
-                <Image className="h-3.5 w-3.5" />
-              ) : mode === "music" ? (
-                <Music className="h-3.5 w-3.5" />
-              ) : (
-                <Video className="h-3.5 w-3.5" />
-              )}
-              <span className="text-zinc-300 font-medium">
-                {mode === "image" ? "Image" : mode === "music" ? "Music" : "Video"}
-              </span>
-              <ChevronUp className="h-3 w-3 text-zinc-500" />
-            </>
-          }
-        />
-
-        {mode === "video" && (
-          <SettingsDropdown
-            title="VIDEO"
-            value={videoMode}
-            onChange={(v) => onVideoModeChange(v as VideoProcessMode)}
-            options={[
-              {
-                value: "generate",
-                label: "Generate",
-                icon: <Sparkles className="h-4 w-4" />,
-              },
-              {
-                value: "reframe",
-                label: "Reframe",
-                icon: <Expand className="h-4 w-4" />,
-              },
-              {
-                value: "retake",
-                label: "Retake (soon)",
-                icon: <Scissors className="h-4 w-4" />,
-                disabled: !RETAKE_AVAILABLE,
-                tooltip: "Retake is not yet compatible with WanGP",
-              },
-            ]}
-            trigger={
-              <>
-                {videoMode === "retake" ? (
-                  <Scissors className="h-3.5 w-3.5" />
-                ) : videoMode === "reframe" ? (
-                  <Expand className="h-3.5 w-3.5" />
-                ) : (
-                  <Sparkles className="h-3.5 w-3.5" />
-                )}
-                <span className="text-zinc-300 font-medium">
-                  {videoMode === "retake"
-                    ? "Retake"
-                    : videoMode === "reframe"
-                      ? "Reframe"
-                      : "Generate"}
-                </span>
-                <ChevronUp className="h-3 w-3 text-zinc-500" />
-              </>
-            }
-          />
-        )}
-
-        <div className="flex-1" />
-
+      {/* Output settings and generate action */}
+      <div className="flex flex-wrap items-center gap-1.5 border-t border-zinc-800/60 px-4 py-3 text-xs text-zinc-400">
         {isRetake ? (
           <div className="text-[10px] text-zinc-500 pr-2">
             Trim in the panel above, then retake
           </div>
         ) : isReframe ? (
           <div className="flex items-center gap-2">
-            {selectedVideoProfile ? (
-              <SettingsDropdown
-                title="MODEL"
-                value={selectedVideoProfile.id}
-                onChange={(v) =>
-                  onSettingsChange({ ...settings, videoProfileId: v })
-                }
-                options={videoModelOptions}
-                trigger={
-                  <>
-                    <LightricksIcon className="h-3.5 w-3.5" />
-                    <span className="text-zinc-300 font-medium">
-                      {selectedVideoProfile.displayName}
-                    </span>
-                  </>
-                }
-              />
-            ) : null}
             <SettingsDropdown
               title="RESOLUTION"
               value={settings.videoResolution}
@@ -1987,46 +1989,17 @@ function PromptBar({
             settings={settings}
             onSettingsChange={onSettingsChange}
             imageProfiles={imageProfiles}
+            section="output"
           />
         ) : mode === "music" ? (
           <MusicModeControls
             settings={musicSettings}
             onChange={onMusicSettingsChange}
             profiles={musicProfiles}
+            section="options"
           />
         ) : (
           <>
-            {selectedVideoProfile ? (
-              <SettingsDropdown
-                title="MODEL"
-                value={selectedVideoProfile.id}
-                onChange={(v) =>
-                  onSettingsChange({ ...settings, videoProfileId: v })
-                }
-                options={videoModelOptions}
-                trigger={
-                  <>
-                    <LightricksIcon className="h-3.5 w-3.5" />
-                    <span className="text-zinc-300 font-medium">
-                      {selectedVideoProfile.displayName}
-                    </span>
-                    {selectedVideoIsExperimental && (
-                      <span className="text-[9px] uppercase tracking-wider text-amber-500">
-                        exp
-                      </span>
-                    )}
-                  </>
-                }
-              />
-            ) : (
-              <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-zinc-800/50 text-zinc-500 text-xs">
-                <AlertCircle className="h-3.5 w-3.5" />
-                <span>Loading models…</span>
-              </div>
-            )}
-
-            <div className="w-px h-4 bg-zinc-700 mx-0.5" />
-
             {durationFollowsGuideTrim ? (
               <button
                 type="button"
@@ -2122,7 +2095,7 @@ function PromptBar({
         <button
           onClick={onGenerate}
           disabled={isGenerating || !canGenerate}
-          className={`flex items-center gap-1.5 ml-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all flex-shrink-0 ${
+          className={`mt-2 flex w-full flex-shrink-0 items-center justify-center gap-1.5 rounded-md px-3 py-2.5 text-xs font-medium transition-all ${
             isGenerating || !canGenerate
               ? "bg-zinc-700 text-zinc-500 cursor-not-allowed"
               : "bg-white text-black hover:bg-zinc-200"
@@ -2137,8 +2110,6 @@ function PromptBar({
     </div>
   );
 }
-
-const GALLERY_BOTTOM_FADE_HEIGHT_PX = 160;
 
 const DEFAULT_VIDEO_SETTINGS = {
   model: "fast",
@@ -2224,7 +2195,6 @@ export function GenSpace() {
   const [isGalleryDragOver, setIsGalleryDragOver] = useState(false);
   const [isGalleryImporting, setIsGalleryImporting] = useState(false);
   const [galleryToast, setGalleryToast] = useState<string | null>(null);
-  const [mediaInputsExpandKey, setMediaInputsExpandKey] = useState(0);
   const [inputRestoreVersion, setInputRestoreVersion] = useState(0);
   const [duplicateFilenameChoice, setDuplicateFilenameChoice] = useState<{
     fileName: string;
@@ -2298,8 +2268,9 @@ export function GenSpace() {
 
   useEffect(() => {
     const profile =
-      musicProfiles.find((candidate) => candidate.id === musicSettings.profileId) ??
-      musicProfiles[0];
+      musicProfiles.find(
+        (candidate) => candidate.id === musicSettings.profileId,
+      ) ?? musicProfiles[0];
     if (!profile) return;
     setMusicSettings((current) => {
       const policy = profile.music;
@@ -2319,7 +2290,9 @@ export function GenSpace() {
         ),
         variations: Math.min(policy.maxVariations, current.variations),
         bpm: policy.supportsBpm ? current.bpm : null,
-        timeSignature: policy.supportsTimeSignature ? current.timeSignature : null,
+        timeSignature: policy.supportsTimeSignature
+          ? current.timeSignature
+          : null,
         keyScale: policy.supportsKeyScale ? current.keyScale : null,
       };
     });
@@ -2809,10 +2782,17 @@ export function GenSpace() {
     if (!musicResult || isGenerating) return;
     const submission = musicSubmissionRef.current;
     if (!submission) return;
-    const generationKey = musicResult.outputs.map((output) => output.path).join("|");
-    if (!generationKey || persistedMusicKeyRef.current === generationKey) return;
+    const generationKey = musicResult.outputs
+      .map((output) => output.path)
+      .join("|");
+    if (!generationKey || persistedMusicKeyRef.current === generationKey)
+      return;
     persistedMusicKeyRef.current = generationKey;
-    const { projectId, prompt: submittedPrompt, settings: submittedSettings } = submission;
+    const {
+      projectId,
+      prompt: submittedPrompt,
+      settings: submittedSettings,
+    } = submission;
 
     void (async () => {
       try {
@@ -2877,12 +2857,7 @@ export function GenSpace() {
         logger.error(`Failed to persist generated music asset: ${err}`);
       }
     })();
-  }, [
-    musicResult,
-    isGenerating,
-    addAsset,
-    reset,
-  ]);
+  }, [musicResult, isGenerating, addAsset, reset]);
 
   const handleGenerate = async () => {
     if (mode === "video" && videoMode === "reframe") {
@@ -3344,12 +3319,20 @@ export function GenSpace() {
       setImageInputs([]);
       setInputImage(null);
       setInputAudio(null);
-      setMode(nextMode === "image" ? "image" : nextMode === "music" ? "music" : "video");
+      setMode(
+        nextMode === "image"
+          ? "image"
+          : nextMode === "music"
+            ? "music"
+            : "video",
+      );
       setVideoMode(nextMode === "reframe" ? "reframe" : "generate");
       setPrompt(params.prompt);
       setSettings((prev) => settingsPatchFromGenerationParams(params, prev));
       if (nextMode === "music") {
-        setMusicSettings((prev) => musicSettingsFromGenerationParams(params, prev));
+        setMusicSettings((prev) =>
+          musicSettingsFromGenerationParams(params, prev),
+        );
       }
       setInputRestoreVersion((version) => version + 1);
 
@@ -3387,7 +3370,6 @@ export function GenSpace() {
     setImageInputs(pending.imageInputs);
     setInputImage(pending.inputImage);
     setInputAudio(pending.inputAudio);
-    setMediaInputsExpandKey((key) => key + 1);
   }, [
     inputRestoreVersion,
     mode,
@@ -3587,7 +3569,9 @@ export function GenSpace() {
   const canGoNext =
     selectedIndex >= 0 && selectedIndex < filteredAssets.length - 1;
   const transferActive =
-    modelDownload !== null || progressUnit === "bytes" || progressUnit === "files";
+    modelDownload !== null ||
+    progressUnit === "bytes" ||
+    progressUnit === "files";
   const modelLifecycleActive =
     phase === "checking_model_files" || phase === "loading_model";
   const generationBadges = [
@@ -3640,7 +3624,7 @@ export function GenSpace() {
         </div>
       )}
       {!isPanelMode && isGalleryDragOver && (
-        <div className="pointer-events-none absolute inset-4 z-20 flex items-center justify-center rounded-xl border-2 border-dashed border-violet-400/70 bg-violet-500/10">
+        <div className="pointer-events-none absolute bottom-4 right-4 top-4 left-[376px] z-20 flex items-center justify-center rounded-xl border-2 border-dashed border-violet-400/70 bg-violet-500/10">
           <p className="text-sm font-medium text-violet-200">
             Drop image, video, or audio files to add to gallery
           </p>
@@ -3648,7 +3632,7 @@ export function GenSpace() {
       )}
       {/* Empty state */}
       {assets.length === 0 && !isGenerating && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+        <div className="pointer-events-none absolute inset-y-0 right-0 left-[480px] flex flex-col items-center justify-center text-center">
           <div className="w-24 h-24 rounded-2xl border-2 border-dashed border-zinc-700 flex items-center justify-center mb-4">
             <Sparkles className="h-10 w-10 text-zinc-600" />
           </div>
@@ -3656,7 +3640,7 @@ export function GenSpace() {
             Start Creating
           </h3>
           <p className="text-zinc-500 max-w-md">
-            Use the prompt bar below to generate images and videos, or drop
+            Use the sidebar to generate images, videos, and music, or drop
             image, video, and audio files here to add them to your gallery.
           </p>
         </div>
@@ -3664,7 +3648,7 @@ export function GenSpace() {
 
       {/* No favorites empty state */}
       {showFavorites && filteredAssets.length === 0 && assets.length > 0 && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+        <div className="pointer-events-none absolute inset-y-0 right-0 left-[480px] flex flex-col items-center justify-center text-center">
           <Heart className="h-12 w-12 text-zinc-700 mb-4" />
           <h3 className="text-lg font-semibold text-white mb-2">
             No favorites yet
@@ -3681,7 +3665,7 @@ export function GenSpace() {
         filteredAssets.length === 0 &&
         assets.length > 0 &&
         !isGenerating && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+          <div className="pointer-events-none absolute inset-y-0 right-0 left-[480px] flex flex-col items-center justify-center text-center">
             <Folder className="h-12 w-12 text-zinc-700 mb-4" />
             <h3 className="text-lg font-semibold text-white mb-2">
               No assets in &ldquo;{selectedBin}&rdquo;
@@ -3698,7 +3682,7 @@ export function GenSpace() {
         filteredAssets.length === 0 &&
         assets.length > 0 &&
         !isGenerating && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+          <div className="pointer-events-none absolute inset-y-0 right-0 left-[480px] flex flex-col items-center justify-center text-center">
             <ListFilter className="h-12 w-12 text-zinc-700 mb-4" />
             <h3 className="text-lg font-semibold text-white mb-2">
               No matching assets
@@ -3711,7 +3695,7 @@ export function GenSpace() {
 
       {(assets.length > 0 || isGenerating) && (
         <GalleryAssetLibrary
-          className="absolute inset-x-0 top-0 bottom-0 px-4 pt-4"
+          className="absolute bottom-0 right-0 top-0 left-[480px] px-4 pt-4"
           assets={assets}
           visibleAssets={filteredAssets}
           bins={galleryBins}
@@ -3844,8 +3828,8 @@ export function GenSpace() {
                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/35 px-4">
                     {modelDownload === null &&
                       (!previewUrl || modelLifecycleActive) && (
-                      <LoaderCircle className="mb-3 h-8 w-8 animate-spin text-violet-400" />
-                    )}
+                        <LoaderCircle className="mb-3 h-8 w-8 animate-spin text-violet-400" />
+                      )}
                     {modelDownload ? (
                       <DownloadProgressView
                         className="w-full max-w-72 rounded-lg bg-black/55 p-2"
@@ -3900,19 +3884,9 @@ export function GenSpace() {
               )}
             </>
           }
-          scrollStyle={{ paddingBottom: GALLERY_BOTTOM_FADE_HEIGHT_PX }}
-          footerOverlay={
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black to-transparent"
-              style={{ height: GALLERY_BOTTOM_FADE_HEIGHT_PX }}
-            />
-          }
         />
       )}
-      {/* Floating prompt panel — wider, responsive, centered */}
-      <div className="absolute bottom-5 left-1/2 z-20 w-[min(700px,calc(100%-2rem))] -translate-x-1/2">
-        {/* Prompt bar */}
+      <aside className="absolute inset-y-0 left-0 z-20 w-[480px]">
         <PromptBar
           mode={mode}
           onModeChange={handleModeChange}
@@ -3941,16 +3915,16 @@ export function GenSpace() {
           imageProfiles={imageProfiles}
           videoProfiles={videoProfiles}
           musicProfiles={musicProfiles}
+          modelDownload={modelDownload}
           musicSettings={musicSettings}
           onMusicSettingsChange={setMusicSettings}
           useAudioTrack={useAudioTrack}
           onUseAudioTrackChange={setUseAudioTrack}
           syncInputFileToGallery={syncInputFileToGallery}
-          mediaInputsExpandKey={mediaInputsExpandKey}
           reframeDurationSeconds={reframeInput.duration}
           videoToolPanel={videoToolPanel}
         />
-      </div>
+      </aside>
 
       {/* Asset preview modal */}
       {selectedAsset && (

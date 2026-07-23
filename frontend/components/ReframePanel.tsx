@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Film,
   Play,
   Pause,
   Volume2,
@@ -149,11 +148,7 @@ export function ReframePanel({
     videoWidth > 0 &&
     videoHeight > 0 &&
     (() => {
-      const fitPadding = computeFitPadding(
-        videoWidth,
-        videoHeight,
-        aspectMode,
-      );
+      const fitPadding = computeFitPadding(videoWidth, videoHeight, aspectMode);
       return (
         (fitPadding.left >= 100 && fitPadding.right >= 100) ||
         (fitPadding.top >= 100 && fitPadding.bottom >= 100)
@@ -412,13 +407,9 @@ export function ReframePanel({
 
   return (
     <div
-      className={`bg-zinc-900 border border-zinc-800 rounded-t-lg overflow-hidden flex flex-col ${fillHeight ? "h-full min-h-0" : ""}`}
+      className={`bg-zinc-900 overflow-hidden flex flex-col ${fillHeight ? "h-full min-h-0" : ""}`}
     >
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 py-2 border-b border-zinc-800 flex-shrink-0">
-        <div className="flex min-w-0 items-center gap-2">
-          <Film className="h-4 w-4 text-violet-400" />
-          <span className="text-sm font-semibold text-white">Reframe</span>
-        </div>
+      <div>
         {videoUrl && (
           <div className="flex min-w-0 items-center justify-center gap-2">
             <div className="flex items-center gap-1 rounded-lg border border-zinc-700 bg-zinc-950/70 p-1">
@@ -449,7 +440,11 @@ export function ReframePanel({
 
             <div
               className={`flex w-[178px] items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-950/70 px-2.5 py-1.5 ${zoomDisabled ? "opacity-50" : ""}`}
-              title={zoomDisabled ? "Zoom has no effect for this aspect ratio" : undefined}
+              title={
+                zoomDisabled
+                  ? "Zoom has no effect for this aspect ratio"
+                  : undefined
+              }
             >
               <span className="text-[10px] font-medium text-zinc-400">
                 Zoom

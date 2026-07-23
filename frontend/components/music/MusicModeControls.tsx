@@ -1,6 +1,8 @@
 import { ChevronUp, Clock, Mic, Settings, Sparkles } from "lucide-react";
 import { SettingsDropdown } from "../SettingsDropdown";
+import { ModelDropdownTrigger } from "../ModelDropdownTrigger";
 import type { ModelProfile } from "../../types/model-profiles";
+import type { ModelDownloadProgress } from "../../types/progress";
 import type {
   MusicSettings,
   MusicTimeSignature,
@@ -21,10 +23,16 @@ export function MusicModeControls({
   settings,
   onChange,
   profiles,
+  section = "all",
+  menuPlacement = "top",
+  modelDownload,
 }: {
   settings: MusicSettings;
   onChange: (settings: MusicSettings) => void;
   profiles: ModelProfile[];
+  section?: "all" | "model" | "options";
+  menuPlacement?: "top" | "bottom";
+  modelDownload?: ModelDownloadProgress | null;
 }) {
   const profile = profiles.find((candidate) => candidate.id === settings.profileId) ?? profiles[0];
   const policy = profile?.music;
@@ -34,25 +42,35 @@ export function MusicModeControls({
 
   return (
     <div className="flex flex-wrap items-center justify-end gap-1.5">
-      <SettingsDropdown
-        title="MUSIC MODEL"
-        value={settings.profileId}
-        onChange={(profileId) => onChange({ ...settings, profileId })}
-        options={profiles.map((candidate) => ({
-          value: candidate.id,
-          label: candidate.displayName + (candidate.status === "experimental" ? " (experimental)" : ""),
-          disabled: candidate.availability === "missing_model_files" || candidate.availability === "unsupported",
-          tooltip: candidate.availability === "missing_model_files" ? "Required WanGP model files are not installed yet." : undefined,
-        }))}
-        trigger={
-          <>
-            <Sparkles className="h-3.5 w-3.5" />
-            <span className="font-medium text-zinc-300">{profile?.displayName ?? "Loading models…"}</span>
-            <ChevronUp className="h-3 w-3 text-zinc-500" />
-          </>
-        }
-      />
+      {section !== "options" && (
+        <SettingsDropdown
+          title="MUSIC MODEL"
+          value={settings.profileId}
+          onChange={(profileId) => onChange({ ...settings, profileId })}
+          options={profiles.map((candidate) => ({
+            value: candidate.id,
+            label: candidate.displayName + (candidate.status === "experimental" ? " (experimental)" : ""),
+            disabled: candidate.availability === "missing_model_files" || candidate.availability === "unsupported",
+            tooltip: candidate.availability === "missing_model_files" ? "Required WanGP model files are not installed yet." : undefined,
+          }))}
+          placement={menuPlacement}
+          variant="model"
+          trigger={
+            profile ? (
+              <ModelDropdownTrigger
+                profile={profile}
+                modelDownload={modelDownload}
+                icon={<Sparkles className="h-5 w-5" />}
+              />
+            ) : (
+              <span className="text-zinc-500">Loading models…</span>
+            )
+          }
+        />
+      )}
 
+      {section !== "model" && (
+        <>
       <SettingsDropdown
         title="VOCAL MODE"
         value={settings.vocalMode}
@@ -171,6 +189,8 @@ export function MusicModeControls({
           </label>
         </div>
       </details>
+        </>
+      )}
     </div>
   );
 }

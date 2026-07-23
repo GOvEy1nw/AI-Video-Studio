@@ -1,11 +1,28 @@
 # projectmem - AI-Video-Studio
 
-_Last updated: 2026-07-21_
+_Last updated: 2026-07-22_
 
 ## Project purpose
 AI Video Studio (AiVS) is a local-first desktop app for AI image, video, and future audio/TTS generation. It is forked from `deepbeepmeep/LTX-Desktop-WanGP` and is being reshaped into a Freepik/Higgsfield-style creative studio powered by WanGP / Wan2GP. The project is community-focused, not commercial.
 
 ## Recent issues
+- [DONE] #0074 Recomposed Settings into a wide left-navigation modal, merged Output controls into General, and redesigned Model Manager cards to show missing/selected/downloading/ready/failed states inline. TypeScript and diff checks passed. -> Settings now uses a wide full-height modal with persistent left navigation. Output controls are part of General, Model Manager has its own tab, and model cards show grey missing, blue selected, yellow inline progress with transfer details, green ready, and red retryable failure states. TypeScript, diff validation, and production Vite build pass. (fixed)
+- [DONE] #0073 TypeScript validation is blocked by an unused Film import in the user's current ReframePanel changes. [frontend/components/ReframePanel.tsx:3] -> Removed the obsolete Film import without changing the user's Reframe layout; TypeScript passes. [frontend/components/ReframePanel.tsx:2] (fixed)
+  - Failed attempt: Ran the full TypeScript check after the model selector update; it stopped on the pre-existing unused Film import in ReframePanel. [frontend/components/ReframePanel.tsx:3]
+- [DONE] #0072 New model trigger imports ReactNode from lucide-react instead of React. [frontend/components/ModelDropdownTrigger.tsx:1] -> ModelDropdownTrigger now imports ReactNode from React and type-checks. [frontend/components/ModelDropdownTrigger.tsx] (fixed)
+  - Partial attempt: Added the shared rich model trigger, then caught its ReactNode type imported from the icon package. [frontend/components/ModelDropdownTrigger.tsx]
+- [DONE] #0071 PowerShell stripped embedded rg quotes during final line-reference lookup, producing invalid regular expressions. [frontend/views/GenSpace.tsx] -> Final source line lookup now uses PowerShell-safe rg quoting. [frontend/views/GenSpace.tsx] (fixed)
+  - Failed attempt: Combined final status and quoted rg patterns in one PowerShell command; the line-reference regex quoting was malformed. [frontend/views/GenSpace.tsx]
+- [DONE] #0070 First full dev launch creates a hidden Electron BrowserWindow; ready-to-show never exposes a targetable AiVS window despite renderer/backend success. [electron/window.ts:40] -> Confirmed the Electron window and Gen Space sidebar after a warm dev restart; user visually approved the layout. [electron/window.ts:40] (fixed)
+  - Failed attempt: Launched the full Electron dev stack; backend and renderer became healthy, but the main BrowserWindow remained hidden with no window handle for Computer Use. [electron/window.ts:40]
+- [DONE] #0069 Managed sandbox denies inspecting the local Vite port owner, preventing shutdown before full Electron QA. [localhost:5173] -> Freed localhost:5173 after verifying and stopping the workspace-only Vite process. [localhost:5173] (fixed)
+  - Failed attempt: Tried to identify and stop only the verified workspace Vite listener; Get-NetTCPConnection was access denied. [localhost:5173]
+- [DONE] #0068 Vite development server cannot resolve its config inside the managed sandbox, blocking browser layout QA. [vite.config.ts] -> Started the local Vite/Electron development stack with approved config access and completed visual QA. [vite.config.ts] (fixed)
+  - Failed attempt: Started the Vite dev server inside the managed sandbox; esbuild hit the same parent-directory access denial. [vite.config.ts]
+- [DONE] #0067 Frontend Vite build again cannot read the parent directory/config inside the managed sandbox. [vite.config.ts] -> Verified the Gen Space redesign with the approved Vite build route; all frontend and Electron bundles compile. [vite.config.ts] (fixed)
+  - Failed attempt: Ran the direct Vite frontend build in the managed sandbox; esbuild was denied access while resolving vite.config.ts. [vite.config.ts]
+- [DONE] #0066 Gen Space sidebar refactor leaves two obsolete media-input expansion setters, causing TypeScript compile errors. [frontend/views/GenSpace.tsx:771; frontend/views/GenSpace.tsx:1339] -> Removed all obsolete media-input expansion setter calls; the full-height sidebar compiles cleanly. [frontend/views/GenSpace.tsx] (fixed)
+  - Partial attempt: Recomposed Gen Space into the sidebar layout; TypeScript found two remaining calls to the removed collapse-state setter. [frontend/views/GenSpace.tsx]
 - [DONE] #0065 Electron production build reports missing closing brace in model-pack JSON event parser [electron/python-setup.ts:637] -> Model-pack JSON event parser syntax corrected; full Vite/Electron build passes [electron/python-setup.ts:626] (fixed)
 - [DONE] #0064 Frontend Vite build cannot read parent directory/config inside managed sandbox [vite.config.ts] -> Approved build route bypasses managed-sandbox esbuild config access restriction [vite.config.ts] (fixed)
 - [DONE] #0063 Pyright rejects broad string download units and partially unknown Mapping normalization in structured progress implementation [backend/handlers/generation_handler.py:127; backend/services/wangp_bridge.py:892] -> Structured progress units and external detail mappings are strictly typed; Pyright passes [backend/progress_types.py; backend/services/wangp_bridge.py:892] (fixed)
@@ -162,6 +179,10 @@ AI Video Studio (AiVS) is a local-first desktop app for AI image, video, and fut
 - WanGP updates use transactional scripts/update-wangp.ps1: check AiVS branch head, report sensitive bridge/dependency/model/default changes, validate, and roll back checkout plus manifest on failure. [scripts/update-wangp.ps1]
 - Pin bundled WanGP to GOvEy1nw/Wan2GP AiVS commit da205e246f4139601c829fefb8c25d2e2e6d6857 (WanGP 12.34) after focused and full compatibility validation. [scripts/wangp-source.json]
 - WanGP model download progress keeps existing transport ownership: generation events flow through backend polling, model packs through Electron IPC; both normalize to one renderer transfer shape and shared progress view. [backend/progress_types.py; frontend/types/progress.ts; frontend/components/DownloadProgressView.tsx]
+- Gen Space uses a persistent full-height left generation sidebar with surface Image/Video/Music tabs; the shared asset gallery fills the remaining right pane, while existing generation controls and handlers are preserved. [frontend/views/GenSpace.tsx]
+- Video Generate/Reframe/Retake choices are exposed as a segmented row beneath the video model selector; unavailable Retake remains visible but disabled. [frontend/views/GenSpace.tsx]
+- Gen Space model selectors use a shared substantial card trigger showing the selected model name and real profile availability; active generation downloads override the label with Downloading only when they match the selected profile. [frontend/components/ModelDropdownTrigger.tsx; frontend/views/GenSpace.tsx]
+- Redesign Settings around persistent left navigation with General, Model Manager, Advanced, and About. Merge all former Output controls into General. Model pack cards communicate state directly: grey missing, blue selected, yellow inline download progress, green installed, red failed/retryable.
 
 ## Notes
 - Future WanGP cadence commands: pnpm wangp:check compares the pin to fork AiVS head; pnpm wangp:update applies focused validation; pnpm wangp:update:full adds typecheck, backend tests, and frontend build. [package.json]
