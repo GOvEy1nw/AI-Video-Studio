@@ -28,7 +28,10 @@ export function SettingsDropdown({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
       }
     };
@@ -44,7 +47,7 @@ export function SettingsDropdown({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex shrink-0 items-center whitespace-nowrap transition-colors ${
+        className={`flex shrink-0 text-sm items-center whitespace-nowrap transition-colors ${
           variant === "model"
             ? "w-full justify-between rounded-xl border border-zinc-700 bg-zinc-800/70 px-3 py-2.5 text-left hover:border-zinc-600 hover:bg-zinc-800"
             : "gap-1 rounded-md px-2 py-1.5 hover:bg-zinc-800"
@@ -57,11 +60,9 @@ export function SettingsDropdown({
         <div
           className={`absolute left-0 z-[9999] min-w-[160px] rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl ${
             variant === "model" ? "right-0" : ""
-          } ${
-            placement === "bottom" ? "top-full mt-2" : "bottom-full mb-2"
-          }`}
+          } ${placement === "bottom" ? "top-full mt-2" : "bottom-full mb-2"}`}
         >
-          <div className="mb-2 text-[10px] uppercase tracking-wider text-zinc-500">
+          <div className="mb-2 text-sm uppercase tracking-wider text-zinc-500">
             {title}
           </div>
           <div className="space-y-1">
@@ -92,12 +93,24 @@ export function SettingsDropdown({
                           : "text-zinc-400"
                     }`}
                   >
-                    {option.icon && <span className="shrink-0">{option.icon}</span>}
+                    {option.icon && (
+                      <span className="shrink-0">{option.icon}</span>
+                    )}
                     {option.label}
                   </span>
                   {value === option.value && !option.disabled && (
-                    <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    <svg
+                      className="h-5 w-5 text-white"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
                     </svg>
                   )}
                 </button>

@@ -7,7 +7,18 @@ from collections import deque
 from pathlib import Path
 from types import SimpleNamespace
 
-from services.wangp_bridge import WanGPBridge
+import pytest
+
+from services.wangp_bridge import WanGPBridge, resolve_audio_performance_profile
+
+
+@pytest.mark.parametrize("profile", [1.0, 2.0, 3.0, 4.5, 5.0])
+def test_audio_performance_profile_passes_through_other_values(profile: float) -> None:
+    assert resolve_audio_performance_profile(profile) == profile
+
+
+def test_audio_performance_profile_maps_four_to_three_plus() -> None:
+    assert resolve_audio_performance_profile(4.0) == 3.5
 
 
 def _capture_progress_event(data: object) -> tuple[object, ...]:
@@ -174,7 +185,16 @@ def test_generate_music_maps_verified_wangp_settings() -> None:
         bpm=96,
         key_scale="A minor",
         time_signature="6/8",
-        auto_fill_metadata=True,
+        language="en",
+        model_mode=3,
+        temperature=1.15,
+        top_p=0.9,
+        top_k=0,
+        lm_guidance_scale=2.5,
+        source_audio_path=r"E:\tmp\cover.wav",
+        reference_timbre_path=None,
+        audio_prompt_type="A",
+        cover_strength=0.5,
         seed=42,
         model_type="ace_step_v1_5_turbo_lm_1_7b",
         default_settings={"num_inference_steps": 8, "duration_seconds": 99},
@@ -191,16 +211,23 @@ def test_generate_music_maps_verified_wangp_settings() -> None:
                 "prompt": "[Verse]\nHello",
                 "alt_prompt": "Warm cinematic ambient music",
                 "duration_seconds": 45,
-                "audio_prompt_type": "",
+                "audio_prompt_type": "A",
                 "repeat_generation": 1,
                 "multi_prompts_gen_type": "FG",
                 "num_inference_steps": 8,
+                "model_mode": 3,
+                "temperature": 1.15,
+                "top_p": 0.9,
+                "top_k": 0,
+                "alt_guidance_scale": 2.5,
                 "custom_settings": {
                     "bpm": 96,
                     "keyscale": "A minor",
                     "timesignature": 6,
+                    "language": "en",
                 },
-                "model_mode": 0,
+                "audio_guide": r"E:\tmp\cover.wav",
+                "audio_scale": 0.5,
                 "seed": 42,
             },
             "plugin_data": {},
@@ -254,6 +281,10 @@ def test_runtime_preferences_update_wangp_config(tmp_path: Path) -> None:
     )
 
     saved = json.loads(config_path.read_text(encoding="utf-8"))
+    assert saved["profile"] == 4
+    assert saved["video_profile"] == 4
+    assert saved["image_profile"] == 4
+    assert saved["audio_profile"] == 3.5
     assert saved["vae_config"] == 0
     assert saved["boost"] == 1
 

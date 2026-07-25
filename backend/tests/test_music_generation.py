@@ -2,14 +2,23 @@
 
 from __future__ import annotations
 
+import wave
+from pathlib import Path
+
 
 def _request(**overrides: object) -> dict[str, object]:
     payload: dict[str, object] = {
+        "schemaVersion": 2,
         "modelProfileId": "ace_step_15_turbo",
         "description": "Warm cinematic ambient music",
         "vocalMode": "instrumental",
-        "durationSeconds": 30,
-        "autoFillMetadata": True,
+        "durationMode": "auto",
+        "durationSeconds": 60,
+        "vocalLanguage": "en",
+        "vocalGender": "auto",
+        "enhanceDescription": False,
+        "weirdness": 50,
+        "promptInfluence": 75,
         "variations": 1,
     }
     payload.update(overrides)
@@ -37,6 +46,9 @@ def test_instrumental_generation_maps_product_values(client, enable_wangp) -> No
     assert call.bpm == 96
     assert call.time_signature == "4/4"
     assert call.model_type == "ace_step_v1_5_turbo_lm_1_7b"
+    assert call.model_mode == 4
+    assert call.temperature == 0.85
+    assert call.lm_guidance_scale == 2.5
 
 
 def test_custom_lyrics_are_normalized_and_returned(client, enable_wangp) -> None:
@@ -57,6 +69,195 @@ def test_auto_lyrics_are_composed_locally(client, enable_wangp) -> None:
     assert response.status_code == 200
     assert response.json()["resolvedLyrics"].startswith("[Verse]")
     assert len(enable_wangp.compose_music_lyrics_calls) == 1
+    call = enable_wangp.compose_music_lyrics_calls[0]
+    assert call.description == "Warm cinematic ambient music"
+    assert call.lyrics_prompt is None
+    assert call.think is False
+    assert call.seed is None
+
+
+def test_empty_custom_lyrics_are_composed_with_idea_think_and_seed(
+    client, enable_wangp
+) -> None:
+    response = client.post(
+        "/api/generate-music",
+        json=_request(
+            vocalMode="custom-lyrics",
+            lyricsPrompt="A reunion at sunrise",
+            lyricsThink=True,
+            lyricsSeed=123,
+        ),
+    )
+    assert response.status_code == 200
+    assert response.json()["resolvedLyrics"].startswith("[Verse]")
+    call = enable_wangp.compose_music_lyrics_calls[0]
+    assert call.description == "Warm cinematic ambient music"
+    assert call.lyrics_prompt == "A reunion at sunrise"
+    assert call.think is True
+    assert call.seed == 123
+
+
+def test_compose_lyrics_is_a_separate_local_operation(client, enable_wangp) -> None:
+    response = client.post(
+        "/api/music/compose-lyrics",
+        json={
+            "modelProfileId": "ace_step_15_turbo",
+            "description": "Dreamy electronic pop",
+            "lyricsPrompt": "A reunion at sunrise",
+            "vocalLanguage": "fr",
+            "durationMode": "auto",
+            "durationSeconds": 60,
+            "think": True,
+            "seed": 456,
+        },
+    )
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "success",
+        "lyrics": "[Verse]\nLocally composed lyrics",
+        "usedThinking": True,
+        "warnings": [],
+    }
+    call = enable_wangp.compose_music_lyrics_calls[0]
+    assert call.lyrics_prompt == "A reunion at sunrise"
+    assert call.language == "fr"
+    assert call.think is True
+    assert call.seed == 456
+    assert enable_wangp.music_calls == []
+
+
+def test_model_mode_truth_table_and_effective_settings(client, enable_wangp) -> None:
+    cases = [
+        ("manual", False, 1),
+        ("manual", True, 2),
+        ("auto", False, 4),
+        ("auto", True, 3),
+    ]
+    for duration_mode, enhance, expected in cases:
+        response = client.post(
+            "/api/generate-music",
+            json=_request(durationMode=duration_mode, enhanceDescription=enhance),
+        )
+        assert response.status_code == 200
+        assert response.json()["effectiveSettings"]["modelMode"] == expected
+        assert enable_wangp.music_calls[-1].model_mode == expected
+
+
+def test_language_gender_and_creative_controls_reach_bridge(client, enable_wangp) -> None:
+    response = client.post(
+        "/api/generate-music",
+        json=_request(
+            vocalMode="custom-lyrics",
+            lyrics="[Verse]\nBonjour",
+            vocalLanguage="fr",
+            vocalGender="female",
+            weirdness=100,
+            promptInfluence=0,
+        ),
+    )
+    assert response.status_code == 200
+    call = enable_wangp.music_calls[0]
+    assert call.language == "fr"
+    assert call.description.endswith("female lead vocals")
+    assert call.temperature == 1.15
+    assert call.top_p == 0.9
+    assert call.top_k == 0
+    assert call.lm_guidance_scale == 1.0
+
+
+def _write_audio(path: Path, seconds: int = 6) -> Path:
+    with wave.open(str(path), "wb") as output:
+        output.setnchannels(1)
+        output.setsampwidth(2)
+        output.setframerate(8_000)
+        output.writeframes(b"\x00\x00" * 8_000 * seconds)
+    return path
+
+
+def test_cover_uses_source_duration_and_custom_lyrics(
+    client, enable_wangp, tmp_path: Path
+) -> None:
+    source = _write_audio(tmp_path / "cover.wav")
+    response = client.post(
+        "/api/generate-music",
+        json=_request(
+            vocalMode="custom-lyrics",
+            lyrics="[Verse]\nOriginal lyrics",
+            durationSeconds=60,
+            audioInput={"path": str(source), "role": "cover", "strength": 0.7},
+        ),
+    )
+    assert response.status_code == 200
+    call = enable_wangp.music_calls[0]
+    assert call.audio_prompt_type == "A"
+    assert call.source_audio_path == str(source.resolve())
+    assert call.cover_strength == 0.7
+    assert call.duration_seconds == 6
+    assert response.json()["effectiveSettings"]["effectiveDurationSeconds"] == 6
+
+
+def test_reference_timbre_uses_ordinary_duration(
+    client, enable_wangp, tmp_path: Path
+) -> None:
+    source = _write_audio(tmp_path / "reference.wav")
+    response = client.post(
+        "/api/generate-music",
+        json=_request(
+            vocalMode="auto-lyrics",
+            durationMode="manual",
+            durationSeconds=30,
+            audioInput={"path": str(source), "role": "reference-timbre"},
+        ),
+    )
+    assert response.status_code == 200
+    call = enable_wangp.music_calls[0]
+    assert call.audio_prompt_type == "B"
+    assert call.reference_timbre_path == str(source.resolve())
+    assert call.duration_seconds == 30
+
+
+def test_cover_and_reference_timbre_use_combined_audio_task(
+    client, enable_wangp, tmp_path: Path
+) -> None:
+    cover = _write_audio(tmp_path / "cover.wav")
+    reference = _write_audio(tmp_path / "reference.wav")
+    response = client.post(
+        "/api/generate-music",
+        json=_request(
+            vocalMode="custom-lyrics",
+            lyrics="[Verse]\nOriginal lyrics",
+            audioInputs=[
+                {"path": str(cover), "role": "cover", "strength": 0.6},
+                {"path": str(reference), "role": "reference-timbre"},
+            ],
+        ),
+    )
+    assert response.status_code == 200
+    call = enable_wangp.music_calls[0]
+    assert call.audio_prompt_type == "AB"
+    assert call.source_audio_path == str(cover.resolve())
+    assert call.reference_timbre_path == str(reference.resolve())
+    assert call.cover_strength == 0.6
+
+
+def test_cover_validation_is_actionable(client, enable_wangp, tmp_path: Path) -> None:
+    source = _write_audio(tmp_path / "cover.wav")
+    assert client.post(
+        "/api/generate-music",
+        json=_request(
+            vocalMode="auto-lyrics",
+            audioInput={"path": str(source), "role": "cover", "strength": 0.5},
+        ),
+    ).status_code == 422
+    response = client.post(
+        "/api/generate-music",
+        json=_request(
+            vocalMode="instrumental",
+            audioInput={"path": str(tmp_path / "missing.wav"), "role": "cover"},
+        ),
+    )
+    assert response.status_code == 400
+    assert response.json()["error"].startswith("MUSIC_AUDIO_FILE_NOT_FOUND")
 
 
 def test_variations_are_sequential_with_locked_seed_offsets(
@@ -72,10 +273,6 @@ def test_variations_are_sequential_with_locked_seed_offsets(
 
 def test_request_validation_rejects_invalid_music_payloads(client, enable_wangp) -> None:
     assert client.post("/api/generate-music", json=_request(description=" ")).status_code == 422
-    assert client.post(
-        "/api/generate-music",
-        json=_request(vocalMode="custom-lyrics"),
-    ).status_code == 422
     response = client.post("/api/generate-music", json=_request(durationSeconds=361))
     assert response.status_code == 400
     assert response.json()["error"].startswith("MUSIC_DURATION_OUT_OF_RANGE")
@@ -95,3 +292,19 @@ def test_auto_lyrics_dependency_error_is_actionable(client, enable_wangp) -> Non
     progress = client.get("/api/generation/progress")
     assert progress.status_code == 200
     assert progress.json()["status"] == "error"
+
+
+def test_v1_request_remains_compatible(client, enable_wangp) -> None:
+    response = client.post(
+        "/api/generate-music",
+        json={
+            "modelProfileId": "ace_step_15_turbo",
+            "description": "Legacy request",
+            "vocalMode": "instrumental",
+            "durationSeconds": 30,
+            "autoFillMetadata": True,
+            "variations": 1,
+        },
+    )
+    assert response.status_code == 200
+    assert enable_wangp.music_calls[0].model_mode == 1

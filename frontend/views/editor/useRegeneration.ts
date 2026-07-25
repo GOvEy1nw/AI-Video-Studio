@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import type { Asset, TimelineClip } from '../../types/project'
-import type { GenerationSettings } from '../../components/SettingsPanel'
+import type { GenerationSettings } from '../../types/generation'
 import { copyToAssetFolder } from '../../lib/asset-copy'
 import { backendFetch } from '../../lib/backend'
 import { fileUrlToPath } from '../../lib/url-to-path'

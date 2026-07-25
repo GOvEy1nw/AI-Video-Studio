@@ -90,6 +90,20 @@ class MusicPolicy:
     time_signatures: tuple[str, ...] = ()
     default_vocal_mode: MusicVocalMode = "instrumental"
     max_variations: int = 1
+    supports_auto_duration: bool = False
+    auto_duration_fallback_seconds: int = 60
+    supports_description_enhancement: bool = False
+    supports_vocal_language: bool = False
+    supported_languages: tuple[str, ...] = ()
+    default_vocal_language: str = "en"
+    supports_vocal_gender_conditioning: bool = False
+    supports_cover: bool = False
+    supports_reference_timbre: bool = False
+    supports_compose_lyrics: bool = False
+    supports_compose_thinking: bool = False
+    default_cover_strength: int = 50
+    default_weirdness: int = 50
+    default_prompt_influence: int = 75
 
 
 @dataclass(frozen=True)
@@ -1073,11 +1087,24 @@ def _ace_step_metadata(*, base_model_type: str) -> WanGPModelMetadata:
         },
         setting_values={
             "duration_seconds": {"min": 5, "max": 360, "increment": 1, "default": 20},
-            "custom_settings": ["bpm", "keyscale", "timesignature"],
+            "custom_settings": ["bpm", "keyscale", "timesignature", "language"],
             "model_mode": [0, 1, 2, 3, 4],
+            "audio_prompt_type": ["", "A", "B", "AB"],
+            "sampling": ["temperature", "top_p", "top_k", "alt_guidance_scale"],
             "prompt_enhancer": "Compose Lyrics",
+            "prompt_enhancer_thinking": "K",
         },
     )
+
+
+_ACE_STEP_LANGUAGES = (
+    "ar", "az", "bg", "bn", "ca", "cs", "da", "de", "el", "en",
+    "es", "fa", "fi", "fr", "he", "hi", "hr", "ht", "hu", "id",
+    "is", "it", "ja", "ko", "la", "lt", "ms", "ne", "nl", "no",
+    "pa", "pl", "pt", "ro", "ru", "sa", "sk", "sr", "sv", "sw",
+    "ta", "te", "th", "tl", "tr", "uk", "ur", "vi", "yue", "zh",
+    "unknown",
+)
 
 
 _ACE_STEP_MUSIC_POLICY = MusicPolicy(
@@ -1097,8 +1124,19 @@ _ACE_STEP_MUSIC_POLICY = MusicPolicy(
     supports_key_scale=True,
     supports_time_signature=True,
     time_signatures=("2/4", "3/4", "4/4", "6/8"),
-    default_vocal_mode="instrumental",
+    default_vocal_mode="auto-lyrics",
     max_variations=4,
+    supports_auto_duration=True,
+    auto_duration_fallback_seconds=60,
+    supports_description_enhancement=True,
+    supports_vocal_language=True,
+    supported_languages=_ACE_STEP_LANGUAGES,
+    default_vocal_language="en",
+    supports_vocal_gender_conditioning=True,
+    supports_cover=True,
+    supports_reference_timbre=True,
+    supports_compose_lyrics=True,
+    supports_compose_thinking=True,
 )
 
 

@@ -1,0 +1,58 @@
+import type { KeyboardEvent, ReactNode } from "react";
+import { GenPanelSection } from "./GenPanelSection";
+
+export function PromptEditor({
+  title = "",
+  value,
+  onChange,
+  onSubmit,
+  canSubmit,
+  disabled,
+  placeholder,
+  leading,
+  children,
+  actions,
+  maxLength,
+  height = "h-36",
+}: {
+  title?: string;
+  value: string;
+  onChange: (value: string) => void;
+  onSubmit: () => void;
+  canSubmit: boolean;
+  disabled: boolean;
+  placeholder: string;
+  leading?: ReactNode;
+  children?: ReactNode;
+  actions?: ReactNode;
+  maxLength?: number;
+  height?: string;
+}) {
+  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Enter" && !event.shiftKey && !disabled && canSubmit) {
+      event.preventDefault();
+      onSubmit();
+    }
+  };
+
+  return (
+    <GenPanelSection title={title}>
+      <div className="flex items-start rounded-lg border border-zinc-800 bg-zinc-950/35">
+        {leading}
+        <div className="flex min-w-0 flex-1 flex-col py-1">
+          {children ?? (
+            <textarea
+              value={value}
+              onChange={(event) => onChange(event.target.value)}
+              onKeyDown={handleKeyDown}
+              maxLength={maxLength}
+              placeholder={placeholder}
+              className={`${height} w-full resize-none overflow-y-auto bg-transparent px-3 py-3 text-sm leading-5 text-white placeholder:text-zinc-500 focus:outline-none`}
+            />
+          )}
+          {actions}
+        </div>
+      </div>
+    </GenPanelSection>
+  );
+}

@@ -1,0 +1,7 @@
+# #0150 Music keyword overflow has no edge affordance and multi-variation audio assets render only one waveform at a time.
+
+- 2026-07-25T22:34:33Z `issue`: Music keyword overflow has no edge affordance and multi-variation audio assets render only one waveform at a time. [frontend/views/genspace/music/MusicGenPanel.tsx; frontend/components/GalleryAssetLibrary.tsx]
+- 2026-07-25T22:37:11Z `attempt`: Added state-driven keyword edge fades, stacked multi-take audio rows, active-take selection, and focused tests; review found the existing card hover overlay can intercept row hover input. [frontend/views/genspace/music/MusicGenPanel.tsx; frontend/components/GalleryAssetLibrary.tsx] (partial)
+- 2026-07-25T22:37:23Z `attempt`: Made the card hover overlay pointer-transparent while preserving pointer-enabled action controls, so stacked waveform rows receive hover/focus events. [frontend/components/GalleryAssetLibrary.tsx] (worked)
+- 2026-07-25T22:38:53Z `attempt`: Strict TypeScript, two focused UI tests, all 56 frontend tests, production renderer/Electron/preload build, and git diff check all pass. [frontend/views/genspace/music/MusicGenPanel.tsx; frontend/components/GalleryAssetLibrary.tsx] (worked)
+- 2026-07-25T22:38:55Z `fix`: Music keyword overflow now shows directional fades and generated multi-variation music renders as independently previewable stacked waveform rows. [frontend/views/genspace/music/MusicGenPanel.tsx; frontend/components/GalleryAssetLibrary.tsx]

@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
-import re
 import uuid
 from pathlib import Path
 from threading import RLock
 
 from _routes._errors import HTTPError
 from api_types import (
+    ComposeMusicLyricsRequest,
+    ComposeMusicLyricsResponse,
     GenerateMusicRequest,
     GenerateMusicResponse,
+    MusicAudioInputRequest,
+    MusicEffectiveSettings,
     MusicOutputResponse,
 )
 from handlers.base import StateHandlerBase
@@ -18,26 +21,20 @@ from handlers.generation_handler import GenerationHandler
 from model_profiles import get_image_profile, get_music_profile, get_video_profile
 from model_profiles.profiles import ModelProfile
 from services.audio_metadata import probe_audio_metadata
-from services.wangp_bridge import WanGPBridge
+from services.music_request_resolver import (
+    ResolvedAudioTask,
+    normalize_music_key_scale,
+    resolve_ace_model_mode,
+    resolve_audio_task,
+    resolve_prompt_influence,
+    resolve_vocal_description,
+    resolve_vocal_language,
+    resolve_weirdness,
+)
+from services.wangp_bridge import WanGPBridge, resolve_audio_performance_profile
 from state.app_state_types import AppState
 
-_KEY_SCALE_RE = re.compile(
-    r"^([A-Ga-g])\s*([#b♯♭]?)\s*(major|minor|maj|min|m)$",
-    re.IGNORECASE,
-)
-
-
-def normalize_key_scale(value: str | None) -> str | None:
-    if value is None or not value.strip():
-        return None
-    match = _KEY_SCALE_RE.fullmatch(value.strip())
-    if match is None:
-        raise HTTPError(400, "MUSIC_KEY_SCALE_INVALID: Use a key such as C major or F# minor.")
-    note = match.group(1).upper()
-    accidental = match.group(2).replace("♯", "#").replace("♭", "b")
-    raw_mode = match.group(3).casefold()
-    mode = "major" if raw_mode in {"major", "maj"} else "minor"
-    return f"{note}{accidental} {mode}"
+_AUDIO_SUFFIXES = {".wav", ".mp3", ".flac", ".ogg", ".m4a", ".aac"}
 
 
 class MusicGenerationHandler(StateHandlerBase):
@@ -67,9 +64,34 @@ class MusicGenerationHandler(StateHandlerBase):
         created_paths: list[Path] = []
 
         try:
-            resolved_lyrics, response_lyrics = self._resolve_lyrics(req, profile)
-            if req.vocalMode != "auto-lyrics":
+            audio_task, effective_duration, warnings = self._resolve_input_audio(req, profile)
+            needs_lyrics_composition = req.vocalMode == "auto-lyrics" or (
+                req.vocalMode == "custom-lyrics" and req.lyrics is None
+            )
+            resolved_lyrics, response_lyrics = self._resolve_lyrics(
+                req, profile, effective_duration
+            )
+            if not needs_lyrics_composition:
                 self._generation.update_progress("preparing_music", 0)
+            try:
+                key_scale = normalize_music_key_scale(req.keyScale)
+                language = resolve_vocal_language(
+                    req.vocalLanguage,
+                    instrumental=req.vocalMode == "instrumental",
+                    supported_languages=profile.music.supported_languages,
+                )
+            except ValueError as exc:
+                raise HTTPError(400, str(exc)) from exc
+            description, description_modifiers = resolve_vocal_description(
+                req.description,
+                req.vocalGender,
+                instrumental=req.vocalMode == "instrumental",
+            )
+            model_mode = resolve_ace_model_mode(
+                req.durationMode, req.enhanceDescription
+            )
+            temperature = resolve_weirdness(req.weirdness)
+            lm_guidance_scale = resolve_prompt_influence(req.promptInfluence)
             settings = self.state.app_settings.model_copy(deep=True)
             base_seed = settings.locked_seed if settings.seed_locked else None
 
@@ -98,13 +120,22 @@ class MusicGenerationHandler(StateHandlerBase):
                     )
 
                 path = self._wangp_bridge.generate_music(
-                    description=req.description,
+                    description=description,
                     lyrics=resolved_lyrics,
-                    duration_seconds=req.durationSeconds,
+                    duration_seconds=effective_duration,
                     bpm=req.bpm,
-                    key_scale=normalize_key_scale(req.keyScale),
+                    key_scale=key_scale,
                     time_signature=req.timeSignature,
-                    auto_fill_metadata=req.autoFillMetadata,
+                    language=language,
+                    model_mode=model_mode,
+                    temperature=temperature,
+                    top_p=0.9,
+                    top_k=0,
+                    lm_guidance_scale=lm_guidance_scale,
+                    source_audio_path=audio_task.source_path,
+                    reference_timbre_path=audio_task.reference_path,
+                    audio_prompt_type=audio_task.prompt_type,
+                    cover_strength=audio_task.cover_strength,
                     seed=seed,
                     model_type=profile.wangp_model_type,
                     default_settings=dict(profile.wangp_default_settings),
@@ -137,6 +168,26 @@ class MusicGenerationHandler(StateHandlerBase):
                 status="success",
                 outputs=outputs,
                 resolvedLyrics=response_lyrics,
+                effectiveSettings=MusicEffectiveSettings(
+                    modelMode=model_mode,
+                    durationMode=req.durationMode.value,
+                    fallbackDurationSeconds=req.durationSeconds,
+                    effectiveDurationSeconds=effective_duration,
+                    temperature=temperature,
+                    topP=0.9,
+                    topK=0,
+                    lmGuidanceScale=lm_guidance_scale,
+                    vocalLanguage=language or "auto",
+                    vocalGender=req.vocalGender.value,
+                    audioTask=audio_task.prompt_type,
+                    coverStrength=audio_task.cover_strength,
+                    descriptionModifiers=list(description_modifiers),
+                    requestedPerformanceProfile=settings.performance_profile,
+                    effectiveAudioProfile=resolve_audio_performance_profile(
+                        settings.performance_profile
+                    ),
+                ),
+                warnings=warnings,
             )
         except HTTPError as exc:
             self._cleanup_outputs(created_paths)
@@ -187,32 +238,173 @@ class MusicGenerationHandler(StateHandlerBase):
             raise HTTPError(400, "MUSIC_TIME_SIGNATURE_UNSUPPORTED: Unsupported time signature.")
         if req.keyScale is not None and not policy.supports_key_scale:
             raise HTTPError(400, "MUSIC_KEY_SCALE_INVALID: Key/scale is unsupported.")
-        normalize_key_scale(req.keyScale)
+        try:
+            normalize_music_key_scale(req.keyScale)
+        except ValueError as exc:
+            raise HTTPError(400, str(exc)) from exc
+        if req.vocalLanguage != "auto" and (
+            not policy.supports_vocal_language
+            or req.vocalLanguage.casefold() not in policy.supported_languages
+        ):
+            raise HTTPError(400, "MUSIC_LANGUAGE_UNSUPPORTED: Unsupported language.")
+        for audio_input in req.audioInputs:
+            if audio_input.role == "cover" and not policy.supports_cover:
+                raise HTTPError(400, "MUSIC_COVER_UNSUPPORTED: Cover is unsupported.")
+            if (
+                audio_input.role == "reference-timbre"
+                and not policy.supports_reference_timbre
+            ):
+                raise HTTPError(
+                    400, "MUSIC_REFERENCE_AUDIO_UNSUPPORTED: Reference Timbre is unsupported."
+                )
         return profile
 
     def _resolve_lyrics(
-        self, req: GenerateMusicRequest, profile: ModelProfile
+        self,
+        req: GenerateMusicRequest,
+        profile: ModelProfile,
+        duration_seconds: int,
     ) -> tuple[str, str | None]:
         if req.vocalMode == "instrumental":
             return "[Instrumental]", None
-        if req.vocalMode == "custom-lyrics":
-            if req.lyrics is None:
-                raise HTTPError(400, "CUSTOM_LYRICS_REQUIRED: Custom lyrics are required.")
+        if req.vocalMode == "custom-lyrics" and req.lyrics is not None:
             return req.lyrics, req.lyrics
+        lyrics = self._compose_text(
+            profile=profile,
+            description=req.description,
+            lyrics_prompt=(
+                req.lyricsPrompt if req.vocalMode == "custom-lyrics" else None
+            ),
+            language=req.vocalLanguage,
+            duration_seconds=duration_seconds,
+            think=req.lyricsThink if req.vocalMode == "custom-lyrics" else False,
+            seed=req.lyricsSeed if req.vocalMode == "custom-lyrics" else None,
+            error_prefix="AUTO_LYRICS_UNAVAILABLE",
+        )
+        self._generation.update_progress("preparing_music", 5)
+        return lyrics, lyrics
+
+    def compose_lyrics(
+        self, req: ComposeMusicLyricsRequest
+    ) -> ComposeMusicLyricsResponse:
+        if self._generation.is_generation_running():
+            raise HTTPError(409, "Generation already in progress")
+        if not self._wangp_bridge.get_status().available:
+            raise HTTPError(503, "WANGP_UNAVAILABLE: WanGP is not available.")
+        profile = get_music_profile(req.modelProfileId)
+        if profile is None or not profile.visible:
+            raise HTTPError(404, "MUSIC_PROFILE_NOT_FOUND: Unknown music model profile.")
+        if not profile.music.supports_compose_lyrics:
+            raise HTTPError(400, "MUSIC_COMPOSE_UNAVAILABLE: Compose Lyrics is unsupported.")
+        if req.think and not profile.music.supports_compose_thinking:
+            raise HTTPError(400, "MUSIC_COMPOSE_UNAVAILABLE: Think is unsupported.")
+        if req.vocalLanguage != "auto" and (
+            req.vocalLanguage.casefold() not in profile.music.supported_languages
+        ):
+            raise HTTPError(400, "MUSIC_LANGUAGE_UNSUPPORTED: Unsupported language.")
+
+        self._generation.start_generation_job(f"lyrics-{uuid.uuid4().hex[:8]}")
+        try:
+            lyrics = self._compose_text(
+                profile=profile,
+                description=req.description,
+                lyrics_prompt=req.lyricsPrompt,
+                language=req.vocalLanguage,
+                duration_seconds=req.durationSeconds,
+                think=req.think,
+                seed=req.seed,
+                error_prefix="MUSIC_COMPOSE_UNAVAILABLE",
+            )
+            self._generation.complete_generation([])
+            return ComposeMusicLyricsResponse(lyrics=lyrics, usedThinking=req.think)
+        except HTTPError as exc:
+            if not self._generation.is_generation_cancelled():
+                self._generation.fail_generation(exc.detail)
+            raise
+
+    def _compose_text(
+        self,
+        *,
+        profile: ModelProfile,
+        description: str,
+        lyrics_prompt: str | None,
+        language: str,
+        duration_seconds: int,
+        think: bool,
+        seed: int | None,
+        error_prefix: str,
+    ) -> str:
         self._generation.update_progress("composing_lyrics", 0)
+        if self._generation.is_generation_cancelled():
+            raise HTTPError(409, "GENERATION_CANCELLED: Music generation was cancelled.")
         try:
             lyrics = self._wangp_bridge.compose_music_lyrics(
-                description=req.description,
-                duration_seconds=req.durationSeconds,
+                description=description,
+                lyrics_prompt=lyrics_prompt,
+                language=language,
+                duration_seconds=duration_seconds,
                 model_type=profile.wangp_model_type,
+                think=think,
+                seed=seed,
             )
         except Exception as exc:
             raise HTTPError(
                 503,
-                "AUTO_LYRICS_UNAVAILABLE: Auto Lyrics needs the Prompt Enhancer model pack.",
+                f"{error_prefix}: Compose Lyrics needs the local Prompt Enhancer model pack.",
             ) from exc
-        self._generation.update_progress("preparing_music", 5)
-        return lyrics, lyrics
+        if self._generation.is_generation_cancelled():
+            raise HTTPError(409, "GENERATION_CANCELLED: Music generation was cancelled.")
+        self._generation.update_progress("composing_lyrics", 100)
+        return lyrics
+
+    def _resolve_input_audio(
+        self,
+        req: GenerateMusicRequest,
+        profile: ModelProfile,
+    ) -> tuple[ResolvedAudioTask, int, list[str]]:
+        audio_task = resolve_audio_task(req.audioInputs)
+        effective_duration = req.durationSeconds
+        warnings: list[str] = []
+        if not req.audioInputs:
+            return audio_task, effective_duration, warnings
+
+        normalized_inputs: list[MusicAudioInputRequest] = []
+        for audio_input in req.audioInputs:
+            audio_path = Path(audio_input.path).expanduser().resolve()
+            if not audio_path.is_file():
+                raise HTTPError(
+                    400, "MUSIC_AUDIO_FILE_NOT_FOUND: Audio input was not found."
+                )
+            if audio_path.suffix.casefold() not in _AUDIO_SUFFIXES:
+                raise HTTPError(
+                    400, "MUSIC_AUDIO_FILE_UNSUPPORTED: Unsupported audio format."
+                )
+            if audio_input.role == "cover":
+                metadata = probe_audio_metadata(audio_path)
+                if metadata.duration_seconds is None:
+                    raise HTTPError(
+                        400,
+                        "MUSIC_COVER_DURATION_OUT_OF_RANGE: Could not read source duration.",
+                    )
+                if not (
+                    profile.music.duration_min_seconds
+                    <= metadata.duration_seconds
+                    <= profile.music.duration_max_seconds
+                ):
+                    raise HTTPError(
+                        400,
+                        "MUSIC_COVER_DURATION_OUT_OF_RANGE: Cover audio is outside profile bounds.",
+                    )
+                effective_duration = round(metadata.duration_seconds)
+                if effective_duration != req.durationSeconds:
+                    warnings.append(
+                        "Cover source duration replaced the requested duration."
+                    )
+            normalized_inputs.append(
+                audio_input.model_copy(update={"path": str(audio_path)})
+            )
+        audio_task = resolve_audio_task(normalized_inputs)
+        return audio_task, effective_duration, warnings
 
     def _cleanup_outputs(self, paths: list[Path]) -> None:
         for path in paths:

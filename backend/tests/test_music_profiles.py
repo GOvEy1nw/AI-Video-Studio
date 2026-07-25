@@ -31,6 +31,16 @@ def test_music_profile_policy_matches_verified_wangp_schema() -> None:
     assert profile.music.bpm_max == 300
     assert profile.music.time_signatures == ("2/4", "3/4", "4/4", "6/8")
     assert profile.music.max_variations == 4
+    assert profile.music.supports_auto_duration is True
+    assert profile.music.auto_duration_fallback_seconds == 60
+    assert profile.music.supports_description_enhancement is True
+    assert profile.music.supports_vocal_language is True
+    assert "en" in profile.music.supported_languages
+    assert profile.music.supports_vocal_gender_conditioning is True
+    assert profile.music.supports_cover is True
+    assert profile.music.supports_reference_timbre is True
+    assert profile.music.supports_compose_lyrics is True
+    assert profile.music.supports_compose_thinking is True
 
 
 def test_profile_api_includes_music_policy(client) -> None:
@@ -41,5 +51,10 @@ def test_profile_api_includes_music_policy(client) -> None:
     assert music["capabilities"]["textToAudio"] is True
     assert music["music"]["enabled"] is True
     assert music["music"]["defaultDurationSeconds"] == 30
+    assert music["music"]["supportsAutoDuration"] is True
+    assert music["music"]["autoDurationFallbackSeconds"] == 60
+    assert music["music"]["defaultVocalLanguage"] == "en"
+    assert music["music"]["defaultWeirdness"] == 50
+    assert music["music"]["defaultPromptInfluence"] == 75
     assert music["license"]["sourceProject"] == "ACE-Step 1.5"
     assert profiles["z_image_turbo"]["music"]["enabled"] is False

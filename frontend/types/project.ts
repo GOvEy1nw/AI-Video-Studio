@@ -1,10 +1,17 @@
 // Project and Asset types for AiVS
 
 import type { DirectorGenerationMetadata, DirectorSequenceV1 } from './director'
+import type {
+  MusicAudioRole,
+  MusicDurationMode,
+  MusicExperienceMode,
+  MusicLyricsMode,
+  MusicTimeSignature,
+  MusicVocalGender,
+  MusicVocalMode,
+} from './music'
 
-export type MusicVocalMode = 'instrumental' | 'auto-lyrics' | 'custom-lyrics'
-
-export interface MusicGenerationMetadata {
+export interface MusicGenerationMetadataV1 {
   schemaVersion: 1
   profileId: string
   description: string
@@ -19,6 +26,61 @@ export interface MusicGenerationMetadata {
   autoFillMetadata: boolean
   variationCount: number
 }
+
+export interface MusicGenerationMetadataV2 {
+  schemaVersion: 2
+  profileId: string
+  experienceMode: MusicExperienceMode
+  description: string
+  instrumental: boolean
+  lyricsMode: MusicLyricsMode
+  lyricsPrompt?: string
+  requestedLyrics?: string
+  lyricsSeed?: number
+  resolvedLyrics?: string
+  enhanceDescription: boolean
+  durationMode: MusicDurationMode
+  requestedDurationSeconds?: number
+  fallbackDurationSeconds: number
+  actualDurationSeconds?: number
+  vocalLanguage: string
+  vocalGender: MusicVocalGender
+  bpm?: number
+  timeSignature?: MusicTimeSignature
+  keyScale?: string
+  audioInput?: {
+    role: MusicAudioRole
+    url: string
+    path?: string
+    mediaDuration?: number
+    coverStrength?: number
+  }
+  audioInputs?: Array<{
+    role: MusicAudioRole
+    url: string
+    path?: string
+    mediaDuration?: number
+    coverStrength?: number
+  }>
+  weirdness: number
+  promptInfluence: number
+  variationCount: number
+  effective: {
+    modelMode: number
+    temperature: number
+    topP: number
+    topK: number
+    lmGuidanceScale: number
+    audioTask: '' | 'A' | 'B' | 'AB'
+    descriptionModifiers: string[]
+    requestedPerformanceProfile?: number
+    effectiveAudioProfile?: number
+  }
+}
+
+export type MusicGenerationMetadata =
+  | MusicGenerationMetadataV1
+  | MusicGenerationMetadataV2
 
 // Parameters needed to regenerate a shot
 export interface GenerationParams {

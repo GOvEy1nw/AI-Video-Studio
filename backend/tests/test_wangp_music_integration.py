@@ -42,7 +42,32 @@ def test_curated_ace_step_models_match_pinned_wangp_schema() -> None:
             "bpm",
             "keyscale",
             "timesignature",
+            "language",
         }
+        modes = record["modelModes"]
+        assert isinstance(modes, dict)
+        mode_values = {
+            choice[1]
+            for choice in cast(dict[str, list[list[object]]], modes)["choices"]
+        }
+        assert mode_values >= {0, 1, 2, 3, 4}
+        audio_tasks = record["audioTasks"]
+        assert isinstance(audio_tasks, dict)
+        assert set(cast(dict[str, list[str]], audio_tasks)["selection"]) >= {
+            "",
+            "A",
+            "B",
+            "AB",
+        }
+        controls = record["samplingControls"]
+        assert isinstance(controls, dict)
+        control_values = cast(dict[str, object], controls)
+        assert control_values["temperature"] is True
+        assert control_values["topP"] is True
+        assert control_values["topK"] is True
+        assert control_values["lmGuidance"]
+        assert record["promptEnhancer"] == "Compose Lyrics"
+        assert record["promptEnhancerThinking"] is True
         defaults = record["defaultSettings"]
         assert isinstance(defaults, dict)
         default_values = cast(dict[str, object], defaults)

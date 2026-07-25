@@ -27,6 +27,7 @@ def inspect_models(
     sys.path.insert(0, str(root))
     try:
         os.chdir(root)
+        wgp_source = (root / "wgp.py").read_text(encoding="utf-8")
         api = importlib.import_module("shared.api")
         session = api.WanGPSession(
             root=root,
@@ -68,7 +69,17 @@ def inspect_models(
                     "duration": model_def.get("duration_slider"),
                     "customSettings": model_def.get("custom_settings"),
                     "modelModes": model_def.get("model_modes"),
+                    "audioTasks": model_def.get("audio_prompt_type_sources"),
+                    "samplingControls": {
+                        "temperature": bool(model_def.get("temperature")),
+                        "topP": bool(model_def.get("top_p_slider")),
+                        "topK": bool(model_def.get("top_k_slider")),
+                        "lmGuidance": model_def.get("alt_guidance"),
+                    },
                     "promptEnhancer": model_def.get("prompt_enhancer_button_label"),
+                    "promptEnhancerThinking": (
+                        'thinking_enabled = "K" in prompt_enhancer_mode' in wgp_source
+                    ),
                     "defaultSettings": {
                         key: defaults.get(key)
                         for key in (
@@ -76,6 +87,10 @@ def inspect_models(
                             "duration_seconds",
                             "num_inference_steps",
                             "repeat_generation",
+                            "temperature",
+                            "top_p",
+                            "top_k",
+                            "alt_guidance_scale",
                         )
                     },
                     "availability": availability,

@@ -78,10 +78,30 @@ class FakeWangpMusicCall:
     bpm: int | None
     key_scale: str | None
     time_signature: str | None
-    auto_fill_metadata: bool
+    language: str | None
+    model_mode: int
+    temperature: float
+    top_p: float
+    top_k: int
+    lm_guidance_scale: float
+    source_audio_path: str | None
+    reference_timbre_path: str | None
+    audio_prompt_type: str
+    cover_strength: float | None
     seed: int | None
     model_type: str
     default_settings: dict[str, object]
+
+
+@dataclass
+class FakeWangpComposeMusicLyricsCall:
+    description: str
+    lyrics_prompt: str | None
+    language: str
+    duration_seconds: int
+    model_type: str
+    think: bool
+    seed: int | None
 
 
 @dataclass
@@ -116,7 +136,9 @@ class FakeWanGPBridge:
     enhance_prompt_calls: list[FakeWangpEnhancePromptCall] = field(default_factory=list)
     director_calls: list[FakeWangpDirectorCall] = field(default_factory=list)
     music_calls: list[FakeWangpMusicCall] = field(default_factory=list)
-    compose_music_lyrics_calls: list[tuple[str, int, str]] = field(default_factory=list)
+    compose_music_lyrics_calls: list[FakeWangpComposeMusicLyricsCall] = field(
+        default_factory=list
+    )
     raise_on_video: Exception | None = None
     raise_on_images: Exception | None = None
     raise_on_enhance_prompt: Exception | None = None
@@ -278,7 +300,16 @@ class FakeWanGPBridge:
         bpm: int | None,
         key_scale: str | None,
         time_signature: str | None,
-        auto_fill_metadata: bool,
+        language: str | None,
+        model_mode: int,
+        temperature: float,
+        top_p: float,
+        top_k: int,
+        lm_guidance_scale: float,
+        source_audio_path: str | None,
+        reference_timbre_path: str | None,
+        audio_prompt_type: str,
+        cover_strength: float | None,
         seed: int | None,
         model_type: str,
         default_settings: dict[str, object] | None,
@@ -293,7 +324,16 @@ class FakeWanGPBridge:
                 bpm=bpm,
                 key_scale=key_scale,
                 time_signature=time_signature,
-                auto_fill_metadata=auto_fill_metadata,
+                language=language,
+                model_mode=model_mode,
+                temperature=temperature,
+                top_p=top_p,
+                top_k=top_k,
+                lm_guidance_scale=lm_guidance_scale,
+                source_audio_path=source_audio_path,
+                reference_timbre_path=reference_timbre_path,
+                audio_prompt_type=audio_prompt_type,
+                cover_strength=cover_strength,
                 seed=seed,
                 model_type=model_type,
                 default_settings=dict(default_settings) if default_settings else {},
@@ -317,10 +357,24 @@ class FakeWanGPBridge:
         self,
         *,
         description: str,
+        lyrics_prompt: str | None,
+        language: str,
         duration_seconds: int,
         model_type: str,
+        think: bool,
+        seed: int | None,
     ) -> str:
-        self.compose_music_lyrics_calls.append((description, duration_seconds, model_type))
+        self.compose_music_lyrics_calls.append(
+            FakeWangpComposeMusicLyricsCall(
+                description=description,
+                lyrics_prompt=lyrics_prompt,
+                language=language,
+                duration_seconds=duration_seconds,
+                model_type=model_type,
+                think=think,
+                seed=seed,
+            )
+        )
         if self.raise_on_compose_music_lyrics is not None:
             raise self.raise_on_compose_music_lyrics
         return "[Verse]\nLocally composed lyrics"

@@ -129,6 +129,68 @@ function AssetCardActionButton({
   );
 }
 
+function AudioVariationRow({
+  url,
+  index,
+  active,
+  previewEnabled,
+  onSelect,
+}: {
+  url: string;
+  index: number;
+  active: boolean;
+  previewEnabled: boolean;
+  onSelect?: () => void;
+}) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  const stopPreview = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.pause();
+    audio.currentTime = 0;
+  };
+
+  useEffect(() => {
+    if (!previewEnabled) stopPreview();
+    return stopPreview;
+  }, [previewEnabled]);
+
+  const startPreview = () => {
+    if (previewEnabled) void audioRef.current?.play().catch(() => undefined);
+  };
+
+  return (
+    <button
+      type="button"
+      aria-label={`Select music variation ${index + 1}`}
+      aria-pressed={active}
+      title={`Variation ${index + 1} — hover to preview`}
+      onClick={onSelect}
+      onMouseEnter={startPreview}
+      onMouseLeave={stopPreview}
+      onFocus={startPreview}
+      onBlur={stopPreview}
+      className={`relative min-h-0 flex-1 overflow-hidden border-b border-zinc-800 text-left last:border-b-0 ${
+        active
+          ? "bg-emerald-950/50"
+          : "bg-zinc-950 hover:bg-emerald-950/40"
+      }`}
+    >
+      <audio ref={audioRef} src={url} preload="metadata" loop className="hidden" />
+      <ClipWaveform
+        url={url}
+        color={
+          active ? "rgba(110, 231, 183, 0.9)" : "rgba(52, 211, 153, 0.65)"
+        }
+      />
+      <span className="absolute bottom-1 right-1 z-10 rounded bg-black/70 px-1.5 py-0.5 text-[9px] font-medium text-emerald-200">
+        {index + 1}
+      </span>
+    </button>
+  );
+}
+
 export function GalleryAssetCard({
   asset,
   selected = false,
@@ -168,6 +230,8 @@ export function GalleryAssetCard({
   const [currentTime, setCurrentTime] = useState(0);
   const [isMuted, setIsMuted] = useState(true);
   const [showBackdrop, setShowBackdrop] = useState(false);
+  const hasStackedAudioTakes =
+    asset.type === "audio" && (asset.takes?.length ?? 0) > 1;
   const canCopySettings = !!asset.generationParams && !!onCopySettings;
   const hasActions =
     !!onToggleFavorite ||
@@ -195,14 +259,19 @@ export function GalleryAssetCard({
   }, [asset.url]);
 
   useEffect(() => {
-    if (asset.type !== "audio" || !audioRef.current) return;
+    if (
+      asset.type !== "audio" ||
+      hasStackedAudioTakes ||
+      !audioRef.current
+    )
+      return;
     if (isHovered && previewEnabled)
       void audioRef.current.play().catch(() => undefined);
     else {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
     }
-  }, [asset.type, isHovered, previewEnabled]);
+  }, [asset.type, hasStackedAudioTakes, isHovered, previewEnabled]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -290,6 +359,19 @@ export function GalleryAssetCard({
               />
             )}
           </>
+        ) : hasStackedAudioTakes ? (
+          <div className="flex h-full w-full flex-col">
+            {asset.takes!.map((take, index) => (
+              <AudioVariationRow
+                key={`${take.url}-${index}`}
+                url={take.url}
+                index={index}
+                active={(asset.activeTakeIndex ?? 0) === index}
+                previewEnabled={previewEnabled}
+                onSelect={() => onSelectTake?.(index)}
+              />
+            ))}
+          </div>
         ) : asset.type === "audio" ? (
           <>
             <audio
@@ -356,7 +438,9 @@ export function GalleryAssetCard({
               <Image className="h-4 w-4" />
             )}
           </div>
-          {asset.takes && asset.takes.length > 1 && (
+          {asset.type !== "audio" &&
+            asset.takes &&
+            asset.takes.length > 1 && (
             <div className="flex items-center gap-0.5 rounded-full bg-black/80">
               <button
                 type="button"
@@ -401,10 +485,10 @@ export function GalleryAssetCard({
         )}
 
         <div
-          className={`absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 transition-opacity duration-200 ${isHovered ? "opacity-100" : "opacity-0"}`}
+          className={`pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 transition-opacity duration-200 ${isHovered ? "opacity-100" : "opacity-0"}`}
         >
           {hasActions && (
-            <div className="asset-card-hover-actions absolute right-2 top-2 z-30 flex flex-col items-end gap-1.5">
+            <div className="asset-card-hover-actions pointer-events-auto absolute right-2 top-2 z-30 flex flex-col items-end gap-1.5">
               {onToggleFavorite && (
                 <AssetCardActionButton
                   label={
@@ -475,7 +559,7 @@ export function GalleryAssetCard({
           )}
 
           {asset.type === "video" && (
-            <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
+            <div className="pointer-events-auto absolute bottom-2 left-2 right-2 flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <div className="rounded-lg bg-black/50 px-2 py-1 font-mono text-xs text-white backdrop-blur-md">
                   {formatTime(currentTime)}

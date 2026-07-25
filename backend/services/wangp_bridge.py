@@ -20,6 +20,11 @@ from typing import Any, cast
 from progress_types import DownloadUnit, ModelDownloadProgress
 
 logger = logging.getLogger(__name__)
+AUDIO_PROFILE_THREE_PLUS = 3.5
+
+
+def resolve_audio_performance_profile(global_profile: float) -> float:
+    return AUDIO_PROFILE_THREE_PLUS if global_profile == 4.0 else global_profile
 
 ProgressCallback = Callable[..., None]
 CancelledCallback = Callable[[], bool]
@@ -107,6 +112,13 @@ class WanGPBridge:
     ) -> None:
         vae_config = 0 if reduce_vram == "disabled" else int(reduce_vram)
         boost = 1 if reduce_vram == "disabled" else 2
+        audio_profile = resolve_audio_performance_profile(performance_profile)
+        if audio_profile != performance_profile:
+            logger.info(
+                "WanGP performance profile override for audio: requested=%s effective=%s",
+                performance_profile,
+                audio_profile,
+            )
         with self._session_lock:
             self._write_runtime_config(
                 {
@@ -114,7 +126,7 @@ class WanGPBridge:
                     "profile": performance_profile,
                     "video_profile": performance_profile,
                     "image_profile": performance_profile,
-                    "audio_profile": performance_profile,
+                    "audio_profile": audio_profile,
                     "vae_config": vae_config,
                     "boost": boost,
                 }
@@ -393,25 +405,37 @@ class WanGPBridge:
         bpm: int | None,
         key_scale: str | None,
         time_signature: str | None,
-        auto_fill_metadata: bool,
+        language: str | None,
+        model_mode: int,
+        temperature: float,
+        top_p: float,
+        top_k: int,
+        lm_guidance_scale: float,
+        source_audio_path: str | None,
+        reference_timbre_path: str | None,
+        audio_prompt_type: str,
+        cover_strength: float | None,
         seed: int | None,
         model_type: str,
         default_settings: dict[str, object] | None,
         on_progress: ProgressCallback,
         is_cancelled: CancelledCallback,
     ) -> str:
-        settings: dict[str, object] = {
+        settings: dict[str, object] = dict(default_settings or {})
+        settings.update({
             "model_type": model_type,
             "prompt": lyrics,
             "alt_prompt": description,
             "duration_seconds": duration_seconds,
-            "audio_prompt_type": "",
+            "audio_prompt_type": audio_prompt_type,
             "repeat_generation": 1,
             "multi_prompts_gen_type": "FG",
-        }
-        if default_settings:
-            for key, value in default_settings.items():
-                settings.setdefault(key, value)
+            "model_mode": model_mode,
+            "temperature": temperature,
+            "top_p": top_p,
+            "top_k": top_k,
+            "alt_guidance_scale": lm_guidance_scale,
+        })
 
         custom_settings: dict[str, object] = {}
         if bpm is not None:
@@ -419,19 +443,16 @@ class WanGPBridge:
         if key_scale is not None:
             custom_settings["keyscale"] = key_scale
         if time_signature is not None:
-            custom_settings["timesignature"] = {
-                "2/4": 2,
-                "3/4": 3,
-                "4/4": 4,
-                "6/8": 6,
-            }[time_signature]
+            custom_settings["timesignature"] = int(time_signature.split("/", 1)[0])
+        if language is not None:
+            custom_settings["language"] = language
         settings["custom_settings"] = custom_settings or None
-        settings["model_mode"] = (
-            1
-            if auto_fill_metadata
-            and (bpm is None or key_scale is None or time_signature is None)
-            else 0
-        )
+        if source_audio_path is not None:
+            settings["audio_guide"] = source_audio_path
+        if reference_timbre_path is not None:
+            settings["audio_guide2"] = reference_timbre_path
+        if cover_strength is not None:
+            settings["audio_scale"] = cover_strength
         if seed is not None:
             settings["seed"] = seed
 
@@ -449,11 +470,18 @@ class WanGPBridge:
         self,
         *,
         description: str,
+        lyrics_prompt: str | None,
+        language: str,
         duration_seconds: int,
         model_type: str,
+        think: bool,
+        seed: int | None,
     ) -> str:
+        idea = lyrics_prompt.strip() if lyrics_prompt else description
         prompt = (
+            f"Lyrics idea:\n{idea}\n\n"
             f"Song description:\n{description}\n\n"
+            f"Language:\n{language}\n\n"
             f"Target duration:\n{duration_seconds} seconds\n\n"
             "Write complete, singable lyrics with suitable section headers. "
             "Return lyrics only."
@@ -463,6 +491,8 @@ class WanGPBridge:
             model_type=model_type,
             mode="audio",
             image_path=None,
+            think=think,
+            seed=seed,
         ).strip()
         if not lyrics or lyrics.casefold() == "[instrumental]":
             raise RuntimeError("WanGP did not produce usable lyrics")
@@ -495,10 +525,12 @@ class WanGPBridge:
         mode: str,
         model_type: str,
         image_path: str | None,
+        think: bool = False,
+        seed: int | None = None,
     ) -> str:
         session = self._get_session()
         runtime = session._ensure_runtime()
-        prompt_enhancer = "TI" if image_path else "T"
+        prompt_enhancer = ("TI" if image_path else "T") + ("K" if think else "")
         image_start = [str(Path(image_path).resolve())] if image_path else [None]
         is_image = mode == "image"
 
@@ -520,7 +552,7 @@ class WanGPBridge:
                 None,
                 is_image,
                 bool(model_def.get("audio_only", False)),
-                -1,
+                seed if seed is not None else -1,
                 _PromptEnhanceProgress(),
                 -1,
                 enhancer_kwargs={

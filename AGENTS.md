@@ -103,6 +103,8 @@ Key patterns:
 - Default app settings schema: `settings.json`
 - Electron builder config: `electron-builder.yml`
 - Video editor (largest frontend file): `frontend/views/VideoEditor.tsx`
-- Generation space (primary MVP target): `frontend/views/GenSpace.tsx`
+- Generation space entry: `frontend/views/GenSpace.tsx`
+- Generation space implementation: `frontend/views/genspace/`
+- Generation space architecture: `docs/GENSPACE_ARCHITECTURE.md`
 - Project types: `frontend/types/project.ts`
 - Backend composition root: `backend/app_handler.py`

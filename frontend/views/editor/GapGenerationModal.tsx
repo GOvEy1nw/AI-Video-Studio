@@ -4,7 +4,7 @@ import {
   Loader2, Sparkles, RefreshCw, Info
 } from 'lucide-react'
 import { SettingsPanel } from '../../components/SettingsPanel'
-import type { GenerationSettings } from '../../components/SettingsPanel'
+import type { GenerationSettings } from '../../types/generation'
 import type { GenerationMode } from '../../components/ModeTabs'
 
 interface TimelineGap {

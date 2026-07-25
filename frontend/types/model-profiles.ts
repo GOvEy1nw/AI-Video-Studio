@@ -92,6 +92,20 @@ export interface ModelProfileMusicPolicy {
   timeSignatures: string[]
   defaultVocalMode: string
   maxVariations: number
+  supportsAutoDuration: boolean
+  autoDurationFallbackSeconds: number
+  supportsDescriptionEnhancement: boolean
+  supportsVocalLanguage: boolean
+  supportedLanguages: string[]
+  defaultVocalLanguage: string
+  supportsVocalGenderConditioning: boolean
+  supportsCover: boolean
+  supportsReferenceTimbre: boolean
+  supportsComposeLyrics: boolean
+  supportsComposeThinking: boolean
+  defaultCoverStrength: number
+  defaultWeirdness: number
+  defaultPromptInfluence: number
 }
 
 export interface ModelProfileLicenseInfo {

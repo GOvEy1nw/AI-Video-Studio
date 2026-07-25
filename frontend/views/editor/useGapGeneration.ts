@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import type { TimelineClip, Track, SubtitleClip, Asset } from '../../types/project'
 import { DEFAULT_COLOR_CORRECTION } from '../../types/project'
-import type { GenerationSettings } from '../../components/SettingsPanel'
+import type { GenerationSettings } from '../../types/generation'
 import { copyToAssetFolder } from '../../lib/asset-copy'
 import { backendFetch } from '../../lib/backend'
 import { fileUrlToPath } from '../../lib/url-to-path'
