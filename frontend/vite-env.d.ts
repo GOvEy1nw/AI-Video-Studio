@@ -19,7 +19,7 @@ interface Window {
     getModelsPath: () => Promise<string>
     readLocalFile: (filePath: string) => Promise<{ data: string; mimeType: string }>
     approveLocalPath: (filePath: string) => Promise<boolean>
-    getPathForFile?: (file: File) => string
+    getPathForFile: (file: File) => string
     checkGpu: () => Promise<{ available: boolean; name?: string; vram?: number }>
     getAppInfo: () => Promise<{ version: string; isPackaged: boolean; modelsPath: string; userDataPath: string }>
     checkFirstRun: () => Promise<{ needsSetup: boolean; needsLicense: boolean }>
@@ -67,9 +67,9 @@ interface Window {
     showSaveDialog: (options: { title?: string; defaultPath?: string; filters?: { name: string; extensions: string[] }[] }) => Promise<string | null>
     saveFile: (filePath: string, data: string, encoding?: string) => Promise<{ success: boolean; path?: string; error?: string }>
     saveBinaryFile: (filePath: string, data: ArrayBuffer) => Promise<{ success: boolean; path?: string; error?: string }>
-    showOpenDirectoryDialog: (options: { title?: string }) => Promise<string | null>
+    showOpenDirectoryDialog: (options: { title?: string; defaultPath?: string }) => Promise<string | null>
     checkFilesExist: (filePaths: string[]) => Promise<Record<string, boolean>>
-    showOpenFileDialog: (options: { title?: string; filters?: { name: string; extensions: string[] }[]; properties?: string[] }) => Promise<string[] | null>
+    showOpenFileDialog: (options: { title?: string; defaultPath?: string; filters?: { name: string; extensions: string[] }[]; properties?: string[] }) => Promise<string[] | null>
     searchDirectoryForFiles: (directory: string, filenames: string[]) => Promise<Record<string, string | null>>
     exportNative: (data: {
       clips: { url: string; type: string; startTime: number; duration: number; trimStart: number; speed: number; reversed: boolean; flipH: boolean; flipV: boolean; opacity: number; trackIndex: number; muted: boolean; volume: number }[]

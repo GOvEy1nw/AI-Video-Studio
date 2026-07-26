@@ -31,7 +31,7 @@ export function writeLog(level: LogLevel, source: LogSource, message: string): v
 }
 
 function log(level: LogLevel, consoleMethod: 'log' | 'warn' | 'error', message: string): void {
-  console[consoleMethod](message)
+  if (process.env.VITE_DEV_SERVER_URL) console[consoleMethod](message)
   writeLog(level, 'Electron', message)
 }
 

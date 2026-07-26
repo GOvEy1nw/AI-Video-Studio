@@ -315,6 +315,9 @@ export async function startPythonBackend(): Promise<void> {
     }
 
     const getWriter = (channel: ConsoleChannel) => channel === 'stdout' ? process.stdout : process.stderr
+    const writeToConsole = (channel: ConsoleChannel, message: string) => {
+      if (isDev) getWriter(channel).write(message)
+    }
 
     const isProgressLine = (line: string): boolean =>
       /\d{1,3}%\|/.test(line) || (/\|\s*\d+(?:\.\d+)?[KMG]?\/\d+(?:\.\d+)?[KMG]?/.test(line) && line.includes('['))
@@ -357,7 +360,7 @@ export async function startPythonBackend(): Promise<void> {
     const finalizeInline = (channel: ConsoleChannel) => {
       const state = inlineState[channel]
       if (!state.active) return
-      getWriter(channel).write('\n')
+      writeToConsole(channel, '\n')
       if (state.text) {
         writeLog(state.level, 'Backend', state.text)
         checkStarted(state.text)
@@ -381,7 +384,7 @@ export async function startPythonBackend(): Promise<void> {
       if (!line) return
       const classification = classifyPythonLine(stream, line)
       finalizeInlineIfNeeded()
-      getWriter(classification.channel).write(`${classification.prefix} ${line}\n`)
+      writeToConsole(classification.channel, `${classification.prefix} ${line}\n`)
       writeLog(classification.level, 'Backend', line)
       checkStarted(line)
     }
@@ -394,7 +397,7 @@ export async function startPythonBackend(): Promise<void> {
       const state = inlineState[classification.channel]
       const rendered = `${classification.prefix} ${line}`
       const pad = state.width > rendered.length ? ' '.repeat(state.width - rendered.length) : ''
-      getWriter(classification.channel).write(`\r${rendered}${pad}`)
+      writeToConsole(classification.channel, `\r${rendered}${pad}`)
       state.active = true
       state.width = rendered.length
       state.text = line

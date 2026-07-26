@@ -22,11 +22,11 @@ describe('getNativeFilePath', () => {
     expect(getNativeFilePath(file)).toBe('C:\\bridged\\image.png')
   })
 
-  it('uses the Electron 31 legacy path when the bridge is unavailable', () => {
+  it('does not read the removed legacy path when the bridge is unavailable', () => {
     const file = new File(['image'], 'image.png', { type: 'image/png' })
     Object.defineProperty(file, 'path', { value: 'C:\\legacy\\image.png' })
 
-    expect(getNativeFilePath(file)).toBe('C:\\legacy\\image.png')
+    expect(getNativeFilePath(file)).toBeNull()
   })
 
   it('returns null when no native path is available', () => {
