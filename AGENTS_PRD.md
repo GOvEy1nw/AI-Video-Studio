@@ -1,1011 +1,618 @@
-# AI Video Studio — LTX-Desktop-WanGP Inherited-Foundation PRD
+# AI Video Studio — Product Charter and Agent Guardrails
 
-**Working title:** AI Video Studio  
-**Document type:** Product Requirements Document + agent implementation guide  
-**Version:** 2.1 — inherited-foundation direction  
-**Date:** 3 July 2026  
+**Product:** AI Video Studio (AiVS)  
+**Document type:** Current product charter and implementation guardrails  
+**Version:** 3.0  
+**Last reviewed:** 26 July 2026 against `dev`  
 **Primary platform:** Windows desktop  
-**Primary app foundation:** `deepbeepmeep/LTX-Desktop-WanGP`  
-**Primary runtime:** WanGP / Wan2GP only  
-**Inherited app stack:** Electron + React + TypeScript + FastAPI backend  
-**Initial product focus:** QuickGen image generation  
-**Later product focus:** QuickGen video, QuickGen audio/TTS, then Production workflows  
-**Commercial intent:** Free/community-focused, not commercial
+**Foundation:** `deepbeepmeep/LTX-Desktop-WanGP`  
+**Generation runtime:** bundled WanGP / Wan2GP only  
+**Commercial intent:** free, open-source, community-focused
 
----
+> This document describes the product AiVS is today, the direction it is moving in, and the boundaries every implementation must respect. It is not a chronological phase plan. Completed plans under `docs/` remain useful historical rationale, but they must not be re-executed as active instructions unless a current task explicitly reopens that work.
 
-## 1. Purpose
+## 1. Product mission
 
-AI Video Studio is a local-first desktop app for AI image, video, and audio generation.
+AI Video Studio is a local-first desktop creative environment for AI image, video, and music generation.
 
-The project should start by **forking and adapting `LTX-Desktop-WanGP`**, not by rebuilding the app from scratch.
-
-The base app already includes a large amount of working product infrastructure, including:
-
-- an Electron/React desktop app;
-- a local FastAPI backend;
-- projects;
-- a generation space / QuickGen-like workflow;
-- gallery and generation card behaviour;
-- generation history and metadata handling;
-- WanGP-backed local generation patterns;
-- a video editor.
-
-This PRD intentionally avoids respecifying those existing systems in detail. Where `LTX-Desktop-WanGP` already has a working implementation, that implementation should remain the source of truth unless there is a clear reason to change it.
-
-The goal is to reshape the existing app into:
-
-> A local Freepik/Higgsfield-style AI media studio powered only by WanGP, with simple QuickGen workflows first and structured Production workflows later.
-
----
-
-## 2. Strategic decision
-
-### 2.1 Core decision
-
-Use `LTX-Desktop-WanGP` as the actual starting codebase for AI Video Studio.
-
-This is not only a reference app and not only UX inspiration. It is the foundation to build on.
-
-### 2.2 Why this is the right direction
-
-This direction is preferable because the base app already solves many hard product problems that would otherwise take significant time to rebuild.
-
-Starting from it should reduce work on:
-
-- desktop app setup;
-- local backend process coordination;
-- project management;
-- generation spaces;
-- gallery/output review;
-- generation card UX;
-- generation history;
-- metadata persistence;
-- editor integration;
-- WanGP bridge patterns.
-
-The project should focus effort on adapting the existing app towards the final product goal, not recreating foundations that already work.
-
-### 2.3 Main change from the previous direction
-
-The earlier product direction treated LTX-Desktop-WanGP mainly as a useful proof-of-concept/reference while defining a separate app architecture.
-
-This version changes that:
+Its purpose is to give users the approachable creative loop of modern hosted AI platforms while retaining the advantages of local software:
 
 ```text
-Old direction:
-  Build a new app and borrow ideas from LTX-Desktop-WanGP.
-
-New direction:
-  Fork LTX-Desktop-WanGP and evolve it into AI Video Studio.
+Prompt or guide media
+    -> Generate locally
+    -> Compare and organise results
+    -> Reuse settings and references
+    -> Refine or direct the next result
+    -> Keep the project and media under the user's control
 ```
 
-That means inherited systems should be preserved by default.
+AiVS is not intended to expose every raw WanGP model or technical setting. It turns tested WanGP capabilities into curated, understandable product workflows.
 
----
-
-## 3. Product summary
-
-AI Video Studio should let users:
-
-- create or open local creative projects;
-- generate images quickly through QuickGen;
-- later generate videos through QuickGen;
-- later generate music, sound, and TTS;
-- browse, compare, reuse, and organise generations;
-- use curated local WanGP-supported models;
-- use simple model presets (model/aspect ratio/resolution) instead of raw technical settings;
-- use LoRAs in a simple, discoverable way where supported;
-- keep work local;
-- eventually build structured AI video projects through a Production tab.
-
-The product identity is:
+## 2. Product identity
 
 ```text
 Local-first creative studio
-Built on LTX-Desktop-WanGP
-WanGP-only generation
-Simple QuickGen workflows first
-Production workflow later
+Built on the proven LTX-Desktop-WanGP foundation
+Powered exclusively by WanGP / Wan2GP
+Curated rather than exhaustive
+Simple first, advanced when useful
+Project-based rather than disposable
+Free and community-focused
 ```
 
----
+The inherited foundation remains important, but AiVS is no longer an image-only fork prototype. It currently contains working image, video, Reframe, music, Director, asset-management, setup, and model-management workflows.
 
-## 4. Inheritance rule
+## 3. Document authority and source-of-truth order
 
-### 4.1 Existing base app behaviour should remain the default
+For implementation decisions, use this order:
 
-If `LTX-Desktop-WanGP` already has a working system for a feature, do not redesign, respecify, or rebuild it unless required by one of the explicit goals in this PRD.
+1. The user's explicit current request and any approved task-specific implementation plan.
+2. The non-negotiable product guardrails in this document.
+3. Current code, tests, and focused current-state contracts such as:
+   - `docs/GENSPACE_ARCHITECTURE.md`;
+   - `docs/DIRECTOR_MODE_V1.md`;
+   - `docs/REFRAME_MODE.md`;
+   - `backend/architecture.md`;
+   - `backend/WANGP_BACKEND.md`.
+4. `AGENTS.md`, `.projectmem/PROJECT_MAP.md`, and `.projectmem/summary.md` for operational guidance and navigation.
+5. Completed implementation plans and historical issue records.
 
-This applies especially to:
+When an old plan conflicts with current code or a focused current-state document, the current implementation and current contract win. Do not silently reinterpret a historical plan as unfinished work.
 
-- project creation/opening;
-- project storage;
-- project metadata;
-- generation cards;
-- gallery/output display;
-- generation history;
-- job/progress behaviour;
-- local backend architecture;
-- frontend routing/layout patterns;
-- editor integration;
-- packaging/build scripts.
+## 4. Non-negotiable product principles
 
-### 4.2 Do not make speculative changes to inherited systems
+### 4.1 Local generation and user control
 
-Avoid changing inherited systems just because this PRD mentions them at a high level.
+Normal image, video, music, future TTS, and future editing-generation workflows must execute through the user's local WanGP runtime.
 
-A coding agent should not interpret this PRD as permission to redesign existing working systems.
+Prompts and guide media must not be sent to an external generation provider.
 
-### 4.3 Change inherited systems only when necessary
+The app may use the network for clearly necessary supporting operations such as:
 
-Inherited systems should only be changed when needed to:
+- downloading models and runtime components;
+- checking or downloading application updates;
+- opening explicitly requested documentation or project links.
 
-- remove cloud/API generation paths;
-- enforce WanGP-only generation;
-- support curated WanGP model profiles;
-- support simple QuickGen model/aspect ratio/resolution UX;
-- support LoRA selection where WanGP supports it;
-- improve local runtime readiness/diagnostics;
-- fix bugs discovered during testing;
-- support later Production features after QuickGen is stable.
+Those operations do not permit cloud generation, hidden media upload, or silent telemetry.
 
-### 4.4 Prefer extension over replacement
+### 4.2 WanGP-only generation
 
-When adding new capability, prefer extending existing LTX-Desktop-WanGP patterns over replacing them.
-
-Examples:
+All product generation routes must use WanGP / Wan2GP.
 
 ```text
-Good:
-  Add WanGP model profiles into the existing model/generation flow.
-
-Bad:
-  Replace the entire project system with a newly designed one.
+No supported WanGP path = no normal AiVS product exposure
 ```
+
+Do not add a separate direct model pipeline, ComfyUI dependency, hosted API fallback, or second generation runtime merely to expose a desired model sooner.
+
+A feature may remain planned or disabled until the corresponding WanGP path is reliable.
+
+### 4.3 Curated product surface
+
+WanGP determines what is technically available. AiVS determines what should be visible and supported.
+
+The main UI must expose a curated set of:
+
+- model profiles;
+- media roles;
+- resolutions and aspect ratios;
+- generation controls;
+- model packs;
+- error and readiness states.
+
+Do not automatically turn raw WanGP metadata into product controls.
+
+### 4.4 Simple first, advanced second
+
+Primary workflows should use clear creative language and sensible defaults.
+
+Advanced controls are appropriate when they materially help the creative result, but they should be grouped, progressively disclosed, and model-aware rather than dominating the initial experience.
+
+Raw internal terms, manifest fields, model-loader flags, and stack traces should not leak into the primary user experience.
+
+### 4.5 Preserve and extend working systems
+
+AiVS began as a fork, but this rule now applies to the current AiVS implementation as well as inherited code:
+
+- study the existing path before changing it;
+- extend established ownership and data flows;
+- reuse shared components and services when their contract fits;
+- avoid speculative rewrites;
+- replace a system only when an approved requirement or demonstrated limitation justifies it.
+
+The goal is maintainable evolution, not permanent fidelity to old code. Refactoring is welcome when it clarifies ownership or removes duplication without changing product behaviour unexpectedly.
+
+### 4.6 Reproducible runtime compatibility
+
+The Python, Torch, CUDA, performance-kernel, WanGP, and model-runtime combination is a curated compatibility unit.
+
+It must remain reproducible through pinned manifests and installation scripts. Generic dependency automation must not independently upgrade this stack.
+
+### 4.7 Project-centred creative work
+
+Generations are not disposable API responses. They belong to local projects and should preserve the information needed to understand, reuse, organise, and continue the work.
+
+Where a workflow creates media, it should integrate with the shared project Asset Library unless a documented reason requires different ownership.
+
+### 4.8 Friendly failure and recovery
+
+Missing models, interrupted downloads, backend restarts, incompatible settings, and invalid media should produce actionable product states.
+
+Do not require users to interpret raw Python, CUDA, HTTP, or WanGP errors for ordinary recovery.
+
+### 4.9 Honest capability presentation
+
+Unavailable features may be shown only when their disabled/planned state is unambiguous.
+
+Do not imply that Retake, TTS, LoRA selection, or locked Director tracks work before their complete user path is validated.
+
+### 4.10 Open-source responsibility
+
+Keep licensing, attribution, local-data behaviour, and system requirements understandable.
+
+Do not add opaque tracking, proprietary lock-in, or dependencies that undermine the community-focused intent without an explicit product decision.
+
+## 5. Current product state
+
+### 5.1 Project shell
+
+Users can create and reopen local projects. A project currently exposes three persistent workspaces:
+
+- **Quick Gen** — implemented by GenSpace;
+- **Director** — frame-based generation planning and execution;
+- **Video Editor** — inherited NLE-style editing workspace.
+
+The workspaces remain mounted to preserve state, but only the active workspace may own playback, keyboard transport, visible compositor layers, media warming, or other active work.
+
+### 5.2 Quick Gen / GenSpace
+
+Quick Gen is the fast creative loop:
 
 ```text
-Good:
-  Reuse existing gallery cards and add model/preset/LoRA info if missing.
-
-Bad:
-  Build a new gallery from scratch because the PRD mentions output history.
+Choose media type
+    -> choose a curated model
+    -> add prompt and optional guides
+    -> adjust useful controls
+    -> generate/cancel
+    -> compare, organise, and reuse results
 ```
 
----
+Implemented media modes:
 
-## 5. Non-negotiable product principles
+- Image;
+- Video;
+- Music.
 
-### 5.1 WanGP-only generation
+GenSpace uses a persistent left generation sidebar and the shared Asset Library. Mode state lives above the visible panels so switching modes does not destroy settings or create independent generation jobs.
 
-All normal product generation must route through WanGP.
+### 5.3 Image generation
 
-This includes:
+Current curated image profiles:
 
-- image generation;
-- video generation;
-- audio/music generation;
-- TTS;
-- future retake/edit/postprocess features where possible.
+- Z-Image Turbo;
+- Krea 2 Turbo;
+- Flux 2 Klein 4B;
+- HiDream O1.
 
-If a model cannot run through WanGP, it should not be exposed as a normal QuickGen model.
+Image profiles may expose different curated reference or control-image roles. Unsupported roles must not be shown merely because another model supports them.
 
-### 5.2 Local-first
+The renderer submits the AiVS profile, aspect ratio, resolution tier, prompt, seed, and supported media roles. The backend validates the profile and resolves the exact WanGP dimensions and settings.
 
-The default product must not require cloud API keys.
+### 5.4 Video generation
 
-Users should be able to run the app locally, configure local runtime/models, and generate locally.
+The current curated video profile is LTX 2.3 Fast, mapped through WanGP's supported LTX path.
 
-### 5.3 Simple first, advanced second
+Generate mode supports the curated combination of:
 
-QuickGen should expose simple creative controls first:
+- text-to-video;
+- start and end images;
+- continuation from source video;
+- supported control-video and guidance roles;
+- supported audio inputs;
+- prompt enhancement;
+- duration/output controls.
 
+GenSpace is intended for a direct generation, not a multi-segment production timeline. Director owns authored prompt timing.
+
+### 5.5 Reframe
+
+Reframe is the working video-outpainting workflow within GenSpace video mode.
+
+It provides:
+
+- source-video trim selection;
+- preset or custom aspect framing;
+- zoom and pan;
+- mirrored custom edge expansion;
+- an optional text prompt;
+- WanGP-backed outpainting generation.
+
+Its current geometry, padding limits, source-frame length handling, and backend mapping are established in `docs/REFRAME_MODE.md`. Do not casually reinterpret them during unrelated work.
+
+### 5.6 Retake
+
+Retake is visible but disabled.
+
+It must remain unavailable until the complete WanGP-backed user path is reliable, including trim semantics, generation mapping, progress, cancellation, output persistence, and real-runtime QA.
+
+Do not treat dormant routes, old UI fragments, or backend compatibility structures as proof that Retake is product-ready.
+
+### 5.7 Music generation
+
+Music generation is implemented through curated ACE-Step 1.5 Fast and XL profiles.
+
+The current workflow includes:
+
+- Instrumental, Auto Lyrics, and Custom Lyrics modes;
+- song-description prompting;
+- Genre, Mood, Vibe, and Instruments keyword chips;
+- generation-time description enhancement;
+- Compose Lyrics with optional Think and independent lyric seed;
+- manual or automatic duration;
+- BPM, key scale, time signature, language, vocal, variability, and sampling controls;
+- independent Cover Song and Transfer Timbre inputs;
+- multiple output variations;
+- multi-variation audio takes in the shared Asset Library.
+
+Music has one canonical full settings experience. Legacy saved fields may remain for compatibility but must not recreate removed product modes.
+
+### 5.8 Shared Asset Library
+
+GenSpace, Director, and Video Editor use one controlled shared Asset Library presentation.
+
+The product contract includes:
+
+- local uploaded and generated assets;
+- project bins and bin-owned colours;
+- filters and favourites;
+- grid and list views;
+- shared context actions;
+- duplicate-name handling;
+- multi-take assets;
+- image, video, and audio presentation;
+- project-safe deletion and reveal/open actions.
+
+Shared presentation does not require every workspace to expose identical actions. Each workspace supplies the actions appropriate to its purpose.
+
+Idle video cards should remain thumbnail-first. Inactive workspaces must not decode or render large media collections in the background merely because their state remains mounted.
+
+### 5.9 Director V1
+
+Director is the canonical multi-segment prompt-timing workflow.
+
+It is a generation-intent timeline, not an NLE timeline.
+
+Current V1 supports:
+
+- multiple Director timelines per project;
+- Global Prompt and local Prompt segments;
+- movable/resizable segments and authored gaps;
+- image keyframes at Start, Centre, or End;
+- a Continue Video prefix anchored at frame zero;
+- integer-frame authoring at 24 fps;
+- upward `8n+1` output snapping;
+- sequences up to 20 seconds;
+- independent preview, playhead, playback, zoom, scroll, focus, and undo/redo;
+- generated output and regeneration takes;
+- normal project Asset creation after generation.
+
+Guide Audio and Control Media authoring remain visible but locked in V1.
+
+Director and Video Editor may share domain-neutral timeline visuals, but their recipes, time models, history, selection, and editing rules must remain separate.
+
+### 5.10 Video Editor
+
+The inherited Video Editor remains a separate NLE-style workspace.
+
+It is not the storage model for Director segments and should not automatically receive Director output. Users may add generated assets through the normal Asset Library workflow.
+
+Changes to the editor should preserve working editing behaviour and avoid turning unrelated Quick Gen or Director tasks into an editor rewrite.
+
+### 5.11 Setup and Model Manager
+
+AiVS manages the Windows Python and GPU runtime installation path and exposes optional WanGP model packs through first-run setup and Settings.
+
+Users may:
+
+- install the curated runtime;
+- choose optional model packs;
+- see structured transfer progress;
+- cancel downloads;
+- retry failed downloads;
+- delete supported model packs;
+- configure project, checkpoint, and LoRA storage paths.
+
+Generation-triggered model downloads and Model Manager downloads have different transport owners, but both should present consistent progress information in the renderer.
+
+## 6. Product surface boundaries
+
+### 6.1 Quick Gen versus Director
+
+Use Quick Gen for a direct image, video, Reframe, or music generation.
+
+Use Director for frame-based, multi-segment video intent and prompt timing.
+
+Do not reintroduce a second prompt timeline inside GenSpace unless a future approved product decision deliberately changes this boundary.
+
+### 6.2 Director versus Video Editor
+
+Director authors what should be generated.
+
+Video Editor arranges and modifies finished media.
+
+Do not store Director Prompt segments as NLE clips or make the editor timeline drive Director playback merely because the visuals are related.
+
+### 6.3 Asset Library versus workspace state
+
+Assets and bins are shared project data.
+
+Transient selection, playback, timeline playheads, mode settings, and undo history remain owned by their workspace.
+
+### 6.4 Product profiles versus raw runtime models
+
+A WanGP model definition or downloaded file is not automatically an AiVS product profile.
+
+Product exposure requires an explicit curated profile, capability policy, defaults, availability behaviour, tests, and user-facing validation.
+
+### 6.5 Current product versus long-term Production concepts
+
+A broader structured Production workflow remains a possible long-term direction, potentially building on Director, projects, and the editor.
+
+There is no currently approved requirement to invent or expose a separate Production tab. Do not build one from the old phase-era PRD without a new product plan.
+
+## 7. Model strategy
+
+### 7.1 Backend-owned profile registry
+
+`backend/model_profiles/profiles.py` is the source of truth for product-visible models.
+
+A curated profile defines the product contract, including:
+
+- stable AiVS ID and display name;
 - media type;
+- mapped WanGP model type;
+- supported generation capabilities;
+- supported input roles and limits;
+- default and allowed output choices;
+- Director or Music policy where relevant;
+- availability/status behaviour;
+- licence information where available.
+
+The frontend consumes the model-profile API. It must not infer the product UI by scraping raw WanGP configuration.
+
+### 7.2 Adding a model
+
+A new model is not complete when its files download or WanGP lists it.
+
+Promotion requires:
+
+1. verified WanGP support;
+2. an explicit AiVS profile and display policy;
+3. curated controls and defaults;
+4. model-pack/readiness behaviour where applicable;
+5. backend validation and mapping;
+6. frontend support without generic raw-setting exposure;
+7. metadata persistence and Copy Settings compatibility;
+8. focused automated coverage;
+9. real-runtime generation testing on supported hardware;
+10. licensing/attribution review.
+
+### 7.3 LoRA direction
+
+AiVS already supports configurable LoRA storage at the runtime level, but user-facing selection and strength controls are not implemented.
+
+Future LoRA UX should be:
+
+- model-aware;
+- optional;
+- compact in primary workflows;
+- explicit about unsupported or experimental compatibility;
+- persisted with generation settings and metadata;
+- mapped through WanGP rather than a direct loader.
+
+### 7.4 TTS direction
+
+TTS is not currently implemented.
+
+A future TTS workflow must use a supported WanGP path, integrate with projects and the Asset Library, expose a curated voice/control surface, and avoid direct cloud APIs.
+
+## 8. Runtime and dependency strategy
+
+### 8.1 Current runtime ownership
+
+The app owns the user-facing setup and readiness experience. WanGP remains the generation and model-acquisition authority beneath that product layer.
+
+Users should not need to manually understand:
+
+- Python environments;
+- Torch/CUDA combinations;
+- performance-kernel wheels;
+- WanGP launch scripts;
+- raw model folder layouts;
+- generation manifests.
+
+### 8.2 Curated GPU stack
+
+The current Windows stack pins Python, Torch, CUDA, and hardware-specific acceleration packages through:
+
+- `backend/pyproject.toml`;
+- `backend/uv.lock`;
+- `scripts/wangp-stacks.json`;
+- `scripts/install-wangp-stack.ps1`.
+
+Treat these as one compatibility matrix. Do not run broad Python dependency upgrades or accept automated runtime version PRs without explicit stack-level validation.
+
+### 8.3 Bundled WanGP source
+
+AiVS bundles a reproducible WanGP checkout pinned by `scripts/wangp-source.json`.
+
+WanGP updates must use the transactional update workflow, review sensitive bridge/model/default/dependency changes, run the required checks, and restore the previous checkout and manifest when validation fails.
+
+### 8.4 Frontend and desktop dependencies
+
+React, Electron, Vite, Tailwind, TypeScript, test tooling, and related desktop packages may be modernised, but major upgrades must be isolated, phased, and validated in development, unpacked, and installed builds.
+
+Do not combine frontend/desktop modernisation with unrelated product feature work.
+
+## 9. Local data, privacy, and storage
+
+### 9.1 Local project data
+
+Projects, imported assets, generated outputs, settings, and recipes are stored locally.
+
+Default project assets live under `Documents/AiVS`, with project uploads and generated outputs separated inside each project.
+
+### 9.2 Runtime data
+
+Executable runtime components, model caches, updater state, and application state belong in appropriate application/runtime locations rather than inside user project folders.
+
+Checkpoint and LoRA roots may be configured without changing the ownership of project media.
+
+### 9.3 No hidden upload
+
+Adding a media input must not upload it to an external service.
+
+Any future networked collaboration, sharing, or optional telemetry would require an explicit product decision, transparent user controls, and documentation. It must not emerge accidentally from a dependency or inherited feature.
+
+## 10. User-experience principles
+
+### 10.1 Clear hierarchy
+
+Keep primary generation controls easy to scan:
+
 - model;
-- aspect ratio;
-- resolution;
-- prompt;
-- reference input where supported;
-- seed lock;
-- LoRA selection where supported;
-- generate.
+- process/mode;
+- media inputs;
+- prompt or lyrics;
+- output settings;
+- generate/cancel.
 
-Advanced settings may exist, but they should not dominate the main QuickGen experience.
+Group secondary controls rather than presenting an undifferentiated settings wall.
 
-### 5.4 Curated models only
+### 10.2 Model-aware controls
 
-Do not expose every WanGP-supported model automatically.
+Hide, disable, or explain controls that the selected profile cannot use.
 
-The main UI should show a curated set of tested model profiles.
+Do not allow impossible combinations and rely on the backend error to teach the user the model contract.
 
-### 5.5 Production later
+### 10.3 Consistent shared behaviour
 
-Production is important, but it should not be built before QuickGen is strong.
+Where GenSpace, Director, and Video Editor expose the same concept—assets, bins, filters, takes, model readiness, progress—the visual and interaction language should stay aligned through shared components or shared primitives.
 
-QuickGen should mature in this order:
+Consistency does not mean forcing different workflows into one universal component.
 
-```text
-Images
-Video
-Audio/TTS
-Production
-```
+### 10.4 Actionable status
 
-### 5.6 Preserve what already works
-
-The project should avoid unnecessary rewrites.
-
-The fastest path is:
-
-```text
-Keep working LTX-Desktop-WanGP systems
-Remove non-WanGP/cloud paths
-Add curated local model support
-Polish QuickGen
-Then expand carefully
-```
-
----
-
-## 6. What to keep from LTX-Desktop-WanGP
-
-Keep the inherited implementation for these areas unless a specific issue is found:
-
-- Electron app shell;
-- React frontend structure;
-- FastAPI backend structure;
-- local backend startup/supervision;
-- project system;
-- generation space / QuickGen foundation;
-- gallery/generation card behaviour;
-- generation history;
-- generation metadata handling;
-- output registration/display patterns;
-- existing WanGP bridge/integration patterns;
-- diagnostics/logging where useful;
-- video editor code as future leverage.
-
-The agent should first study how these currently work, then make the smallest useful changes.
-
----
-
-## 7. What to remove, disable, or hide
-
-The app should be converted into a local-only WanGP product.
-
-Remove, disable, or hide inherited features that depend on external generation providers or product assumptions that no longer fit.
-
-Target areas to audit:
-
-- LTX API-only generation paths;
-- cloud generation provider flows;
-- API key onboarding;
-- fal.ai / hosted Z-Image API usage;
-- Gemini prompt suggestion API usage;
-- any feature that sends prompts/media to external services;
-- direct non-WanGP model-loading paths;
-- cloud text encoding requirements;
-- API-only macOS assumptions;
-- telemetry unless fully removed or made strictly opt-in and transparent;
-- billing/cost/API quota copy;
-- branding/copy tied to LTX Desktop as the product.
-
-Temporary cloud/API code may remain during an early audit only if:
-
-- it is unreachable from the UI;
-- it is behind a disabled feature flag;
-- it is documented in a removal tracker;
-- there is a clear plan to delete it.
-
----
-
-## 8. MVP definition
-
-### 8.1 MVP name
-
-**MVP 0.1 — Local-Only QuickGen Image Foundation**
-
-### 8.2 MVP goal
-
-Create a fork of `LTX-Desktop-WanGP` that:
-
-- launches as AI Video Studio;
-- keeps the inherited project/generation/gallery foundations;
-- removes or disables visible cloud/API usage;
-- generates images locally through WanGP only;
-- supports at least one stable WanGP image model end-to-end;
-- introduces a simple way to add curated WanGP image models;
-- keeps output/history behaviour aligned with the inherited app;
-- keeps Production visible but disabled or marked as coming later.
-
-### 8.3 MVP user journey
-
-A user should be able to:
-
-1. Open AI Video Studio.
-2. See that the app is local/WanGP-powered.
-3. Create or open a project using the inherited project flow.
-4. Enter QuickGen.
-5. Choose Images.
-6. Select an installed WanGP image model.
-7. Pick Preview, Balanced, or Quality.
-8. Enter a prompt.
-9. Optionally add reference input if supported by the selected model.
-10. Optionally select LoRA if supported by the selected model.
-11. Generate locally through WanGP.
-12. See progress using the inherited job/progress pattern.
-13. View results using the inherited gallery/generation card pattern.
-14. Reuse previous prompts/settings where the inherited app already supports this or where a small extension is needed.
-15. Reopen the project later and see previous work.
-
-### 8.4 MVP success criteria
-
-The MVP succeeds when QuickGen image generation feels like a usable local creative app, not a technical proof-of-concept.
-
-The user should not need to:
-
-- open WanGP manually;
-- open Gradio;
-- use API keys;
-- paste raw WanGP settings;
-- understand CUDA/Torch;
-- manually move generated outputs;
-- use a cloud provider.
-
----
-
-## 9. QuickGen direction
-
-### 9.1 Core QuickGen goal
-
-QuickGen should become the fast creative loop:
-
-```text
-Prompt → Generate → Compare → Reuse → Vary → Save
-```
-
-Do this by adapting the existing Gen Space / QuickGen implementation rather than replacing it.
-
-### 9.2 MVP QuickGen controls
-
-QuickGen should support:
-
-- media type selector;
-- model selector;
-- aspect ratio;
-- resolution;
-- prompt;
-- reference input where supported;
-- LoRA selector where supported;
-- seed lock where already supported or easy to add;
-- generate/cancel/progress.
-
-### 9.3 Existing gallery and generation cards
-
-Use the existing gallery/generation card implementation as the default.
-
-Do not redesign it in MVP.
-
-Only extend it where needed to show useful local-generation information, such as:
-
-- model name;
-- preset;
-- seed;
-- LoRA used;
-- WanGP/local status;
-- reuse settings.
-
-If those details are already stored/displayed by the inherited app, leave them alone.
-
----
-
-## 10. Model strategy
-
-### 10.1 Model rule
-
-Only expose models that run through WanGP.
-
-```text
-No WanGP support = no normal QuickGen exposure
-```
-
-### 10.2 Initial image model candidates
-
-Candidate QuickGen image models include:
-
-- Z-Image / Z-Image Turbo through WanGP;
-- Flux 2 Klein through WanGP;
-- Flux 2 Chroma through WanGP if available and useful;
-- Qwen Image through WanGP;
-- HiDream through WanGP;
-- Krea 2 Turbo only if supported through WanGP;
-- Ideogram 4 only if supported through WanGP.
-
-### 10.3 Important candidate warning
-
-Krea 2 Turbo, Flux2 Klein, Ideogram 4, or any other desired model should not be integrated as a direct custom pipeline unless WanGP supports it.
-
-If a desired model is not yet available through WanGP, list it as:
-
-```text
-Desired model — blocked until WanGP support exists
-```
-
-### 10.4 First model target
-
-The first promoted image model should be whichever WanGP-supported image model is easiest to make reliable end-to-end inside the inherited app.
-
-Krea 2 Turbo can be a preferred target, but it must not block MVP progress.
-
-### 10.5 Model profile approach
-
-Add a lightweight curated model profile layer only if the inherited app does not already provide an equivalent clean mechanism.
-
-The goal is not to create a large new architecture. The goal is to make adding WanGP-backed models repeatable and safe.
-
-A model profile should answer:
-
-- display name;
-- media type;
-- WanGP model/type/settings mapping;
-- supported inputs;
-- LoRA support status;
-- resolution availability;
-- aspect ratio availability;
-- install/availability status;
-- experimental/stable status.
-
----
-
-## 11. LoRA support
-
-### 11.1 Why LoRA matters
-
-LoRA support is a key differentiator versus many online prompt-first platforms.
-
-It gives AI Video Studio a local-first advantage beyond simply copying cloud UX.
-
-### 11.2 MVP LoRA scope
-
-Start simple and model-aware.
-
-MVP LoRA support should include:
-
-- LoRA folder detection or configuration;
-- compatible LoRA listing where compatibility can be inferred;
-- manual LoRA import/copy if useful;
-- enable/disable LoRA per generation;
-- strength slider where WanGP supports it;
-- LoRA info saved with generation metadata if not already captured.
-
-### 11.3 LoRA UX
-
-LoRA should appear as an optional QuickGen control, not as a major settings panel.
-
-Example:
-
-```text
-LoRA: None / Select...
-```
-
-The control should be hidden, disabled, or marked unsupported for models where LoRA is not available.
-
----
-
-## 12. Runtime and diagnostics
-
-### 12.1 Runtime goal
-
-Users should not need to manually understand Python, Torch, CUDA, WanGP startup scripts, or model folder structure.
-
-### 12.2 MVP runtime strategy
-
-Reuse and adapt the existing LTX-Desktop-WanGP runtime/WanGP detection patterns where possible.
-
-MVP should support:
-
-- repo-local WanGP checkout if inherited;
-- external WanGP folder selection/config if inherited;
-- `WANGP_ROOT`-style setup if inherited;
-- checks for WanGP availability;
-- checks for `shared/api.py` or the inherited WanGP bridge route;
-- CUDA/Torch readiness checks where available;
-- friendly missing/broken runtime states.
-
-### 12.3 App-managed runtime later
-
-A later version can move towards a fully app-managed runtime informed by WanGP-Easy-Install.
-
-Do not let a perfect runtime installer block the MVP if an existing WanGP folder can be used during early development.
-
-### 12.4 Friendly status states
-
-Expose statuses such as:
+Prefer states such as:
 
 ```text
 Ready
-Runtime missing
-WanGP missing
-WanGP API unavailable
-Model missing
-CUDA unavailable
-GPU memory too low
-Repair needed
+Model files missing
+Downloading model
+Runtime starting
+Runtime needs repair
+Generation queued
 Generating
+Cancelling
+Complete
+Failed — Retry
 ```
 
-Avoid raw stack traces in the main UI.
+Retain detailed diagnostics in logs and structured API data, while showing concise human-readable status in the primary UI.
 
----
+### 10.5 Stable creative state
 
-## 13. Production tab
+Switching modes, tabs, or projects must not silently discard authored settings or allow a finishing generation to save into the wrong project.
 
-### 13.1 Product intent
+Preserve persistent state intentionally and stop inactive side effects intentionally.
 
-Production is the future structured workflow for finished AI video projects.
+### 10.6 Performance awareness
 
-It should eventually support:
+Avoid duplicate media decoding, duplicate polling loops, hidden active workspaces, repeated thumbnail extraction, or unnecessary rerenders of the Asset Library.
 
-- idea/treatment;
-- script;
-- visual style;
-- characters;
-- locations;
-- props;
-- shot list;
-- storyboards;
-- per-shot prompts;
-- image generation;
-- video generation;
-- audio/music/TTS;
-- review/approval;
-- export/editor handoff.
+Measure before introducing lazy loading or a new state framework. Existing static imports and focused controller boundaries are deliberate unless evidence justifies change.
 
-### 13.2 MVP state
+## 11. Architecture guardrails with product impact
 
-Production should be visible but disabled, hidden, or marked as coming later.
+The implementation details live in `AGENTS.md` and architecture documents, but these boundaries protect product behaviour:
 
-Recommended copy:
+1. Renderer-native communication goes through the context-isolated preload bridge.
+2. Renderer-backend communication uses the authenticated local FastAPI service.
+3. Backend routes remain thin; handlers own domain decisions; services isolate side effects.
+4. Shared generation state owns progress and cancellation across image, video, music, and Director workflows.
+5. The backend validates all curated profile and media-role choices before invoking WanGP.
+6. Generated results are registered through project-safe persistence paths.
+7. Heavy GPU or I/O work must not block shared state locks.
+8. Director recipes and NLE clips remain different domain models.
+9. Runtime and source pins remain reproducible.
+10. No product feature may bypass WanGP or the local project/data boundaries.
+
+## 12. Active roadmap
+
+The current near-term directions are:
+
+1. Phased modernisation of the frontend/Electron dependency stack on a dedicated branch.
+2. Real-runtime regression testing across image, video, Reframe, Director, music, setup, and every model-download entry point.
+3. Retake once its WanGP-backed flow is reliable enough to expose.
+4. Curated user-facing LoRA selection and strength controls.
+5. TTS generation through WanGP.
+6. Director Guide Audio and Control Media authoring after Prompt Track V1 is stable.
+7. Continued curated model additions supported by profiles, model packs, and real-runtime testing.
+8. Ongoing maintainability, performance, accessibility, and packaging improvements.
+
+This list establishes direction, not permission to implement every item in one task. Significant features require a focused plan and explicit scope.
+
+## 13. Explicit non-goals without a new approved plan
+
+Do not introduce the following as incidental work:
+
+- cloud generation providers or API-key onboarding;
+- a direct model runtime beside WanGP;
+- automatic exposure of every WanGP model or setting;
+- ComfyUI as a required runtime;
+- a universal schema-generated settings form replacing curated panels;
+- a second project or Asset Library state system;
+- a second independent generation polling/cancellation implementation;
+- merging Director and Video Editor data models;
+- a speculative Production tab;
+- silent telemetry or media upload;
+- bulk upgrades of the curated Python/Torch/CUDA/WanGP stack;
+- large visual redesigns hidden inside dependency, bug-fix, or refactor work.
+
+## 14. Product decision framework for agents
+
+Before changing a product flow, answer:
 
 ```text
-Production is coming later.
-QuickGen comes first: images, then video, then audio/TTS.
+What user problem or approved requirement does this solve?
+Which current component, handler, service, or domain already owns it?
+Does the requested behaviour belong in Quick Gen, Director, Video Editor, Settings, or setup?
+Can the current system be extended without creating a second source of truth?
+Does generation still route through WanGP locally?
+Is the selected model/profile combination explicitly supported?
+Will project persistence, Copy Settings, progress, cancellation, and error recovery still work?
+What automated and native-runtime evidence will prove parity?
 ```
 
-### 13.3 Do not build early
-
-Do not build Production until QuickGen is stable.
-
----
-
-## 14. Video editor
-
-### 14.1 Role
-
-The inherited video editor is a bonus, not the MVP centre.
-
-### 14.2 MVP handling
-
-Keep the inherited editor code if it does not slow development.
-
-Hide it, beta-label it, or leave it as-is depending on the current state of the base app.
-
-Do not rewrite it for MVP.
-
-### 14.3 Future use
-
-The editor may later become:
-
-- a review area for generated clips;
-- a simple assembly space;
-- a way to compare variations;
-- a bridge from QuickGen into Production;
-- a rough AI animatic tool.
-
----
-
-## 15. Phased roadmap
-
-### Phase 0 — Fork audit and preservation map
-
-Goal:
-
-Understand what the base app already does and avoid accidental rewrites.
-
-Tasks:
-
-- fork `LTX-Desktop-WanGP`;
-- document inherited project system;
-- document inherited generation/gallery/card behaviour;
-- document inherited metadata/job behaviour;
-- identify all generation routes;
-- identify all cloud/API paths;
-- identify all WanGP paths;
-- identify runtime setup assumptions;
-- create a keep/remove/extend tracker.
-
-Definition of done:
-
-```text
-There is a clear map of what must be kept, removed, extended, and left untouched.
-```
-
-### Phase 1 — Local-only product shell
-
-Goal:
-
-Make the app clearly local-first and WanGP-powered.
-
-Tasks:
-
-- rename/rebrand app to AI Video Studio;
-- remove/hide visible API key onboarding;
-- remove/hide cloud provider settings;
-- remove or disable telemetry;
-- update copy to local/WanGP positioning;
-- add clear WanGP attribution/disclosure;
-- keep inherited project/home flow intact.
-
-Definition of done:
-
-```text
-The app opens as AI Video Studio and exposes no normal cloud/API generation workflow.
-```
-
-### Phase 2 — WanGP-only generation enforcement
-
-Goal:
-
-Ensure normal generation paths route through WanGP only.
-
-Tasks:
-
-- audit image/video generation routes;
-- disable/remove LTX API generation;
-- disable/remove fal/Gemini/cloud helper paths;
-- ensure inherited Z-Image or image generation uses WanGP rather than hosted API;
-- add guardrails/tests/checks to prevent accidental external generation calls.
-
-Definition of done:
-
-```text
-A normal generation from the UI cannot call an external generation provider.
-```
-
-### Phase 3 — QuickGen image baseline
-
-Goal:
-
-Make one image model work end-to-end locally through WanGP.
-
-Tasks:
-
-- use inherited QuickGen/Gen Space UI;
-- select the easiest stable WanGP image model;
-- map model/preset controls to WanGP settings;
-- run generation through the inherited backend/WanGP bridge;
-- preserve inherited progress/gallery/metadata handling;
-- add friendly local runtime/model errors.
-
-Definition of done:
-
-```text
-A user can generate one image locally through WanGP and see it in the inherited gallery/output flow.
-```
-
-### Phase 4 — Curated image model expansion
-
-Goal:
-
-Add more WanGP-supported image models without turning QuickGen into a technical settings dump.
-
-> **Detailed brief:** `docs/PHASE4_DETAILS.md` is the source of truth for Phase 4 implementation. Read it before starting Phase 4 work. The notes below summarise it; the detailed brief takes precedence on any conflict.
-
-Tasks:
-
-- add or adapt a lightweight curated model profile mechanism (backend-owned, exposed to frontend via API — single source of truth);
-- add candidate image models one at a time, starting with **Krea 2 Turbo** alongside the existing **Z-Image Turbo** baseline;
-- show installed/missing/experimental states with friendly messages, not raw WanGP tracebacks;
-- keep UI simple — extend the existing `ModelSelector` (already works in video mode) into image mode; do not redesign GenSpace/gallery/cards;
-- curated resolution/aspect-ratio set only: aspect ratios `1:1` / `16:9` / `9:16`, resolution tiers `540p` minimum; no 4K/2160p by default;
-- collapse duplicate same-aspect-ratio resolutions per tier to one curated `WxH` value (prefer lower pixel count when ambiguous);
-- backend resolves simple UI choices to exact WanGP `WxH` (e.g. `1080p 16:9 → 1920x1088`) and validates profile/resolution/aspect before calling WanGP;
-- model switching keeps current aspect ratio/resolution where supported, otherwise falls back to model defaults;
-- include LoRA capability fields in profiles now, but do not build LoRA UI in Phase 4 — that is Phase 5;
-- treat reference images as model-aware — hide/disable for profiles where `referenceImages` is false (both initial profiles are normal prompt-to-image);
-- WanGP discovery is used for validation/availability only, not as the raw UI source;
-- do not switch the WanGP integration to MCP for this phase — continue using the existing in-process WanGP bridge.
-
-Implementation principle:
-
-```text
-WanGP tells us what can exist.
-AiVS decides what should be visible.
-```
-
-The frontend should not scrape or infer arbitrary WanGP options directly into the UI. The curated profile layer remains the source of truth for what AiVS exposes; the backend validates that each curated profile still maps to a real WanGP-supported model.
-
-Definition of done:
-
-```text
-Additional image models can be added predictably without rewriting core UI each time.
-```
-
-### Phase 5 — LoRA MVP
-
-Goal:
-
-Add simple LoRA usage for supported image models.
-
-Tasks:
-
-- detect/configure LoRA folders;
-- list compatible/experimental LoRAs;
-- add optional LoRA selection in QuickGen;
-- expose strength where supported;
-- pass LoRA settings to WanGP;
-- ensure LoRA usage is stored/displayed if not already captured.
-
-Definition of done:
-
-```text
-A compatible LoRA can be selected and used in a WanGP image generation.
-```
-
-### Phase 6 — QuickGen image polish
-
-**Status: Complete.**
-
-Goal:
-
-Make image generation genuinely useful for creative iteration.
-
-Tasks:
-
-- improve prompt/settings reuse if needed;
-- improve seed lock/variation flows if needed;
-- improve compare/favourite/delete/reveal actions if inherited app lacks them;
-- keep gallery/generation card changes minimal and additive;
-- tighten friendly errors.
-
-Definition of done:
-
-```text
-QuickGen image feels practical for real creative exploration.
-```
-
-### Phase 7 — QuickGen video
-
-**Status: Complete.**
-
-Goal:
-
-Bring video generation into the same WanGP-only QuickGen model.
-
-Tasks:
-
-- expose one stable WanGP video model;
-- support prompt/reference/duration/motion controls where appropriate;
-- reuse inherited output/gallery/video preview behaviour;
-- store useful generation settings through inherited metadata flow.
-
-Definition of done:
-
-```text
-A user can generate video locally through WanGP from QuickGen.
-```
-
-### Phase 8 — QuickGen audio/TTS
-
-Goal:
-
-Add audio/music/TTS once image and video foundations are stable.
-
-Tasks:
-
-- expose one stable WanGP audio/music path if available;
-- expose one stable WanGP TTS path if available;
-- add simple prompt/voice controls;
-- reuse inherited asset/output patterns where possible.
-
-Definition of done:
-
-```text
-A user can generate audio or TTS locally through WanGP.
-```
-
-### Phase 9 — Production planning
-
-Goal:
-
-Design the future structured workflow without destabilising QuickGen.
-
-Tasks:
-
-- prototype Production UX;
-- define script/character/location/shot/storyboard concepts;
-- define handoff from Production shots into QuickGen;
-- avoid major implementation until approved.
-
-Definition of done:
-
-```text
-Production is clearly specified, but QuickGen remains the stable foundation.
-```
-
----
-
-## 16. MVP acceptance checklist
-
-### Local-only
-
-- [ ] No visible API key requirement.
-- [ ] No normal cloud provider generation path.
-- [ ] Prompt/media are not sent to external generation services.
-- [ ] WanGP is clearly disclosed.
-- [ ] Runtime/model status is understandable.
-
-### Inherited foundation
-
-- [ ] Existing project flow is preserved unless explicitly changed.
-- [ ] Existing gallery/generation card behaviour is preserved unless explicitly changed.
-- [ ] Existing metadata/history behaviour is preserved unless explicitly changed.
-- [ ] Existing backend/frontend architecture is preserved unless explicitly changed.
-- [ ] Existing editor is not rewritten for MVP.
-
-### QuickGen image
-
-- [ ] Image generation works through WanGP only.
-- [ ] At least one WanGP image model works end-to-end.
-- [ ] Model selector is curated.
-- [ ] Prompt submission works.
-- [ ] Progress/cancel uses inherited patterns where possible.
-- [ ] Outputs appear through inherited gallery/output flow.
-- [ ] Previous settings can be reused if inherited or added minimally.
-
-### Model expansion
-
-- [ ] New models are WanGP-supported.
-- [ ] Desired-but-unsupported models are tracked, not directly integrated.
-- [ ] Model availability/missing states are friendly.
-- [ ] Adding a model does not require major UI surgery.
-
-### LoRA
-
-- [ ] LoRA selection only appears where supported or clearly experimental.
-- [ ] LoRA strength works where WanGP supports it.
-- [ ] LoRA usage is saved/displayed if needed.
-
-### Codebase
-
-- [ ] Cloud/API paths are removed, disabled, or unreachable.
-- [ ] External calls are not used for normal generation.
-- [ ] WanGP remains the generation backend.
-- [ ] App-specific changes are documented.
-- [ ] Existing working systems are not unnecessarily rewritten.
-
----
-
-## 17. Risks and mitigations
-
-### Risk: AI agent rebuilds systems that already work
-
-Mitigation:
-
-- this PRD explicitly treats inherited systems as source of truth;
-- Phase 0 requires a preservation map;
-- architecture/project/gallery/metadata details are intentionally not respecified;
-- changes should be additive unless required by local-only/WanGP-only goals.
-
-### Risk: inherited cloud/API assumptions are deeply embedded
-
-Mitigation:
-
-- start with a cloud/API removal tracker;
-- hide cloud UI first;
-- remove routes/services once WanGP-only path is stable;
-- add checks to prevent normal generation from calling external providers.
-
-### Risk: desired models are not supported by WanGP
-
-Mitigation:
-
-- expose only WanGP-supported models;
-- track desired unsupported models separately;
-- do not add custom direct pipelines;
-- use fallback stable WanGP image models for MVP.
-
-### Risk: QuickGen becomes a raw WanGP settings UI
-
-Mitigation:
-
-- curated models;
-- simple presets;
-- hidden advanced controls;
-- model-aware defaults;
-- minimal UI changes.
-
-### Risk: fork diverges too far from upstream/base app
-
-Mitigation:
-
-- preserve inherited systems;
-- isolate AI Video Studio changes;
-- document major changes;
-- avoid rewrites unless necessary.
-
-### Risk: video editor distracts from MVP
-
-Mitigation:
-
-- keep/hide/beta-label inherited editor;
-- do not rewrite it;
-- do not make editor changes part of QuickGen image MVP.
-
----
-
-## 18. AI coding agent instructions
-
-### 18.1 North star
-
-Turn `LTX-Desktop-WanGP` into AI Video Studio by preserving its working desktop/project/generation/gallery foundations, removing non-WanGP/cloud generation paths, and making QuickGen excellent for local WanGP-powered generation.
-
-### 18.2 Core agent rule
-
-Before changing an inherited feature, ask:
-
-```text
-Does this already work in LTX-Desktop-WanGP?
-Is this change required for WanGP-only/local-only/QuickGen model support?
-Can this be done by extending the existing implementation instead of replacing it?
-```
-
-If the answer does not justify the change, leave the inherited implementation alone.
-
-### 18.3 Hard guardrails
-
-1. Do not rebuild the project system unless there is a specific bug or approved requirement.
-2. Do not rebuild the gallery/generation card system unless there is a specific bug or approved requirement.
-3. Do not redesign metadata storage unless the inherited system cannot support required WanGP/model/LoRA fields.
-4. Do not replace the Electron/React/FastAPI architecture.
-5. Do not add generation paths that bypass WanGP.
-6. Do not expose cloud/API generation as a normal feature.
-7. Do not require API keys for MVP.
-8. Do not add direct custom model pipelines for models that WanGP does not support.
-9. Do not expose every WanGP setting in QuickGen.
-10. Do not expose every WanGP model automatically.
-11. Do not build Production before QuickGen is stable.
-12. Do not let the inherited video editor define the MVP.
-13. Do not hide WanGP attribution.
-
-### 18.4 Implementation order for any feature
-
-For each feature:
-
-1. classify it as MVP core, MVP nice-to-have, future QuickGen, future Production, runtime infrastructure, or out of scope;
-2. check whether LTX-Desktop-WanGP already has an equivalent feature;
-3. decide keep / remove / extend / replace;
-4. prefer the smallest extension that meets the requirement;
-5. ensure generation still routes through WanGP;
-6. ensure no external generation service is called;
-7. preserve inherited project/gallery/metadata behaviour unless the change explicitly requires otherwise;
-8. add friendly errors/status where needed;
-9. smoke test the user path;
-10. document any significant deviation from the base app.
-
-### 18.5 Definition of done
-
-A feature is done when it:
-
-- works through WanGP;
-- respects local-only product rules;
-- preserves inherited working systems where possible;
-- has friendly failure states;
-- avoids unnecessary technical complexity in QuickGen;
-- can be tested through a repeatable manual or automated smoke test.
-
----
-
-## 19. One-sentence product instruction
-
-Fork LTX-Desktop-WanGP into AI Video Studio, preserve its existing project, gallery, generation-card, metadata, editor, and Electron/React/FastAPI foundations wherever they already work, remove non-WanGP/cloud/API generation paths, make QuickGen image generation excellent first with curated WanGP models and simple LoRA support, then expand to video, audio/TTS, and finally Production.
+If ownership is unclear, inspect the current map and code before creating a new abstraction.
+
+## 15. Definition of done for product work
+
+A product change is complete only when all applicable items are true:
+
+- The intended user path works from the actual Electron app.
+- Generation remains local and WanGP-backed.
+- The UI exposes only supported, curated combinations.
+- Existing projects and saved generation settings remain compatible or have an explicit migration.
+- Progress, cancellation, errors, and retry behaviour are handled.
+- Generated media and metadata persist to the correct project.
+- Inactive workspaces do not retain unintended playback or heavy work.
+- Focused automated tests cover the changed contracts.
+- Type checking and relevant full test/build gates pass.
+- Native drag/drop, playback, model download, generation, packaging, or installer behaviour is manually tested where automation cannot prove it.
+- Documentation reflects any new product capability, ownership boundary, runtime requirement, or deliberate limitation.
+- The implementation does not quietly bundle unrelated redesign or dependency changes.
+
+## 16. One-sentence product instruction
+
+Build AiVS as a reliable, approachable, local creative studio that turns curated WanGP capabilities into project-based image, video, music, and directed-generation workflows, while preserving user control, clear ownership, reproducible runtime compatibility, and the working systems already proven in the app.
