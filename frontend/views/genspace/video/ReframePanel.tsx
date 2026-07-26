@@ -9,6 +9,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { fileUrlToPath } from "../../../lib/url-to-path";
+import { getNativeFilePath } from "../../../lib/native-file-path";
 import { OutpaintFrameOverlay } from "./OutpaintFrameOverlay";
 import {
   MIN_TRIM_DURATION,
@@ -395,7 +396,7 @@ export function ReframePanel({
 
     const file = e.dataTransfer.files?.[0];
     if (file) {
-      const filePath = (file as File & { path?: string }).path;
+      const filePath = getNativeFilePath(file);
       if (filePath) {
         void window.electronAPI?.approveLocalPath?.(filePath).finally(() => {
           setVideoPath(filePath);

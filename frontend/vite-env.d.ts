@@ -19,6 +19,7 @@ interface Window {
     getModelsPath: () => Promise<string>
     readLocalFile: (filePath: string) => Promise<{ data: string; mimeType: string }>
     approveLocalPath: (filePath: string) => Promise<boolean>
+    getPathForFile?: (file: File) => string
     checkGpu: () => Promise<{ available: boolean; name?: string; vram?: number }>
     getAppInfo: () => Promise<{ version: string; isPackaged: boolean; modelsPath: string; userDataPath: string }>
     checkFirstRun: () => Promise<{ needsSetup: boolean; needsLicense: boolean }>

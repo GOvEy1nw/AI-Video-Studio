@@ -12,6 +12,7 @@ describe('importGalleryFile', () => {
   it('approves a user-dropped path before importing it', async () => {
     const filePath = 'C:\\tmp\\drag-gallery.png'
     const approveLocalPath = vi.fn().mockResolvedValue(true)
+    const getPathForFile = vi.fn().mockReturnValue(filePath)
     const importToProjectAssets = vi.fn().mockResolvedValue({
       success: true,
       path: 'C:\\Users\\rais\\Documents\\AiVS\\project\\uploads\\drag-gallery.png',
@@ -22,15 +23,16 @@ describe('importGalleryFile', () => {
       configurable: true,
       value: {
         approveLocalPath,
+        getPathForFile,
         importToProjectAssets,
       } as unknown as Window['electronAPI'],
     })
     const file = new File(['png'], 'drag-gallery.png', { type: 'image/png' })
-    Object.defineProperty(file, 'path', { value: filePath })
 
     const outcome = await importGalleryFile('project', file)
 
     expect(outcome.ok).toBe(true)
+    expect(getPathForFile).toHaveBeenCalledWith(file)
     expect(approveLocalPath).toHaveBeenCalledWith(filePath)
     expect(importToProjectAssets).toHaveBeenCalledWith({
       srcPath: filePath,
@@ -40,5 +42,26 @@ describe('importGalleryFile', () => {
     expect(approveLocalPath.mock.invocationCallOrder[0]).toBeLessThan(
       importToProjectAssets.mock.invocationCallOrder[0],
     )
+  })
+
+  it('rejects unsupported media before path approval or import', async () => {
+    const approveLocalPath = vi.fn()
+    const importToProjectAssets = vi.fn()
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        approveLocalPath,
+        getPathForFile: () => 'C:\\tmp\\notes.txt',
+        importToProjectAssets,
+      } as unknown as Window['electronAPI'],
+    })
+    const file = new File(['text'], 'notes.txt', { type: 'text/plain' })
+
+    await expect(importGalleryFile('project', file)).resolves.toEqual({
+      ok: false,
+      reason: 'unsupported',
+    })
+    expect(approveLocalPath).not.toHaveBeenCalled()
+    expect(importToProjectAssets).not.toHaveBeenCalled()
   })
 })

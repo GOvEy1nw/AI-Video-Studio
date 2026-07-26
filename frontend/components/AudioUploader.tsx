@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { Upload, Music, RefreshCw, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { getNativeFilePath } from '@/lib/native-file-path'
 
 interface AudioUploaderProps {
   onAudioSelect: (path: string | null) => void
@@ -12,7 +13,7 @@ export function AudioUploader({ onAudioSelect, selectedAudio }: AudioUploaderPro
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0]
     if (file) {
-      const filePath = (file as any).path as string | undefined
+      const filePath = getNativeFilePath(file)
       if (filePath) {
         await window.electronAPI?.approveLocalPath?.(filePath)
         const normalized = filePath.replace(/\\/g, '/')

@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { Upload, Image as ImageIcon, RefreshCw, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { getNativeFilePath } from '@/lib/native-file-path'
 
 interface ImageUploaderProps {
   onImageSelect: (path: string | null) => void
@@ -12,8 +13,7 @@ export function ImageUploader({ onImageSelect, selectedImage }: ImageUploaderPro
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0]
     if (file) {
-      // In Electron, File objects have a .path property with the full filesystem path
-      const filePath = (file as any).path as string | undefined
+      const filePath = getNativeFilePath(file)
       if (filePath) {
         await window.electronAPI?.approveLocalPath?.(filePath)
         const normalized = filePath.replace(/\\/g, '/')

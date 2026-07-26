@@ -10,6 +10,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { fileUrlToPath } from "../../../lib/url-to-path";
+import { getNativeFilePath } from "../../../lib/native-file-path";
 import {
   MIN_TRIM_DURATION,
   VideoTrimPanel,
@@ -255,7 +256,7 @@ export function RetakePanel({
 
     const file = e.dataTransfer.files?.[0];
     if (file) {
-      const filePath = (file as any).path as string | undefined;
+      const filePath = getNativeFilePath(file);
       if (filePath) {
         void window.electronAPI?.approveLocalPath?.(filePath).finally(() => {
           setVideoPath(filePath);

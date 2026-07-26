@@ -3,6 +3,7 @@ import type { Asset, TimelineClip, Track, TransitionType, SubtitleClip, ClipEffe
 import { DEFAULT_COLOR_CORRECTION, DEFAULT_LETTERBOX, EFFECT_DEFINITIONS, DEFAULT_TEXT_STYLE } from '../../types/project'
 import type { ParsedTimeline } from '../../lib/timeline-import'
 import { exportFcp7Xml } from '../../lib/timeline-import'
+import { getNativeFilePath } from '../../lib/native-file-path'
 import { resolveOverlaps, DEFAULT_DISSOLVE_DURATION } from './video-editor-utils'
 
 interface UseClipOperationsParams {
@@ -169,8 +170,7 @@ export function useClipOperations(params: UseClipOperationsParams) {
       
       if (!isVideo && !isAudio && !isImage) continue
       
-      // In Electron, File objects have a .path property with the full filesystem path
-      const electronFilePath = (file as any).path as string | undefined
+      const electronFilePath = getNativeFilePath(file)
       
       let persistentUrl: string
       let persistentPath: string

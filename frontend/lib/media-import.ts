@@ -1,5 +1,6 @@
 import { logger } from './logger'
 import type { Asset } from '../types/project'
+import { getNativeFilePath } from './native-file-path'
 
 export type MediaImportPolicy = 'copy-into-project' | 'reference-in-place'
 export type DuplicateStrategy = 'reuse' | 'suffix' | 'overwrite' | 'prompt'
@@ -200,7 +201,7 @@ export async function ensureGalleryAssetForInputFile(
   addAssetFn: (projectId: string, asset: Omit<Asset, 'id' | 'createdAt'>) => Asset,
   resolveDuplicate?: ResolveDuplicateFilename,
 ): Promise<string | null> {
-  const filePath = (file as File & { path?: string }).path
+  const filePath = getNativeFilePath(file)
   if (!filePath) {
     return URL.createObjectURL(file)
   }
@@ -250,7 +251,7 @@ export async function importGalleryFile(
   file: File,
   resolveDuplicate?: ResolveDuplicateFilename,
 ): Promise<GalleryFileImportOutcome> {
-  const filePath = (file as File & { path?: string }).path
+  const filePath = getNativeFilePath(file)
   if (!filePath) {
     return { ok: false, reason: 'no-path' }
   }
