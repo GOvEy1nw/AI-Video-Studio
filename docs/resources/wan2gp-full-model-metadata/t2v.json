@@ -25,6 +25,14 @@
         1,
         2
       ],
+      "vae_upsamplers": {
+        "qwen_vae_pid(1.5)": [
+          1
+        ]
+      },
+      "excluded_spatial_upsamplers": [
+        "qwen_pid(1.5)"
+      ],
       "vae_block_size": 16,
       "profiles_dir": [
         "wan"
