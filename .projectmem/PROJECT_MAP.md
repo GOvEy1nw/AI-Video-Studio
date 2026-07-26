@@ -1,314 +1,573 @@
-# Project Map - AI Video Studio
+# Project Map — AI Video Studio
 
-Status: Updated 2026-07-20 after WanGP 12.34 source and update-workflow integration.
+_Last reviewed: 2026-07-26 against the `dev` branch._
 
-## Purpose
+> This file is a current-state navigation map for coding agents. It is not a chronological implementation log. Completed phase plans remain useful historical references, but current code, tests, and the focused architecture documents listed near the end of this file are the source of truth.
 
-AI Video Studio is a local-first desktop creative app for AI image, video, and future audio/TTS generation. It is forked from `deepbeepmeep/LTX-Desktop-WanGP` and evolves that inherited foundation into an AiVS product powered by WanGP / Wan2GP.
+## Product state
 
-## Stack
+AI Video Studio (AiVS) is a local-first, community-focused desktop creative app built on `deepbeepmeep/LTX-Desktop-WanGP` and powered exclusively by the bundled WanGP / Wan2GP runtime.
 
-- Frontend: React 18, TypeScript, Vite 5, Tailwind CSS
-- Electron: Electron 31 main process plus context-isolated preload
-- Backend: Python 3.11.9, FastAPI, uvicorn, uv
-- Package manager: pnpm 10.30.3
-- Packaging: electron-builder
-- Runtime: WanGP / Wan2GP through in-process `WanGPSession`
-- GPU stack: configured by `scripts/wangp-stacks.json` and installed by `scripts/install-wangp-stack.ps1`
-- Testing: backend pytest with service fakes, pyright strict mode, TypeScript `tsc --noEmit`
+Implemented product surfaces:
 
-## Architecture
+- **Quick Gen / GenSpace**
+  - curated image generation;
+  - LTX video generation;
+  - video Reframe/outpainting;
+  - ACE-Step music generation;
+  - shared generation progress, cancellation, result persistence, and Copy Settings.
+- **Director V1**
+  - frame-based prompt timeline;
+  - image keyframes;
+  - Continue Video prefix;
+  - generated takes and independent preview/playback.
+- **Video Editor**
+  - inherited NLE-style workspace retained as a separate project tab.
+- **Shared Asset Library**
+  - project-local imports and generated assets;
+  - bins, filters, favourites, grid/list views, context actions, and multi-take assets.
+- **Setup and Model Manager**
+  - bundled Python/runtime setup;
+  - optional WanGP model packs;
+  - structured transfer progress and cancellation;
+  - configurable project, checkpoint, and LoRA storage locations.
+
+Not yet implemented or intentionally unavailable:
+
+- Retake is visible in GenSpace but disabled until the WanGP path is reliable.
+- TTS generation is not implemented.
+- User-facing LoRA selection/strength controls are not implemented.
+- Director Guide Audio and Control Media authoring remain locked in V1.
+- The frontend/Electron dependency modernisation is planned separately; this map records the pre-upgrade stack.
+
+## Current stack
+
+The values below reflect the current lock/runtime configuration on `dev`.
+
+| Layer | Current stack |
+| --- | --- |
+| Renderer | React 18.3.1, TypeScript 5.9.3, Vite 5.4.21, Tailwind CSS 3.4.19 |
+| Frontend tests | Vitest 2.1.9, jsdom 24.1.3, Testing Library |
+| Desktop shell | Electron 31.7.7 with a context-isolated CommonJS preload |
+| Package manager | pnpm 10.30.3 |
+| Packaging/updating | electron-builder 26.x, electron-updater 6.x, NSIS on Windows |
+| Backend | Python 3.11.9, FastAPI, Pydantic 2, uvicorn, uv |
+| GPU runtime | Torch 2.10.0 + CUDA 13.0 with curated hardware-specific kernels |
+| Generation runtime | Bundled WanGP 12.34 through an in-process `WanGPSession` |
+
+## Top-level architecture
 
 ```text
-Renderer (React + TS)
-  | HTTP localhost:8000
-  v
-Backend (FastAPI + Python)
-  | in-process API
-  v
-WanGP / Wan2GP
-
-Renderer
-  | IPC through preload
-  v
-Electron main
-  | OS integration
-  v
-Files, dialogs, ffmpeg, backend process management
+React renderer
+  ├─ HTTP + per-session auth token ──> FastAPI backend
+  │                                  └─ in-process WanGP bridge
+  │                                     └─ bundled Wan2GP runtime/models
+  │
+  └─ context-isolated preload ──────> Electron main process
+                                     ├─ files, dialogs, project storage
+                                     ├─ Python/runtime setup and supervision
+                                     ├─ model-pack child process
+                                     ├─ ffmpeg export/frame extraction
+                                     └─ updater and application lifecycle
 ```
+
+The renderer never imports Node or Electron APIs directly. Native access must go through the typed `window.electronAPI` bridge in `electron/preload.ts`.
 
 ## Main folders
 
-- `frontend/` - React renderer, QuickGen UI, project views, editor views, hooks, types.
-- `electron/` - Electron main process, preload bridge, app lifecycle, IPC, export, backend supervision.
-- `backend/` - FastAPI server, handlers, services, state, runtime config, tests.
-- `backend/model_profiles/` - backend-owned curated AiVS model profiles and resolution resolver.
-- `scripts/` - dev setup, build scripts, WanGP source/update workflow, GPU stack installer.
-- `docs/` - phase docs, WanGP docs, installer/backend docs.
-- `resources/` - app/build resources.
-- `.projectmem/` - project memory snapshots for agents.
-- `Wan2GP/` - bundled WanGP source, mirrored from the fork's `AiVS` branch at the exact revision in `scripts/wangp-source.json`.
+| Path | Responsibility |
+| --- | --- |
+| `frontend/` | React renderer, project state, GenSpace, Director, Video Editor, shared UI, types, and tests |
+| `frontend/views/genspace/` | Current GenSpace implementation split by mode and responsibility |
+| `frontend/hooks/generation/` | Shared generation job lifecycle, request builders, progress normalisation, and tests |
+| `frontend/views/director/` | Director workspace, preview, controls, timeline, persistence, and takes |
+| `frontend/views/editor/` | Video Editor implementation and timeline primitives shared visually with Director |
+| `electron/` | Electron main process, preload bridge, IPC, project storage, setup, export, and updater |
+| `backend/` | FastAPI routes, domain handlers, services, state, model profiles, runtime configuration, and tests |
+| `backend/model_profiles/` | Backend-owned curated product model registry and image resolution policy |
+| `scripts/` | Setup/build scripts, WanGP source management, and GPU stack installation |
+| `docs/` | Current contracts plus completed implementation plans retained for history |
+| `resources/` | App, installer, icon, and bootstrap resources |
+| `Wan2GP/` | Bundled WanGP checkout pinned by `scripts/wangp-source.json` |
+| `.projectmem/` | Curated current-state summary/map plus granular historical issue records |
 
 ## Frontend map
 
-### Primary files
+### Application and project navigation
 
-- `frontend/views/GenSpace.tsx` - QuickGen surface for image/video/retake/**reframe** modes, prompt bar, profile-driven controls, media input strip, gallery with filters/bins/list view, asset persistence.
-- `frontend/components/ReframePanel.tsx` - Reframe mode panel: video preview, trim (`VideoTrimPanel`), zoom/pan overlay, emits `ReframePanelState` to GenSpace.
-- `frontend/components/OutpaintFrameOverlay.tsx` - Draggable outpaint frame overlay: aspect chips (1:1/16:9/9:16/custom), zoom slider (preset modes), mirrored edge handles (custom), pan area, refresh reset, padding label.
-- `frontend/lib/reframe-outpaint.ts` - Reframe padding/layout math (fit, max aspect zoom, pan, mirrored expand, two-phase frame layout).
-- `frontend/components/VideoTrimPanel.tsx` - Shared trim UI extracted for Retake and Reframe panels.
-- `docs/REFRAME_MODE.md` - Current Reframe UX/backend contract: optional prompt, WanGP settings, source-frame video_length behavior.
-- `frontend/lib/media-import.ts` - GenSpace media ingestion (copy-into-project), gallery file import, input-to-gallery sync, duplicate filename handling.
-- `frontend/lib/gallery-filters.ts` - Gallery type/source/bin filter helpers and display filename inference.
-- `frontend/lib/asset-delete.ts` - Scoped project asset delete with media handle release before trash.
-- `frontend/lib/asset-copy.ts` - Move generated outputs into project `generated/` folder.
-- `frontend/components/GalleryFilters.tsx` - Icon-only filter trigger; type/source toggle chips in popover.
-- `frontend/components/GalleryBinBar.tsx` - Bin chips, create/rename/delete, drag-to-assign; toolbar row left of view controls.
-- `frontend/components/GalleryAssetContextMenu.tsx` - Right-click asset → Move to Bin / New Bin / Remove from Bin.
-- `frontend/components/DuplicateFilenameDialog.tsx` - Basename collision modal for uploads.
-- `frontend/hooks/use-generation.ts` - submit/cancel/progress polling for video and image generation.
-- `frontend/hooks/use-image-profiles.ts` - fetches model profiles and exposes image/video filtered hooks.
-- `frontend/types/model-profiles.ts` - frontend mirror of backend model profile API.
-- `frontend/types/project.ts` - project, asset, generation metadata types.
-- `frontend/contexts/ProjectContext.tsx` - project state, assets, view routing, editor-to-GenSpace handoff.
-- `frontend/views/VideoEditor.tsx` - inherited video editor, retained as beta/future workflow surface.
-- `frontend/views/director/` - Director workspace, prompt-first frame timeline, contextual controls, preview, persistence, undo/redo; Guide Audio and Control Media remain visible but locked.
-- `frontend/views/editor/timeline/TimelinePrimitives.tsx` - domain-neutral ruler, playhead, segment shell, viewport, track-row, and zoom visuals shared by Edit and Director timelines.
-- `frontend/types/director.ts` - versioned Director recipe and semantic request types.
-- `frontend/lib/director-timeline.ts` - frame snapping, keyframe roles, split/delete/ripple operations, migration/clone.
-- `frontend/lib/director-validation.ts` - profile compatibility, media, prompt, keyframe, and source-audio validation.
-- `frontend/lib/director-request.ts` - resolves project asset IDs into semantic Director API request paths.
+| Path | Responsibility |
+| --- | --- |
+| `frontend/main.tsx` | React root and Strict Mode |
+| `frontend/App.tsx` | App-level setup/readiness and top-level routing |
+| `frontend/views/Home.tsx` | Project home/create/open surface |
+| `frontend/views/Project.tsx` | Project header and Quick Gen / Director / Video Editor tabs |
+| `frontend/contexts/ProjectContext.tsx` | Projects, assets, timelines, active view/tab, persistence, and cross-workspace hand-offs |
+| `frontend/types/project.ts` | Project, asset, bin, take, generation metadata, and timeline persistence types |
 
-### Current QuickGen behavior
+`Project.tsx` keeps all three workspaces mounted to preserve state. Inactive workspaces are hidden and must stop playback, keyboard shortcuts, media decoding, and compositor work.
 
-- Image and video modes use profile-driven model dropdowns.
-- Image mode shows media input strip above prompt only when selected profile supports inputs.
-- Supported image profiles expose role selector per input thumbnail.
-- Video mode is profile-driven and exposes simple controls plus optional multi-shot prompt rows.
-- Multi-shot mode replaces the prompt textarea with an optional global prompt row and timed shot rows capped at 20 total seconds.
-- Prompt enhancement is available in image/video prompt areas and routes through WanGP.
-- Gallery persistence guards avoid repeated save loops after generation completion.
+### GenSpace composition
 
-### GenSpace media library (phases A–D, `docs/MEDIA_LIBRARY_PLAN.md`)
+`frontend/views/GenSpace.tsx` is intentionally only the route entry:
 
-- **Storage:** GenSpace copies into `{AiVS Assets}/{projectId}/uploads/` (imports) and `generated/` (WanGP outputs moved from staging). Editor still references heavy imports in place.
-- **Inputs:** Gallery drag video/audio/image to prompt slots; single file picker infers role for Vid/Aud.
-- **Import:** OS drop on gallery + input attach sync via `media-import.ts`; duplicate basename dialog (reuse / suffix / cancel).
-- **Gallery UI:** Grid sizes (small/medium/large) + list view (`AssetListRow`); hover filename overlay; audio/video hover preview; lightbox supports audio.
-- **Toolbar (left→right):** filter icon → favorites heart → bin chips; view size menu on the right. Toolbar controls use `h-8` with reserved border to avoid layout shift.
-- **Filters:** Type (image/video/audio) + source (generated/uploaded) as blue/grey toggle chips; combines with favorites and bin selection.
-- **Bins:** `Asset.bin` string labels; shared with video editor; create/rename/delete, drag or context menu assign. Phase E mini picker cancelled.
+```text
+GenSpace
+└─ GenSpaceWorkspace
+   ├─ useGenSpaceController
+   │  ├─ persistent mode/settings/media state
+   │  ├─ one shared useGeneration instance
+   │  ├─ immutable submission snapshots
+   │  ├─ result persistence/settings restoration
+   │  └─ gallery state and actions
+   ├─ GenSpaceGallery
+   ├─ GenSpaceSidebar
+   │  ├─ image/ImageGenPanel
+   │  ├─ video/VideoGenPanel
+   │  └─ music/MusicGenPanel
+   └─ GenSpaceOverlays
+```
 
-### Reframe gen mode (outpaint reframe)
+Primary ownership:
 
-- **UI:** GenSpace video mode has process dropdown `Generate` / `Reframe` / `Retake`. Reframe/Retake render inside the prompt bar so the gallery remains visible.
-- **Prompt:** Reframe shows an optional prompt textarea below the panel, placeholder `optional text prompt to drive outpainting...`; blank prompt submits `outpaint`.
-- **Preset aspects:** Zoom slider 0% = fit box (`computeFitPadding`), 100% = max expansion at target aspect (`computeMaxAspectZoomPadding` — e.g. 1:1→16:9 max is L/R 100%, T/B ~34%, not all edges 100%). Pan drag reframes video inside box.
-- **Custom:** Mirrored edge drag expands both sides on an axis; pan for fine reframe. Edge handles hidden in preset modes.
-- **Padding limits:** UI expand/zoom capped at 100% per edge; pan may redistribute up to 200% on one side internally (`MAX_PADDING_INTERNAL`).
-- **Reset:** Refresh button (after aspect chips) resets zoom to 0 and padding to fit (presets) or zero (custom) without changing aspect mode.
-- **Generate:** `use-generation.ts` sends `reframe` on POST `/api/generate` with padding, aspectMode, trim; `normalizeReframeForApi` clamps 0–200.
-- **Persistence:** `generationParams` stores reframe fields; gallery Apply prompt restores via `apply-generation-params.ts`.
-- **Backend:** `video_generation_handler` reframe branch → FFmpeg clip extract → `reframe_wangp_mapping.py` → WanGP `video_guide_outpainting*`, `video_prompt_type=VG`, `audio_prompt_type=K`, `force_fps=auto`, `sliding_window_overlap=33`.
-- **Video length:** Reframe probes extracted trim metadata and passes `video_length_frames`; `wangp_bridge` normalizes source frame count to WanGP `8n+1` `video_length` instead of using request FPS when metadata is available.
-- **API types:** `ReframeOptions`, `ReframePadding` in `api_types.py` — per-edge `le=200` required for pan >100% (100 rejects whole payload).
+| Area | Current owner |
+| --- | --- |
+| Composition | `frontend/views/genspace/GenSpaceWorkspace.tsx` |
+| Controller aggregation | `frontend/views/genspace/hooks/useGenSpaceController.tsx` |
+| Mode transitions | `frontend/views/genspace/hooks/useGenSpaceModeState.ts` |
+| Image/video/music settings state | `frontend/views/genspace/hooks/useGenSpaceSettingsState.ts` |
+| Prompt and attached media | `frontend/views/genspace/hooks/useGenSpaceMediaInputs.ts` |
+| Reframe/Retake state | `frontend/views/genspace/hooks/useGenSpaceVideoTools.tsx` |
+| Per-mode command construction | `frontend/views/genspace/logic/generation-requests.ts` |
+| Submission snapshots/actions | `frontend/views/genspace/hooks/useGenSpaceGenerationActions.ts` |
+| Generated asset construction | `frontend/views/genspace/logic/generation-assets.ts` |
+| Completion/idempotent persistence | `frontend/views/genspace/hooks/useGenSpaceResultPersistence.ts` |
+| Copy Settings restoration | `frontend/views/genspace/logic/settings-restore.ts` and `hooks/useGenSpaceSettingsRestore.ts` |
+| Gallery state/actions | `frontend/views/genspace/hooks/useGenSpaceGallery.ts` |
+| Gallery/overlay presentation | `GenSpaceGallery.tsx` and `GenSpaceOverlays.tsx` |
+| Shared mode controls | `frontend/views/genspace/components/` |
+| Image-owned UI | `frontend/views/genspace/image/` |
+| Video/Reframe/Retake-owned UI | `frontend/views/genspace/video/` |
+| Music-owned UI and compiler | `frontend/views/genspace/music/` |
+
+Mode panels receive typed controller contracts. They must not create their own project context, polling loop, persistence path, or `useGeneration` instance.
+
+### Image generation
+
+Curated visible profiles are backend-owned:
+
+- `z_image_turbo` — Z-Image Turbo; one optional control input routes through the Z-Image control model.
+- `krea2_turbo` — Krea 2 Turbo.
+- `flux2_klein_4b` — Flux 2 Klein 4B; up to five curated reference/control inputs.
+- `hidream_o1_dev` — HiDream O1; up to five curated reference/control inputs.
+
+Key files:
+
+- `frontend/views/genspace/image/ImageGenPanel.tsx`
+- `frontend/views/genspace/image/ImageModelControls.tsx`
+- `frontend/views/genspace/image/ImageMediaInputs.tsx`
+- `backend/handlers/image_generation_handler.py`
+- `backend/model_profiles/resolution_resolver.py`
+
+The frontend submits profile IDs, aspect ratios, and resolution tiers. The backend validates the profile and resolves the exact output dimensions.
+
+### Video generation
+
+The visible curated video profile is:
+
+- `ltx2_22b_distilled` — displayed as **LTX 2.3 Fast**, mapped to WanGP `ltx2_22B_distilled_1_1`.
+
+Current video process modes:
+
+- **Generate** — text-to-video plus curated start/end image, continuation, control-video, audio, and guidance roles supported by the selected profile.
+- **Reframe** — trim plus aspect/zoom/pan outpainting workflow.
+- **Retake** — visible but disabled.
+
+Key files:
+
+- `frontend/views/genspace/video/VideoGenPanel.tsx`
+- `frontend/views/genspace/video/VideoModeTabs.tsx`
+- `frontend/views/genspace/video/VideoMediaInputs.tsx`
+- `frontend/views/genspace/video/GuideMediaTrimEditor.tsx`
+- `frontend/views/genspace/video/ReframePanel.tsx`
+- `frontend/views/genspace/video/OutpaintFrameOverlay.tsx`
+- `frontend/views/genspace/video/VideoTrimPanel.tsx`
+- `frontend/views/genspace/video/reframe-outpaint.ts`
+- `backend/handlers/video_generation_handler.py`
+- `backend/services/video_clip.py`
+- `backend/services/reframe_wangp_mapping.py`
+
+Multi-segment prompt timing is no longer authored in GenSpace. Director is the canonical prompt-timeline workflow; the backend retains legacy `shotPrompts` compatibility only.
+
+### Music generation
+
+Music generation is implemented through two curated ACE-Step 1.5 profiles:
+
+- `ace_step_15_turbo` — **ACE-Step 1.5 Fast**
+- `ace_step_15_xl_turbo` — **ACE-Step 1.5 XL**
+
+Current capabilities include:
+
+- Instrumental, Auto Lyrics, and Custom Lyrics modes.
+- Song-description prompt with local Genre/Mood/Vibe/Instruments keyword chips.
+- Generation-time description enhancement.
+- Compose Lyrics with optional Think and independent lyric seed.
+- Manual or automatic duration.
+- BPM, key scale, time signature, language, vocal conditioning, variability, and sampling controls.
+- Independent Cover Song and Transfer Timbre inputs.
+- Up to four variations.
+- Multi-variation audio assets rendered as independently previewable waveform rows.
+
+Key files:
+
+- `frontend/views/genspace/music/MusicGenPanel.tsx`
+- `frontend/views/genspace/music/MusicSettings.tsx`
+- `frontend/views/genspace/music/MusicAdvancedSettings.tsx`
+- `frontend/views/genspace/music/MusicMediaInputs.tsx`
+- `frontend/views/genspace/music/compile-music-request.ts`
+- `frontend/views/genspace/music/music-keywords.ts`
+- `frontend/types/music.ts`
+- `backend/_routes/music_gen.py`
+- `backend/handlers/music_generation_handler.py`
+- `backend/services/music_request_resolver.py`
+- `backend/services/audio_metadata.py`
+
+The backend maps no audio/Cover/Timbre/both to WanGP audio tasks `""`, `A`, `B`, and `AB`. Legacy single-audio-input requests remain accepted for saved-generation compatibility.
+
+### Shared generation lifecycle
+
+`frontend/hooks/use-generation.ts` remains the compatibility facade used by GenSpace and Director.
+
+`frontend/hooks/generation/useGenerationJob.ts` exclusively owns:
+
+- the active generation state;
+- one abort controller;
+- the 500 ms polling loop;
+- cancellation;
+- terminal-state guards;
+- unmount cleanup.
+
+Pure request builders and progress formatters live alongside it in `frontend/hooks/generation/`.
+
+GenSpace captures immutable, project-scoped submission snapshots. Completion persistence must use that snapshot rather than live UI state, so switching projects or modes during a job cannot save the result into the wrong project or apply later settings.
+
+### Shared Asset Library
+
+`frontend/components/GalleryAssetLibrary.tsx` is the controlled shared asset-library implementation used by GenSpace, Director, and Video Editor.
+
+It owns the common:
+
+- filter, favourite, bin, and view controls;
+- grid/list rendering;
+- media cards and type badges;
+- multi-take navigation;
+- audio waveform rows;
+- hover preview behaviour;
+- common context-action presentation.
+
+Each workspace supplies only its data, selection, persistence, and workspace-specific callbacks.
+
+Supporting files include:
+
+- `frontend/lib/media-import.ts`
+- `electron/lib/project-asset-import.ts`
+- `electron/lib/project-asset-delete.ts`
+- `frontend/lib/asset-copy.ts`
+- `frontend/lib/asset-delete.ts`
+- `frontend/lib/gallery-filters.ts`
+- `frontend/components/GalleryBinBar.tsx`
+- `frontend/views/editor/AssetContextMenu.tsx`
+
+GenSpace imports are copied to `{projectAssetsRoot}/{projectId}/uploads/`; generated outputs are moved to `generated/`. The Video Editor may still reference heavy editing imports in place.
+
+### Director V1
+
+Director is a separate frame-based project workspace, not an alias for the NLE timeline.
+
+Current V1 supports:
+
+- multiple independent Director timelines per project;
+- movable/resizable Prompt segments and authored gaps;
+- Global Prompt plus local segment prompts;
+- one Start/Centre/End image keyframe per Prompt segment;
+- optional Continue Video prefix anchored at frame zero;
+- 24 fps integer-frame authoring;
+- output length snapped upward to `8n+1`;
+- up to 20 seconds;
+- independent playhead, preview, zoom, scroll, focus, and undo/redo;
+- generated track and regeneration takes;
+- output persistence into the shared Asset Library.
+
+Guide Audio and Control Media tracks remain visible but locked.
+
+Key files:
+
+- `frontend/views/DirectorEditor.tsx`
+- `frontend/views/director/`
+- `frontend/types/director.ts`
+- `frontend/lib/director-timeline.ts`
+- `frontend/lib/director-validation.ts`
+- `frontend/lib/director-request.ts`
+- `frontend/views/editor/timeline/TimelinePrimitives.tsx`
+- `backend/_routes/director.py`
+- `backend/handlers/director_generation_handler.py`
+- `backend/services/director_compiler.py`
+
+### Video Editor
+
+`frontend/views/VideoEditor.tsx` and `frontend/views/editor/` contain the inherited editing workspace. It remains a separate project tab and uses shared Asset Library presentation and shared domain-neutral timeline primitives where appropriate.
+
+Do not merge Director recipe objects into NLE `TimelineClip` objects. They deliberately use different time models and editing semantics.
+
+### Settings, setup, and model management
+
+Key files:
+
+- `frontend/components/SettingsModal.tsx`
+- `frontend/components/ModelPackManager.tsx`
+- `frontend/components/PythonSetup.tsx`
+- `frontend/components/DownloadProgressView.tsx`
+- `electron/python-setup.ts`
+- `electron/app-state.ts`
+- `backend/wangp_model_packs.py`
+- `frontend/types/progress.ts`
+- `backend/progress_types.py`
+
+Settings uses persistent left navigation for General, Model Manager, Advanced, and About. Model-pack states are communicated inline as missing, selected, downloading, ready, or failed.
+
+Generation-triggered model downloads flow through backend generation progress. Setup/Model Manager downloads flow through Electron IPC. Both are normalised to the same renderer transfer shape without collapsing structured filename/counter details.
 
 ## Backend map
 
-### Primary files
+### Composition and route pattern
 
-- `backend/ltx2_server.py` - runtime bootstrap, config, uvicorn entry.
-- `backend/app_factory.py` - FastAPI app factory, routers, exception/logging boundary.
-- `backend/app_handler.py` - composition root for handlers, state, services.
-- `backend/api_types.py` - Pydantic request/response models.
-- `backend/handlers/image_generation_handler.py` - WanGP image generation routing and profile validation.
-- `backend/handlers/video_generation_handler.py` - WanGP video generation routing, profile validation, **reframe/outpaint branch**.
-- `backend/services/reframe_wangp_mapping.py` - Maps reframe padding percentages to WanGP outpaint guide fields.
-- `backend/services/video_clip.py` - FFmpeg clip extraction for reframe trim window plus best-effort source video frame/duration metadata probing.
-- `backend/handlers/prompt_enhancement_handler.py` - WanGP prompt enhancement routing.
-- `backend/handlers/model_profiles_handler.py` - `GET /api/model-profiles`.
-- `backend/services/wangp_bridge.py` - WanGP API bridge for image/video manifest execution.
-- `backend/services/director_compiler.py` - pure semantic Director compiler and stable validation codes.
-- `backend/handlers/director_generation_handler.py` - Director media validation/trimming, profile policy, shared job state, settings orchestration.
-- `backend/_routes/director.py` - thin `POST /api/director/generate` route.
-- `backend/model_profiles/profiles.py` - curated image/video model profiles plus raw WanGP metadata.
-- `backend/model_profiles/resolution_resolver.py` - curated image profile resolution table.
-- `backend/tests/fakes/fake_wangp_bridge.py` - fake bridge used by tests.
+```text
+backend/ltx2_server.py
+  └─ backend/app_factory.py
+      └─ backend/app_handler.py
+          ├─ state
+          ├─ domain handlers
+          └─ services / WanGP bridge
+```
 
-### Route pattern
-
-Routes remain thin. Request flow:
+Routes stay thin:
 
 ```text
 _routes/* -> AppHandler -> handlers/* -> services/* + state/*
 ```
 
-Heavy side effects live behind services. Tests use fakes instead of mocks.
+`AppHandler` is the composition root and owns the shared `RLock`, application state, WanGP bridge, and typed domain handlers.
+
+Heavy work must not hold the shared lock. The expected pattern is:
+
+```text
+lock -> read/validate/update state -> unlock
+heavy GPU/IO work
+lock -> publish result/error -> unlock
+```
+
+### Main API routes
+
+| Endpoint | Owner |
+| --- | --- |
+| `POST /api/generate-image` | `ImageGenerationHandler` |
+| `POST /api/generate` | `VideoGenerationHandler` |
+| `POST /api/generate-music` | `MusicGenerationHandler` |
+| `POST /api/music/compose-lyrics` | `MusicGenerationHandler` |
+| `POST /api/director/generate` | `DirectorGenerationHandler` |
+| `POST /api/enhance-prompt` | `PromptEnhancementHandler` |
+| `GET /api/generation/progress` | shared `GenerationHandler` |
+| `POST /api/generate/cancel` | shared `GenerationHandler` |
+| `GET /api/model-profiles` | `ModelProfilesHandler` |
+| health/settings/retake compatibility routes | their matching handlers |
+
+`backend/app_factory.py` owns CORS, per-session auth middleware, route registration, and exception/logging boundaries.
+
+### Important backend files
+
+| Path | Responsibility |
+| --- | --- |
+| `backend/api_types.py` | Pydantic HTTP contracts |
+| `backend/state/` | discriminated state types, settings, and dependency access |
+| `backend/handlers/generation_handler.py` | shared job/progress/cancel state |
+| `backend/handlers/image_generation_handler.py` | image profile validation and WanGP mapping |
+| `backend/handlers/video_generation_handler.py` | video, continuation, controls, and Reframe mapping |
+| `backend/handlers/music_generation_handler.py` | ACE-Step request resolution, lyric composition, generation, and outputs |
+| `backend/handlers/director_generation_handler.py` | semantic Director validation and generation |
+| `backend/handlers/model_profiles_handler.py` | curated profile API and availability |
+| `backend/services/wangp_bridge.py` | in-process WanGP session, manifest execution, progress normalisation |
+| `backend/model_profiles/profiles.py` | product-facing model source of truth |
+| `backend/wangp_model_packs.py` | model-pack discovery/download/delete without GPU model loading |
+| `backend/tests/fakes/fake_wangp_bridge.py` | test boundary for WanGP side effects |
+
+Tests use service fakes rather than `unittest.mock`.
+
+## Curated model contract
+
+WanGP discovery answers what exists and whether files are available. AiVS decides what appears in the product.
+
+Visible profiles currently are:
+
+| Media | AiVS profile IDs |
+| --- | --- |
+| Image | `z_image_turbo`, `krea2_turbo`, `flux2_klein_4b`, `hidream_o1_dev` |
+| Video | `ltx2_22b_distilled` |
+| Music | `ace_step_15_turbo`, `ace_step_15_xl_turbo` |
+
+Rules:
+
+- The renderer consumes `GET /api/model-profiles`; it does not scrape WanGP.
+- The backend validates profile IDs and curated options before invoking WanGP.
+- Raw WanGP metadata remains separate from product capabilities.
+- Adding raw metadata or a model-pack entry does not automatically expose a new UI profile.
+- TTS is represented in shared types as a future media type but has no visible profile/workflow.
 
 ## Electron map
 
-### Primary files
+| Path | Responsibility |
+| --- | --- |
+| `electron/main.ts` | single-instance lifecycle, handler registration, startup/shutdown |
+| `electron/window.ts` | BrowserWindow creation and renderer loading |
+| `electron/preload.ts` | typed, context-isolated renderer API |
+| `electron/ipc/` | file, app, project, video-processing, logging, and storage handlers |
+| `electron/app-state.ts` | per-user project/checkpoint/LoRA path settings |
+| `electron/python-setup.ts` | Python/GPU runtime setup, model-pack process, backend readiness |
+| `electron/python-backend.ts` | backend process supervision |
+| `electron/lib/project-asset-import.ts` | project upload/generated asset movement and duplicate policy |
+| `electron/export/` | native ffmpeg export |
+| `electron/updater.ts` | GitHub release update checks |
+| `electron-builder.yml` | packaged resources and Windows/macOS targets |
 
-- `electron/lib/project-asset-import.ts` - Copy/import into project uploads with suffix/reuse/overwrite strategies.
-- `electron/lib/project-asset-delete.ts` - Scoped trash with retry for Windows file locks.
-- `electron/ipc/file-handlers.ts` - IPC for import-to-project-assets, copy-to-project-assets, asset delete/trash.
+Native filesystem operations must validate or explicitly approve paths before reading, copying, deleting, or exposing them.
 
-### Asset IPC
+## WanGP source and GPU runtime
 
-- `import-to-project-assets` → copy to `{projectId}/uploads/`
-- `copy-to-project-assets` → move from backend staging to `{projectId}/generated/`
+Current source manifest:
 
-## Model profile contract
+- Repository: `GOvEy1nw/Wan2GP`
+- Branch: `AiVS`
+- Revision: `4f441a12f3a33f4466ed422428bf667d9651bc55`
+- WanGP version: `12.34`
 
-Backend owns the curated profile registry. Frontend does not scrape WanGP directly.
+Source-of-truth files:
 
-Profile response includes:
+- `scripts/wangp-source.json`
+- `scripts/ensure-wan2gp.ps1` / `.sh`
+- `scripts/update-wangp.ps1`
+- `backend/WANGP_BACKEND.md`
 
-- AiVS id and display name
-- media type
-- visibility/status
-- WanGP model type
-- raw `wangpMetadata`
-- curated capabilities
-- default/allowed aspect ratios
-- default/allowed resolution tiers
-- input media policy
-- availability state
+The bundled checkout is reproducible. Update scripts compare the fork branch, report sensitive changes, validate a candidate, and roll back both checkout and manifest when validation fails.
 
-### Image profiles
+Current Windows GPU stack:
 
-- `z_image_turbo`
-- `krea2_turbo`
-- `flux2_klein_4b`
-- `hidream_o1_dev`
+- Python 3.11.9
+- Torch 2.10.0
+- torchvision 0.25.0
+- torchaudio 2.10.0
+- CUDA 13.0 index
+- GPU-generation-specific Triton/SageAttention/Sparge/Flash/Nunchaku/GGUF/LightX2V wheels
 
-### Video profiles
+Canonical files:
 
-- `ltx2_22b_distilled`, display name `LTX 2.3 Fast`, WanGP model type `ltx2_22B_distilled_1_1`
+- `backend/pyproject.toml`
+- `backend/uv.lock`
+- `scripts/wangp-stacks.json`
+- `scripts/install-wangp-stack.ps1`
 
-### Profile rules
+Do not bulk-upgrade or automate this stack as ordinary Python dependencies. It is one curated compatibility unit tied to WanGP, CUDA, Python ABI, GPU generation, and available wheels.
 
-- UI-visible model options come from `GET /api/model-profiles`.
-- Backend validates profile id and UI choices before WanGP.
-- Image generation sends `modelProfileId`, `aspectRatio`, and `resolutionTier`; backend resolves exact `WxH`.
-- Video generation sends `modelProfileId`; legacy `model: fast` maps to the curated LTX2 video profile.
-- Multi-shot video requests send `shotPrompts`; backend combines the optional global prompt and timed rows into WanGP relayed prompt syntax.
-- Director-enabled profiles expose curated `director` policy; frontend never infers Director combinations from raw WanGP metadata.
-- Director requests remain semantic. Backend maps Start/End/Injected images, Continue Video, Guide Audio, Ingredients, Human Motion, and Depth.
-- WanGP manifests use `multi_prompts_gen_type: "FG"` so all lines are treated as one prompt unless relayed ranges are present.
-- Raw WanGP metadata is retained separately from AiVS-curated UI capability fields.
+## Storage and runtime locations
 
-## Runtime map
+- Default project asset root: `Documents/AiVS`
+- Imported project assets: `{root}/{projectId}/uploads/`
+- Generated project assets: `{root}/{projectId}/generated/`
+- Per-user executable/cache/update state: Electron user-data directory
+- Checkpoint and LoRA roots: defaults from the runtime, optionally overridden through app state
+- Backend staging/output paths: runtime-owned and copied/moved into project storage after successful generation
 
-- Python version pinned to 3.11.9.
-- `backend/pyproject.toml` pins torch stack versions aligned with installer.
-- `scripts/wangp-source.json` is the WanGP source-of-truth manifest: fork repository, `AiVS` branch, exact commit, WanGP version, and immutable AiVS tag.
-- `scripts/ensure-wan2gp.ps1` / `.sh` fetch the exact manifest revision, reject dirty tracked source, use detached checkout, and verify `WanGP_version`.
-- `scripts/update-wangp.ps1` performs check-only comparison or transactional updates with sensitive-file reporting, focused/full validation, and rollback on failure.
-- Bundled source is pinned to WanGP 12.34 commit `38b9ea381b3808290702068bda569fab89c24286`, tag `aivs-wangp-12.34.0`, from `GOvEy1nw/Wan2GP`.
-- `scripts/wangp-stacks.json` is the curated GPU stack source.
-- `scripts/install-wangp-stack.ps1` detects GPU generation and installs compatible torch/performance wheels.
-- Setup scripts and backend tests use `uv sync --inexact` to avoid pruning WanGP requirements/performance wheels from `backend/.venv`.
-- `WANGP_VIDEO_MODEL_TYPE` default: `ltx2_22B_distilled_1_1`.
-- `WANGP_IMAGE_MODEL_TYPE` default: `z_image`.
-- App data folder: AiVS.
+## Testing and validation map
 
-## Testing map
+### Commands
 
-- `backend/tests/conftest.py` wires a fresh `AppHandler` per test.
-- `enable_wangp` fixture turns on WanGP path and yields `FakeWanGPBridge`.
-- `backend/tests/test_model_profiles.py` covers profile shape, endpoint response, availability, image input routing, and profile generation routing.
-- `backend/tests/test_generation.py` covers video/image generation behavior through fake WanGP (includes reframe branches).
-- `backend/tests/test_reframe_wangp_mapping.py` covers padding → WanGP outpaint field mapping.
-- `backend/tests/test_wangp_bridge.py` covers bridge mapping behavior.
-- `backend/tests/test_pyright.py` enforces pyright strict mode.
-- `backend/tests/test_director_compiler.py` covers frame/keyframe/prompt/audio/guidance compilation.
-- `backend/tests/test_director_generation.py` covers semantic endpoint and shared bridge/state flow.
-- `backend/tests/fixtures/wangp/director/` pins sanitized WanGP 12.34 Director settings contracts.
-- `backend/tests/test_wangp_source.py` verifies source manifest, bundled checkout version, mmgp requirement alignment, and bridge method contracts.
+| Command | Purpose |
+| --- | --- |
+| `pnpm dev` | Start Vite, Electron, and the Python backend |
+| `pnpm dev:debug` | Start with Electron and Python debugging |
+| `pnpm typecheck:ts` | Strict TypeScript |
+| `pnpm typecheck:py` | Strict Pyright |
+| `pnpm typecheck` | Both type checks |
+| `pnpm test:frontend` | Full Vitest suite |
+| `pnpm test:frontend:watch` | Watch-mode frontend tests |
+| `pnpm backend:test` | Backend pytest suite |
+| `pnpm build:frontend` | Renderer, Electron main, and preload production build |
+| `pnpm build:fast:win` | Unpacked Windows build without rebuilding Python |
+| `pnpm build:win` | Full Windows installer build |
+| `pnpm wangp:check` | Compare bundled pin with fork head |
+| `pnpm wangp:update` | Transactional WanGP update |
+| `pnpm wangp:update:full` | WanGP update plus full validation |
 
-Current verified checks:
+### Test ownership
 
-- Backend pytest -> 217 passed.
-- `uv run pyright` -> 0 errors.
-- TypeScript `tsc --noEmit` -> passed.
-- `pnpm run build:frontend` via direct pnpm -> passed.
+- Frontend focused tests live beside extracted GenSpace components/hooks/logic and under `frontend/hooks/generation/`.
+- Backend integration tests live in `backend/tests/`.
+- Backend tests use real FastAPI app wiring with fake heavy services.
+- `backend/tests/test_pyright.py` enforces strict Pyright.
+- Director, Reframe, model-profile, music, model-pack, progress, source-pin, and bridge contracts have dedicated test coverage.
 
-## Development commands
+Last recorded validation after the current GenSpace/Music work:
 
-| Command                           | Purpose                                            |
-| --------------------------------- | -------------------------------------------------- |
-| `pnpm dev`                        | Start Vite/Electron/backend dev app                |
-| `pnpm dev:debug`                  | Dev app with Electron inspector and Python debugpy |
-| `pnpm typecheck`                  | TypeScript + Python type checks                    |
-| `pnpm typecheck:ts`               | TypeScript only                                    |
-| `pnpm typecheck:py`               | Pyright only                                       |
-| `pnpm backend:test`               | Backend pytest                                     |
-| `pnpm build:frontend`             | Renderer/Electron build                            |
-| `pnpm wangp:check`                | Compare pinned WanGP revision with fork AiVS head  |
-| `pnpm wangp:update`               | Update WanGP transactionally with focused checks   |
-| `pnpm wangp:update:full`          | Update WanGP and run full project validation       |
-| `pnpm setup:dev:win`              | Windows setup                                      |
-| `scripts/install-wangp-stack.ps1` | Install/refresh WanGP GPU stack                    |
+- TypeScript: 0 errors.
+- Pyright: 0 errors.
+- Frontend: 56 tests passed.
+- Backend: 278 passed, 1 skipped.
+- Production renderer/Electron/preload build: passed.
+- `git diff --check`: clean.
 
-## Known tooling caveat
+These are historical evidence, not a substitute for rerunning the relevant gates after new changes.
 
-The Codex bundled `pnpm` wrapper can trigger dependency layout checks and attempt to recreate `node_modules` in non-TTY mode. If this leaves `node_modules` partial, use direct pnpm:
+## Current constraints and risks
 
-```powershell
-C:\Users\rais\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe C:\Users\rais\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\node_modules\pnpm\bin\pnpm.mjs install --force --offline --frozen-lockfile
-```
+- **Primary platform:** Windows 10/11 with NVIDIA RTX hardware. Other platforms are secondary/source-development targets.
+- **Runtime floor:** current Windows stack requires NVIDIA driver 580+.
+- **Frontend age:** Electron 31, Vite 5, Tailwind 3, and React 18 are scheduled for a phased modernisation.
+- **Electron migration hazard:** `frontend/lib/media-import.ts` still relies on Electron's removed non-standard `File.path`; the Electron upgrade must migrate this through preload `webUtils.getPathForFile`.
+- **Installer signing:** the current Windows installer is not Authenticode-signed.
+- **Retake:** route/legacy structures exist, but the user-facing workflow remains disabled.
+- **Manual media QA:** drag/drop, waveform/video playback, seeking, Reframe geometry, real model download, and generation output still require native Electron checks.
+- **Agent capture caveat:** some managed Windows agents cannot capture the app because `GetCursorPos` is denied; treat that as a tooling limitation, not an app failure.
+- **No cloud fallback:** generation must remain local and WanGP-only.
 
-Then run scripts through the same direct pnpm entry if needed.
+## Active roadmap
 
-## Roadmap
+Near-term work should be tracked by current implementation plans, not the old numbered phase table.
 
-| Phase      | Goal                                                                                                                            | Status   |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| Phase 0    | Fork audit + preservation map                                                                                                   | Complete |
-| Phase 1    | Local-only product shell                                                                                                        | Complete |
-| Phase 2    | WanGP-only generation enforcement                                                                                               | Complete |
-| Phase 3    | QuickGen image baseline                                                                                                         | Complete |
-| Phase 4    | Curated image model expansion                                                                                                   | Complete |
-| Phase 4.1  | Image input media roles + multi-image support                                                                                   | Complete |
-| Phase 4.2  | Video model profile alignment                                                                                                   | Complete |
-| Phase 4.3  | Update input media slots for better feature support & run backend/WanGP connection in the background to avoid delays loading UI | Complete |
-| Phase 4.41 | WanGP prompt enhancement for image/video modes                                                                                  | Complete |
-| Phase 4.42 | Video multi-shot prompt rows with relayed WanGP prompt formatting                                                               | Complete |
-| Media A–D  | GenSpace media library: import, gallery filters, bins, list view (`docs/MEDIA_LIBRARY_PLAN.md`)                                 | Complete |
-| Reframe    | Outpaint reframe mode: trim, aspect/zoom/pan UI, backend WanGP outpaint mapping                                                 | Complete |
-| Phase 5    | LoRA MVP                                                                                                                        | Pending  |
-| Phase 6    | QuickGen image polish                                                                                                           | Complete |
-| Phase 7    | Video input capabilities (start/end/control/source video)                                                                       | Complete |
-| Phase 8    | QuickGen audio/TTS                                                                                                              | Pending  |
-| Phase 9    | Production planning                                                                                                             | Pending  |
+Current known directions:
 
-## Next work
+1. Phased frontend/Electron dependency modernisation on a dedicated branch.
+2. Real-runtime regression testing for image, video, Reframe, Director, music, and model-download workflows.
+3. Retake when the WanGP integration is reliable enough to expose.
+4. User-facing LoRA selection and strength controls.
+5. TTS generation.
+6. Later Director Guide Audio and Control Media authoring.
+7. Continued curated model additions through backend profiles and model packs.
 
-- Test and polish multi-shot video prompt behavior against real WanGP output.
-- Manual QA reframe against real WanGP (aspect fit, max zoom, pan >100%, custom mirrored edges).
-- Add video start frame / end frame / source video / control video UI and backend mapping from existing LTX2 raw metadata.
-- Add LoRA folder detection, selection, strength, and metadata.
-- Improve model availability/missing-model UX.
-- Optional: port GenSpace bin/filter toolbar patterns to video editor LeftPanel for visual parity.
-- Keep inherited editor stable and avoid major rewrites until QuickGen is stronger.
+## Documentation source-of-truth order
 
-## Suggested first reads
+Read these first:
 
-1. `AGENTS_PRD.md`
-2. `AGENTS.md`
-3. `docs/MEDIA_LIBRARY_PLAN.md`
-4. `docs/REFRAME_MODE.md` (reframe work)
-5. `.projectmem/summary.md`
-6. `frontend/views/GenSpace.tsx`
-7. `frontend/lib/reframe-outpaint.ts` (reframe work)
-8. `frontend/components/ReframePanel.tsx` (reframe work)
-9. `frontend/lib/media-import.ts`
-10. `frontend/lib/gallery-filters.ts`
-11. `backend/architecture.md`
-12. `backend/WANGP_BACKEND.md` (WanGP source/update contract)
-13. `scripts/wangp-source.json` (exact bundled source pin)
-14. `backend/services/reframe_wangp_mapping.py` (reframe work)
-15. `backend/model_profiles/profiles.py`
-16. `backend/services/wangp_bridge.py`
+1. `AGENTS_PRD.md` — product principles and non-negotiable local/WanGP direction.
+2. `AGENTS.md` — coding conventions and validation commands.
+3. `.projectmem/PROJECT_MAP.md` — current ownership/navigation.
+4. `.projectmem/summary.md` — concise current state, decisions, and active constraints.
+5. `docs/GENSPACE_ARCHITECTURE.md` — current GenSpace ownership model.
+6. `docs/GENSPACE_REFACTOR_PARITY_CHECKLIST.md` — completed split parity evidence.
+7. `docs/DIRECTOR_MODE_V1.md` — current Director product contract.
+8. `docs/REFRAME_MODE.md` — current Reframe contract.
+9. `backend/architecture.md` — backend design rules.
+10. `backend/WANGP_BACKEND.md` — bundled WanGP/source-update contract.
+11. `scripts/wangp-source.json` and `scripts/wangp-stacks.json` — exact runtime pins.
+
+Completed implementation plans such as the full GenSpace split and Music V2 plan are historical records. Do not execute their unchecked phase language again unless a current task explicitly reopens that work.
+
+## Maintenance rule for this map
+
+Update this file when code ownership, visible product capabilities, runtime pins, or major constraints change. Do not append individual bug-fix stories or completed task transcripts; those belong in `.projectmem/issues/`, commits, tests, and focused implementation documents.
