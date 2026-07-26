@@ -1,11 +1,24 @@
-import { ipcMain, dialog } from 'electron'
+import { app, ipcMain, dialog, type OpenDialogOptions } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import { getAllowedRoots } from '../config'
 import { logger } from '../logger'
 import { getMainWindow } from '../window'
 import { validatePath, approvePath } from '../path-validation'
-import { getProjectAssetsPath, setProjectAssetsPath } from '../app-state'
+import {
+  getLastDirectoryPickerPath,
+  getLastOpenDirectory,
+  getLastSaveDirectory,
+  getProjectAssetsPath,
+  setLastDirectoryPickerPath,
+  setLastOpenDirectory,
+  setLastSaveDirectory,
+  setProjectAssetsPath,
+} from '../app-state'
+import {
+  directoryForDialogSelection,
+  firstUsableDirectory,
+} from '../dialog-paths'
 import { importProjectAsset, projectAssetCategoryDir, type DuplicateStrategy } from '../lib/project-asset-import'
 import { deleteProjectAssetFiles } from '../lib/project-asset-delete'
 
@@ -65,6 +78,17 @@ function searchDirectoryForFiles(dir: string, filenames: string[]): Record<strin
   return results
 }
 
+function getDialogFallbackDirectory(): string {
+  return firstUsableDirectory(
+    [
+      getProjectAssetsPath(),
+      app.getPath('documents'),
+      app.getPath('downloads'),
+      app.getPath('home'),
+    ],
+    (candidate) => fs.existsSync(candidate) && fs.statSync(candidate).isDirectory(),
+  ) ?? app.getPath('home')
+}
 
 export function registerFileHandlers(): void {
   ipcMain.handle('open-parent-folder-of-file', async (_event, filePath: string) => {
@@ -114,13 +138,16 @@ export function registerFileHandlers(): void {
   }) => {
     const mainWindow = getMainWindow()
     if (!mainWindow) return null
+    const defaultPath =
+      options.defaultPath || getLastSaveDirectory() || getDialogFallbackDirectory()
     const result = await dialog.showSaveDialog(mainWindow, {
       title: options.title || 'Save File',
-      defaultPath: options.defaultPath,
+      defaultPath,
       filters: options.filters || [],
     })
     if (result.canceled || !result.filePath) return null
     approvePath(result.filePath)
+    setLastSaveDirectory(directoryForDialogSelection(result.filePath, 'file'))
     return result.filePath
   })
 
@@ -150,15 +177,26 @@ export function registerFileHandlers(): void {
     }
   })
 
-  ipcMain.handle('show-open-directory-dialog', async (_event, options: { title?: string }) => {
+  ipcMain.handle('show-open-directory-dialog', async (_event, options: {
+    title?: string
+    defaultPath?: string
+  }) => {
     const mainWindow = getMainWindow()
     if (!mainWindow) return null
+    const defaultPath =
+      options.defaultPath ||
+      getLastDirectoryPickerPath() ||
+      getDialogFallbackDirectory()
     const result = await dialog.showOpenDialog(mainWindow, {
       title: options.title || 'Select Folder',
+      defaultPath,
       properties: ['openDirectory', 'createDirectory'],
     })
     if (result.canceled || result.filePaths.length === 0) return null
     approvePath(result.filePaths[0])
+    setLastDirectoryPickerPath(
+      directoryForDialogSelection(result.filePaths[0], 'directory'),
+    )
     return result.filePaths[0]
   })
 
@@ -270,15 +308,19 @@ export function registerFileHandlers(): void {
 
   ipcMain.handle('show-open-file-dialog', async (_event, options: {
     title?: string
+    defaultPath?: string
     filters?: { name: string; extensions: string[] }[]
     properties?: string[]
   }) => {
     const mainWindow = getMainWindow()
     if (!mainWindow) return null
-    const props: any[] = ['openFile']
+    const props: NonNullable<OpenDialogOptions['properties']> = ['openFile']
     if (options.properties?.includes('multiSelections')) props.push('multiSelections')
+    const defaultPath =
+      options.defaultPath || getLastOpenDirectory() || getDialogFallbackDirectory()
     const result = await dialog.showOpenDialog(mainWindow, {
       title: options.title || 'Select File',
+      defaultPath,
       filters: options.filters || [],
       properties: props,
     })
@@ -286,6 +328,9 @@ export function registerFileHandlers(): void {
     for (const fp of result.filePaths) {
       approvePath(fp)
     }
+    setLastOpenDirectory(
+      directoryForDialogSelection(result.filePaths[0], 'file'),
+    )
     return result.filePaths
   })
 
