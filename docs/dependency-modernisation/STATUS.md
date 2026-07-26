@@ -10,7 +10,7 @@
 - Branch created on: 2026-07-26
 - Executor: Codex
 - Baseline `dev` commit SHA: `a3b8cbdd750d167e3d88eb1c99df3ebd78b3a141`
-- Current HEAD SHA: `8db86258502c4fca1bb3b69b429b862ae343ede3`
+- Current HEAD SHA: `bb9cd5399fd7d2d767cceee378a6e7eef561ab80`
 - Last sync from `dev`: 2026-07-26 (`origin/dev` merged before Phase 1)
 - Node version: 24.18.0
 - pnpm version: 10.30.3 through Corepack
@@ -64,7 +64,7 @@ Use exactly one status: `NOT STARTED`, `IN PROGRESS`, `BLOCKED`, or `PASSED`.
 
 | Phase | Status | Starting SHA | Passing SHA | Date | Notes |
 |---:|---|---|---|---|---|
-| 1 — Branch, baseline, guardrails | IN PROGRESS | `3558d385d96da954cf9d91c0fadab6fe523aa0a8` |  | 2026-07-26 | All automated and Windows manual gates pass; awaiting baseline commit. |
+| 1 — Branch, baseline, guardrails | PASSED | `3558d385d96da954cf9d91c0fadab6fe523aa0a8` | `bb9cd5399fd7d2d767cceee378a6e7eef561ab80` | 2026-07-26 | Automated, development, unpacked, installed, drag/drop, uninstall, data-preservation, and protected-runtime gates passed. |
 | 2 — Electron 43 | NOT STARTED |  |  |  |  |
 | 3 — Vite 8 | NOT STARTED |  |  |  |  |
 | 4 — Vitest 4 | NOT STARTED |  |  |  |  |
@@ -127,7 +127,7 @@ Use exactly one status: `NOT STARTED`, `IN PROGRESS`, `BLOCKED`, or `PASSED`.
 | Purpose | Commit SHA | Message |
 |---|---|---|
 | Align parent vendored source, nested checkout, and manifest to requested WanGP pin | `8db86258502c4fca1bb3b69b429b862ae343ede3` | `chore(wangp): pin bundled source to 4f441a12` |
-| Establish Phase 1 baseline and guardrails | pending | `chore(deps): establish modernisation baseline` |
+| Establish Phase 1 baseline and guardrails | `bb9cd5399fd7d2d767cceee378a6e7eef561ab80` | `chore(deps): establish modernisation baseline` |
 
 ### Phase 1 issues and attempted fixes
 
