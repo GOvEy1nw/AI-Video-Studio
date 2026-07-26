@@ -260,6 +260,8 @@ export async function importGalleryFile(
     return { ok: false, reason: 'unsupported' }
   }
 
+  await window.electronAPI?.approveLocalPath?.(filePath)
+
   let result = await importMediaAsset({
     projectId,
     filePath,
