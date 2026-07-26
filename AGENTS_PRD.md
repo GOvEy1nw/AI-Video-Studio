@@ -2,7 +2,7 @@
 
 **Product:** AI Video Studio (AiVS)  
 **Document type:** Current product charter and implementation guardrails  
-**Version:** 3.0  
+**Version:** 3.1  
 **Last reviewed:** 26 July 2026 against `dev`  
 **Primary platform:** Windows desktop  
 **Foundation:** `deepbeepmeep/LTX-Desktop-WanGP`  
@@ -110,17 +110,43 @@ Advanced controls are appropriate when they materially help the creative result,
 
 Raw internal terms, manifest fields, model-loader flags, and stack traces should not leak into the primary user experience.
 
-### 4.5 Preserve and extend working systems
+### 4.5 Preserve proven contracts; evolve implementation deliberately
 
-AiVS began as a fork, but this rule now applies to the current AiVS implementation as well as inherited code:
+The original fork needed a strong “extend, do not rewrite” guardrail because much of the inherited application already worked and speculative replacement would have destroyed useful foundations.
 
-- study the existing path before changing it;
-- extend established ownership and data flows;
-- reuse shared components and services when their contract fits;
-- avoid speculative rewrites;
-- replace a system only when an approved requirement or demonstrated limitation justifies it.
+AiVS has now grown into its own application. The guardrail is therefore:
 
-The goal is maintainable evolution, not permanent fidelity to old code. Refactoring is welcome when it clarifies ownership or removes duplication without changing product behaviour unexpectedly.
+```text
+Preserve proven behaviour, data, security, and product contracts.
+Do not preserve an implementation merely because it already exists.
+```
+
+Extension remains the preferred option when the current owner and abstraction genuinely fit the new requirement. Reuse a component, hook, handler, service, or data flow when doing so keeps ownership clear and does not create awkward conditionals, duplicated state, compatibility layers, or cross-domain coupling.
+
+Refactoring or targeted replacement is encouraged when evidence shows that the current structure has become the constraint. Valid evidence includes:
+
+- the same change repeatedly requires edits across unrelated files or domains;
+- one module owns several unrelated responsibilities and cannot be tested independently;
+- new features require branches, flags, adapters, or compatibility shims that compound rather than converge;
+- duplicate implementations exist because the shared abstraction no longer models its consumers cleanly;
+- performance, security, reliability, accessibility, packaging, or testability cannot be addressed locally;
+- a near-term approved roadmap would otherwise build substantial new work on a known unsuitable foundation;
+- the replacement materially reduces long-term complexity and has a clear ownership boundary.
+
+“Future-proofing” by itself is not enough. The expected future pressure must be concrete enough to explain what the existing design prevents and what the proposed design makes simpler.
+
+A rewrite must not mean “start again.” Prefer a bounded subsystem replacement behind stable contracts. A substantial refactor or replacement requires:
+
+1. a documented problem and measurable or observable benefit;
+2. an explicit scope and list of preserved user-visible behaviours;
+3. characterisation tests or another reliable parity baseline before destructive changes;
+4. a migration plan for persisted projects, settings, assets, recipes, and API contracts where relevant;
+5. a staged implementation or rollback point when practical;
+6. native Electron and real-runtime validation for behaviours automation cannot prove;
+7. removal of the superseded path once migration is complete, rather than permanent parallel systems;
+8. its own branch or phase when the change is broad enough to obscure unrelated feature work.
+
+Product boundaries remain stronger than implementation preferences. A rewrite may replace internal structure, but it must not casually break local-only generation, WanGP ownership, project-data safety, the preload security boundary, curated profile validation, reproducible runtime pins, or validated saved-project compatibility.
 
 ### 4.6 Reproducible runtime compatibility
 
@@ -306,7 +332,7 @@ The inherited Video Editor remains a separate NLE-style workspace.
 
 It is not the storage model for Director segments and should not automatically receive Director output. Users may add generated assets through the normal Asset Library workflow.
 
-Changes to the editor should preserve working editing behaviour and avoid turning unrelated Quick Gen or Director tasks into an editor rewrite.
+Changes to the editor should preserve working editing behaviour. A focused editor refactor or subsystem replacement is allowed when the architectural-evolution criteria in section 4.5 are met; unrelated Quick Gen or Director work must not quietly become an editor rewrite.
 
 ### 5.11 Setup and Model Manager
 
@@ -452,7 +478,7 @@ WanGP updates must use the transactional update workflow, review sensitive bridg
 
 React, Electron, Vite, Tailwind, TypeScript, test tooling, and related desktop packages may be modernised, but major upgrades must be isolated, phased, and validated in development, unpacked, and installed builds.
 
-Do not combine frontend/desktop modernisation with unrelated product feature work.
+Do not combine frontend/desktop modernisation with unrelated product feature work or use a dependency migration as cover for an architectural rewrite.
 
 ## 9. Local data, privacy, and storage
 
@@ -499,7 +525,7 @@ Do not allow impossible combinations and rely on the backend error to teach the 
 
 Where GenSpace, Director, and Video Editor expose the same concept—assets, bins, filters, takes, model readiness, progress—the visual and interaction language should stay aligned through shared components or shared primitives.
 
-Consistency does not mean forcing different workflows into one universal component.
+Consistency does not mean forcing different workflows into one universal component. A shared abstraction may be split or replaced if it has become an unnatural union of genuinely different workflows and the section 4.5 criteria are met.
 
 ### 10.4 Actionable status
 
@@ -530,7 +556,7 @@ Preserve persistent state intentionally and stop inactive side effects intention
 
 Avoid duplicate media decoding, duplicate polling loops, hidden active workspaces, repeated thumbnail extraction, or unnecessary rerenders of the Asset Library.
 
-Measure before introducing lazy loading or a new state framework. Existing static imports and focused controller boundaries are deliberate unless evidence justifies change.
+Measure before introducing lazy loading, a new state framework, or a large structural replacement. Existing static imports and focused controller boundaries are deliberate until evidence shows a better design is needed.
 
 ## 11. Architecture guardrails with product impact
 
@@ -547,6 +573,8 @@ The implementation details live in `AGENTS.md` and architecture documents, but t
 9. Runtime and source pins remain reproducible.
 10. No product feature may bypass WanGP or the local project/data boundaries.
 
+These are behavioural and security contracts, not a requirement to retain every current class, file, hook, or component forever. A replacement implementation is acceptable when it preserves or deliberately migrates these contracts and satisfies section 4.5.
+
 ## 12. Active roadmap
 
 The current near-term directions are:
@@ -558,9 +586,9 @@ The current near-term directions are:
 5. TTS generation through WanGP.
 6. Director Guide Audio and Control Media authoring after Prompt Track V1 is stable.
 7. Continued curated model additions supported by profiles, model packs, and real-runtime testing.
-8. Ongoing maintainability, performance, accessibility, and packaging improvements.
+8. Ongoing maintainability, architecture, performance, accessibility, and packaging improvements—including focused subsystem replacements where justified.
 
-This list establishes direction, not permission to implement every item in one task. Significant features require a focused plan and explicit scope.
+This list establishes direction, not permission to implement every item in one task. Significant features and architectural replacements require a focused plan and explicit scope.
 
 ## 13. Explicit non-goals without a new approved plan
 
@@ -577,28 +605,32 @@ Do not introduce the following as incidental work:
 - a speculative Production tab;
 - silent telemetry or media upload;
 - bulk upgrades of the curated Python/Torch/CUDA/WanGP stack;
-- large visual redesigns hidden inside dependency, bug-fix, or refactor work.
+- broad rewrites without an approved boundary, parity baseline, migration plan, and deletion path;
+- large visual redesigns hidden inside dependency, bug-fix, or unrelated feature work.
 
-## 14. Product decision framework for agents
+## 14. Product and architecture decision framework for agents
 
-Before changing a product flow, answer:
+Before changing a product flow or major subsystem, answer:
 
 ```text
-What user problem or approved requirement does this solve?
-Which current component, handler, service, or domain already owns it?
+What user problem, engineering constraint, or approved roadmap requirement does this solve?
+Which current component, handler, service, data contract, or domain owns it?
 Does the requested behaviour belong in Quick Gen, Director, Video Editor, Settings, or setup?
-Can the current system be extended without creating a second source of truth?
+Does the current abstraction still fit, or would extension compound debt and coupling?
+What user-visible behaviours and persisted contracts must remain unchanged?
+Could a bounded refactor solve the problem, or is targeted replacement justified?
+How will the old and new paths coexist or migrate, and when will the old path be deleted?
 Does generation still route through WanGP locally?
 Is the selected model/profile combination explicitly supported?
 Will project persistence, Copy Settings, progress, cancellation, and error recovery still work?
-What automated and native-runtime evidence will prove parity?
+What automated, native Electron, packaged-build, and real-runtime evidence will prove parity?
 ```
 
-If ownership is unclear, inspect the current map and code before creating a new abstraction.
+If ownership is unclear, inspect the current map and code before creating a new abstraction or declaring a rewrite necessary.
 
-## 15. Definition of done for product work
+## 15. Definition of done for product and architectural work
 
-A product change is complete only when all applicable items are true:
+A product change, refactor, or subsystem replacement is complete only when all applicable items are true:
 
 - The intended user path works from the actual Electron app.
 - Generation remains local and WanGP-backed.
@@ -608,11 +640,13 @@ A product change is complete only when all applicable items are true:
 - Generated media and metadata persist to the correct project.
 - Inactive workspaces do not retain unintended playback or heavy work.
 - Focused automated tests cover the changed contracts.
+- Characterisation/parity tests exist before removing a substantial proven path.
 - Type checking and relevant full test/build gates pass.
 - Native drag/drop, playback, model download, generation, packaging, or installer behaviour is manually tested where automation cannot prove it.
-- Documentation reflects any new product capability, ownership boundary, runtime requirement, or deliberate limitation.
+- A replaced path is deleted after migration rather than left as a permanent duplicate source of truth.
+- Documentation reflects any new product capability, ownership boundary, runtime requirement, deliberate limitation, or architectural replacement.
 - The implementation does not quietly bundle unrelated redesign or dependency changes.
 
 ## 16. One-sentence product instruction
 
-Build AiVS as a reliable, approachable, local creative studio that turns curated WanGP capabilities into project-based image, video, music, and directed-generation workflows, while preserving user control, clear ownership, reproducible runtime compatibility, and the working systems already proven in the app.
+Build AiVS as a reliable, approachable, local creative studio that turns curated WanGP capabilities into project-based image, video, music, and directed-generation workflows—preserving proven product contracts and user data while deliberately refactoring or replacing implementation that no longer provides a maintainable foundation.
