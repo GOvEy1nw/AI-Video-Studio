@@ -10,7 +10,7 @@
 - Branch created on: 2026-07-26
 - Executor: Codex
 - Baseline `dev` commit SHA: `a3b8cbdd750d167e3d88eb1c99df3ebd78b3a141`
-- Current HEAD SHA: `bb9cd5399fd7d2d767cceee378a6e7eef561ab80`
+- Current implementation HEAD SHA: `72cd210c03894db0d820ea5f6e088d872d4d7e65`
 - Last sync from `dev`: 2026-07-26 (`origin/dev` merged before Phase 1)
 - Node version: 24.18.0
 - pnpm version: 10.30.3 through Corepack
@@ -35,10 +35,10 @@ Fill these from `pnpm list --depth 0` before changing dependencies.
 
 | Package | Baseline resolved version | Planned family | Final resolved version |
 |---|---:|---:|---:|
-| Node.js | 24.18.0 | 24 LTS |  |
-| pnpm | 10.30.3 | 10.30.3 |  |
-| electron | 31.7.7 | 43.x |  |
-| @types/node | 20.19.43 | 24.x |  |
+| Node.js | 24.18.0 | 24 LTS | 24.18.0 |
+| pnpm | 10.30.3 | 10.30.3 | 10.30.3 |
+| electron | 31.7.7 | 43.x | 43.2.0 |
+| @types/node | 20.19.43 | 24.x | 24.13.3 |
 | vite | 5.4.21 | 8.1.x |  |
 | @vitejs/plugin-react | 4.7.0 | 6.x |  |
 | vite-plugin-electron | 0.28.8 | 1.x |  |
@@ -65,7 +65,7 @@ Use exactly one status: `NOT STARTED`, `IN PROGRESS`, `BLOCKED`, or `PASSED`.
 | Phase | Status | Starting SHA | Passing SHA | Date | Notes |
 |---:|---|---|---|---|---|
 | 1 — Branch, baseline, guardrails | PASSED | `3558d385d96da954cf9d91c0fadab6fe523aa0a8` | `bb9cd5399fd7d2d767cceee378a6e7eef561ab80` | 2026-07-26 | Automated, development, unpacked, installed, drag/drop, uninstall, data-preservation, and protected-runtime gates passed. |
-| 2 — Electron 43 | NOT STARTED |  |  |  |  |
+| 2 — Electron 43 | BLOCKED | `43ed93f45d98e3b3bf80ea6ce19a423ee565dbb5` |  | 2026-07-26 | Implementation and automated/package checks pass. Exit gate blocked: current Windows automation cannot target Electron-owned native dialogs or perform Explorer-to-Electron drag/drop, so mandatory selection/drop/remembered-dialog matrices remain unverified. Phase 3 not started. |
 | 3 — Vite 8 | NOT STARTED |  |  |  |  |
 | 4 — Vitest 4 | NOT STARTED |  |  |  |  |
 | 5 — Tailwind 4 compatibility | NOT STARTED |  |  |  |  |
@@ -161,6 +161,99 @@ Use exactly one status: `NOT STARTED`, `IN PROGRESS`, `BLOCKED`, or `PASSED`.
    - Attempt: approve the dropped `File.path` at the gallery-import boundary before native copy; add approval-order regression coverage.
    - Result: strict TypeScript, 57 frontend tests, production bundles, full installer rebuild, and repeated installed-app gallery drag all pass.
    - Final resolution or blocker: resolved in `frontend/lib/media-import.ts`.
+
+### Phase 2 command evidence
+
+| Command | Result | Duration | Log/evidence |
+|---|---|---:|---|
+| `git diff --check` | PASS | 0.06s | No whitespace errors; only expected LF-to-CRLF working-copy warnings. |
+| `corepack pnpm typecheck:ts` | PASS | 2.00s | TypeScript 5.9.3, 0 errors after final packaged-output fix. |
+| `corepack pnpm test:frontend` | PASS | 2.76s | 21 files, 64 tests passed, including native-file-path and remembered-dialog tests. Approved route required because managed sandbox denied esbuild config loading. |
+| `corepack pnpm build:frontend` | PASS | 3.78s build time | Renderer, Electron main, and CommonJS preload built. Existing chunk-size/dynamic-import warnings remain. |
+| `corepack pnpm exec vitest run frontend/lib/native-file-path.test.ts` | PASS |  | 3 focused bridge-only path tests passed. |
+| `corepack pnpm exec vitest run frontend/lib/media-import.test.ts` | PASS |  | 2 focused project-import routing tests passed. |
+| `corepack pnpm typecheck:py` | PASS |  | Pyright 0 errors, 0 warnings. |
+| `corepack pnpm backend:test` | PASS | 6.58s pytest time | 278 passed, 1 skipped, 1 existing `pynvml` deprecation warning. |
+| `corepack pnpm build:fast:win` | PASS |  | Electron Builder packaged `release\win-unpacked` with Electron 43.2.0. Rebuilt after packaged-output fix. |
+| `corepack pnpm start:unpacked:win` | PASS |  | Unpacked app reached Inference Engine Ready, reopened existing projects, and rendered native Open dialog. |
+| `corepack pnpm build:win` | PASS |  | `release\AiVS-Setup.exe`, 358,659,897 bytes; SHA-256 `D92A5BE57E58E490B50A62B3FABD012C2B36D91375C6A91DC5A16097F5F7627A`. |
+| `corepack pnpm list electron @types/node --depth 0 --json` | PASS | 0.26s | Resolved Electron 43.2.0 and `@types/node` 24.13.3. |
+| `.\node_modules\.bin\electron.CMD C:\tmp\aivs-electron-versions.cjs` | PASS | 0.46s | Temporary probe reported Electron 43.2.0, Chrome 150.0.7871.129, Node 24.18.0; probe file removed. |
+| Electron binary warm-up | PASS WITH DEVIATION |  | `corepack pnpm exec electron --version` did not work through the Windows wrapper; `.\node_modules\.bin\electron.CMD --version` returned `v43.2.0`. |
+| Protected-runtime diff guard from Phase 2 starting SHA | PASS | 0.05s | No output for protected runtime paths. |
+| Phase 1 backup hash comparison | PASS | 3.86s | All 100 backed-up project-asset files remain present and SHA-256 identical; live tree contains only additional test media. |
+
+### Phase 2 Electron breaking-change review
+
+| Electron family | Disposition |
+|---|---|
+| 32 | DOM `File.path` removal handled through narrow preload `webUtils.getPathForFile` bridge. Chromium `userData/databases` cleanup audited against live data and Phase 1 backup: `NOT USED`. |
+| 33–37 | Official breaking-change sections reviewed; no applicable AiVS API usage found. |
+| 38–40 | Reviewed navigation history, storage/quota, notification, offscreen, protocol, capture, PDF, clipboard, image, and related removals; no applicable production usage found. |
+| 41 | Official section reviewed; no applicable AiVS API usage found. |
+| 42 | First-run Electron binary behaviour handled by explicit warm-up after install. |
+| 43 | Native-dialog default-location change handled by explicit fallback plus persisted open/save/directory locations. |
+
+### Phase 2 manual and package checks
+
+- [x] Development app launched on Electron 43.2.0 / Chrome 150.0.7871.129 / Node 24.18.0
+- [x] Renderer visible; backend reached Inference Engine Ready; one app instance; preload exposes only narrow `getPathForFile(file)`
+- [x] CommonJS preload, `contextIsolation: true`, `nodeIntegration: false`, production `webSecurity: true`, and no renderer Electron import confirmed in built output
+- [x] Unpacked app launched, reopened existing project, started packaged backend, and rendered native Open dialog
+- [x] NSIS installer completed for current user; installed app launched from `%LOCALAPPDATA%\Programs\AiVS`
+- [x] Installed app reopened existing projects, started packaged backend, handled updater failure without crashing, and closed with zero remaining app/backend processes
+- [x] Existing data remained intact: 100/100 Phase 1 backup files present with identical SHA-256 hashes
+- [x] `userData/databases`: `NOT USED` in live data or Phase 1 backup
+- [x] Protected runtime diff guard produced no output
+- [ ] Development image/video/audio native picker/dropzone path resolution, uploads, duplicate choices, gallery-to-input, and normal-file `no-path` checks
+- [ ] Development Explorer OS drag/drop matrix
+- [ ] Open/save/directory first-use, remembered-path, restart, deleted-directory fallback, cancel, and save-parent matrix
+- [ ] Repeat critical file and dialog matrices in `win-unpacked`
+- [ ] Repeat critical file and dialog matrices in NSIS-installed app
+
+Blocker: Computer Use can inspect and capture Electron-owned Windows Open dialogs, but `list_windows` omits the owned modal and input rejects its HWND as a non-target window. Accessibility-index, screenshot-coordinate, activation/re-observation, keyboard, and app-list routes all failed. Playwright `setInputFiles` creates genuinely pathless files, so it cannot substitute for normal Electron file selection. Cross-window Explorer drag is also unavailable. These mandatory checks require manual interaction or a connector fix; Phase 2 remains `BLOCKED`.
+
+### Phase 2 dependency review
+
+- Exact package commands used: `corepack pnpm --config.minimum-release-age=0 add -D electron@43.2.0 @types/node@24.13.3`; `corepack pnpm list electron @types/node --depth 0 --json`.
+- Exact resolved versions: Electron 43.2.0; `@types/node` 24.13.3; runtime Chrome 150.0.7871.129; runtime Node 24.18.0.
+- Peer dependency warnings: none.
+- Lockfile review: only Electron 43.2.0, matching transitive Electron packages, and Node 24 type-tree changes; no Vite, Vitest, Tailwind, React, TypeScript, builder, updater, Python, or WanGP upgrade.
+- Upstream release notes reviewed: official Electron breaking changes for every family from 32 through 43; Electron latest-three-supported-family policy; npm registry freshness.
+- Plan freshness, checked 2026-07-26: Electron 43.2.0 is current supported-family patch.
+- Deviations from plan: repository `minimum-release-age=10080` rejected Electron 43.2.0 because it was five days old. One exact-version command used `--config.minimum-release-age=0`; `.npmrc` remains unchanged. Windows binary warm-up used generated `.CMD` shim. Managed sandbox required approved routes for Vitest/build/Python commands.
+
+### Phase 2 commits
+
+| Purpose | Commit SHA | Message |
+|---|---|---|
+| Pre-bump native-file-path compatibility rollback point | `7da576653c20a0a527c42b6ae04f5dd65c670814` | `fix(electron): centralise native file path resolution` |
+| Electron 43 runtime, preload bridge, bridge-only path resolution, and packaged-output fix | `3d3c7b71d4a339803a9c538430947598bb37171f` | `chore(electron): upgrade desktop runtime to Electron 43` |
+| Remembered open/save/directory paths and focused tests | `72cd210c03894db0d820ea5f6e088d872d4d7e65` | `fix(electron): preserve remembered native dialog locations` |
+
+### Phase 2 issues and attempted fixes
+
+1. Issue: exact Electron install was blocked by repository release-age policy.
+   - Error: Electron 43.2.0 was younger than `minimum-release-age=10080`.
+   - Attempt: one command-scoped exact-version exception with `--config.minimum-release-age=0`.
+   - Result: exact packages installed; `.npmrc` unchanged.
+   - Final resolution or blocker: resolved and documented.
+2. Issue: packaged app crashed with main-process `EPIPE` after `start:unpacked:win` returned.
+   - Root cause: packaged backend output continued writing to detached `process.stdout`/`process.stderr` pipes.
+   - Attempt: first guarded generic logger console mirroring; error persisted from direct Python-output stream writes. Then guarded all console stream mirroring behind development mode while preserving file logs and readiness parsing.
+   - Result: rebuilt unpacked and installed apps launch cleanly and reach Inference Engine Ready.
+   - Final resolution or blocker: resolved in `electron/logger.ts` and `electron/python-backend.ts`.
+3. Issue: Windows automation cannot complete Electron-owned native-dialog or cross-window Explorer drag/drop checks.
+   - Error: child modal is visible in screenshots but absent from targetable windows; input reports child HWND is not the selected AiVS window.
+   - Attempt: accessibility actions, fresh screenshot coordinates, activation/retry, keyboard focus, app/window enumeration, same-integrity relaunch, and CDP fallback.
+   - Result: app/preload/backend/package state is inspectable, but required native selection/drop outcomes remain unverified.
+   - Final resolution or blocker: exit-gate blocker; manual validation or connector fix required.
+4. Issue: installed updater check returns GitHub HTTP 406.
+   - Result: error is caught and logged; app remains responsive and backend Ready.
+   - Final resolution or blocker: non-crashing existing updater/feed issue, recorded separately as projectmem issue `#0240`.
+5. Issue: installed session log reports `resources\icon.ico` absent.
+   - Result: window still uses the executable icon.
+   - Final resolution or blocker: out-of-scope packaging follow-up, recorded as projectmem issue `#0241`.
 
 ## Command evidence template
 
