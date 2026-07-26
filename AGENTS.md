@@ -4,7 +4,7 @@ This file is the operational guide for AI coding agents working in this reposito
 
 Read [`AGENTS_PRD.md`](AGENTS_PRD.md) first for product direction and non-negotiable guardrails. Then use this file for architecture, ownership, validation, and working conventions.
 
-> **Origin:** AiVS is built on [`deepbeepmeep/LTX-Desktop-WanGP`](https://github.com/deepbeepmeep/LTX-Desktop-WanGP), itself derived from Lightricks' LTX Desktop. The current AiVS code and focused current-state documents now take precedence over old inherited assumptions and completed phase plans.
+> **Origin:** AiVS is built on [`deepbeepmeep/LTX-Desktop-WanGP`](https://github.com/deepbeepmeep/LTX-Desktop-WanGP), itself derived from Lightricks' LTX Desktop. Current AiVS code, tests, and focused current-state documents take precedence over old inherited assumptions and completed phase plans. Preserve proven contracts; do not freeze accidental implementation structure.
 
 ## 1. Required reading order
 
@@ -54,7 +54,105 @@ Retake, TTS, user-facing LoRA controls, and Director Guide Audio/Control Media a
 - When a managed environment blocks a command, record the limitation and use an approved equivalent route; do not convert a sandbox problem into an application workaround.
 - Do not commit generated media, model weights, local environments, release artifacts, caches, or temporary diagnostics unless the task explicitly requires a tracked fixture.
 
-## 4. Common commands
+## 4. Architectural evolution, refactoring, and replacement
+
+### 4.1 Preserve contracts, not accidental structure
+
+The default rule is not “never rewrite.” It is:
+
+```text
+Preserve proven behaviour, data, security, and product contracts.
+Choose the smallest implementation change that creates a clean long-term owner.
+```
+
+AiVS began as a fork, so extending working inherited systems was initially the safest path. As the application grows, blindly extending every old structure can create wrappers around wrappers, scattered conditionals, duplicated state, and permanent compatibility layers. A focused refactor or subsystem replacement may therefore be safer than continued extension.
+
+### 4.2 Terms
+
+Use these terms precisely:
+
+- **Extension** — add behaviour through an existing owner and contract without materially changing its structure.
+- **Refactor** — change internal structure while intentionally preserving external behaviour and data contracts.
+- **Targeted replacement** — replace one bounded subsystem behind explicit interfaces, with migration and parity validation.
+- **Broad rewrite** — replace several connected domains or foundational contracts at once. This is exceptional and requires an approved architecture plan.
+
+Do not label ordinary cleanup a rewrite, and do not label a blank-canvas replacement a refactor.
+
+### 4.3 When extension is the right choice
+
+Prefer extension when:
+
+- the current component, hook, handler, service, or data model clearly owns the requirement;
+- the change remains local and testable;
+- existing interfaces express the new behaviour without misleading names or impossible states;
+- reuse removes duplication rather than pushing domain-specific behaviour into a universal abstraction;
+- performance, security, persistence, and cancellation contracts remain straightforward;
+- the expected near-term roadmap fits the same ownership model.
+
+### 4.4 Evidence that refactoring or replacement is justified
+
+A larger change is justified when one or more of these are demonstrated:
+
+- routine features require edits across several unrelated modules;
+- one file or object owns multiple domains and cannot be tested independently;
+- duplicated implementations exist because the supposed shared abstraction does not model its consumers cleanly;
+- each new feature adds branches, flags, adapters, or compatibility shims that do not converge;
+- the existing data flow makes cancellation, persistence, project isolation, or error recovery fragile;
+- performance or memory problems cannot be fixed locally because ownership is wrong;
+- security or path-validation boundaries are blurred;
+- packaging, platform support, or testability is blocked by the current structure;
+- an approved near-term roadmap would build substantial new work on a known unsuitable foundation;
+- the proposed replacement has a clear owner and materially lowers ongoing complexity.
+
+“Future-proofing” is not sufficient on its own. State the concrete future pressure, why the present architecture resists it, and how the proposed design reduces—not merely moves—complexity.
+
+### 4.5 Required plan for a substantial replacement
+
+Before destructive work begins, the implementation plan must identify:
+
+1. the current problem and evidence;
+2. the exact subsystem boundary;
+3. user-visible behaviours that must remain unchanged;
+4. persisted project/settings/asset/API contracts that require compatibility or migration;
+5. characterisation tests or another reliable parity baseline;
+6. the new owner and its interfaces;
+7. staged cut-over and rollback points where practical;
+8. native Electron, packaged-build, and real-runtime checks automation cannot cover;
+9. when and how the old path will be deleted;
+10. explicit non-goals so the replacement does not expand into a product redesign.
+
+A broad rewrite must use its own branch and phased documents. Do not combine it with dependency modernisation, a visual redesign, or an unrelated feature.
+
+### 4.6 Preferred migration shape
+
+Prefer a controlled replacement over a flag-day rewrite:
+
+```text
+characterise current behaviour
+    -> define stable boundary
+    -> introduce replacement behind boundary
+    -> migrate callers/data deliberately
+    -> validate parity and improvements
+    -> remove old path and compatibility scaffolding
+```
+
+Temporary adapters are acceptable during migration. They are not a permanent architecture. Record their deletion condition and remove them once all callers/data have moved.
+
+### 4.7 Contracts that cannot be broken incidentally
+
+Internal implementation may evolve, but the following require explicit migration and approval:
+
+- local-only, WanGP-only generation;
+- context-isolated preload and narrow native API exposure;
+- authenticated local backend communication;
+- project-scoped asset and persistence safety;
+- shared progress/cancellation semantics;
+- curated backend-owned model profiles;
+- Director and NLE domain separation;
+- reproducible WanGP/Python/Torch/CUDA runtime pins;
+- compatibility with existing projects and saved generation settings.
+
+## 5. Common commands
 
 | Command | Purpose |
 | --- | --- |
@@ -91,18 +189,18 @@ uv run pytest tests/test_music_generation.py -v --tb=short
 
 Use repository scripts rather than inventing parallel install/build paths.
 
-## 5. Validation expectations
+## 6. Validation expectations
 
-Validation should match the risk of the change.
+Validation must match the risk of the change.
 
-### Documentation-only changes
+### 6.1 Documentation-only changes
 
 - Review the full rendered content/diff.
 - Check paths, commands, names, versions, and status claims against current source.
 - Run `git diff --check` when working locally.
 - Application tests are not required when no executable/configuration file changed, but say that explicitly.
 
-### Frontend component, hook, or pure-logic changes
+### 6.2 Frontend component, hook, or pure-logic changes
 
 Minimum:
 
@@ -116,7 +214,7 @@ Also run `pnpm build:frontend` when the change affects composition, imports, bun
 
 Native media behaviour—drag/drop, audio/video playback, seeking, file URLs, resize interactions—still requires Electron smoke testing when relevant.
 
-### Backend changes
+### 6.3 Backend changes
 
 Minimum:
 
@@ -128,7 +226,7 @@ relevant focused pytest files
 
 Run `pnpm backend:test` for changes to shared state, app composition, API types, route/handler contracts, WanGP bridge behaviour, model profiles, model packs, or common services.
 
-### Electron, preload, IPC, or file handling
+### 6.4 Electron, preload, IPC, or file handling
 
 Run:
 
@@ -140,31 +238,45 @@ pnpm build:frontend
 
 Then verify the affected path in the actual Electron app. For packaging-sensitive work, also run an unpacked build and, where required, the full installer.
 
-### Styling or dependency changes
+### 6.5 Architecture refactor or targeted replacement
+
+In addition to the affected-layer checks:
+
+- establish and record a pre-change parity baseline;
+- add characterisation tests around preserved behaviour before removing the old path;
+- test existing project/settings migration or reopen behaviour;
+- compare performance, memory, or complexity claims with actual evidence where those justify the change;
+- validate all callers of the replaced boundary;
+- confirm old code, flags, adapters, and duplicated state are removed at completion;
+- run native Electron and real-runtime smoke tests for the complete user path.
+
+A passing unit suite is not enough when the change moves ownership, persistence, preload/IPC boundaries, or packaged resources.
+
+### 6.6 Styling or dependency changes
 
 A successful build is not visual proof. Compare the relevant screens and interactions in Electron.
 
 For major frontend/desktop dependency upgrades, follow the approved phased plan on a dedicated branch and validate development, unpacked, and installed builds independently.
 
-### WanGP source or GPU runtime changes
+### 6.7 WanGP source or GPU runtime changes
 
 Use the dedicated source/stack workflow. Review the exact source and wheel changes, run focused compatibility checks, then full validation before promotion.
 
 Do not substitute a generic `uv update`, `pip install -U`, or package bot PR for the curated runtime process.
 
-## 6. Frontend architecture
+## 7. Frontend architecture
 
-### 6.1 General rules
+### 7.1 General rules
 
 - Path alias: `@/*` maps to `frontend/*`.
 - Strict TypeScript is enabled with unused locals/parameters rejected.
-- Use React context and focused hooks already present in the project. Do not add Redux, Zustand, or another global state system without a measured architectural need and explicit approval.
+- Use React context and focused hooks already present in the project. A different state architecture may be proposed only through the section 4 process with measured need and migration scope.
 - Prefer direct imports while ownership is evolving; avoid broad barrels that obscure dependencies or create cycles.
 - Keep side effects in hooks/services and keep pure transformations independently testable.
 - Do not access Node or Electron APIs directly from renderer code.
 - Backend requests use the established authenticated localhost helper/connection flow; do not hard-code a second backend URL or bypass the session token contract.
 
-### 6.2 Project workspaces
+### 7.2 Project workspaces
 
 `frontend/views/Project.tsx` owns the Quick Gen, Director, and Video Editor tabs.
 
@@ -176,9 +288,9 @@ All workspaces remain mounted to preserve authored state. Inactive workspaces mu
 - avoid visible compositor residue;
 - avoid polling or side effects not required for state preservation.
 
-Do not replace this with unmount/remount behaviour casually; persistence and playback ownership are deliberate.
+Do not replace this with unmount/remount behaviour casually; persistence and playback ownership are deliberate. A replacement mounting/state strategy must prove equivalent restore behaviour and lower background work.
 
-### 6.3 GenSpace ownership
+### 7.3 GenSpace ownership
 
 `frontend/views/GenSpace.tsx` is intentionally a tiny route entry that renders `GenSpaceWorkspace`.
 
@@ -211,11 +323,13 @@ Ownership rules:
 - Per-mode UI/helpers live under `image/`, `video/`, or `music/`.
 - Cross-mode controls belong in `genspace/components/` only when genuinely shared.
 - Pure transition/request/asset/restore logic belongs in `genspace/logic/`.
-- Do not add a schema-generated universal form or independent mode-specific job manager.
+- Do not add a schema-generated universal form or independent mode-specific job manager as incidental work.
+
+These are the current proven boundaries. They may be refactored or replaced only through an explicit architecture plan that preserves generation, persistence, Copy Settings, and project-switch safety.
 
 See `docs/GENSPACE_ARCHITECTURE.md` for the current detailed contract.
 
-### 6.4 Generation lifecycle
+### 7.4 Generation lifecycle
 
 `frontend/hooks/use-generation.ts` is the public compatibility facade used by GenSpace and Director.
 
@@ -230,11 +344,11 @@ See `docs/GENSPACE_ARCHITECTURE.md` for the current detailed contract.
 
 Request builders and progress formatters live in `frontend/hooks/generation/`.
 
-Do not create a second polling loop or cancellation implementation for a new media mode.
+Do not create a second polling loop or cancellation implementation for a new media mode. A deliberate replacement of the shared job architecture must migrate every consumer and prove equivalent cancellation, terminal-state, unmount, and backend-restart behaviour.
 
 GenSpace submissions capture immutable, project-scoped snapshots. Completion persistence must use the submission snapshot, not live UI state, so switching projects/modes while a job runs cannot misfile the result or save later settings.
 
-### 6.5 Shared Asset Library
+### 7.5 Shared Asset Library
 
 `frontend/components/GalleryAssetLibrary.tsx` is the controlled shared Asset Library used by GenSpace, Director, and Video Editor.
 
@@ -250,11 +364,11 @@ The shared component owns common presentation and interaction primitives such as
 
 Each workspace supplies data, persistence, selection, and workspace-specific callbacks.
 
-Do not fork another near-identical asset grid. Extend the shared contract only when the behaviour is truly common; keep workflow-specific actions at the caller boundary.
+Do not fork another near-identical asset grid merely to avoid improving the shared contract. Conversely, do not keep expanding a universal component if evidence shows it has become an unnatural union of different domains. A split or replacement is valid when the common contract is explicitly identified, workspace-specific ownership becomes clearer, and visual/behavioural parity is tested.
 
 Asset and bin state is shared project data. Workspace selection, playheads, playback, and undo history are not.
 
-### 6.6 Director and Video Editor
+### 7.6 Director and Video Editor
 
 Director authors generation intent using integer frames and Director-specific recipes.
 
@@ -264,7 +378,9 @@ They may share `frontend/views/editor/timeline/TimelinePrimitives.tsx`, but must
 
 Director V1 behaviour is defined in `docs/DIRECTOR_MODE_V1.md`. Guide Audio and Control Media authoring remain locked unless a current task explicitly implements the approved later phase.
 
-### 6.7 Frontend testing
+The Video Editor may be refactored or progressively replaced for maintainability when justified, but an editor rewrite must be a focused project with behavioural parity, project migration, preview/export validation, and no forced merging of Director and NLE domains.
+
+### 7.7 Frontend testing
 
 Frontend tests exist and are required.
 
@@ -273,8 +389,9 @@ Frontend tests exist and are required.
 - Prefer testing pure transitions, request compilation, persistence boundaries, and meaningful user interactions.
 - Add browser API shims only where jsdom genuinely lacks the API; do not hide real application defects behind broad mocks.
 - Keep test fixtures aligned with strict production types.
+- Characterisation tests are required before replacing a proven subsystem whose exact behaviour is not already captured.
 
-### 6.8 Styling
+### 7.8 Styling
 
 - Tailwind uses semantic colour tokens backed by CSS variables in `frontend/index.css` and configuration in `tailwind.config.js` on the current pre-modernisation branch.
 - Utilities commonly use `class-variance-authority`, `clsx`, and `tailwind-merge`.
@@ -282,31 +399,33 @@ Frontend tests exist and are required.
 - Container queries are used for size-dependent Asset Library card controls.
 - Dependency/style migrations require visual parity checks; compilation alone is insufficient.
 
-## 7. Electron architecture
+## 8. Electron architecture
 
-### 7.1 Security boundary
+### 8.1 Security boundary
 
 - `contextIsolation` must remain enabled.
 - Renderer `nodeIntegration` must remain disabled.
-- The preload is a CommonJS bundle.
+- The preload is a CommonJS bundle on the current branch.
 - Native capabilities are exposed narrowly through `window.electronAPI` in `electron/preload.ts`.
 - Do not expose raw `ipcRenderer`, arbitrary filesystem access, shell execution, or an unbounded invoke wrapper.
 
-### 7.2 IPC and native files
+This boundary may be reorganised internally, but its security properties cannot be weakened as part of a refactor.
 
-- Register IPC in the existing domain handler files under `electron/ipc/`.
+### 8.2 IPC and native files
+
+- Register IPC in the existing domain handler files under `electron/ipc/`, or move it through an approved replacement that keeps domain ownership explicit.
 - Validate or explicitly approve paths before reading, copying, deleting, revealing, or serving files.
-- Keep project asset import/delete policies in the existing `electron/lib/` helpers rather than duplicating path logic in the renderer.
+- Keep project asset import/delete policies in native helpers rather than duplicating path logic in renderer components.
 - Ensure event subscriptions return or provide matching cleanup; avoid `removeAllListeners` when listener-specific cleanup is available and safer.
 - Preserve project-scoped duplicate handling and deletion boundaries.
 
-### 7.3 Current Electron upgrade hazard
+### 8.3 Current Electron upgrade hazard
 
 The current pre-modernisation renderer still reads Electron's removed non-standard `File.path` in `frontend/lib/media-import.ts`.
 
 Any upgrade beyond Electron 31 must first expose `webUtils.getPathForFile(file)` through the context-isolated preload and migrate every file/drop import path. Do not cast around the removal or fall back to temporary blob URLs for project imports.
 
-### 7.4 Packaging
+### 8.4 Packaging
 
 `electron-builder.yml` controls packaged files, backend/WanGP resources, bootstraps, NSIS, macOS output, and publishing.
 
@@ -314,7 +433,7 @@ A renderer build does not prove packaging. Changes affecting preload paths, reso
 
 The current Windows installer is not Authenticode-signed; do not describe it as signed.
 
-## 8. Backend architecture
+## 9. Backend architecture
 
 Request flow:
 
@@ -322,7 +441,7 @@ Request flow:
 _routes/* -> AppHandler -> handlers/* -> services/* + state/*
 ```
 
-### 8.1 Routes
+### 9.1 Routes
 
 Routes under `backend/_routes/` are thin HTTP adapters:
 
@@ -333,9 +452,9 @@ Routes under `backend/_routes/` are thin HTTP adapters:
 
 Do not put business logic, heavy work, or direct WanGP orchestration in route modules.
 
-### 8.2 Composition root
+### 9.2 Composition root
 
-`backend/app_handler.py` owns application composition:
+`backend/app_handler.py` owns current application composition:
 
 - shared state and `RLock`;
 - settings;
@@ -347,9 +466,9 @@ Do not put business logic, heavy work, or direct WanGP orchestration in route mo
 - Retake compatibility;
 - the WanGP bridge.
 
-Add new domain ownership deliberately. Do not create a second application state container.
+Add new domain ownership deliberately. Do not create a second application state container as a shortcut. A replacement composition architecture requires a complete migration of state, tests, dependency wiring, and runtime startup.
 
-### 8.3 State and concurrency
+### 9.3 State and concurrency
 
 Use typed/discriminated state models.
 
@@ -369,21 +488,22 @@ unlock
 
 Never hold the shared `RLock` during model loading, generation, downloads, ffmpeg, or other long I/O/compute work.
 
-### 8.4 Handlers and services
+### 9.4 Handlers and services
 
 - Handlers own domain decisions, validation, state transitions, and orchestration.
 - Services isolate heavy or external side effects.
 - Use Protocol-style boundaries and real/fake implementations when a new heavy dependency needs testing.
-- Keep cross-domain shared behaviour in an existing shared handler/service rather than duplicating it.
+- Keep cross-domain shared behaviour in a clear shared owner rather than duplicating it.
+- If the current handler/service split no longer models the domain, propose a bounded replacement rather than layering proxies indefinitely.
 
-### 8.5 Exceptions and logging
+### 9.5 Exceptions and logging
 
 - Raise `HTTPError` with useful details and exception chaining where appropriate.
 - `app_factory.py` owns application-boundary traceback/logging policy.
 - Do not `logger.exception()` and then rethrow the same error for the boundary to log again.
 - User-facing messages should be actionable; detailed tracebacks belong in logs.
 
-### 8.6 Backend testing
+### 9.6 Backend testing
 
 - Tests are integration-first through the real FastAPI app and composed `AppHandler`.
 - Heavy services are replaced with fakes under `backend/tests/fakes/`.
@@ -391,18 +511,18 @@ Never hold the shared `RLock` during model loading, generation, downloads, ffmpe
 - `backend/tests/conftest.py` provides fresh state per test.
 - Strict Pyright is enforced both directly and through the test suite.
 
-When adding a backend feature:
+When adding or replacing a backend feature:
 
 1. Add/extend typed API models in `backend/api_types.py`.
 2. Add a thin route in `backend/_routes/` if a new endpoint is required.
-3. Add/extend the correct domain handler.
+3. Add/extend the correct domain handler, or document the replacement owner.
 4. Add a service Protocol/real/fake boundary for new heavy side effects.
 5. Add focused integration tests using fakes.
-6. Verify cancellation, progress, errors, and state cleanup when applicable.
+6. Verify cancellation, progress, errors, state cleanup, and migration behaviour when applicable.
 
-## 9. Curated model and generation contracts
+## 10. Curated model and generation contracts
 
-### 9.1 Product source of truth
+### 10.1 Product source of truth
 
 `backend/model_profiles/profiles.py` owns product-visible profiles.
 
@@ -414,7 +534,7 @@ Current visible profile IDs:
 - Video: `ltx2_22b_distilled`.
 - Music: `ace_step_15_turbo`, `ace_step_15_xl_turbo`.
 
-### 9.2 Adding a curated model
+### 10.2 Adding a curated model
 
 Adding a model normally requires coordinated changes to:
 
@@ -430,7 +550,7 @@ Adding a model normally requires coordinated changes to:
 
 A WanGP model definition or downloaded checkpoint is not automatically a product profile.
 
-### 9.3 Generation invariants
+### 10.3 Generation invariants
 
 - Backend validates profile IDs and curated choices before WanGP execution.
 - All normal generation routes use the shared generation state/progress/cancel contract.
@@ -438,7 +558,7 @@ A WanGP model definition or downloaded checkpoint is not automatically a product
 - Model-download progress must preserve structured details even when the main UI shows a concise summary.
 - Legacy request fields may remain for saved-data compatibility, but new UI should use the canonical current contracts.
 
-## 10. Python, WanGP, and GPU runtime rules
+## 11. Python, WanGP, and GPU runtime rules
 
 Current canonical files:
 
@@ -463,20 +583,24 @@ Rules:
 - Review sensitive model/default/dependency/bridge changes before accepting a new pin.
 - Keep the exact bundled revision reproducible.
 
-## 11. Persistence and file ownership
+A future redesign of runtime ownership is possible, but it must preserve offline/reproducible installation, supported hardware validation, model-pack behaviour, existing user locations, and rollback. It is not ordinary dependency cleanup.
+
+## 12. Persistence and file ownership
 
 - Default project asset root is `Documents/AiVS` unless the user selects another location.
 - Imports copied into a GenSpace project go under `{projectId}/uploads/`.
-- completed generated media goes under `{projectId}/generated/`.
+- Completed generated media goes under `{projectId}/generated/`.
 - Runtime executables, model caches, updater state, and app state do not belong inside project folders.
 - Video Editor may reference large editing imports in place where the current workflow deliberately does so.
 - Store project references using stable project/Asset IDs where the domain contract requires it; resolve live paths at the native/request boundary.
 - Deletion must stay scoped to the owning project and approved roots.
 - Preserve generation settings needed by Copy Settings and project reopen compatibility.
 
-## 12. Coding conventions
+Any persistence rewrite requires explicit schema/version migration, existing-project fixtures, idempotent upgrade behaviour, and a tested rollback or recovery story. Never silently reinterpret stored data.
 
-### TypeScript
+## 13. Coding conventions
+
+### 13.1 TypeScript
 
 - Strict mode must remain enabled.
 - Do not suppress errors broadly with `any`, unchecked casts, or `@ts-ignore`.
@@ -485,7 +609,7 @@ Rules:
 - Keep renderer, preload, and Electron main contracts aligned.
 - The preload output must remain CommonJS until the Electron loading contract is deliberately migrated and packaged-tested.
 
-### Python
+### 13.2 Python
 
 - Python 3.11 compatibility is required on the current stack.
 - Pyright strict mode must remain clean.
@@ -493,15 +617,17 @@ Rules:
 - External WanGP data may require defensive normalisation, but narrow it as early as possible.
 - Use `*Payload` for DTO/TypedDict-like structures, `*Like` for structural adapters, and `Fake*` for test implementations where those conventions fit.
 
-### General
+### 13.3 General
 
-- Reuse existing logging helpers and error boundaries.
+- Reuse existing logging helpers and error boundaries where their contract still fits.
 - Keep functions/components focused around a clear owner.
 - Avoid speculative abstraction and generic frameworks before there are multiple proven consumers.
+- Do not use “consistency” as a reason to force unlike domains into one abstraction.
+- Do not use “future-proofing” as a reason for a rewrite without concrete pressure and a migration plan.
 - Preserve accessibility labels, keyboard behaviour, focus states, and disabled explanations.
 - Comments should explain non-obvious intent or constraints, not restate the code.
 
-## 13. Documentation and project memory policy
+## 14. Documentation and project memory policy
 
 - `AGENTS_PRD.md` describes current product intent and guardrails.
 - `AGENTS.md` describes current engineering rules.
@@ -518,26 +644,31 @@ Update the current-state documents when a change alters:
 - runtime/source pins;
 - user-facing limitations;
 - validation commands;
-- an architectural invariant.
+- an architectural invariant;
+- a subsystem migration or replacement boundary.
 
 Do not append every bug fix or command transcript to the summary or project map.
 
-## 14. Dependency upgrade rules
+## 15. Dependency upgrade rules
 
 - Major frontend/desktop upgrades require a dedicated branch and phased plan.
 - Upgrade compatibility clusters together where required, but isolate independent majors into reviewable phases.
-- Keep product behaviour stable during dependency work; do not hide a redesign inside a migration.
+- Keep product behaviour stable during dependency work; do not hide a redesign or rewrite inside a migration.
 - Capture baseline tests/builds and visual references before changing versions.
 - Validate development, production bundle, unpacked app, installer, project reopen, drag/drop, playback, backend startup, model download, generation, and updater-sensitive paths as applicable.
 - Protect `backend/pyproject.toml`, `backend/uv.lock`, `scripts/wangp-stacks.json`, `scripts/wangp-source.json`, stack installers, and `Wan2GP/` from generic dependency automation.
 
-## 15. Definition of done
+When a dependency upgrade exposes architectural debt, record it and create a separate follow-up phase unless the architectural change is strictly required for compatibility and is explicitly scoped in the upgrade plan.
+
+## 16. Definition of done
 
 Before declaring work complete, verify every applicable item:
 
 - The requested behaviour is implemented without unrelated scope expansion.
 - Product guardrails in `AGENTS_PRD.md` are respected.
-- Current code ownership is preserved or deliberately improved without creating duplicate sources of truth.
+- The current owner was extended only if its contract still fits; otherwise the replacement boundary and rationale are documented.
+- Proven user-visible behaviour and persisted data are preserved or explicitly migrated.
+- Characterisation/parity tests cover a substantial replaced path before its removal.
 - TypeScript/Pyright are clean for affected layers.
 - Focused tests cover the changed contract.
 - Required full test suites pass.
@@ -547,10 +678,11 @@ Before declaring work complete, verify every applicable item:
 - Project persistence, Copy Settings, progress, cancellation, and errors remain correct where relevant.
 - No prompts/media are sent to a cloud generation provider.
 - Runtime/source pins remain reproducible.
-- Documentation and project memory reflect meaningful capability or ownership changes.
+- Superseded code, temporary adapters, flags, and duplicate sources of truth are removed when migration is complete.
+- Documentation and project memory reflect meaningful capability, ownership, or architecture changes.
 - The final diff contains no generated artifacts, accidental formatting churn, stale imports, or unrelated edits.
 
-## 16. Key file locations
+## 17. Key file locations
 
 ### Product and current-state guidance
 
