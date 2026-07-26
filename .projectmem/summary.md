@@ -12,7 +12,7 @@ Product principles:
 
 - Keep generation local and WanGP-only.
 - Present a curated creative product rather than raw WanGP configuration.
-- Preserve and extend working inherited systems instead of rebuilding them speculatively.
+- Preserve proven behaviour, user data, and architectural contracts; refactor or replace implementation deliberately when the current structure becomes a documented constraint.
 - Keep model/runtime compatibility reproducible and deliberately pinned.
 - Prefer simple user-facing workflows with advanced controls only where they add clear value.
 
@@ -204,6 +204,7 @@ Model packs currently cover utility assets, the visible image/video/music models
 - Empty Custom Lyrics can fall back to generation-time composition, except Cover Song requires original supplied lyrics.
 - Reframe behaviour and padding limits are established; its files now live under `frontend/views/genspace/video/`.
 - WanGP updates are transactional and must preserve the exact source pin or roll back.
+- Current implementation is not frozen: extension is preferred only where the existing owner still fits. A substantial refactor or replacement requires evidence, preserved-contract/parity tests, data migration where relevant, staged rollback, and a clear deletion path for the superseded system.
 
 ## Active constraints and known risks
 
@@ -230,6 +231,7 @@ Current near-term directions, not old implementation phase numbers:
 5. Add TTS generation.
 6. Add Director Guide Audio and Control Media authoring after Prompt Track V1 is stable.
 7. Continue curated model expansion through backend profiles and tested model packs.
+8. Continue evidence-based architecture, maintainability, performance, accessibility, and packaging work, including bounded subsystem replacements where extension would compound debt.
 
 ## Last recorded validation baseline
 
