@@ -10,7 +10,7 @@
 - Branch created on: 2026-07-26
 - Executor: Codex
 - Baseline `dev` commit SHA: `a3b8cbdd750d167e3d88eb1c99df3ebd78b3a141`
-- Current implementation HEAD SHA: `a9194ba700ba890c933c8d0543be99d71d429cee`
+- Current implementation HEAD SHA: `3710866c35e7fe52370b586c39230abc3ee0c88f`
 - Last sync from `dev`: 2026-07-26 (`origin/dev` merged before Phase 1)
 - Node version: 24.18.0
 - pnpm version: 10.30.3 through Corepack
@@ -39,10 +39,10 @@ Fill these from `pnpm list --depth 0` before changing dependencies.
 | pnpm | 10.30.3 | 10.30.3 | 10.30.3 |
 | electron | 31.7.7 | 43.x | 43.2.0 |
 | @types/node | 20.19.43 | 24.x | 24.13.3 |
-| vite | 5.4.21 | 8.1.x |  |
-| @vitejs/plugin-react | 4.7.0 | 6.x |  |
-| vite-plugin-electron | 0.28.8 | 1.x |  |
-| vite-plugin-electron-renderer | 0.14.7 | remove if unused |  |
+| vite | 5.4.21 | 8.1.x | 8.1.5 |
+| @vitejs/plugin-react | 4.7.0 | 6.x | 6.0.4 |
+| vite-plugin-electron | 0.28.8 | 1.x | 1.1.0 |
+| vite-plugin-electron-renderer | 0.14.7 | remove if unused | removed as direct dependency; 0.14.7 remains optional transitively |
 | vitest | 2.1.9 | 4.1.x |  |
 | jsdom | 24.1.3 | compatible stable |  |
 | @testing-library/react | 16.1.0 | compatible stable |  |
@@ -66,7 +66,7 @@ Use exactly one status: `NOT STARTED`, `IN PROGRESS`, `BLOCKED`, or `PASSED`.
 |---:|---|---|---|---|---|
 | 1 — Branch, baseline, guardrails | PASSED | `3558d385d96da954cf9d91c0fadab6fe523aa0a8` | `bb9cd5399fd7d2d767cceee378a6e7eef561ab80` | 2026-07-26 | Automated, development, unpacked, installed, drag/drop, uninstall, data-preservation, and protected-runtime gates passed. |
 | 2 — Electron 43 | PASSED | `43ed93f45d98e3b3bf80ea6ce19a423ee565dbb5` | `a9194ba700ba890c933c8d0543be99d71d429cee` | 2026-07-27 | Automated, development, unpacked, installed, file-workflow, native-dialog persistence/fallback, data-preservation, and protected-runtime gates passed. Phase 3 not started. |
-| 3 — Vite 8 | NOT STARTED |  |  |  |  |
+| 3 — Vite 8 | PASSED | `59d425e91284fdf2ac6cc1ad56c5e306b1de6310` | `3710866c35e7fe52370b586c39230abc3ee0c88f` | 2026-07-27 | Automated, development lifecycle, debug, unpacked, native file-import, data-preservation, and protected-runtime gates passed. Phase 4 not started. |
 | 4 — Vitest 4 | NOT STARTED |  |  |  |  |
 | 5 — Tailwind 4 compatibility | NOT STARTED |  |  |  |  |
 | 6 — Tailwind CSS-first theme | NOT STARTED |  |  |  |  |
@@ -272,6 +272,86 @@ Exit gate: user-assisted native interaction completed where automation could not
    - Attempt: resolve filename-only defaults under the valid remembered/fallback directory while preserving defaults that already contain a directory.
    - Result: focused and full tests passed; rebuilt installed and unpacked apps opened export dialogs at `C:\tmp\AiVS-phase2-save` with the expected filename.
    - Final resolution or blocker: resolved in `a9194ba700ba890c933c8d0543be99d71d429cee`.
+
+### Phase 3 command evidence
+
+| Command | Result | Duration | Log/evidence |
+|---|---|---:|---|
+| Vite/plugin registry freshness queries | PASS | 4.27s | Newest stable approved-family patches on 2026-07-27: Vite 8.1.5, `@vitejs/plugin-react` 6.0.4, `vite-plugin-electron` 1.1.0. |
+| Vite release/advisory review | PASS | 1.06s | Official Vite releases reviewed; no Vite advisory published from 2026-07-26 through 2026-07-27. |
+| Baseline `corepack pnpm build:frontend` | PASS | 5.10s | Vite 5.4.21: renderer 3.22s/957.84 kB JS/72.11 kB CSS; main 709ms/409.93 kB; CommonJS preload 7ms/4.81 kB. |
+| Renderer Electron/Node import audit | PASS | 0.82s | Frontend uses `window.electronAPI`; no direct Electron or Node built-in imports. Direct renderer plugin dependency removed. |
+| `git diff --check` | PASS |  | No whitespace errors; only expected LF-to-CRLF working-copy warnings. |
+| `corepack pnpm typecheck:ts` | PASS | 3.88s | TypeScript 5.9.3, 0 errors. |
+| `corepack pnpm test:frontend` | PASS | 2.49s test time | Vitest 2.1.9 remains unchanged; 22 files and 67 tests passed. |
+| `corepack pnpm build:frontend` | PASS | 1.72s tool time | Vite 8.1.5: renderer 1.03s/929.83 kB JS/68.99 kB CSS; main 64ms/378.09 kB; CommonJS preload 7ms/3.49 kB. |
+| `corepack pnpm typecheck:py` | PASS | 3.17s | Pyright 0 errors, 0 warnings. |
+| `corepack pnpm backend:test` | PASS | 11.95s | 278 passed, 1 skipped, 1 existing `pynvml` deprecation warning. |
+| `corepack pnpm build:fast:win` | PASS | 15.30s | Windows unpacked app rebuilt with Vite 8.1.5 and Electron 43.2.0. |
+| Development startup | PASS |  | Clean Vite 8 start reached ready state; one Electron main process; embedded Gradio scan issue resolved by scoping `optimizeDeps.entries` to root `index.html`. |
+| Renderer HMR | PASS |  | Temporary no-op CSS variable produced `hmr update /frontend/index.css`; probe reverted. |
+| Preload reload | PASS |  | Temporary type-safe preload probe rebuilt `dist-electron/preload.js`; probe reverted; no duplicate Electron main process. |
+| Main-process restart | PASS |  | Temporary main probe rebuilt and restarted Electron once; old backend exited and one replacement backend remained; probe reverted. |
+| `corepack pnpm dev:debug` | PASS |  | Inspector listening on 9229, Chromium remote debugging on 9222, one Electron main process. |
+| Protected-runtime diff guard | PASS |  | No protected runtime path changed from Phase 3 starting SHA. |
+
+### Phase 3 output contract
+
+- Renderer output: `dist/`; production entry: `dist/index.html`; relative `./assets/` URLs retained.
+- Electron output: `dist-electron/main.js` and `dist-electron/preload.js`; source maps retained.
+- Preload: one CommonJS build containing `require("electron")`; no ESM preload pass or alternate filename remains.
+- Main entry remains `electron/main.ts`; preload source remains `electron/preload.ts`.
+- Alias remains `@ -> ./frontend`; Electron Builder still packages `dist/**/*` and `dist-electron/**/*`.
+- `vite-plugin-electron` flat two-build architecture retained; `startup()` is awaited.
+
+### Phase 3 manual checks
+
+- [x] Development Vite/Electron startup completed without terminal errors
+- [x] Renderer HMR observed in Vite lifecycle output
+- [x] Preload rebuild/reload observed in Vite lifecycle output
+- [x] Main process restarted once; backend processes did not multiply
+- [x] Debug inspector 9229 and remote debugging 9222 opened
+- [x] User confirms development renderer is visible and not blank after HMR/preload/main lifecycle checks
+- [x] User confirms existing project, Settings, Director, and one practical generation workflow in development
+- [x] User confirms unpacked app loads without missing `file://` assets, CSS, preload, or blank renderer
+- [x] User confirms Phase 2 native file import still works in unpacked app
+- [x] User confirms unpacked app closes/reopens cleanly with project data intact
+- [x] Protected runtime diff guard produced no output
+
+Exit gate: user confirmed development visual stability through HMR, preload reload, and main restart, then passed existing-project, Settings, Director, generation, unpacked production, native file-import, clean-restart, and data-preservation checks. Phase 3 is `PASSED`; Phase 4 remains not started and unread.
+
+### Phase 3 dependency review
+
+- Exact package commands used: `corepack pnpm --config.minimum-release-age=0 add -D vite@8.1.5 @vitejs/plugin-react@6.0.4 vite-plugin-electron@1.1.0`; `corepack pnpm --config.minimum-release-age=0 remove vite-plugin-electron-renderer`.
+- Exact resolved versions: Vite 8.1.5; `@vitejs/plugin-react` 6.0.4; `vite-plugin-electron` 1.1.0; Rolldown 1.1.5; Vitest remains 2.1.9 with its own Vite 5.4.21 dependency.
+- Peer dependency warnings: none.
+- `pnpm why` findings: one direct Vite 8.1.5 used by app/plugin-react; Vitest 2.1.9 retains nested Vite 5.4.21 until Phase 4; renderer plugin is no longer direct but remains optional under `vite-plugin-electron`.
+- Lockfile review: expected Vite/Rolldown/Oxc/Lightning CSS/plugin graph changes; Babel/react-refresh packages removed from the Vite plugin path; no React, Tailwind, TypeScript, Electron, builder, updater, Python, or WanGP direct upgrade.
+- Security advisory findings: GitHub advisory query returned no Vite advisory published since the 2026-07-26 runbook review.
+- Upstream release notes reviewed: official Vite 8.1.5 release; Vite 8 build/dep-optimization documentation; `vite-plugin-electron` v1 configuration and Vite 8 compatibility documentation.
+- Plan freshness, checked 2026-07-27: approved families remain supported; Vite 8.2 is beta only, so Phase 3 stays on stable 8.1.5.
+- Deviations from plan: exact current plugin-react and an Electron transitive dependency were younger than repository `minimumReleaseAge`; one command-scoped exception was used and `.npmrc` remains unchanged. CommonJS preload entry moved into explicit `build.lib` config because plugin v1 flat-entry defaults follow repository ESM mode.
+
+### Phase 3 commits
+
+| Purpose | Commit SHA | Message |
+|---|---|---|
+| Vite 8 cluster, renderer-plugin removal, Rolldown config, CommonJS preload contract, and dev scan scope | `3710866c35e7fe52370b586c39230abc3ee0c88f` | `chore(build): migrate Vite toolchain to Vite 8` |
+
+### Phase 3 issues and attempted fixes
+
+1. Issue: normal package transactions were blocked by release-age policy.
+   - Attempt: exact reviewed commands under normal policy.
+   - Result: rejected before dependency changes because plugin-react 6.0.4 and transitive `undici` 7.29.0 were too new.
+   - Final resolution or blocker: command-scoped `minimum-release-age=0` exception; exact install passed; repository policy unchanged.
+2. Issue: plugin v1 emitted an ESM preload despite `rolldownOptions.output.format = 'cjs'`.
+   - Attempt: added `build.lib.formats = ['cjs']`; deep merge produced both ESM and CJS passes.
+   - Result: moved preload entry into explicit `build.lib`, set only `formats: ['cjs']`, and fixed output name to `preload.js`.
+   - Final resolution or blocker: clean build emits one CommonJS preload with required path.
+3. Issue: Vite 8 dev dependency scan traversed embedded Gradio HTML under `python-embed`.
+   - Attempt: initial startup completed but logged unresolved Svelte/Gradio dependencies.
+   - Result: `optimizeDeps.entries = ['index.html']`; clean restart no longer scans embedded runtime sources.
+   - Final resolution or blocker: resolved.
 
 ## Command evidence template
 
