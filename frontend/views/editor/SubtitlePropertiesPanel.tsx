@@ -25,12 +25,12 @@ export function SubtitlePropertiesPanel({
   return (
     <>
       <div
-        className="w-1 flex-shrink-0 cursor-col-resize bg-transparent hover:bg-amber-500/40 active:bg-amber-500/60 transition-colors relative group z-10"
+        className="w-1 shrink-0 cursor-col-resize bg-transparent hover:bg-amber-500/40 active:bg-amber-500/60 transition-colors relative group z-10"
         onMouseDown={onResizeDragStart}
       >
         <div className="absolute inset-y-0 -left-1 -right-1" />
       </div>
-      <div className="flex-shrink-0 border-l border-zinc-800 bg-zinc-900 p-4 overflow-auto" style={{ width: rightPanelWidth }}>
+      <div className="shrink-0 border-l border-zinc-800 bg-zinc-900 p-4 overflow-auto" style={{ width: rightPanelWidth }}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-semibold text-amber-400 flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
@@ -38,7 +38,7 @@ export function SubtitlePropertiesPanel({
           </h3>
           <button
             onClick={() => deleteSubtitle(selectedSub.id)}
-            className="p-1 rounded hover:bg-red-900/30 text-zinc-500 hover:text-red-400"
+            className="p-1 rounded-sm hover:bg-red-900/30 text-zinc-500 hover:text-red-400"
             title="Delete subtitle"
           >
             <Trash2 className="h-3.5 w-3.5" />
@@ -53,7 +53,7 @@ export function SubtitlePropertiesPanel({
               value={selectedSub.text}
               onChange={(e) => updateSubtitle(selectedSub.id, { text: e.target.value })}
               onKeyDown={(e) => e.stopPropagation()}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-2.5 text-sm text-white resize-none focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30"
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-2.5 text-sm text-white resize-none focus:outline-hidden focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30"
               rows={3}
               placeholder="Enter subtitle text..."
             />
@@ -77,7 +77,7 @@ export function SubtitlePropertiesPanel({
                     }
                   }}
                   onKeyDown={(e) => e.stopPropagation()}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-white font-mono focus:outline-none focus:border-amber-500/50"
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-sm px-2 py-1 text-xs text-white font-mono focus:outline-hidden focus:border-amber-500/50"
                 />
               </div>
               <div>
@@ -94,7 +94,7 @@ export function SubtitlePropertiesPanel({
                     }
                   }}
                   onKeyDown={(e) => e.stopPropagation()}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-white font-mono focus:outline-none focus:border-amber-500/50"
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-sm px-2 py-1 text-xs text-white font-mono focus:outline-hidden focus:border-amber-500/50"
                 />
               </div>
             </div>
@@ -117,7 +117,7 @@ export function SubtitlePropertiesPanel({
                   value={subStyle.fontSize}
                   onChange={(e) => updateSubtitle(selectedSub.id, { style: { ...selectedSub.style, fontSize: parseInt(e.target.value) || 32 } })}
                   onKeyDown={(e) => e.stopPropagation()}
-                  className="w-16 bg-zinc-800 border border-zinc-700 rounded px-2 py-0.5 text-[10px] text-white text-center focus:outline-none focus:border-amber-500/50"
+                  className="w-16 bg-zinc-800 border border-zinc-700 rounded-sm px-2 py-0.5 text-[10px] text-white text-center focus:outline-hidden focus:border-amber-500/50"
                 />
               </div>
 
@@ -125,13 +125,13 @@ export function SubtitlePropertiesPanel({
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => updateSubtitle(selectedSub.id, { style: { ...selectedSub.style, fontWeight: subStyle.fontWeight === 'bold' ? 'normal' : 'bold' } })}
-                  className={`px-2.5 py-1 rounded text-[10px] font-bold ${subStyle.fontWeight === 'bold' ? 'bg-amber-600/30 text-amber-300 border border-amber-500/40' : 'bg-zinc-800 text-zinc-400 border border-zinc-700'}`}
+                  className={`px-2.5 py-1 rounded-sm text-[10px] font-bold ${subStyle.fontWeight === 'bold' ? 'bg-amber-600/30 text-amber-300 border border-amber-500/40' : 'bg-zinc-800 text-zinc-400 border border-zinc-700'}`}
                 >
                   B
                 </button>
                 <button
                   onClick={() => updateSubtitle(selectedSub.id, { style: { ...selectedSub.style, italic: !subStyle.italic } })}
-                  className={`px-2.5 py-1 rounded text-[10px] italic ${subStyle.italic ? 'bg-amber-600/30 text-amber-300 border border-amber-500/40' : 'bg-zinc-800 text-zinc-400 border border-zinc-700'}`}
+                  className={`px-2.5 py-1 rounded-sm text-[10px] italic ${subStyle.italic ? 'bg-amber-600/30 text-amber-300 border border-amber-500/40' : 'bg-zinc-800 text-zinc-400 border border-zinc-700'}`}
                 >
                   I
                 </button>
@@ -144,7 +144,7 @@ export function SubtitlePropertiesPanel({
                   type="color"
                   value={subStyle.color}
                   onChange={(e) => updateSubtitle(selectedSub.id, { style: { ...selectedSub.style, color: e.target.value } })}
-                  className="w-7 h-6 rounded cursor-pointer border border-zinc-700"
+                  className="w-7 h-6 rounded-sm cursor-pointer border border-zinc-700"
                 />
               </div>
 
@@ -169,7 +169,7 @@ export function SubtitlePropertiesPanel({
                       type="color"
                       value={subStyle.backgroundColor.slice(0, 7)}
                       onChange={(e) => updateSubtitle(selectedSub.id, { style: { ...selectedSub.style, backgroundColor: e.target.value + 'CC' } })}
-                      className="w-7 h-6 rounded cursor-pointer border border-zinc-700"
+                      className="w-7 h-6 rounded-sm cursor-pointer border border-zinc-700"
                     />
                   )}
                 </div>
@@ -181,7 +181,7 @@ export function SubtitlePropertiesPanel({
                 <select
                   value={subStyle.position}
                   onChange={(e) => updateSubtitle(selectedSub.id, { style: { ...selectedSub.style, position: e.target.value as SubtitleStyle['position'] } })}
-                  className="bg-zinc-800 border border-zinc-700 rounded px-2 py-0.5 text-[10px] text-white focus:outline-none focus:border-amber-500/50"
+                  className="bg-zinc-800 border border-zinc-700 rounded-sm px-2 py-0.5 text-[10px] text-white focus:outline-hidden focus:border-amber-500/50"
                 >
                   <option value="bottom">Bottom</option>
                   <option value="center">Center</option>

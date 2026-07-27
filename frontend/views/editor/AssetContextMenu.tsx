@@ -102,7 +102,7 @@ export function AssetContextMenu({
   return (
     <div
       ref={assetContextMenuRef}
-      className="fixed bg-zinc-800 border border-zinc-700 rounded-xl shadow-2xl py-1.5 z-[60] min-w-[180px] text-xs"
+      className="fixed bg-zinc-800 border border-zinc-700 rounded-xl shadow-2xl py-1.5 z-60 min-w-[180px] text-xs"
       style={{ left: assetContextMenu.x, top: assetContextMenu.y }}
       onClick={(e) => e.stopPropagation()}
     >

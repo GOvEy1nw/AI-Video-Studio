@@ -77,7 +77,7 @@ export function GalleryBinBar({
     assets.filter((asset) => asset.bin === bin).length;
 
   const binChipClass = (active: boolean) =>
-    `flex h-8 flex-shrink-0 items-center gap-1 rounded-md border px-2.5 text-xs font-medium transition-colors ${
+    `flex h-8 shrink-0 items-center gap-1 rounded-md border px-2.5 text-xs font-medium transition-colors ${
       active
         ? "border border-zinc-500/40 bg-zinc-400/30 text-zinc-300"
         : "border-transparent text-zinc-400 hover:bg-zinc-800 hover:text-white"
@@ -85,13 +85,13 @@ export function GalleryBinBar({
 
   return (
     <>
-      <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden">
         <button
           type="button"
           onClick={() => onSelectBin(null)}
           className={binChipClass(selectedBin === null)}
         >
-          <Folder className="h-3.5 w-3.5 flex-shrink-0" />
+          <Folder className="h-3.5 w-3.5 shrink-0" />
           <span>All Bins</span>
         </button>
 
@@ -123,7 +123,7 @@ export function GalleryBinBar({
             className={binChipClass(selectedBin === bin)}
           >
             <Folder
-              className="h-3.5 w-3.5 flex-shrink-0"
+              className="h-3.5 w-3.5 shrink-0"
               style={{ color: getColorLabel(binColors[bin])?.color }}
             />
             <span className="truncate">{bin}</span>
@@ -155,13 +155,13 @@ export function GalleryBinBar({
               }
             }}
             placeholder="Bin name..."
-            className="h-8 w-28 flex-shrink-0 rounded-md border border-zinc-600 bg-zinc-800 px-2 text-xs text-white placeholder-zinc-600 focus:border-blue-500 focus:outline-none"
+            className="h-8 w-28 shrink-0 rounded-md border border-zinc-600 bg-zinc-800 px-2 text-xs text-white placeholder-zinc-600 focus:border-blue-500 focus:outline-hidden"
           />
         ) : (
           <button
             type="button"
             onClick={() => onCreatingBinChange(true)}
-            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md border border-transparent text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-transparent text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
             aria-label="Create bin"
             title="Create bin"
           >
@@ -173,7 +173,7 @@ export function GalleryBinBar({
       {binContextMenu && (
         <div
           ref={binContextMenuRef}
-          className="fixed z-[60] min-w-[160px] rounded-xl border border-zinc-700 bg-zinc-800 py-1.5 text-xs shadow-2xl"
+          className="fixed z-60 min-w-[160px] rounded-xl border border-zinc-700 bg-zinc-800 py-1.5 text-xs shadow-2xl"
           style={{ left: binContextMenu.x, top: binContextMenu.y }}
           onClick={(e) => e.stopPropagation()}
         >

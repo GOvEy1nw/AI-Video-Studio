@@ -81,7 +81,7 @@ export function ImageUploader({ onImageSelect, selectedImage }: ImageUploaderPro
         {selectedImage ? (
           <div className="flex items-center gap-3">
             {/* Thumbnail */}
-            <div className="w-14 h-14 flex-shrink-0 rounded-md overflow-hidden bg-zinc-800">
+            <div className="w-14 h-14 shrink-0 rounded-md overflow-hidden bg-zinc-800">
               <img
                 src={selectedImage}
                 alt="Selected"
@@ -97,7 +97,7 @@ export function ImageUploader({ onImageSelect, selectedImage }: ImageUploaderPro
             </div>
 
             {/* Action buttons */}
-            <div className="flex items-center gap-1 flex-shrink-0">
+            <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={clearImage}
                 className="p-2 hover:bg-zinc-700 rounded-lg transition-colors"

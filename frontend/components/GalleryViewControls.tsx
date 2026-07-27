@@ -25,7 +25,7 @@ export function GalleryViewControls({
     }`
 
   return (
-    <div className="flex flex-shrink-0 items-center gap-1.5">
+    <div className="flex shrink-0 items-center gap-1.5">
       <div className="flex rounded-lg bg-zinc-900 p-0.5">
         <button
           type="button"

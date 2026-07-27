@@ -142,7 +142,7 @@ export function GapGenerationModal({
   return (
     <>
       {gapGenerateMode && (
-        <div className="fixed inset-0 z-[100] flex flex-col items-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-100 flex flex-col items-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
           <div className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl w-[420px] max-h-[calc(100vh-2rem)] flex flex-col overflow-hidden my-auto shrink-0">
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
@@ -196,7 +196,7 @@ export function GapGenerationModal({
                   <button
                     onClick={() => { if (startFrameEnabled) { setStartFrameEnabled(false) } else { setStartFrameEnabled(true); setEndFrameEnabled(false) } }}
                     className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
-                      startFrameEnabled ? 'bg-zinc-600 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'
+                      startFrameEnabled ? 'bg-zinc-600 text-white shadow-xs' : 'text-zinc-500 hover:text-zinc-300'
                     }`}
                   >
                     Start frame
@@ -204,7 +204,7 @@ export function GapGenerationModal({
                   <button
                     onClick={() => { if (endFrameEnabled) { setEndFrameEnabled(false) } else { setEndFrameEnabled(true); setStartFrameEnabled(false) } }}
                     className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
-                      endFrameEnabled ? 'bg-zinc-600 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'
+                      endFrameEnabled ? 'bg-zinc-600 text-white shadow-xs' : 'text-zinc-500 hover:text-zinc-300'
                     }`}
                   >
                     End frame
@@ -217,7 +217,7 @@ export function GapGenerationModal({
                 {/* Before frame */}
                 {displayedBeforeFrame ? (
                   <div
-                    className="relative w-[38%] h-full flex-shrink-0 overflow-hidden rounded-l-xl group/before cursor-pointer"
+                    className="relative w-[38%] h-full shrink-0 overflow-hidden rounded-l-xl group/before cursor-pointer"
                     onClick={() => { if (startFrameEnabled) { setStartFrameEnabled(false) } else { setStartFrameEnabled(true); setEndFrameEnabled(false) } }}
                   >
                     <img
@@ -231,11 +231,11 @@ export function GapGenerationModal({
                     <div className="absolute top-1 left-1 inline-flex items-start opacity-0 group-hover/before:opacity-100 transition-all group/replace-start">
                       <button
                         onClick={(e) => { e.stopPropagation(); startFrameInputRef.current?.click() }}
-                        className="p-1 rounded bg-black/50 text-zinc-400 hover:text-white hover:bg-black/75"
+                        className="p-1 rounded-sm bg-black/50 text-zinc-400 hover:text-white hover:bg-black/75"
                       >
                         <Upload className="h-2.5 w-2.5" />
                       </button>
-                      <div className="absolute left-0 top-full mt-1 px-1.5 py-0.5 bg-zinc-800 border border-zinc-700 rounded text-[9px] text-zinc-300 whitespace-nowrap invisible group-hover/replace-start:visible pointer-events-none z-30">
+                      <div className="absolute left-0 top-full mt-1 px-1.5 py-0.5 bg-zinc-800 border border-zinc-700 rounded-sm text-[9px] text-zinc-300 whitespace-nowrap invisible group-hover/replace-start:visible pointer-events-none z-30">
                         Replace image
                       </div>
                     </div>
@@ -245,7 +245,7 @@ export function GapGenerationModal({
                     )}
                   </div>
                 ) : (
-                  <div className="w-[38%] h-full flex-shrink-0 bg-zinc-800 flex items-center justify-center">
+                  <div className="w-[38%] h-full shrink-0 bg-zinc-800 flex items-center justify-center">
                     <span className="text-zinc-600 text-[8px]">No clip</span>
                   </div>
                 )}
@@ -262,7 +262,7 @@ export function GapGenerationModal({
                       >
                         <X className="h-2.5 w-2.5" />
                       </button>
-                      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent py-1 px-2 flex items-center justify-center">
+                      <div className="absolute bottom-0 inset-x-0 bg-linear-to-t from-black/70 to-transparent py-1 px-2 flex items-center justify-center">
                         <span className="text-[8px] text-blue-200/90 font-medium">
                           Source frame
                         </span>
@@ -283,7 +283,7 @@ export function GapGenerationModal({
                 {/* After frame */}
                 {displayedAfterFrame ? (
                   <div
-                    className="relative w-[38%] h-full flex-shrink-0 overflow-hidden rounded-r-xl group/after cursor-pointer"
+                    className="relative w-[38%] h-full shrink-0 overflow-hidden rounded-r-xl group/after cursor-pointer"
                     onClick={() => { if (endFrameEnabled) { setEndFrameEnabled(false) } else { setEndFrameEnabled(true); setStartFrameEnabled(false) } }}
                   >
                     <img
@@ -297,11 +297,11 @@ export function GapGenerationModal({
                     <div className="absolute top-1 left-1 inline-flex items-start opacity-0 group-hover/after:opacity-100 transition-all group/replace-end">
                       <button
                         onClick={(e) => { e.stopPropagation(); endFrameInputRef.current?.click() }}
-                        className="p-1 rounded bg-black/50 text-zinc-400 hover:text-white hover:bg-black/75"
+                        className="p-1 rounded-sm bg-black/50 text-zinc-400 hover:text-white hover:bg-black/75"
                       >
                         <Upload className="h-2.5 w-2.5" />
                       </button>
-                      <div className="absolute left-0 top-full mt-1 px-1.5 py-0.5 bg-zinc-800 border border-zinc-700 rounded text-[9px] text-zinc-300 whitespace-nowrap invisible group-hover/replace-end:visible pointer-events-none z-30">
+                      <div className="absolute left-0 top-full mt-1 px-1.5 py-0.5 bg-zinc-800 border border-zinc-700 rounded-sm text-[9px] text-zinc-300 whitespace-nowrap invisible group-hover/replace-end:visible pointer-events-none z-30">
                         Replace image
                       </div>
                     </div>
@@ -311,7 +311,7 @@ export function GapGenerationModal({
                     )}
                   </div>
                 ) : (
-                  <div className="w-[38%] h-full flex-shrink-0 bg-zinc-800 flex items-center justify-center">
+                  <div className="w-[38%] h-full shrink-0 bg-zinc-800 flex items-center justify-center">
                     <span className="text-zinc-600 text-[8px]">No clip</span>
                   </div>
                 )}
@@ -340,7 +340,7 @@ export function GapGenerationModal({
                     {!gapSuggesting && !gapSuggestionNoApiKey && (
                       <button
                         onClick={regenerateSuggestion}
-                        className="flex items-center gap-1 text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors px-1.5 py-0.5 rounded hover:bg-zinc-800"
+                        className="flex items-center gap-1 text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors px-1.5 py-0.5 rounded-sm hover:bg-zinc-800"
                         title="Re-analyze surrounding clips and generate a new prompt suggestion"
                       >
                         <RefreshCw className="h-3 w-3" />
@@ -359,7 +359,7 @@ export function GapGenerationModal({
                       : isImageMode
                       ? 'Describe the image to generate...'
                       : (gapImageFile ? 'Describe the video to generate from the image...' : 'Describe the video shot to generate...')}
-                    className={`w-full bg-zinc-800 border rounded-xl p-3 text-sm text-white resize-none focus:outline-none focus:ring-1 placeholder-zinc-600 ${
+                    className={`w-full bg-zinc-800 border rounded-xl p-3 text-sm text-white resize-none focus:outline-hidden focus:ring-1 placeholder-zinc-600 ${
                       gapSuggesting
                         ? 'border-amber-600/40 focus:border-amber-500/50 focus:ring-amber-500/30 animate-pulse'
                         : 'border-zinc-700 focus:border-blue-500/50 focus:ring-blue-500/30'
@@ -386,7 +386,7 @@ export function GapGenerationModal({
                       onClick={() => {
                         window.dispatchEvent(new CustomEvent('open-settings', { detail: { tab: 'apiKeys' } }))
                       }}
-                      className="px-2.5 py-1 bg-blue-600 text-white text-[10px] rounded hover:bg-blue-500 transition-colors"
+                      className="px-2.5 py-1 bg-blue-600 text-white text-[10px] rounded-sm hover:bg-blue-500 transition-colors"
                     >
                       Configure in Settings
                     </button>
@@ -419,10 +419,10 @@ export function GapGenerationModal({
                     <span className="text-xs text-zinc-300">Apply audio to audio track</span>
                     <p className="text-[10px] text-zinc-500 mt-0.5">Place the generated audio as a linked clip on the audio track</p>
                   </div>
-                  <div className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${
+                  <div className={`relative w-9 h-5 rounded-full transition-colors shrink-0 ${
                     gapApplyAudioToTrack ? 'bg-blue-600' : 'bg-zinc-700'
                   }`}>
-                    <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform pointer-events-none ${
+                    <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-xs transition-transform pointer-events-none ${
                       gapApplyAudioToTrack ? 'translate-x-4' : 'translate-x-0'
                     }`} />
                   </div>
@@ -511,9 +511,9 @@ export function GapGenerationModal({
 
         return (
         <>
-        <div className="fixed inset-0 z-[90]" onClick={() => setSelectedGap(null)} />
+        <div className="fixed inset-0 z-90" onClick={() => setSelectedGap(null)} />
         <div
-          className="fixed z-[100] bg-zinc-950 border border-zinc-800 rounded-lg shadow-2xl overflow-hidden py-1"
+          className="fixed z-100 bg-zinc-950 border border-zinc-800 rounded-lg shadow-2xl overflow-hidden py-1"
           style={{ left, top, width: POPOVER_W }}
         >
           {/* Title */}
@@ -540,7 +540,7 @@ export function GapGenerationModal({
             className="w-full px-3 py-1.5 text-left text-xs text-zinc-400 hover:bg-zinc-800 hover:text-zinc-300 transition-colors flex items-center justify-between"
           >
             <span>Close gap</span>
-            <kbd className="px-1 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-500 text-[9px] font-mono leading-none">Del</kbd>
+            <kbd className="px-1 py-0.5 rounded-sm bg-zinc-800 border border-zinc-700 text-zinc-500 text-[9px] font-mono leading-none">Del</kbd>
           </button>
         </div>
         </>

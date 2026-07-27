@@ -59,7 +59,7 @@ export function MediaInputSlot({
         type="button"
         onClick={open}
         title={title}
-        className={`group relative flex h-14 w-14 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg ${
+        className={`group relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg ${
           item
             ? "border bg-zinc-800"
             : "flex-col border-2 border-dashed transition-colors hover:border-zinc-500"
@@ -94,7 +94,7 @@ export function MediaInputSlot({
           </>
         )}
         {badge ? (
-          <span className="absolute bottom-1 right-1 max-w-[48px] truncate rounded bg-black/70 p-0.5 text-[9px] text-zinc-400">
+          <span className="absolute bottom-1 right-1 max-w-[48px] truncate rounded-sm bg-black/70 p-0.5 text-[9px] text-zinc-400">
             {badge}
           </span>
         ) : null}

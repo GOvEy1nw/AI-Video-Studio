@@ -47,7 +47,7 @@ export function PromptEditor({
               onKeyDown={handleKeyDown}
               maxLength={maxLength}
               placeholder={placeholder}
-              className={`${height} w-full resize-none overflow-y-auto bg-transparent px-3 py-3 text-sm leading-5 text-white placeholder:text-zinc-500 focus:outline-none`}
+              className={`${height} w-full resize-none overflow-y-auto bg-transparent px-3 py-3 text-sm leading-5 text-white placeholder:text-zinc-500 focus:outline-hidden`}
             />
           )}
           {actions}

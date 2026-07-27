@@ -320,7 +320,7 @@ export function ExportModal({ open, onClose, clips, tracks, timeline, projectNam
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4" onClick={onClose}>
       <div 
         className="bg-zinc-900 rounded-2xl border border-zinc-700/50 shadow-2xl w-full max-w-lg relative overflow-hidden max-h-[calc(100vh-2rem)] flex flex-col"
         onClick={(e) => e.stopPropagation()}
@@ -420,7 +420,7 @@ export function ExportModal({ open, onClose, clips, tracks, timeline, projectNam
                 </div>
                 <div>
                   <p className="text-sm text-white font-medium">Export failed</p>
-                  <p className="text-xs text-red-400 max-w-[340px] break-words">{exportError}</p>
+                  <p className="text-xs text-red-400 max-w-[340px] wrap-break-word">{exportError}</p>
                 </div>
               </div>
               <Button
@@ -445,18 +445,18 @@ export function ExportModal({ open, onClose, clips, tracks, timeline, projectNam
                 onClick={handleExportPackage}
                 className="w-full flex items-center gap-3 p-3 rounded-xl border border-zinc-700/50 bg-zinc-800/50 hover:bg-zinc-800 hover:border-zinc-600 transition-all group"
               >
-                <div className="w-10 h-10 rounded-lg bg-zinc-700/50 flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-lg bg-zinc-700/50 flex items-center justify-center shrink-0">
                   <Package className="h-5 w-5 text-zinc-300" />
                 </div>
                 <div className="flex-1 text-left">
                   <p className="text-sm font-semibold text-white">Package (FCPXML)</p>
                   <p className="text-[10px] text-zinc-500">For Premiere Pro &amp; DaVinci Resolve</p>
                 </div>
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <div className="w-6 h-6 rounded bg-zinc-700 flex items-center justify-center" title="DaVinci Resolve">
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="w-6 h-6 rounded-sm bg-zinc-700 flex items-center justify-center" title="DaVinci Resolve">
                     <span className="text-[8px] font-bold text-orange-400">DR</span>
                   </div>
-                  <div className="w-6 h-6 rounded bg-zinc-700 flex items-center justify-center" title="Premiere Pro">
+                  <div className="w-6 h-6 rounded-sm bg-zinc-700 flex items-center justify-center" title="Premiere Pro">
                     <span className="text-[8px] font-bold text-blue-400">Pr</span>
                   </div>
                   <Download className="h-4 w-4 text-zinc-500 group-hover:text-zinc-300 transition-colors ml-1" />
@@ -502,7 +502,7 @@ export function ExportModal({ open, onClose, clips, tracks, timeline, projectNam
                         const [w, h] = e.target.value.split('x').map(Number)
                         setSettings(prev => ({ ...prev, width: w, height: h }))
                       }}
-                      className="w-full appearance-none bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 pr-8 cursor-pointer"
+                      className="w-full appearance-none bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:border-blue-500 pr-8 cursor-pointer"
                     >
                       {RESOLUTIONS.map(r => (
                         <option key={`${r.width}x${r.height}`} value={`${r.width}x${r.height}`}>
@@ -519,7 +519,7 @@ export function ExportModal({ open, onClose, clips, tracks, timeline, projectNam
                     <select
                       value={settings.fps}
                       onChange={(e) => setSettings(prev => ({ ...prev, fps: parseInt(e.target.value) }))}
-                      className="w-full appearance-none bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 pr-8 cursor-pointer"
+                      className="w-full appearance-none bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:border-blue-500 pr-8 cursor-pointer"
                     >
                       {FRAME_RATES.map(fps => (
                         <option key={fps} value={fps}>{fps} fps</option>
@@ -599,7 +599,7 @@ export function ExportModal({ open, onClose, clips, tracks, timeline, projectNam
                       type="checkbox"
                       checked={burnSubtitles}
                       onChange={(e) => setBurnSubtitles(e.target.checked)}
-                      className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 accent-blue-500 cursor-pointer"
+                      className="w-4 h-4 rounded-sm border-zinc-600 bg-zinc-800 accent-blue-500 cursor-pointer"
                     />
                     <span className="text-xs text-zinc-300 group-hover:text-white transition-colors">Burn-in subtitles</span>
                   </label>

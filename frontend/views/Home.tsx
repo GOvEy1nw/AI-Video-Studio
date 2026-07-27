@@ -91,7 +91,7 @@ function ProjectCard({
           e.stopPropagation();
           setShowMenu(!showMenu);
         }}
-        className="absolute top-2 right-2 p-1.5 rounded bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"
+        className="absolute top-2 right-2 p-1.5 rounded-sm bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"
       >
         <MoreVertical className="h-4 w-4 text-white" />
       </button>
@@ -188,7 +188,7 @@ export function Home() {
                   onClick={() => openProject(project.id)}
                   className="w-full px-3 py-2 rounded-lg text-zinc-400 hover:bg-zinc-800 hover:text-white text-left text-sm flex items-center gap-2 transition-colors truncate"
                 >
-                  <Folder className="h-4 w-4 flex-shrink-0" />
+                  <Folder className="h-4 w-4 shrink-0" />
                   <span className="truncate">{project.name}</span>
                 </button>
               ))}
@@ -220,7 +220,7 @@ export function Home() {
             className="absolute inset-0 w-full h-full object-cover"
           />
           {/* Dark overlay for text readability */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-black/10" />
+          <div className="absolute inset-0 bg-linear-to-t from-black/70 via-black/30 to-black/10" />
           <div className="absolute bottom-6 left-8 z-10">
             <h1 className="text-3xl font-bold text-white mb-2 drop-shadow-lg">
               <AivsLogo className="h-17 w-auto text-white mb-4" />
@@ -289,7 +289,7 @@ export function Home() {
               value={newProjectName}
               onChange={(e) => setNewProjectName(e.target.value)}
               placeholder="Project name"
-              className="w-full px-4 py-3 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder:text-zinc-500 focus:outline-none focus:border-blue-500"
+              className="w-full px-4 py-3 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder:text-zinc-500 focus:outline-hidden focus:border-blue-500"
               autoFocus
               onKeyDown={(e) => e.key === "Enter" && handleCreateProject()}
             />
@@ -328,7 +328,7 @@ export function Home() {
               value={renameValue}
               onChange={(e) => setRenameValue(e.target.value)}
               placeholder="Project name"
-              className="w-full px-4 py-3 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder:text-zinc-500 focus:outline-none focus:border-blue-500"
+              className="w-full px-4 py-3 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder:text-zinc-500 focus:outline-hidden focus:border-blue-500"
               autoFocus
               onKeyDown={(e) => e.key === "Enter" && submitRename()}
             />

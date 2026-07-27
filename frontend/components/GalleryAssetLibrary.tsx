@@ -184,7 +184,7 @@ function AudioVariationRow({
           active ? "rgba(110, 231, 183, 0.9)" : "rgba(52, 211, 153, 0.65)"
         }
       />
-      <span className="absolute bottom-1 right-1 z-10 rounded bg-black/70 px-1.5 py-0.5 text-[9px] font-medium text-emerald-200">
+      <span className="absolute bottom-1 right-1 z-10 rounded-sm bg-black/70 px-1.5 py-0.5 text-[9px] font-medium text-emerald-200">
         {index + 1}
       </span>
     </button>
@@ -388,7 +388,7 @@ export function GalleryAssetCard({
             </div>
           </>
         ) : asset.type === "adjustment" ? (
-          <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 border border-dashed border-blue-500/30 bg-gradient-to-br from-blue-900/40 to-zinc-900">
+          <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 border border-dashed border-blue-500/30 bg-linear-to-br from-blue-900/40 to-zinc-900">
             <Layers className="h-8 w-8 text-blue-400" />
             <span className="text-[10px] font-medium text-blue-300/70">
               Adjustment Layer
@@ -423,7 +423,7 @@ export function GalleryAssetCard({
 
         <div className="absolute left-2 top-2 z-30 flex items-center gap-1">
           <div
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-black/80 text-white shadow-sm"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-black/80 text-white shadow-xs"
             style={binColor ? { backgroundColor: binColor } : undefined}
             aria-label={`${asset.type} asset`}
             title={`${asset.type[0].toUpperCase()}${asset.type.slice(1)}`}
@@ -481,11 +481,11 @@ export function GalleryAssetCard({
         </div>
 
         {selected && (
-          <div className="pointer-events-none absolute inset-0 z-[1] bg-blue-600/25" />
+          <div className="pointer-events-none absolute inset-0 z-1 bg-blue-600/25" />
         )}
 
         <div
-          className={`pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 transition-opacity duration-200 ${isHovered ? "opacity-100" : "opacity-0"}`}
+          className={`pointer-events-none absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-black/30 transition-opacity duration-200 ${isHovered ? "opacity-100" : "opacity-0"}`}
         >
           {hasActions && (
             <div className="asset-card-hover-actions pointer-events-auto absolute right-2 top-2 z-30 flex flex-col items-end gap-1.5">
@@ -661,7 +661,7 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
 
   return (
     <div className={`flex min-h-0 flex-col ${props.className ?? ""}`}>
-      <div className="flex flex-shrink-0 flex-col gap-2 pb-2">
+      <div className="flex shrink-0 flex-col gap-2 pb-2">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-1">
             <span className="text-sm font-semibold text-white">Assets</span>
@@ -684,7 +684,7 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
           <button
             type="button"
             onClick={() => props.onShowFavoritesChange(!props.showFavorites)}
-            className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md border transition-colors ${
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-colors ${
               props.showFavorites
                 ? "border-red-500/30 bg-red-500/20 text-red-400"
                 : "border-transparent text-zinc-400 hover:bg-zinc-800 hover:text-white"
@@ -723,7 +723,7 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
       </div>
 
       <div
-        className={`min-h-0 flex-1 overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable] ${props.scrollClassName ?? ""}`}
+        className={`min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-gutter-stable ${props.scrollClassName ?? ""}`}
         style={props.scrollStyle}
       >
         <div

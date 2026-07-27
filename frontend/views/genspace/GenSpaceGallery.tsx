@@ -238,7 +238,7 @@ function GenSpaceGalleryView({
                             {generation.badges.map((badge) => (
                               <span
                                 key={badge}
-                                className="rounded bg-black/50 px-1.5 py-0.5 text-[10px] text-zinc-300"
+                                className="rounded-sm bg-black/50 px-1.5 py-0.5 text-[10px] text-zinc-300"
                               >
                                 {badge}
                               </span>

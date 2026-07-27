@@ -58,7 +58,7 @@ export function SettingsDropdown({
 
       {isOpen && (
         <div
-          className={`absolute left-0 z-[9999] min-w-[160px] rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl ${
+          className={`absolute left-0 z-9999 min-w-[160px] rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl ${
             variant === "model" ? "right-0" : ""
           } ${placement === "bottom" ? "top-full mt-2" : "bottom-full mb-2"}`}
         >
@@ -115,7 +115,7 @@ export function SettingsDropdown({
                   )}
                 </button>
                 {option.disabled && option.tooltip && (
-                  <div className="pointer-events-none absolute left-full top-1/2 z-[10000] ml-2 -translate-y-1/2 whitespace-nowrap rounded bg-zinc-700 px-2 py-1 text-xs text-zinc-300 opacity-0 transition-opacity group-hover/option:opacity-100">
+                  <div className="pointer-events-none absolute left-full top-1/2 z-10000 ml-2 -translate-y-1/2 whitespace-nowrap rounded-sm bg-zinc-700 px-2 py-1 text-xs text-zinc-300 opacity-0 transition-opacity group-hover/option:opacity-100">
                     {option.tooltip}
                   </div>
                 )}

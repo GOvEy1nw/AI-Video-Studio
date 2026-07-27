@@ -71,6 +71,6 @@ describe("MusicGenPanel", () => {
       within(vibeKeywords).getByRole("button", { name: "Modern" }),
     ).toBeTruthy();
     expect(vibeKeywords.className).toContain("overflow-x-auto");
-    expect(vibeKeywords.className).toContain("[scrollbar-width:none]");
+    expect(vibeKeywords.className).toContain("scrollbar-none");
   });
 });

@@ -79,7 +79,7 @@ export function AudioUploader({ onAudioSelect, selectedAudio }: AudioUploaderPro
         {selectedAudio ? (
           <div className="flex items-center gap-3">
             {/* Audio icon (no thumbnail for audio) */}
-            <div className="w-14 h-14 flex-shrink-0 rounded-md overflow-hidden bg-zinc-800 flex items-center justify-center">
+            <div className="w-14 h-14 shrink-0 rounded-md overflow-hidden bg-zinc-800 flex items-center justify-center">
               <Music className="h-6 w-6 text-emerald-400" />
             </div>
 
@@ -91,7 +91,7 @@ export function AudioUploader({ onAudioSelect, selectedAudio }: AudioUploaderPro
             </div>
 
             {/* Action buttons */}
-            <div className="flex items-center gap-1 flex-shrink-0">
+            <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={clearAudio}
                 className="p-2 hover:bg-zinc-700 rounded-lg transition-colors"

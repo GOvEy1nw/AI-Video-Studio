@@ -29,7 +29,7 @@ function FilterChipGroup<T extends string>({
   onToggle: (value: T) => void;
 }) {
   return (
-    <div className="flex flex-shrink-0 gap-1" aria-label={label}>
+    <div className="flex shrink-0 gap-1" aria-label={label}>
       {options.map((option) => {
         const isActive = selected.includes(option.value);
         return (
@@ -37,7 +37,7 @@ function FilterChipGroup<T extends string>({
             key={option.value}
             type="button"
             onClick={() => onToggle(option.value)}
-            className={`flex h-8 flex-shrink-0 items-center gap-1 rounded-md border px-2.5 text-xs font-medium transition-colors ${filterChipClass(isActive)}`}
+            className={`flex h-8 shrink-0 items-center gap-1 rounded-md border px-2.5 text-xs font-medium transition-colors ${filterChipClass(isActive)}`}
           >
             {option.label}
           </button>
@@ -69,7 +69,7 @@ export function GalleryFilters({ filter, onChange }: GalleryFiltersProps) {
   };
 
   return (
-    <div className="flex min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div className="flex min-w-0 items-center gap-1 overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden">
       <FilterChipGroup
         label="Media type"
         options={GALLERY_TYPE_OPTIONS}

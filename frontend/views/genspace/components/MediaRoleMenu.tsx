@@ -28,7 +28,7 @@ export function MediaRoleMenu({
   return (
     <div
       data-media-menu
-      className="absolute bottom-full left-0 z-[10000] mb-2 w-64 rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl"
+      className="absolute bottom-full left-0 z-10000 mb-2 w-64 rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl"
     >
       <div className="mb-2 text-[10px] uppercase tracking-wider text-zinc-500">
         {title}

@@ -116,7 +116,7 @@ export function MusicSettings({
                     ? "Lyrics are disabled for instrumental music…"
                     : "Write lyrics or an idea, then Compose Lyrics…"
               }
-              className="h-32 w-full resize-none overflow-y-auto bg-transparent px-3 py-3 text-sm leading-5 text-white placeholder:text-zinc-500 focus:outline-none disabled:opacity-40"
+              className="h-32 w-full resize-none overflow-y-auto bg-transparent px-3 py-3 text-sm leading-5 text-white placeholder:text-zinc-500 focus:outline-hidden disabled:opacity-40"
             />
             <div className="flex items-center justify-end gap-2 px-2 pb-0.5 pt-1">
               <SeedControl

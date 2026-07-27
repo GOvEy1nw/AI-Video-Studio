@@ -201,7 +201,7 @@ export function GenSpaceOverlays({
                   <button
                     type="button"
                     onClick={() => onCopyPrompt(selectedAsset.prompt)}
-                    className="shrink-0 rounded p-1 text-zinc-400 transition-colors hover:bg-zinc-700 hover:text-zinc-200"
+                    className="shrink-0 rounded-sm p-1 text-zinc-400 transition-colors hover:bg-zinc-700 hover:text-zinc-200"
                     title="Copy prompt"
                   >
                     {copiedPrompt ? (
@@ -235,7 +235,7 @@ export function GenSpaceOverlays({
 
       {takesAsset?.takes && takesAsset.takes.length > 1 ? (
         <div
-          className="fixed inset-0 z-[55] flex items-center justify-center bg-black/75 p-8 backdrop-blur-sm"
+          className="fixed inset-0 z-55 flex items-center justify-center bg-black/75 p-8 backdrop-blur-xs"
           onClick={onCloseTakes}
         >
           <div
@@ -252,7 +252,7 @@ export function GenSpaceOverlays({
               <button
                 type="button"
                 onClick={onCloseTakes}
-                className="rounded p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                className="rounded-sm p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-white"
                 aria-label="Close takes"
               >
                 <X className="h-4 w-4" />
@@ -290,7 +290,7 @@ export function GenSpaceOverlays({
                         className="aspect-video w-full object-contain"
                       />
                     )}
-                    <span className="absolute bottom-1 left-1 rounded bg-black/80 px-1.5 py-0.5 text-[10px] text-white">
+                    <span className="absolute bottom-1 left-1 rounded-sm bg-black/80 px-1.5 py-0.5 text-[10px] text-white">
                       Take {index + 1}
                       {active ? " · Active" : ""}
                     </span>

@@ -56,7 +56,7 @@ export function SeedSettings({
           value={lockedSeed}
           disabled={disabled}
           onChange={(event) => handleSeedInput(event.target.value)}
-          className="w-full rounded-md border border-zinc-600 bg-zinc-900 px-2.5 py-1.5 text-sm text-white focus:border-blue-500 focus:outline-none disabled:opacity-40"
+          className="w-full rounded-md border border-zinc-600 bg-zinc-900 px-2.5 py-1.5 text-sm text-white focus:border-blue-500 focus:outline-hidden disabled:opacity-40"
         />
       </label>
 

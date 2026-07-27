@@ -33,7 +33,7 @@ export function GenerationErrorDialog({ error, onDismiss }: GenerationErrorDialo
   const [detailsExpanded, setDetailsExpanded] = useState(false)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs">
       <div className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl w-[480px] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
@@ -65,7 +65,7 @@ export function GenerationErrorDialog({ error, onDismiss }: GenerationErrorDialo
               Technical Details
             </button>
             {detailsExpanded && (
-              <pre className="mt-2 bg-zinc-800/50 rounded-lg p-3 text-[11px] text-zinc-400 whitespace-pre-wrap break-words max-h-40 overflow-auto">
+              <pre className="mt-2 bg-zinc-800/50 rounded-lg p-3 text-[11px] text-zinc-400 whitespace-pre-wrap wrap-break-word max-h-40 overflow-auto">
                 {error}
               </pre>
             )}

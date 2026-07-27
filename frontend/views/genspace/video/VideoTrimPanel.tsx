@@ -254,7 +254,7 @@ export function VideoTrimPanel({
   const selDuration = selEnd - selStart;
 
   return (
-    <div className="flex-shrink-0">
+    <div className="shrink-0">
       <div className="px-4 pb-0">
         <div className="relative h-3 mb-0">
           <div
@@ -325,7 +325,7 @@ export function VideoTrimPanel({
           />
 
           <div
-            className={`absolute top-0 bottom-0 z-[12] ${draggingHandle === "range" ? "cursor-grabbing" : "cursor-grab"}`}
+            className={`absolute top-0 bottom-0 z-12 ${draggingHandle === "range" ? "cursor-grabbing" : "cursor-grab"}`}
             style={{
               left: `calc(${selStartFrac * 100}% + 14px)`,
               width: `calc(${(selEndFrac - selStartFrac) * 100}% - 28px)`,

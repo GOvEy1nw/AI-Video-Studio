@@ -364,7 +364,7 @@ export function OutpaintFrameOverlay({
 
       {moveWidth > 0 && moveHeight > 0 && (
         <div
-          className="absolute z-[15] cursor-grab active:cursor-grabbing"
+          className="absolute z-15 cursor-grab active:cursor-grabbing"
           style={{
             left: outer.x + moveInset,
             top: outer.y + moveInset,
@@ -400,7 +400,7 @@ export function OutpaintFrameOverlay({
         ))}
 
       <div
-        className="absolute z-20 text-[10px] font-mono text-blue-200 bg-black/70 px-2 py-1 rounded pointer-events-none"
+        className="absolute z-20 text-[10px] font-mono text-blue-200 bg-black/70 px-2 py-1 rounded-sm pointer-events-none"
         style={{
           left: outer.x + 8,
           top: outer.y + 8,

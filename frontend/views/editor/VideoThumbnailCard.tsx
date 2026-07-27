@@ -188,7 +188,7 @@ export function VideoThumbnailCard({ url, thumbnailUrl }: { url: string; thumbna
       )}
 
       {isHovering && videoReady && scrubTime && (
-        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded bg-black/80 backdrop-blur-sm">
+        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded-sm bg-black/80 backdrop-blur-xs">
           <span className="text-[9px] text-white font-mono tabular-nums">{scrubTime}</span>
         </div>
       )}

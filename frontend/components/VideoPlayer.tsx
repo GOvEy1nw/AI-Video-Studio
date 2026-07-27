@@ -356,10 +356,10 @@ export function VideoPlayer({ videoUrl, videoPath, videoResolution, isGenerating
                   </div>
                   
                   {/* Labels */}
-                  <div className="absolute bottom-4 left-4 bg-black/70 px-2 py-1 rounded text-xs font-medium text-white">
+                  <div className="absolute bottom-4 left-4 bg-black/70 px-2 py-1 rounded-sm text-xs font-medium text-white">
                     {videoResolution} (Before)
                   </div>
-                  <div className="absolute bottom-4 right-4 bg-black/70 px-2 py-1 rounded text-xs font-medium text-white">
+                  <div className="absolute bottom-4 right-4 bg-black/70 px-2 py-1 rounded-sm text-xs font-medium text-white">
                     {upscaleTargetResolution} (After)
                   </div>
                 </div>
@@ -367,7 +367,7 @@ export function VideoPlayer({ videoUrl, videoPath, videoResolution, isGenerating
               
               {/* Resolution badge (only in toggle mode) */}
               {comparisonMode === 'toggle' && displayedResolution && (
-                <div className="absolute top-3 left-3 bg-black/70 px-2 py-1 rounded text-xs font-medium text-white">
+                <div className="absolute top-3 left-3 bg-black/70 px-2 py-1 rounded-sm text-xs font-medium text-white">
                   {displayedResolution}
                 </div>
               )}
@@ -378,13 +378,13 @@ export function VideoPlayer({ videoUrl, videoPath, videoResolution, isGenerating
                   {/* Mode switcher */}
                   <button
                     onClick={() => setComparisonMode('curtain')}
-                    className="bg-black/70 px-2 py-1 rounded text-xs font-medium text-zinc-400 hover:text-white transition-colors"
+                    className="bg-black/70 px-2 py-1 rounded-sm text-xs font-medium text-zinc-400 hover:text-white transition-colors"
                     title="Switch to curtain comparison"
                   >
                     ↔
                   </button>
                   {/* Before/After toggle */}
-                  <div className="flex bg-black/70 rounded overflow-hidden">
+                  <div className="flex bg-black/70 rounded-sm overflow-hidden">
                     <button
                       onClick={() => setShowingUpscaled(false)}
                       className={`px-3 py-1 text-xs font-medium transition-colors ${
@@ -414,12 +414,12 @@ export function VideoPlayer({ videoUrl, videoPath, videoResolution, isGenerating
                 <div className="absolute top-3 right-3 flex gap-2">
                   <button
                     onClick={() => setComparisonMode('toggle')}
-                    className="bg-black/70 px-2 py-1 rounded text-xs font-medium text-zinc-400 hover:text-white transition-colors"
+                    className="bg-black/70 px-2 py-1 rounded-sm text-xs font-medium text-zinc-400 hover:text-white transition-colors"
                     title="Switch to toggle comparison"
                   >
                     ⇄
                   </button>
-                  <div className="bg-black/70 px-3 py-1 rounded text-xs font-medium text-white">
+                  <div className="bg-black/70 px-3 py-1 rounded-sm text-xs font-medium text-white">
                     Drag to compare
                   </div>
                 </div>

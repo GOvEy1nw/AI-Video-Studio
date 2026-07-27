@@ -128,7 +128,7 @@ export function MusicGenPanel({
             ref={keywordRowRef}
             aria-label={`${keywordCategory} keywords`}
             onScroll={updateKeywordOverflow}
-            className="flex min-w-0 gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="flex min-w-0 gap-1 overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden"
           >
             {MUSIC_KEYWORDS[keywordCategory].map((keyword) => {
               const active = hasMusicKeyword(prompt.value, keyword);
@@ -153,13 +153,13 @@ export function MusicGenPanel({
           {keywordOverflow.left && (
             <div
               data-testid="keyword-fade-left"
-              className="pointer-events-none absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-zinc-900 to-transparent"
+              className="pointer-events-none absolute inset-y-0 left-0 w-20 bg-linear-to-r from-zinc-900 to-transparent"
             />
           )}
           {keywordOverflow.right && (
             <div
               data-testid="keyword-fade-right"
-              className="pointer-events-none absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-zinc-900 to-transparent"
+              className="pointer-events-none absolute inset-y-0 right-0 w-20 bg-linear-to-l from-zinc-900 to-transparent"
             />
           )}
         </div>
