@@ -1,7 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import electron from 'vite-plugin-electron'
-import renderer from 'vite-plugin-electron-renderer'
 import path from 'path'
 
 export default defineConfig({
@@ -10,26 +9,25 @@ export default defineConfig({
     electron([
       {
         entry: 'electron/main.ts',
-        onstart(options) {
+        async onstart(options) {
           if (process.env.ELECTRON_DEBUG) {
             // --inspect and --remote-debugging-port must come before '.' (the app path)
-            options.startup(['--inspect=9229', '--remote-debugging-port=9222', '.', '--no-sandbox'])
+            await options.startup(['--inspect=9229', '--remote-debugging-port=9222', '.', '--no-sandbox'])
           } else {
-            options.startup()
+            await options.startup()
           }
         },
         vite: {
           build: {
             outDir: 'dist-electron',
             sourcemap: true,
-            rollupOptions: {
+            rolldownOptions: {
               external: ['electron']
             }
           }
         }
       },
       {
-        entry: 'electron/preload.ts',
         onstart(options) {
           options.reload()
         },
@@ -37,7 +35,12 @@ export default defineConfig({
           build: {
             outDir: 'dist-electron',
             sourcemap: true,
-            rollupOptions: {
+            lib: {
+              entry: 'electron/preload.ts',
+              formats: ['cjs'],
+              fileName: () => 'preload.js'
+            },
+            rolldownOptions: {
               output: {
                 format: 'cjs'  // Preload must be CommonJS
               }
@@ -45,9 +48,11 @@ export default defineConfig({
           }
         }
       }
-    ]),
-    renderer()
+    ])
   ],
+  optimizeDeps: {
+    entries: ['index.html']
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './frontend')
