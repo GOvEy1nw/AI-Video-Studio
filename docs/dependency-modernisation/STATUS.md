@@ -10,7 +10,7 @@
 - Branch created on: 2026-07-26
 - Executor: Codex
 - Baseline `dev` commit SHA: `a3b8cbdd750d167e3d88eb1c99df3ebd78b3a141`
-- Current implementation HEAD SHA: `bca68bf614bc34cb8e62dc1862a04caca58e8759`
+- Current implementation HEAD SHA: `c285bbbbc966b41f1931be1b40f42b0f34e3af4f`
 - Last sync from `dev`: 2026-07-26 (`origin/dev` merged before Phase 1)
 - Node version: 24.18.0
 - pnpm version: 10.30.3 through Corepack
@@ -47,16 +47,16 @@ Fill these from `pnpm list --depth 0` before changing dependencies.
 | jsdom | 24.1.3 | compatible stable | 30.0.0 |
 | @testing-library/react | 16.1.0 | compatible stable | 16.3.2 |
 | @testing-library/user-event | 14.5.2 | compatible stable | 14.6.1 |
-| tailwindcss | 3.4.19 | 4.3.x |  |
-| @tailwindcss/vite | not installed | matching 4.3.x |  |
-| tailwind-merge | 2.6.1 | 3.x |  |
-| react | 18.3.1 | 19.2.x |  |
-| react-dom | 18.3.1 | 19.2.x |  |
-| @types/react | 18.3.31 | 19.x |  |
-| @types/react-dom | 18.3.7 | 19.x |  |
+| tailwindcss | 3.4.19 | 4.3.x | 4.3.3 |
+| @tailwindcss/vite | not installed | matching 4.3.x | 4.3.3 |
+| tailwind-merge | 2.6.1 | 3.x | 3.6.0 |
+| react | 18.3.1 | 19.2.x | 19.2.8 |
+| react-dom | 18.3.1 | 19.2.x | 19.2.8 |
+| @types/react | 18.3.31 | 19.x | 19.2.17 |
+| @types/react-dom | 18.3.7 | 19.x | 19.2.3 |
 | typescript | 5.9.3 | 6.0.x | 6.0.3 |
-| electron-builder | 26.15.3 | reviewed stable |  |
-| electron-updater | 6.8.9 | reviewed stable |  |
+| electron-builder | 26.15.3 | reviewed stable | 26.15.3 |
+| electron-updater | 6.8.9 | reviewed stable | 6.8.9 |
 
 ## Phase dashboard
 
@@ -72,7 +72,7 @@ Use exactly one status: `NOT STARTED`, `IN PROGRESS`, `BLOCKED`, or `PASSED`.
 | 6 — Tailwind CSS-first theme | PASSED | `4593f1d16ba2dfa36907342ba36eee3cb9250cce` | `5a0df7d313f759d96648746d9e5690dd19230071` | 2026-07-27 | CSS-first mappings, runtime retheming, Tier A/B, development and unpacked parity, project reopen, and protected-runtime gates passed. Phase 7 not started. |
 | 7 — React 19 | PASSED | `4d20cb815a8a19ea9ef4718098ddbfc6578e5503` | `1c667c9d8f7d28c950fe475dd9fca0fb2766b280` | 2026-07-27 | React 19.2.8 migration, nullable DOM-ref compatibility, Tier A/B, development and unpacked smoke/visual parity, and protected-runtime gates passed. Phase 8 not started. |
 | 8 — TypeScript 6 | PASSED | `1ee8ade9e09e8dcdd4439bb980e1ccf2a0053f63` | `bca68bf614bc34cb8e62dc1862a04caca58e8759` | 2026-07-27 | TypeScript 6.0.3 migration, strict renderer/node projects, Tier A/B, development and unpacked smoke/parity, and protected-runtime gates passed. Phase 9 not started. |
-| 9 — Low-risk package refresh | NOT STARTED |  |  |  |  |
+| 9 — Low-risk package refresh | PASSED | `bca68bf614bc34cb8e62dc1862a04caca58e8759` | `c285bbbbc966b41f1931be1b40f42b0f34e3af4f` | 2026-07-27 | All direct packages decided; focused/full automated, development, unpacked, installed, uninstall, deterministic graph, audit, and protected-runtime gates passed. Phase 10 not started. |
 | 10 — Automation and CI | NOT STARTED |  |  |  |  |
 | 11 — Final validation and PR | NOT STARTED |  |  |  |  |
 
@@ -787,6 +787,88 @@ Exit gate: user confirmed development and unpacked styling parity, dual-token ru
 
 Exit gate: `PASSED`. TypeScript `6.0.3`, both strict projects, Tier A/B, development/unpacked smoke and parity, suppression audit, documentation, scoped diff, and protected-runtime guard passed. TypeScript 7 is absent. Phase 9 remains `NOT STARTED` and unread.
 
+### Phase 9 pre-upgrade review
+
+- Starting SHA: `bca68bf614bc34cb8e62dc1862a04caca58e8759`; branch is `chore/dependency-modernisation-2026`.
+- Worktree was clean before the Phase 9 ledger marker.
+- Direct graph inventory contains 9 dependencies and 20 dev dependencies. Phase 2–8 core families remain on their passed versions.
+- Usage audit found `js-yaml`, `@types/js-yaml`, `@resvg/resvg-js`, and `wait-on` have no app-owned import or script caller. `js-yaml` remains transitive through Electron Builder/Updater.
+- Current routine packages: `class-variance-authority` `0.7.1`, `clsx` `2.1.1`, `electron-updater` `6.8.9`, `js-yaml` `4.2.0`, `lucide-react` `0.400.0`, `react-dropzone` `14.4.1`, `@resvg/resvg-js` `2.6.2`, `concurrently` `8.2.2`, `cross-env` `10.1.0`, `electron-builder` `26.15.3`, and `wait-on` `7.2.0`.
+- Registry freshness review identified newer majors for `concurrently`, `js-yaml`, `lucide-react`, `react-dropzone`, and `wait-on`; Node 24 and React 19 peer/engine compatibility were checked for candidate releases. Recently published package versions excluded by the repository release-age policy were not selected silently.
+- Context7 review confirmed current Lucide v1 named-export/accessibility contracts, current React Dropzone accept/keyboard/event contracts, and Electron Builder's current updater/NSIS/native-module configuration contracts.
+- `corepack pnpm install --frozen-lockfile`: passed through the approved CI-mode pnpm-store route after the non-TTY route aborted and the sandboxed relink stalled; 435 packages reused, lockfile unchanged.
+- Initial `corepack pnpm audit --prod` sandbox route failed `EACCES` on npm's advisory endpoint. Maintainer later approved dependency-graph disclosure; final production and full audits completed.
+
+### Phase 9 implementation
+
+- Group A removed unused direct `js-yaml` and `@types/js-yaml`. Electron tooling now resolves patched transitive `js-yaml` `4.3.0`; production audit is clean.
+- Group B updated `lucide-react` `0.400.0` to `1.25.0`. All 101 imported icon names resolve and user-confirmed visual parity passed. `react-dropzone` remains `14.4.1`; majors 16–19 were published within one week and require a separate soak/migration review.
+- Group C retained direct `electron-builder` `26.15.3` and `electron-updater` `6.8.9`. Compatible minimum-patch overrides reduced 12 Electron Builder advisories to two dev-only `GHSA-mh99-v99m-4gvg` paths. Forcing `brace-expansion` 5 under old `minimatch` consumers is API-incompatible.
+- Group D removed unused direct `@resvg/resvg-js`; no application-owned SVG/render call site exists.
+- Group E updated `concurrently` `8.2.2` to `10.0.3`, retained `cross-env` `10.1.0`, and removed unused `wait-on`. Nested full-typecheck commands now use Corepack so child processes preserve pnpm `10.30.3`.
+- `concurrently` `10.0.3` pins vulnerable `shell-quote` `1.8.4`; a parent-scoped override selects API-compatible patched `1.9.0`. Remove the override when `concurrently` publishes a patched dependency.
+- Phase 4 test packages were reviewed and marked `ALREADY HANDLED`; no new compatibility or security trigger justified movement.
+- pnpm remains exactly `10.30.3`. pnpm 11 is outside Phase 9 and should be evaluated separately because it changes package-manager, Corepack, lockfile, and CI contracts.
+
+### Phase 9 command evidence
+
+| Command | Result | Evidence |
+|---|---|---|
+| `corepack pnpm install --frozen-lockfile` after deleting `node_modules` | PASS | Reconstructed 430 packages from lockfile with pnpm `10.30.3`; repeat frozen install reported up to date. |
+| `corepack pnpm list --depth 0` | PASS | 25 final direct packages; removed packages absent. |
+| `corepack pnpm list react react-dom electron vite vitest tailwindcss typescript --depth 20` | PASS | One approved React/React DOM, Electron, Vite, Vitest, Tailwind, and TypeScript family. |
+| `corepack pnpm outdated` | PASS WITH DOCUMENTED DEFERRALS | Only `@types/node` 26, `react-dropzone` 19, and TypeScript 7 remain; each is an out-of-scope major. |
+| `corepack pnpm audit --prod` | PASS | No known vulnerabilities. |
+| `corepack pnpm audit` | PASS WITH DOCUMENTED DEV-ONLY FINDINGS | Two high `brace-expansion` paths remain under Electron Builder; no compatible old-`minimatch` patch exists. |
+| `corepack pnpm typecheck` | PASS | TypeScript and Pyright completed; 0 errors and 0 warnings. |
+| `corepack pnpm test:frontend` | PASS | Vitest `4.1.10`: 22 files and 75 tests passed. |
+| `corepack pnpm backend:test` | PASS | 278 passed, 1 skipped; existing `pynvml` warning only. |
+| `corepack pnpm build:frontend` | PASS | Renderer, Electron main, and CommonJS preload built; existing chunk warnings only. |
+| `corepack pnpm build:fast:win` | PASS | Final unpacked Windows app built with Electron `43.2.0`. |
+| `powershell -ExecutionPolicy Bypass -File scripts/local-build.ps1 -Publish never` | PASS | Final `AiVS-Setup.exe`: 358,840,946 bytes; SHA-256 `A1ECA9B98CF80DEE6FA2AB984CB698930F5184A4E682EE24F1183D6E19FD3929`. |
+| Protected-runtime diff from Phase 9 start | PASS | No changes under backend runtime locks, WanGP pins/installers, or `Wan2GP/`. |
+
+### Phase 9 manual checks
+
+- [x] `pnpm dev` launched Vite, Electron, and backend; slow WanGP preload reached ready state.
+- [x] `pnpm dev:debug` applied Electron/Node debug options and propagated backend debug configuration.
+- [x] Ctrl+C cleanup left no Vite, backend, Electron, or debugger listeners.
+- [x] Lucide icon-dense views retained visual parity.
+- [x] Final unpacked app launched; existing project, file import/drop, GenSpace modes, Director, Video Editor, visuals, and clean shutdown passed.
+- [x] Final installer installed and launched; native import and existing project-data preservation passed.
+- [x] Final uninstall completed without deleting project data.
+- [x] Protected runtime diff guard produced no output.
+
+### Phase 9 commits
+
+| Purpose | Commit SHA | Message |
+|---|---|---|
+| Utility package refresh | `9918dd9` | `chore(deps): refresh utility packages` |
+| Renderer interaction refresh | `b89c206` | `chore(deps): refresh renderer interaction packages` |
+| Electron packaging support | `25ac6cc` | `chore(deps): refresh Electron packaging support` |
+| Remove unused native image tooling | `fc71f9c` | `chore(deps): remove unused resvg tooling` |
+| Development helper refresh | `b2cd256` | `chore(deps): refresh development helpers` |
+| Concurrently transitive advisory patch | `c285bbb` | `chore(deps): patch concurrently transitive advisory` |
+
+### Phase 9 issues and attempted fixes
+
+1. Non-TTY frozen install aborted dependency relinking; approved CI/store access completed the deterministic install.
+2. Managed process inspection was denied while diagnosing a hung relink; scoped approved inspection enabled safe termination.
+3. npm advisory and package metadata endpoints were blocked until maintainer-approved disclosure; approved queries completed.
+4. Production audit found direct `js-yaml` `4.2.0`; unused direct declarations were removed and transitive `4.3.0` cleared production audit.
+5. Full audit found 12 Electron Builder advisories; compatible minimum-patch overrides reduced this to two documented dev-only paths.
+6. Normal lock refresh hit `minimumReleaseAge` on existing `undici`; command-scoped release-age exceptions applied reviewed graph changes without changing repository policy.
+7. Managed pnpm selected a store incompatible with linked `node_modules`; approved existing-store commands preserved the established store.
+8. Sandbox denied `.git/index.lock`; approved scoped Git metadata access enabled package-group commits.
+9. CI-mode installer build attempted implicit GitHub publishing and failed without `GH_TOKEN`; explicit `-Publish never` built the local installer.
+10. Backend-ready output appeared after the initial 65-second observation window; continued observation confirmed slow WanGP preload, not a regression.
+11. Direct `pnpm` wrapper verification failed during `dev:debug`; Corepack used cached project-pinned pnpm `10.30.3`.
+12. Sandboxed Electron could not write its AppData lock/DevTools port; normal AppData access restored debug launch.
+13. `concurrently` child commands resolved global pnpm 11; explicit Corepack child commands restored pnpm `10.30.3`.
+14. Sandboxed clean-install deletion partially removed linked `node_modules`; verified workspace-only elevated removal followed by frozen install passed.
+15. Final `pnpm outdated` required explicit direct-dependency metadata approval; approved query completed.
+16. `concurrently` introduced vulnerable exact `shell-quote` `1.8.4`; parent-scoped `1.9.0` override passed typecheck and cleared its advisory.
+
 ## Command evidence template
 
 Duplicate this section beneath each phase heading.
@@ -851,7 +933,35 @@ Complete one row for every direct JavaScript dependency and dev dependency.
 
 | Package | Exact before | Exact candidate | Usage/evidence | Risk | Decision (`UPDATE`/`KEEP`/`REMOVE`/`DEFER`/`ALREADY HANDLED`) | Reason | Validation/commit |
 |---|---:|---:|---|---|---|---|---|
-|  |  |  |  |  |  |  |  |
+| `@resvg/resvg-js` | 2.6.2 | removed | No app-owned import or script caller. | Native/platform artifacts | REMOVE | Unused direct native dependency. | Tier A/B, unpacked and installer; `fc71f9c` |
+| `@tailwindcss/vite` | 4.3.3 | 4.3.3 | Tailwind Vite integration. | Build/styling | ALREADY HANDLED | Completed in Phase 5. | Phase 5 gate |
+| `@testing-library/react` | 16.3.2 | 16.3.2 | Frontend component tests. | Test harness | ALREADY HANDLED | Completed in Phase 4. | Phase 4 gate |
+| `@testing-library/user-event` | 14.6.1 | 14.6.1 | Frontend interaction tests. | Test harness | ALREADY HANDLED | Completed in Phase 4. | Phase 4 gate |
+| `@types/js-yaml` | 4.0.9 | removed | No direct `js-yaml` use remains. | Type-only | REMOVE | Orphaned with direct runtime package removal. | Typecheck; `9918dd9` |
+| `@types/node` | 24.13.3 | 24.13.3 | Electron and build types. | Toolchain major | ALREADY HANDLED | Node 24 types completed in Phase 2; 26 is out of scope. | Phase 2 gate |
+| `@types/react` | 19.2.17 | 19.2.17 | Renderer React types. | Renderer types | ALREADY HANDLED | Completed in Phase 7. | Phase 7 gate |
+| `@types/react-dom` | 19.2.3 | 19.2.3 | Renderer DOM types. | Renderer types | ALREADY HANDLED | Completed in Phase 7. | Phase 7 gate |
+| `@vitejs/plugin-react` | 6.0.4 | 6.0.4 | Vite React transform. | Build pipeline | ALREADY HANDLED | Completed in Phase 3. | Phase 3 gate |
+| `class-variance-authority` | 0.7.1 | 0.7.1 | Shared component variants. | Low | KEEP | Current compatible stable line; no useful change. | Tier A/B; `9918dd9` |
+| `clsx` | 2.1.1 | 2.1.1 | Shared class composition. | Low | KEEP | Current stable release. | Tier A/B; `9918dd9` |
+| `concurrently` | 8.2.2 | 10.0.3 | Runs TS and Pyright together. | Signals, quoting, child PM | UPDATE | Node 24-compatible stable major; nested commands pinned through Corepack. | Full typecheck/dev; `b2cd256`, `c285bbb` |
+| `cross-env` | 10.1.0 | 10.1.0 | Sets Electron/backend debug variables. | Windows quoting | KEEP | Current compatible stable release. | `dev:debug`; `b2cd256` |
+| `electron` | 43.2.0 | 43.2.0 | Desktop runtime. | Critical desktop major | ALREADY HANDLED | Completed in Phase 2. | Phase 2 gate |
+| `electron-builder` | 26.15.3 | 26.15.3 | Unpacked/NSIS packaging. | Packaging/native graph | KEEP | Current reviewed stable release; transitive findings handled separately. | Unpacked/installer; `25ac6cc` |
+| `electron-updater` | 6.8.9 | 6.8.9 | Update event and install flow. | Release-only behavior | KEEP | Current stable release and compatible with Electron 43/Builder 26. | Build/dev update init; `25ac6cc` |
+| `js-yaml` | 4.2.0 | removed direct; 4.3.0 transitive | No app-owned import; Electron tooling still needs it. | Production advisory | REMOVE | Remove unused direct declaration; patched transitive graph remains. | Production audit clean; `9918dd9` |
+| `jsdom` | 30.0.0 | 30.0.0 | Vitest DOM environment. | Test harness | ALREADY HANDLED | Completed in Phase 4. | Phase 4 gate |
+| `lucide-react` | 0.400.0 | 1.25.0 | 101 named icon imports. | Export/visual drift | UPDATE | Current stable line; all imports and visuals preserved. | Typecheck/tests/build/manual; `b89c206` |
+| `react` | 19.2.8 | 19.2.8 | Renderer runtime. | Critical renderer major | ALREADY HANDLED | Completed in Phase 7. | Phase 7 gate |
+| `react-dom` | 19.2.8 | 19.2.8 | Renderer DOM runtime. | Critical renderer major | ALREADY HANDLED | Completed in Phase 7. | Phase 7 gate |
+| `react-dropzone` | 14.4.1 | 19.1.1 | Gallery and media input dropzones. | React/Electron file semantics | DEFER | Majors 16–19 shipped within one week; require separate soak and migration review. | Existing 14.4.1 manual workflows pass |
+| `tailwind-merge` | 3.6.0 | 3.6.0 | Shared utility-class merging. | Styling | ALREADY HANDLED | Completed in Phase 5. | Phase 5 gate |
+| `tailwindcss` | 4.3.3 | 4.3.3 | Renderer styling. | Critical visual build | ALREADY HANDLED | Completed in Phases 5–6. | Phase 5/6 gates |
+| `typescript` | 6.0.3 | 6.0.3 | Strict renderer/Electron checks. | Toolchain major | ALREADY HANDLED | Completed in Phase 8; TypeScript 7 deferred. | Phase 8 gate |
+| `vite` | 8.1.5 | 8.1.5 | Renderer/Electron build and dev server. | Critical build major | ALREADY HANDLED | Completed in Phase 3. | Phase 3 gate |
+| `vite-plugin-electron` | 1.1.0 | 1.1.0 | Electron main/preload Vite integration. | Desktop build | ALREADY HANDLED | Completed in Phase 3. | Phase 3 gate |
+| `vitest` | 4.1.10 | 4.1.10 | Frontend test runner. | Test harness major | ALREADY HANDLED | Completed in Phase 4. | Phase 4 gate |
+| `wait-on` | 7.2.0 | removed | No package script, build script, or workflow caller. | Low | REMOVE | Unused development helper. | Full build/dev; `b2cd256` |
 
 ## Dependency automation evidence
 
@@ -897,27 +1007,27 @@ Use a stable 1400×900 app window where practical.
 
 | View | Baseline evidence | Tailwind 4 evidence | Final evidence | Result |
 |---|---|---|---|---|
-| Home/projects | `C:\tmp\AiVS-phase1-baseline-20260726\01-home.png` | User-confirmed development and unpacked parity, 2026-07-27 |  | PASS |
-| GenSpace Image | `C:\tmp\AiVS-phase1-baseline-20260726\02-genspace-image.png` | User-confirmed development and unpacked parity, 2026-07-27 |  | PASS |
-| GenSpace Video | `C:\tmp\AiVS-phase1-baseline-20260726\03-genspace-video.png` | User-confirmed development and unpacked parity, 2026-07-27 |  | PASS |
-| GenSpace Music | `C:\tmp\AiVS-phase1-baseline-20260726\04-genspace-music.png` | User-confirmed development and unpacked parity, 2026-07-27 |  | PASS |
-| Gallery list view | `C:\tmp\AiVS-phase1-baseline-20260726\05-gallery-list.png` | User-confirmed development and unpacked parity, 2026-07-27 |  | PASS |
-| Settings | `C:\tmp\AiVS-phase1-baseline-20260726\06-settings-general-output.png` | User-confirmed development and unpacked parity, 2026-07-27 |  | PASS |
-| Model Manager | `C:\tmp\AiVS-phase1-baseline-20260726\07-model-manager.png` | User-confirmed development and unpacked parity, 2026-07-27 |  | PASS |
-| Director | `C:\tmp\AiVS-phase1-baseline-20260726\08-director.png` | User-confirmed development and unpacked parity, 2026-07-27 |  | PASS |
-| Video Editor | `C:\tmp\AiVS-phase1-baseline-20260726\09-video-editor.png` | User-confirmed development and unpacked parity, 2026-07-27 |  | PASS |
-| Setup/first run |  |  |  |  |
-| Modal/popover/forms | `C:\tmp\AiVS-phase1-baseline-20260726\10-installed-gallery-drag-ready.png` | User-confirmed development and unpacked parity, 2026-07-27 |  | PASS |
+| Home/projects | `C:\tmp\AiVS-phase1-baseline-20260726\01-home.png` | User-confirmed development and unpacked parity, 2026-07-27 | Phase 9 final unpacked/installed confirmation, 2026-07-27 | PASS |
+| GenSpace Image | `C:\tmp\AiVS-phase1-baseline-20260726\02-genspace-image.png` | User-confirmed development and unpacked parity, 2026-07-27 | Phase 9 final unpacked confirmation, 2026-07-27 | PASS |
+| GenSpace Video | `C:\tmp\AiVS-phase1-baseline-20260726\03-genspace-video.png` | User-confirmed development and unpacked parity, 2026-07-27 | Phase 9 final unpacked confirmation, 2026-07-27 | PASS |
+| GenSpace Music | `C:\tmp\AiVS-phase1-baseline-20260726\04-genspace-music.png` | User-confirmed development and unpacked parity, 2026-07-27 | Phase 9 final unpacked confirmation, 2026-07-27 | PASS |
+| Gallery list view | `C:\tmp\AiVS-phase1-baseline-20260726\05-gallery-list.png` | User-confirmed development and unpacked parity, 2026-07-27 | Phase 9 final file import/drop confirmation, 2026-07-27 | PASS |
+| Settings | `C:\tmp\AiVS-phase1-baseline-20260726\06-settings-general-output.png` | User-confirmed development and unpacked parity, 2026-07-27 | Phase 9 final unpacked confirmation, 2026-07-27 | PASS |
+| Model Manager | `C:\tmp\AiVS-phase1-baseline-20260726\07-model-manager.png` | User-confirmed development and unpacked parity, 2026-07-27 | Phase 9 final unpacked confirmation, 2026-07-27 | PASS |
+| Director | `C:\tmp\AiVS-phase1-baseline-20260726\08-director.png` | User-confirmed development and unpacked parity, 2026-07-27 | Phase 9 final unpacked confirmation, 2026-07-27 | PASS |
+| Video Editor | `C:\tmp\AiVS-phase1-baseline-20260726\09-video-editor.png` | User-confirmed development and unpacked parity, 2026-07-27 | Phase 9 final unpacked confirmation, 2026-07-27 | PASS |
+| Setup/first run |  |  | Phase 9 final NSIS install/launch/uninstall confirmation, 2026-07-27 | PASS |
+| Modal/popover/forms | `C:\tmp\AiVS-phase1-baseline-20260726\10-installed-gallery-drag-ready.png` | User-confirmed development and unpacked parity, 2026-07-27 | Phase 9 final installed native-import confirmation, 2026-07-27 | PASS |
 
 ## Final known limitations
 
 - macOS validation status: not run; Phase 1 executed on Windows.
 - Linux source/dev validation status: not run; Phase 1 executed on Windows.
 - Generation modes not smoke-tested and why: video and music generation were not run because image generation plus shared progress/persistence covered the Phase 1 baseline runtime smoke; their UI, model readiness, and native media pickers were checked.
-- Installer/update behaviour not tested and why:
-- Deferred packages: all dependency upgrades remain in their numbered phases; Phase 1 only establishes baseline/runtime floors.
-- Follow-up issues: audit advisories remain recorded for planned dependency phases.
-- TypeScript 7 evaluation status: intentionally deferred to separate branch
+- Installer/update behaviour: final NSIS install, installed launch, native import, uninstall, and project-data preservation passed on Windows. Release-hosted auto-update transport remains release-environment-only.
+- Deferred packages: `react-dropzone` 19 requires a separate soak/migration review; `@types/node` 26 and TypeScript 7 are out-of-scope majors; pnpm 11 requires a separate package-manager/CI phase.
+- Follow-up issues: remove temporary package overrides when Electron Builder/Concurrently parent graphs resolve patched compatible versions; two dev-only Electron Builder `brace-expansion` audit paths remain documented.
+- TypeScript 7 evaluation status: intentionally deferred to a separate branch.
 
 ## Final owner review
 
