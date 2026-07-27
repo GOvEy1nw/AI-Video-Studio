@@ -21,7 +21,7 @@ export interface AssetContextMenuProps {
   asset: Asset;
   targetIds: string[];
   assetContextMenu: { assetId: string; x: number; y: number };
-  assetContextMenuRef: React.RefObject<HTMLDivElement>;
+  assetContextMenuRef: React.RefObject<HTMLDivElement | null>;
   assets: Asset[];
   bins: string[];
   binColors?: Record<string, string>;

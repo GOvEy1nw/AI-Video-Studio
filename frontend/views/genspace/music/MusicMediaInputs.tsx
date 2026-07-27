@@ -75,7 +75,7 @@ export function MusicMediaInputs({
     label: string,
     role: MusicAudioRole,
     input: MusicAudioInputDraft | null,
-    inputRef: RefObject<HTMLInputElement>,
+    inputRef: RefObject<HTMLInputElement | null>,
   ) => (
     <div className="min-w-0 space-y-1.5">
       <div className="text-xs text-zinc-500">{label}</div>

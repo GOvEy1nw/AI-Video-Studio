@@ -93,7 +93,7 @@ export function SourceMonitor({
           <>
             {sourceAsset.type === 'video' ? (
               <video
-                ref={sourceVideoRef as React.RefObject<HTMLVideoElement>}
+                ref={sourceVideoRef as React.RefObject<HTMLVideoElement | null>}
                 src={sourceAsset.url}
                 className="max-w-full max-h-full object-contain"
                 onTimeUpdate={() => {

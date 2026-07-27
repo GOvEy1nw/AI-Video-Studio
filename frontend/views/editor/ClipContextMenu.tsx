@@ -13,7 +13,7 @@ import { COLOR_LABELS } from './video-editor-utils'
 export interface ClipContextMenuProps {
   clipContextMenu: { clipId: string; x: number; y: number }
   contextClip: TimelineClip | null
-  clipContextMenuRef: React.RefObject<HTMLDivElement>
+  clipContextMenuRef: React.RefObject<HTMLDivElement | null>
   clips: TimelineClip[]
   tracks: Track[]
   selectedClipIds: Set<string>

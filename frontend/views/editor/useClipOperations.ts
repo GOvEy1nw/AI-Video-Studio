@@ -28,7 +28,7 @@ interface UseClipOperationsParams {
   setActiveTimeline: (projectId: string, timelineId: string) => void
   setOpenTimelineIds: React.Dispatch<React.SetStateAction<Set<string>>>
   activeTimeline: any
-  fileInputRef: React.RefObject<HTMLInputElement>
+  fileInputRef: React.RefObject<HTMLInputElement | null>
   setHoveredCutPoint: (point: any) => void
 }
 

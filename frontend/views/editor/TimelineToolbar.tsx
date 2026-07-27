@@ -13,7 +13,7 @@ interface TimelineToolbarProps {
   setIcLoraSourceClipId: (id: string | null) => void
   setShowICLoraPanel: (v: boolean) => void
   tracks: Track[]
-  subtitleFileInputRef: React.RefObject<HTMLInputElement>
+  subtitleFileInputRef: React.RefObject<HTMLInputElement | null>
   handleImportSrt: (e: React.ChangeEvent<HTMLInputElement>) => void
   handleExportSrt: () => void
   subtitles: SubtitleClip[]

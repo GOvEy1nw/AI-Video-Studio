@@ -44,7 +44,7 @@ export interface GenSpaceOverlaysProps {
   contextMenu: { assetId: string; x: number; y: number } | null;
   contextAsset: Asset | undefined;
   contextSelectedAssetIds: Set<string>;
-  contextMenuRef: RefObject<HTMLDivElement>;
+  contextMenuRef: RefObject<HTMLDivElement | null>;
   assets: Asset[];
   bins: string[];
   binColors: Record<string, string> | undefined;

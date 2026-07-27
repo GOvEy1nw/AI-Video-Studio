@@ -29,7 +29,7 @@ export interface GenSpaceGalleryProps {
     GalleryAssetLibraryProps,
     "className" | "headerAction" | "leadingContent" | "listActions"
   >;
-  fileInputRef: RefObject<HTMLInputElement>;
+  fileInputRef: RefObject<HTMLInputElement | null>;
   onImportFiles: (files: File[]) => void;
   toast: string | null;
   isDragOver: boolean;

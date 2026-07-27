@@ -33,7 +33,7 @@ export function MediaInputSlot({
   title: string;
   active?: boolean;
   dragActive?: boolean;
-  inputRef?: RefObject<HTMLInputElement>;
+  inputRef?: RefObject<HTMLInputElement | null>;
   menu?: ReactNode;
   onToggle?: () => void;
   onDrop: (event: DragEvent<HTMLDivElement>) => void | Promise<void>;

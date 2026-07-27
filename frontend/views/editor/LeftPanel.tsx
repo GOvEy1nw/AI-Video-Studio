@@ -332,7 +332,7 @@ export function LeftPanel(props: LeftPanelProps) {
               }
             />
             <input
-              ref={fileInputRef as React.RefObject<HTMLInputElement>}
+              ref={fileInputRef as React.RefObject<HTMLInputElement | null>}
               type="file"
               accept="video/*,audio/*,image/*"
               multiple

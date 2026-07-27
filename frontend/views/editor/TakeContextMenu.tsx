@@ -7,7 +7,7 @@ export interface TakeContextMenuProps {
   take: AssetTake
   takeIndex: number
   takeContextMenu: { assetId: string; takeIndex: number; x: number; y: number }
-  takeContextMenuRef: React.RefObject<HTMLDivElement>
+  takeContextMenuRef: React.RefObject<HTMLDivElement | null>
   currentProjectId: string | null
   pushAssetUndoRef: React.RefObject<() => void>
   addClipToTimeline: (asset: Asset, trackIndex?: number, startTime?: number) => void

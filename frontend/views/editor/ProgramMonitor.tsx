@@ -185,7 +185,7 @@ export function ProgramMonitor({
         )}
         {/* Preview (existing) */}
         <div
-          ref={previewContainerRef as React.RefObject<HTMLDivElement>}
+          ref={previewContainerRef as React.RefObject<HTMLDivElement | null>}
           className={`flex-1 relative overflow-hidden min-h-0 min-w-0 ${isFullscreen ? 'bg-black' : ''}`}
           style={{ backgroundColor: isFullscreen ? '#000' : '#333', ...(previewZoom !== 'fit' ? { cursor: 'grab' } : {}) }}
           onMouseDown={(e) => {
@@ -318,7 +318,7 @@ export function ProgramMonitor({
 
                   {activeClip?.asset?.type === 'image' && (
                     <img
-                      ref={previewImageRef as React.RefObject<HTMLImageElement>}
+                      ref={previewImageRef as React.RefObject<HTMLImageElement | null>}
                       src={getClipUrl(activeClip) || activeClip.asset.url}
                       alt=""
                       className="absolute inset-0 w-full h-full object-contain z-2"
@@ -339,7 +339,7 @@ export function ProgramMonitor({
                     if (incoming.asset?.type === 'video') {
                       return (
                         <video
-                          ref={previewVideoRef as React.RefObject<HTMLVideoElement>}
+                          ref={previewVideoRef as React.RefObject<HTMLVideoElement | null>}
                           key={`dissolve-in-${incoming.id}`}
                           src={inSrc}
                           className="absolute inset-0 w-full h-full object-contain pointer-events-none"

@@ -31,7 +31,7 @@ interface GapGenerationModalProps {
   setGapSettings: (settings: GenerationSettings) => void
   gapImageFile: File | null
   setGapImageFile: (file: File | null) => void
-  gapImageInputRef: React.RefObject<HTMLInputElement>
+  gapImageInputRef: React.RefObject<HTMLInputElement | null>
   isRegenerating: boolean
   regenStatusMessage: string
   regenProgress: number
