@@ -16,6 +16,8 @@ Product principles:
 Current integration baseline: `dev`.
 
 ## Recent issues
+- [DONE] #0325 Expected Phase 11 filename 11_FINAL_VALIDATION_AND_PR.md does not exist [docs/dependency-modernisation] -> Correct Phase 11 path identified from repository file list [docs/dependency-modernisation/11_FINAL_VALIDATION_AND_PULL_REQUEST.md] (fixed)
+  - Failed attempt: Tried reading expected Phase 11 filename from dashboard label; Get-Content returned path-not-found [docs/dependency-modernisation]
 - [DONE] #0324 GitHub CLI inferred upstream repository instead of origin fork for frontend workflow dispatch [Phase 10 GitHub workflow dispatch] -> Explicit --repo targets origin correctly; remaining 404 is expected because GitHub only dispatches workflows present on default branch [Phase 10 GitHub workflow dispatch] (fixed)
   - Failed attempt: Dispatched by workflow filename without --repo; gh queried deepbeepmeep/LTX-Desktop-WanGP and returned HTTP 404 [Phase 10 GitHub workflow dispatch]
   - Partial attempt: Retried with explicit origin repo; gh reached GOvEy1nw/AI-Video-Studio but GitHub cannot dispatch workflow absent from default branch [Phase 10 GitHub workflow dispatch]
