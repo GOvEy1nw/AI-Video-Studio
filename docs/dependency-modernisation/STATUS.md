@@ -10,7 +10,7 @@
 - Branch created on: 2026-07-26
 - Executor: Codex
 - Baseline `dev` commit SHA: `a3b8cbdd750d167e3d88eb1c99df3ebd78b3a141`
-- Current implementation HEAD SHA: `3710866c35e7fe52370b586c39230abc3ee0c88f`
+- Current implementation HEAD SHA: `92012f374438214367c74756e27e98c387d0ebdd`
 - Last sync from `dev`: 2026-07-26 (`origin/dev` merged before Phase 1)
 - Node version: 24.18.0
 - pnpm version: 10.30.3 through Corepack
@@ -43,10 +43,10 @@ Fill these from `pnpm list --depth 0` before changing dependencies.
 | @vitejs/plugin-react | 4.7.0 | 6.x | 6.0.4 |
 | vite-plugin-electron | 0.28.8 | 1.x | 1.1.0 |
 | vite-plugin-electron-renderer | 0.14.7 | remove if unused | removed as direct dependency; 0.14.7 remains optional transitively |
-| vitest | 2.1.9 | 4.1.x |  |
-| jsdom | 24.1.3 | compatible stable |  |
-| @testing-library/react | 16.1.0 | compatible stable |  |
-| @testing-library/user-event | 14.5.2 | compatible stable |  |
+| vitest | 2.1.9 | 4.1.x | 4.1.10 |
+| jsdom | 24.1.3 | compatible stable | 30.0.0 |
+| @testing-library/react | 16.1.0 | compatible stable | 16.3.2 |
+| @testing-library/user-event | 14.5.2 | compatible stable | 14.6.1 |
 | tailwindcss | 3.4.19 | 4.3.x |  |
 | @tailwindcss/vite | not installed | matching 4.3.x |  |
 | tailwind-merge | 2.6.1 | 3.x |  |
@@ -67,7 +67,7 @@ Use exactly one status: `NOT STARTED`, `IN PROGRESS`, `BLOCKED`, or `PASSED`.
 | 1 — Branch, baseline, guardrails | PASSED | `3558d385d96da954cf9d91c0fadab6fe523aa0a8` | `bb9cd5399fd7d2d767cceee378a6e7eef561ab80` | 2026-07-26 | Automated, development, unpacked, installed, drag/drop, uninstall, data-preservation, and protected-runtime gates passed. |
 | 2 — Electron 43 | PASSED | `43ed93f45d98e3b3bf80ea6ce19a423ee565dbb5` | `a9194ba700ba890c933c8d0543be99d71d429cee` | 2026-07-27 | Automated, development, unpacked, installed, file-workflow, native-dialog persistence/fallback, data-preservation, and protected-runtime gates passed. Phase 3 not started. |
 | 3 — Vite 8 | PASSED | `59d425e91284fdf2ac6cc1ad56c5e306b1de6310` | `3710866c35e7fe52370b586c39230abc3ee0c88f` | 2026-07-27 | Automated, development lifecycle, debug, unpacked, native file-import, data-preservation, and protected-runtime gates passed. Phase 4 not started. |
-| 4 — Vitest 4 | NOT STARTED |  |  |  |  |
+| 4 — Vitest 4 | PASSED | `08fa360ec108fed212c6c5495b4faff1068fe71a` | `92012f374438214367c74756e27e98c387d0ebdd` | 2026-07-27 | Exact test cluster, existing suite, strengthened native file-import coverage, Tier A, development launch, visual confirmation, and protected-runtime gates passed. Phase 5 not started. |
 | 5 — Tailwind 4 compatibility | NOT STARTED |  |  |  |  |
 | 6 — Tailwind CSS-first theme | NOT STARTED |  |  |  |  |
 | 7 — React 19 | NOT STARTED |  |  |  |  |
@@ -352,6 +352,76 @@ Exit gate: user confirmed development visual stability through HMR, preload relo
    - Attempt: initial startup completed but logged unresolved Svelte/Gradio dependencies.
    - Result: `optimizeDeps.entries = ['index.html']`; clean restart no longer scans embedded runtime sources.
    - Final resolution or blocker: resolved.
+
+### Phase 4 command evidence
+
+| Command | Result | Duration | Log/evidence |
+|---|---|---:|---|
+| Test inventory and mock/browser-API searches | PASS | 0.13s | 22 Vitest files: 21 under `frontend/` and `electron/dialog-paths.test.ts`; one `restoreAllMocks` use correctly restores manual media spies; no third-argument test options or shared setup file. |
+| Baseline `corepack pnpm exec vitest run --reporter=verbose` | PASS | 2.69s | Vitest 2.1.9: 22 files and 67 tests passed; no skipped/flaky tests, console warnings, unhandled rejections, or open handles. |
+| Registry freshness and compatibility queries | PASS | 2.86s | Newest stable reviewed targets: Vitest 4.1.10, jsdom 30.0.0, Testing Library React 16.3.2, user-event 14.6.1. |
+| Initial Vitest 4 complete suite | PASS | 2.78s | 22 files and 67 existing tests passed unchanged before test edits. |
+| `corepack pnpm exec vitest run frontend/lib/native-file-path.test.ts frontend/lib/media-import.test.ts` | PASS | 0.88s | 2 files and 13 focused tests passed after typed preload fixtures and expanded native-path/import coverage. |
+| `git diff --check` | PASS | 0.05s | No whitespace errors; only expected LF-to-CRLF working-copy warnings. |
+| `corepack pnpm typecheck:ts` | PASS | 3.82s | TypeScript 5.9.3, 0 errors. |
+| `corepack pnpm test:frontend` | PASS | 2.15s | Vitest 4.1.10: 22 files and 75 tests passed; process exited normally with no watch mode or open-handle symptoms. |
+| `corepack pnpm build:frontend` | PASS | 1.01s build time | Renderer, Electron main, and CommonJS preload built; existing chunk-size/dynamic-import warnings remain. |
+| Protected-runtime diff guard from Phase 4 starting SHA | PASS | 0.06s | No protected runtime path changed. |
+| Development startup | PASS |  | Vite 8.1.5 started, rebuilt the Electron main/preload bundles, launched Electron, and backend reached application startup complete with WanGP runtime preloaded. |
+
+### Phase 4 Vitest 4 migration review
+
+- Mock construction/restoration: no constructor mocks; the only `restoreAllMocks` use restores manual `HTMLMediaElement` spies and remains correct. No tests depend on automock restoration or cross-test call history.
+- Mock names/snapshots: no mock-name assertions or snapshots.
+- Removed configuration: `poolMatchGlobs`, `environmentMatchGlobs`, deprecated dependency options, browser tester scripts, and `minWorkers` are `NOT USED`.
+- Third-argument test options: `NOT USED`.
+- Browser mode: `NOT USED`.
+- V8 coverage: `NOT USED`; coverage remains disabled.
+- Custom environments/pools: `NOT USED`; minimal jsdom configuration remains unchanged.
+- Browser shims: repeated global setup is not justified. Existing media spies and object-URL shims remain local, explicitly cleaned up where reused.
+
+### Phase 4 manual checks
+
+- [x] Development app launched
+- [x] Renderer visible; no blank screen
+- [x] Existing project opened
+- [x] No unexpected visible errors
+- [x] Protected runtime diff guard produced no output
+
+Exit gate: user confirmed the development app renders normally, an existing project opens, and no unexpected visible errors are present. Automated Tier A and focused native-file/import regression checks passed. Phase 4 is `PASSED`; Phase 5 remains not started and unread.
+
+### Phase 4 dependency review
+
+- Exact package command used: `corepack pnpm --config.minimum-release-age=0 add -D vitest@4.1.10 jsdom@30.0.0 @testing-library/react@16.3.2 @testing-library/user-event@14.6.1`.
+- Exact resolved versions: Vitest 4.1.10; jsdom 30.0.0; Testing Library React 16.3.2; user-event 14.6.1; transitive Testing Library DOM 10.4.1.
+- Peer dependency warnings: none. Vitest supports Vite 6–8 and Node 20/22/24+; jsdom 30 requires Node 22.22.2 or Node 24.15+; Testing Library React supports React and React DOM 18/19.
+- `pnpm why` findings: one Vitest 4.1.10 and one deduplicated Vite 8.1.5; the Phase 3 nested Vite 5.4.21 test-tool dependency is removed.
+- Lockfile review: expected Vitest 4, jsdom 30, Testing Library, Chai, DOM/CSS parser, and related test-only graph changes; obsolete Vitest 2/Vite 5/esbuild/Rollup test graph removed. No React, Tailwind, TypeScript, Electron, builder, updater, Python, or WanGP direct upgrade.
+- Security advisory findings: exact-version public GitHub advisory queries for all four targets, restricted to advisories published since 2026-07-26, returned none. Full `pnpm audit` was not run because managed approval rejected sending the installed dependency graph to npm.
+- Upstream release notes reviewed: official Vitest 4 migration guide and API documentation through Context7; npm registry engine, peer, version, and publication metadata for each exact target.
+- Plan freshness, checked 2026-07-27: approved Vitest 4.1 family remains stable; Vitest 5 was not selected. jsdom 30.0.0 is current stable and compatible with Node 24.18.0. Testing Library React 16.3.2 supports both current React 18 and planned React 19.
+- Deviations from plan: exact current releases required a command-scoped `minimum-release-age=0` exception; `.npmrc` remains unchanged. Managed sandbox required approved Vitest and registry routes. No `vitest.setup.ts` was added because shims do not repeat across three or more files.
+
+### Phase 4 commits
+
+| Purpose | Commit SHA | Message |
+|---|---|---|
+| Vitest 4 test cluster and native file-import regression coverage | `92012f374438214367c74756e27e98c387d0ebdd` | `chore(test): migrate frontend suite to Vitest 4` |
+
+### Phase 4 issues and attempted fixes
+
+1. Issue: managed sandbox denied Vitest/esbuild access to `vitest.config.ts`.
+   - Attempt: ran the complete baseline and migrated suites through the approved `corepack pnpm exec vitest` route.
+   - Result: all suites passed.
+   - Final resolution or blocker: host sandbox limitation; repository tests green.
+2. Issue: npm registry freshness query hung and failed `EACCES` in the managed route.
+   - Attempt: reran exact package metadata queries through approved network access.
+   - Result: exact stable targets and compatibility metadata resolved.
+   - Final resolution or blocker: host network limitation; resolved for phase planning.
+3. Issue: full `pnpm audit` approval was rejected because it would send the installed dependency graph to npm.
+   - Attempt: queried exact-version public GitHub advisories for only the four Phase 4 package identifiers.
+   - Result: no advisories published since the runbook review date apply to the selected versions.
+   - Final resolution or blocker: safer package-specific review completed; no project graph disclosed.
 
 ## Command evidence template
 
