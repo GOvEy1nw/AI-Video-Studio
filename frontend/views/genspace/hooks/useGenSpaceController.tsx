@@ -545,12 +545,14 @@ export function useGenSpaceController() {
   return {
     rootProps: {
       className: "h-full relative bg-zinc-950",
-      onDragEnter: !isPanelMode ? rootDragHandlers.onDragEnter : undefined,
-      onDragOver: !isPanelMode ? rootDragHandlers.onDragOver : undefined,
-      onDragLeave: !isPanelMode ? rootDragHandlers.onDragLeave : undefined,
-      onDrop: !isPanelMode ? rootDragHandlers.onDrop : undefined,
     },
     gallery: {
+      dropZoneProps: {
+        onDragEnter: !isPanelMode ? rootDragHandlers.onDragEnter : undefined,
+        onDragOver: !isPanelMode ? rootDragHandlers.onDragOver : undefined,
+        onDragLeave: !isPanelMode ? rootDragHandlers.onDragLeave : undefined,
+        onDrop: !isPanelMode ? rootDragHandlers.onDrop : undefined,
+      },
       library: galleryLibrary,
       fileInputRef: galleryFileInputRef,
       onImportFiles: handleImportFiles,
