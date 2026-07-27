@@ -16,6 +16,14 @@ Product principles:
 Current integration baseline: `dev`.
 
 ## Recent issues
+- [DONE] #0258 Phase 5 project-wide PostCSS audit hits access denied on linked WanGP documentation files in managed sandbox [docs/wan2gp-docs / tooling/rg] -> App-owned scoped audit avoids inaccessible linked docs and confirms project-level PostCSS/autoprefixer can be removed after Vite-plugin build proof [docs/wan2gp-docs / tooling/rg] (fixed)
+  - Partial attempt: Ran repository-wide rg for postcss/autoprefixer; app/package/config hits were returned, but linked docs/wan2gp-docs paths emitted access-denied errors [docs/wan2gp-docs / tooling/rg]
+- [DONE] #0257 Phase 5 preflight fast Windows build aborts because pnpm wants to recreate node_modules without a TTY [node_modules / scripts/local-build.ps1] -> Phase 5 preflight fast Windows build passes via CI=true approved route; repository and lockfile unchanged [node_modules / scripts/local-build.ps1] (fixed)
+  - Failed attempt: Ran corepack pnpm build:fast:win normally; install step stopped with ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY before packaging [node_modules / scripts/local-build.ps1]
+  - Failed attempt: Tried Win32 process command-line inspection to identify hung pnpm reinstall safely; managed sandbox denied Get-CimInstance [tooling/process-inspection]
+  - Failed attempt: Retried with CI=true; pnpm recreated node_modules then stalled without output under network-restricted sandbox, so exact pnpm install PID was stopped safely [node_modules / scripts/local-build.ps1]
+- [DONE] #0256 Phase 5 GitHub advisory CLI query cannot start in managed sandbox because gh config.yml access is denied [tooling/gh] -> Public curl advisory queries bypassed inaccessible gh config and confirmed no advisories published since runbook review for exact Phase 5 targets [tooling/gh] (fixed)
+  - Failed attempt: Tried gh --version before advisory queries; sandbox denied reading AppData GitHub CLI config and command did not start [tooling/gh]
 - [DONE] #0255 Phase 4 npm registry freshness query hangs then fails EACCES inside managed sandbox [docs/dependency-modernisation/04_VITEST_4_TEST_STACK_MIGRATION.md] -> Approved registry route completed Phase 4 version freshness and compatibility checks [docs/dependency-modernisation/04_VITEST_4_TEST_STACK_MIGRATION.md] (fixed)
 - [DONE] #0254 Phase 4 baseline Vitest cannot load vitest.config.ts inside managed sandbox; esbuild gets access denied [vitest.config.ts] -> Approved Vitest execution route bypasses managed sandbox config access; Phase 4 baseline suite passes [vitest.config.ts] (fixed)
 - [DONE] #0253 Phase 3 requires pnpm dev:debug but package.json has no dev:debug script [package.json] -> Confirmed Phase 3 debug script already exists; no package script change required [package.json] (fixed)
@@ -85,6 +93,7 @@ Current integration baseline: `dev`.
 - [OPEN] #0224 Managed process backend rejected interrupt for hanging npm registry query [tooling/exec] (open)
   - Failed attempt: Sent Ctrl+C to hanging registry query; process backend does not support interrupts [tooling/exec]
   - Failed attempt: Phase 3 npm registry freshness query hung in managed sandbox; process backend again rejected Ctrl+C [tooling/exec]
+  - Failed attempt: Tried Ctrl+C after Phase 5 pnpm reinstall produced no output for 90 seconds; process backend again rejected interrupts [tooling/exec]
 - [DONE] #0223 Phase 2 registry freshness query failed in managed sandbox with npm EACCES [docs/dependency-modernisation/02_ELECTRON_43_MIGRATION.md] -> Approved network route completed registry freshness check and confirmed exact target versions [docs/dependency-modernisation/02_ELECTRON_43_MIGRATION.md] (fixed)
   - Failed attempt: Queried npm registry for Electron 43 and @types/node 24 in sandbox; both requests failed with EACCES [docs/dependency-modernisation/02_ELECTRON_43_MIGRATION.md]
 - [OPEN] #0222 projectmem get_project_map timed out after 300 seconds at session start [.projectmem/PROJECT_MAP.md] (open)

@@ -68,7 +68,7 @@ Use exactly one status: `NOT STARTED`, `IN PROGRESS`, `BLOCKED`, or `PASSED`.
 | 2 — Electron 43 | PASSED | `43ed93f45d98e3b3bf80ea6ce19a423ee565dbb5` | `a9194ba700ba890c933c8d0543be99d71d429cee` | 2026-07-27 | Automated, development, unpacked, installed, file-workflow, native-dialog persistence/fallback, data-preservation, and protected-runtime gates passed. Phase 3 not started. |
 | 3 — Vite 8 | PASSED | `59d425e91284fdf2ac6cc1ad56c5e306b1de6310` | `3710866c35e7fe52370b586c39230abc3ee0c88f` | 2026-07-27 | Automated, development lifecycle, debug, unpacked, native file-import, data-preservation, and protected-runtime gates passed. Phase 4 not started. |
 | 4 — Vitest 4 | PASSED | `08fa360ec108fed212c6c5495b4faff1068fe71a` | `92012f374438214367c74756e27e98c387d0ebdd` | 2026-07-27 | Exact test cluster, existing suite, strengthened native file-import coverage, Tier A, development launch, visual confirmation, and protected-runtime gates passed. Phase 5 not started. |
-| 5 — Tailwind 4 compatibility | NOT STARTED |  |  |  |  |
+| 5 — Tailwind 4 compatibility | IN PROGRESS | `92012f374438214367c74756e27e98c387d0ebdd` |  | 2026-07-27 | Phase 1 visual baseline remains current through Phase 4; preflight and Tailwind 4.3 plan-freshness review started. |
 | 6 — Tailwind CSS-first theme | NOT STARTED |  |  |  |  |
 | 7 — React 19 | NOT STARTED |  |  |  |  |
 | 8 — TypeScript 6 | NOT STARTED |  |  |  |  |
@@ -422,6 +422,58 @@ Exit gate: user confirmed the development app renders normally, an existing proj
    - Attempt: queried exact-version public GitHub advisories for only the four Phase 4 package identifiers.
    - Result: no advisories published since the runbook review date apply to the selected versions.
    - Final resolution or blocker: safer package-specific review completed; no project graph disclosed.
+
+### Phase 5 pre-upgrade command evidence
+
+| Command | Result | Duration | Log/evidence |
+|---|---|---:|---|
+| `corepack pnpm typecheck:ts` | PASS | 4.78s | TypeScript 5.9.3, 0 errors. |
+| `corepack pnpm test:frontend` | PASS | 2.57s test time | Tailwind 3 baseline: 22 files and 75 tests passed. |
+| `corepack pnpm build:frontend` | PASS | 1.00s build time | Tailwind 3 baseline CSS 68.99 kB / 12.48 kB gzip; renderer JS 929.83 kB / 241.85 kB gzip; CommonJS preload preserved. |
+| `$env:CI='true'; corepack pnpm build:fast:win` | PASS | 28.22s | Approved route restored 492 packages from the existing pnpm store and produced `release\win-unpacked`. |
+| Phase 5 registry freshness queries | PASS |  | Stable approved-family candidates: `tailwindcss` 4.3.3, `@tailwindcss/vite` 4.3.3, `@tailwindcss/upgrade` 4.3.3, and `tailwind-merge` 3.6.0. |
+| Exact-package advisory queries | PASS |  | Public GitHub advisory API returned no advisories published from 2026-07-26 through 2026-07-27 for the four exact candidates. |
+
+### Phase 5 pre-upgrade inventory
+
+- Existing integration: Tailwind 3 directives in `frontend/index.css`, JavaScript theme in `tailwind.config.js`, and project-level PostCSS/autoprefixer pipeline.
+- Existing class composition: one `cn()` helper wraps `clsx` and `twMerge`; `class-variance-authority` is used directly by the shared button component.
+- Opacity utilities: 0 matches.
+- Removed aliases: 163 matches across 40 files, all from the `flex-shrink` family.
+- Scale-sensitive standalone utilities: 289 matches across 56 files.
+- `space-*` / `divide-*`: 91 matches across 25 files.
+- CSS-variable arbitrary syntax: 0 matches.
+- Direct-child variant stacking: 0 matches.
+- Tailwind CSS directives: 3 matches in `frontend/index.css`.
+- Bare border tokens: 347 matches across 69 files.
+- Ring usage: 31 matches across 21 files.
+- `hidden` attribute: 3 matches in `frontend/views/Project.tsx`; native `<dialog>` usage: 0.
+- Scoped app-owned search found no direct PostCSS/autoprefixer workflow beyond `postcss.config.js` and package/lockfile entries.
+- Visual baseline remains `C:\tmp\AiVS-phase1-baseline-20260726`; Phases 2–4 recorded no intentional style changes and Phase 4 user visual confirmation passed.
+
+### Phase 5 dependency review
+
+- Exact candidate versions: Tailwind CSS/Vite plugin/upgrade tool 4.3.3; `tailwind-merge` 3.6.0.
+- Publication dates: Tailwind 4.3.3 cluster published 2026-07-16; `tailwind-merge` 3.6.0 published 2026-05-10.
+- Security advisory findings: no exact-package advisories published since the 2026-07-26 runbook review.
+- Upstream documentation reviewed: official Tailwind v4 upgrade guide and v4.3 Vite integration documentation through Context7.
+- Plan freshness, checked 2026-07-27: Tailwind 4.3.3 is current stable and remains inside the approved 4.3 family; `tailwind-merge` 3.6.0 is current stable 3.x.
+- Deviations from plan so far: fast Windows preflight required `CI=true` and approved execution after pnpm attempted a non-interactive dependency-tree recreation.
+
+### Phase 5 issues and attempted fixes
+
+1. Issue: `gh` could not start for advisory queries because managed sandbox denied access to its AppData config.
+   - Attempt: replaced `gh` with unauthenticated public GitHub advisory REST queries through `curl`.
+   - Result: all four exact-package queries completed with no advisories in the review window.
+   - Final resolution or blocker: resolved as projectmem issue `#0256`.
+2. Issue: fast Windows preflight aborted when pnpm requested a non-interactive `node_modules` recreation, then the first `CI=true` retry stalled under restricted network access.
+   - Attempt: stopped only the exact stalled pnpm PID, then reran the unchanged command with `CI=true` through the approved route.
+   - Result: dependencies restored from the pnpm store and unpacked packaging passed.
+   - Final resolution or blocker: resolved as projectmem issue `#0257`.
+3. Issue: repository-wide PostCSS audit hit access-denied linked WanGP documentation paths.
+   - Attempt: scoped the audit to app-owned package/config/frontend/scripts/workflow paths.
+   - Result: audit completed and confirmed no direct app workflow beyond the old Tailwind PostCSS configuration.
+   - Final resolution or blocker: resolved as projectmem issue `#0258`.
 
 ## Command evidence template
 
