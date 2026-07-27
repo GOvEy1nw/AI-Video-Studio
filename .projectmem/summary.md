@@ -16,6 +16,29 @@ Product principles:
 Current integration baseline: `dev`.
 
 ## Recent issues
+- [DONE] #0289 Phase 8 fast Windows build aborts pnpm dependency relink without TTY/CI mode [scripts/local-build.ps1; node_modules] -> CI-mode approved route completed Phase 8 fast Windows packaging [release/win-unpacked] (fixed)
+  - Failed attempt: Ran repository fast Windows build; dependency install stopped with ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY [scripts/local-build.ps1]
+- [DONE] #0288 Phase 8 backend suite cannot sync through existing uv cache in managed sandbox [backend; uv cache] -> Approved uv-cache route completed Phase 8 backend regression suite [backend] (fixed)
+  - Failed attempt: Ran repository backend test gate; uv sync failed on AppData cache .git access before pytest [backend; uv cache]
+- [DONE] #0287 Phase 8 Pyright gate cannot read existing uv cache in managed sandbox [backend; uv cache] -> Approved uv-cache route completed Phase 8 Pyright gate cleanly [backend] (fixed)
+  - Failed attempt: Ran repository TypeScript/Python gate route; uv failed on AppData cache .git access before Pyright [backend; uv cache]
+- [DONE] #0286 Explicit Electron TypeScript project check exposes invalid logger.warning call; logger API only has warn [electron/python-backend.ts:149] -> Corrected backend-path warning call to logger.warn; explicit Electron project check passes [electron/python-backend.ts:149] (fixed)
+- [DONE] #0285 Standalone tsconfig.node check fails TS6059 because vite.config.ts sits outside rootDir electron [tsconfig.node.json:9] -> Set node project rootDir to repository root so included Electron sources and vite.config.ts share one coherent source root [tsconfig.node.json] (fixed)
+  - Failed attempt: Ran Phase 8 explicit renderer/node checks; renderer passed, node project failed TS6059 on included root vite.config.ts [tsconfig.node.json]
+- [DONE] #0284 TypeScript 6 rejects deprecated renderer baseUrl option with TS5101 [tsconfig.json:18] -> Migrated path alias to TypeScript 6 baseUrl-free resolution; strict check passes without ignoreDeprecations [tsconfig.json] (fixed)
+  - Failed attempt: Ran first TypeScript 6 strict gate; only TS5101 reported for baseUrl in renderer config [tsconfig.json:18]
+- [DONE] #0283 Phase 8 TypeScript install rejects node_modules because managed sandbox resolves a different pnpm store [package.json; node_modules; pnpm store] -> Exact TypeScript 6.0.3 install completed without changing repository release-age policy [package.json; pnpm-lock.yaml] (fixed)
+  - Failed attempt: Ran exact TypeScript 6.0.3 add in managed sandbox; pnpm rejected AppData-linked node_modules versus workspace .pnpm-store [package.json; node_modules]
+  - Failed attempt: Reran exact add with existing AppData pnpm store; transaction then stopped before changes on three-day-old transitive undici 7.29.0 minimumReleaseAge [package.json; pnpm-lock.yaml]
+- [DONE] #0282 Phase 8 npm registry freshness query hangs in managed sandbox and cannot be interrupted [docs/dependency-modernisation/08_TYPESCRIPT_6_BRIDGE_MIGRATION.md] -> Approved network route completed Phase 8 TypeScript 6.0.3 freshness and advisory checks [docs/dependency-modernisation/08_TYPESCRIPT_6_BRIDGE_MIGRATION.md] (fixed)
+  - Failed attempt: Queried TypeScript 6.0 versions and latest dist-tag through npm; only config warning returned before timeout and interrupt was rejected [docs/dependency-modernisation/08_TYPESCRIPT_6_BRIDGE_MIGRATION.md]
+- [DONE] #0281 Phase 8 effective-config capture cannot write planned temporary files under C:\tmp in managed sandbox [C:\tmp; TypeScript baseline] -> Used disposable workspace-local effective-config files after C:\tmp write denial [.tmp-tsconfig-frontend-before.json; .tmp-tsconfig-node-before.json] (fixed)
+  - Failed attempt: Piped TypeScript 5.9 effective configs to C:\tmp; Set-Content was denied for both temporary files [C:\tmp]
+- [DONE] #0280 Phase 8 baseline cannot resolve tsc through corepack pnpm exec despite TypeScript being a direct dev dependency [package.json; node_modules/.bin] -> Phase 8 uses explicit local tsc.CMD for standalone compiler commands and repository package scripts for standard gates [node_modules/.bin/tsc.CMD; package.json] (fixed)
+  - Failed attempt: Ran version and effective-config baseline via corepack pnpm exec tsc; Windows reported tsc not recognized for all three compiler commands [node_modules/.bin]
+  - Partial attempt: Invoked explicit local tsc.CMD; compiler resolved as 5.9.3, confirming only pnpm exec PATH resolution is broken [node_modules/.bin/tsc.CMD]
+- [DONE] #0279 Runbook Phase 8 filename assumption failed; 08_TYPESCRIPT_6_MIGRATION.md does not exist [docs/dependency-modernisation] -> Resolved Phase 8 document path as 08_TYPESCRIPT_6_BRIDGE_MIGRATION.md and read it successfully [docs/dependency-modernisation/08_TYPESCRIPT_6_BRIDGE_MIGRATION.md] (fixed)
+  - Failed attempt: Tried inferred Phase 8 path 08_TYPESCRIPT_6_MIGRATION.md; file is absent [docs/dependency-modernisation]
 - [DONE] #0278 Phase 7 Pyright gate cannot read uv cache .git in managed sandbox [backend/typecheck:py; C:\Users\rais\AppData\Local\uv\cache] -> Approved validation route restored uv cache access; Phase 7 Pyright gate passes [backend/typecheck:py] (fixed)
 - [DONE] #0277 React 19 types expose nullable DOM refs incompatible with non-null RefObject contracts [frontend] -> React 19 DOM ref nullability is represented end-to-end in prop and helper contracts; TypeScript gate passes [frontend] (fixed)
   - Failed attempt: Ran immediate React 19 TypeScript gate; 31 assignments failed because prop/helper contracts omit DOM-ref nullability [frontend]
@@ -597,11 +620,9 @@ Current integration baseline: `dev`.
 - Phase 2 remains BLOCKED, not PASSED: mandatory real OS selection/drop and remembered native-dialog matrices were not verified because current automation cannot target owned dialogs or cross-window drags; do not start Phase 3 [docs/dependency-modernisation/STATUS.md]
 - Phase 2 Electron 43 exit gate now PASSED after user-assisted installed/unpacked OS-drop and native-dialog matrices, filename-only save-path fix, deleted-directory fallback, Tier A/B, packaging, data, and protected-runtime checks; Phase 3 remains not started. [docs/dependency-modernisation/STATUS.md]
 - Tailwind 4 theme is CSS-first in frontend/index.css: @theme inline maps utilities to runtime :root tokens; retain app-wide v3 border-color base rule for visual parity; remove tailwind.config.js [frontend/index.css]
+- TypeScript 6 node project rootDir is repository root because it intentionally typechecks both electron/**/*.ts and root vite.config.ts; Vite still owns runtime/preload emission [tsconfig.node.json]
 
 ## Notes
-- gotcha: Tailwind v4 automatic detection scans outside renderer in this monorepo; use source(none) with explicit ../index.html and ./ registrations [frontend/index.css]
-- User confirmed Phase 5 Tailwind 4 development UI matches saved Phase 1 spacing after removing redundant universal reset [docs/dependency-modernisation/STATUS.md]
-- User confirmed Phase 5 unpacked app styling, existing-project open, native file picker/import, and OS drag/drop all pass [docs/dependency-modernisation/STATUS.md]
 - Phase 5 Tailwind 4 compatibility PASSED at 50fcb190: Tailwind 4.3.3/Vite plugin, tailwind-merge 3.6.0, Tier A/B, dev and unpacked parity/file workflows, protected runtime clean; Phase 6 not started [docs/dependency-modernisation/STATUS.md]
 - Phase 6 freshness: Tailwind 4.3.3 remains registry latest; official Tailwind docs require @theme inline for mappings that reference runtime CSS variables; no new Tailwind advisories since 2026-07-26 [docs/dependency-modernisation/STATUS.md]
 - Phase 6 PASSED at 5a0df7d313f759d96648746d9e5690dd19230071: CSS-first Tailwind theme, runtime dual-accent retheming, Tier A/B, unpacked parity, project reopen, and protected-runtime gates passed; Phase 7 not started [docs/dependency-modernisation/STATUS.md]
@@ -609,6 +630,9 @@ Current integration baseline: `dev`.
 - User confirmed Phase 7 React 19 development smoke, console, persistence, media, and visual-parity exit gate passed [docs/dependency-modernisation/STATUS.md]
 - User confirmed Phase 7 React 19 unpacked app launch, file/import/media workflows, state, and visual-parity exit gate passed [docs/dependency-modernisation/STATUS.md]
 - Phase 7 React 19 PASSED at implementation commit 1c667c9d8f7d28c950fe475dd9fca0fb2766b280: React 19.2.8/types, nullable DOM refs, Tier A/B, dev/unpacked parity, protected runtime clean; Phase 8 not started [docs/dependency-modernisation/STATUS.md]
+- Phase 8 development smoke passed by user: core screens, project, media attachment, preload-backed UI, and visual/behavioural parity confirmed [docs/dependency-modernisation/STATUS.md]
+- Phase 8 unpacked Windows smoke passed by user: file:// renderer, preload workflows, project/media/navigation, visual parity, and clean close confirmed [docs/dependency-modernisation/STATUS.md]
+- Phase 8 compiler baseline is TypeScript 6.0.3; TypeScript 7 remains deferred to Phase 12 on a separate post-merge branch [package.json]
 
 ## Key files
 - `LTX-2.3_Cinematic_hardcut.safetensors`

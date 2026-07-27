@@ -10,7 +10,7 @@
 - Branch created on: 2026-07-26
 - Executor: Codex
 - Baseline `dev` commit SHA: `a3b8cbdd750d167e3d88eb1c99df3ebd78b3a141`
-- Current implementation HEAD SHA: `5a0df7d313f759d96648746d9e5690dd19230071`
+- Current implementation HEAD SHA: `1ee8ade9e09e8dcdd4439bb980e1ccf2a0053f63`
 - Last sync from `dev`: 2026-07-26 (`origin/dev` merged before Phase 1)
 - Node version: 24.18.0
 - pnpm version: 10.30.3 through Corepack
@@ -54,7 +54,7 @@ Fill these from `pnpm list --depth 0` before changing dependencies.
 | react-dom | 18.3.1 | 19.2.x |  |
 | @types/react | 18.3.31 | 19.x |  |
 | @types/react-dom | 18.3.7 | 19.x |  |
-| typescript | 5.9.3 | 6.0.x |  |
+| typescript | 5.9.3 | 6.0.x | 6.0.3 |
 | electron-builder | 26.15.3 | reviewed stable |  |
 | electron-updater | 6.8.9 | reviewed stable |  |
 
@@ -71,7 +71,7 @@ Use exactly one status: `NOT STARTED`, `IN PROGRESS`, `BLOCKED`, or `PASSED`.
 | 5 — Tailwind 4 compatibility | PASSED | `92012f374438214367c74756e27e98c387d0ebdd` | `50fcb190234ba28289c12d8364c96191b8c7b1f8` | 2026-07-27 | Tailwind 4.3.3 compatibility migration, Tier A/B, development and unpacked visual/file workflows, and protected-runtime gates passed. Phase 6 not started. |
 | 6 — Tailwind CSS-first theme | PASSED | `4593f1d16ba2dfa36907342ba36eee3cb9250cce` | `5a0df7d313f759d96648746d9e5690dd19230071` | 2026-07-27 | CSS-first mappings, runtime retheming, Tier A/B, development and unpacked parity, project reopen, and protected-runtime gates passed. Phase 7 not started. |
 | 7 — React 19 | PASSED | `4d20cb815a8a19ea9ef4718098ddbfc6578e5503` | `1c667c9d8f7d28c950fe475dd9fca0fb2766b280` | 2026-07-27 | React 19.2.8 migration, nullable DOM-ref compatibility, Tier A/B, development and unpacked smoke/visual parity, and protected-runtime gates passed. Phase 8 not started. |
-| 8 — TypeScript 6 | NOT STARTED |  |  |  |  |
+| 8 — TypeScript 6 | IN PROGRESS | `1ee8ade9e09e8dcdd4439bb980e1ccf2a0053f63` |  | 2026-07-27 | Phase 8 preflight started; Phase 9 remains unread. |
 | 9 — Low-risk package refresh | NOT STARTED |  |  |  |  |
 | 10 — Automation and CI | NOT STARTED |  |  |  |  |
 | 11 — Final validation and PR | NOT STARTED |  |  |  |  |
@@ -685,6 +685,99 @@ Exit gate: user confirmed development and unpacked styling parity, dual-token ru
 - Protected runtime guard: no change under `backend/pyproject.toml`, `backend/uv.lock`, `scripts/wangp-stacks.json`, `scripts/wangp-source.json`, stack/source installers, update scripts, or `Wan2GP/`.
 - Deviations: exact targets required the documented command-scoped release-age exception. Managed Pyright needed approved uv-cache access. No codemod, peer override, dependency replacement, or TypeScript suppression was used.
 - Exit gate: `PASSED`. Phase 8 remains `NOT STARTED`.
+
+### Phase 8 pre-upgrade review
+
+- Starting SHA: `1ee8ade9e09e8dcdd4439bb980e1ccf2a0053f63`; branch is `chore/dependency-modernisation-2026`.
+- Worktree was clean at the starting SHA. Mandatory project-memory logging for a corrected Phase 8 document filename created the only pre-implementation memory changes.
+- Baseline: Node `24.18.0`, pnpm `10.30.3`, TypeScript `5.9.3`.
+- Baseline `corepack pnpm typecheck:ts`: passed.
+- Baseline `corepack pnpm test:frontend`: Vitest `4.1.10`, 22 files and 75 tests passed.
+- Baseline `corepack pnpm build:frontend`: renderer, Electron main, and CommonJS preload passed; existing chunk-size/dynamic-import warnings only.
+- Effective renderer and node configurations were captured as disposable workspace files because the managed sandbox denied `C:\tmp` writes.
+- Plan freshness, checked 2026-07-27: npm registry reports TypeScript `6.0.3` as the newest stable patch in the approved 6.0 family; registry `latest` is TypeScript `7.0.2`, which remains explicitly out of scope.
+- Security review: public GitHub advisory query returned no TypeScript `6.0.3` advisory published since the 2026-07-26 runbook review.
+- Official TypeScript 6 migration review: `baseUrl`, ES5 target, Node10/classic module resolution, `outFile`, legacy module kinds, explicit `downlevelIteration`, and false interop options are deprecated for removal in TypeScript 7.
+- Applicability: renderer `baseUrl: "."` is the only deprecated option. Remove it and make the existing path target explicitly relative (`"./frontend/*"`); TypeScript 6 resolves `paths` from the declaring tsconfig directory without `baseUrl`.
+- Applicability: ES2020, ESNext modules, bundler resolution, React JSX, DOM libraries, strict/unused checks, project reference, node config, and CommonJS preload build ownership remain supported.
+- Compiler-consumer audit found no app-owned programmatic TypeScript API consumer. TypeScript is invoked only by the root typecheck script; Vite 8 and Vitest 4 own runtime transforms.
+- Suppression baseline found no `@ts-ignore`, `@ts-expect-error`, or TypeScript ESLint suppression in `frontend/` or `electron/`. Existing broad `any` usage is pre-existing and outside this migration unless a TypeScript 6 diagnostic touches it.
+- Deviation: `corepack pnpm exec tsc` did not inherit the local Windows bin path before or after reinstall in the managed command runner. Repository package scripts and the explicit local `tsc.CMD` provided equivalent compiler gates.
+
+### Phase 8 implementation and automated validation
+
+- Installed TypeScript `6.0.3` only. Package and lockfile diffs contain no other dependency version change; TypeScript 7 is absent.
+- Used the reviewed command-scoped `minimum-release-age=0` exception because three-day-old transitive `undici@7.29.0` blocked pnpm's graph resolution. `.npmrc` remains unchanged.
+- Removed renderer `baseUrl` and made `@/*` explicitly map to `./frontend/*`; no `ignoreDeprecations` suppression was added.
+- Changed the node project's `rootDir` from `electron` to `.` so its declared `electron/**/*.ts` and root `vite.config.ts` inputs share one valid source root.
+- Corrected one latent Electron diagnostic from `logger.warning` to the existing `logger.warn` API. No other runtime source changed.
+- TypeScript 6 effective configuration preserves ES2020, ESNext modules, bundler resolution, React JSX, DOM libraries, strict mode, unused checks, no emit, project reference, and CommonJS preload build ownership.
+- Explicit renderer check: passed via local `tsc.CMD -p tsconfig.json --noEmit`.
+- Explicit Electron/config check: passed via local `tsc.CMD -p tsconfig.node.json --noEmit`.
+- `corepack pnpm typecheck:ts`: passed.
+- `corepack pnpm test:frontend`: Vitest `4.1.10`, 22 files and 75 tests passed.
+- `corepack pnpm build:frontend`: renderer, Electron main, and CommonJS preload passed; existing chunk-size/dynamic-import warnings only.
+- Development app launched with Vite `8.1.5`; Electron main/preload built, backend reached ready, and a temporary CSS probe produced two successful HMR updates before being removed.
+- Development visual/behavioural smoke: user confirmed project reopen, GenSpace modes, Settings, Model Manager, local media attachment, Director, Video Editor, and visual/behavioural parity.
+- `corepack pnpm typecheck:py`: passed through approved uv-cache route with 0 errors and 0 warnings.
+- `corepack pnpm backend:test`: passed through approved uv-cache route with 278 tests passed and 1 skipped; existing `pynvml` warning only.
+- `corepack pnpm build:fast:win`: passed through approved pnpm-store route with `CI=true`; unpacked Electron `43.2.0` app rebuilt successfully.
+- Unpacked visual/behavioural smoke: user confirmed `file://` launch, project reopen, GenSpace modes, Settings, Model Manager, local media attachment, Director, Video Editor, visual/behavioural parity, and clean close.
+- Post-migration suppression audit: no new `@ts-ignore`, `@ts-expect-error`, `ignoreDeprecations`, or broad `any`; existing `any` usage is unchanged.
+- Protected-runtime diff guard: no protected path changed from the Phase 8 starting SHA.
+
+### Phase 8 command evidence
+
+| Command | Result | Log/evidence |
+|---|---|---|
+| Local `tsc.CMD -p tsconfig.json --noEmit` | PASS | TypeScript `6.0.3`; strict renderer project clean. |
+| Local `tsc.CMD -p tsconfig.node.json --noEmit` | PASS | TypeScript `6.0.3`; Electron/config project clean. |
+| `corepack pnpm typecheck:ts` | PASS | 0 TypeScript errors. |
+| `corepack pnpm test:frontend` | PASS | Vitest `4.1.10`: 22 files and 75 tests passed. |
+| `corepack pnpm build:frontend` | PASS | Renderer, Electron main, and CommonJS preload built. |
+| `corepack pnpm typecheck:py` | PASS WITH APPROVED ROUTE | Pyright: 0 errors and 0 warnings. |
+| `corepack pnpm backend:test` | PASS WITH APPROVED ROUTE | 278 passed, 1 skipped; existing `pynvml` warning only. |
+| `corepack pnpm build:fast:win` | PASS WITH APPROVED ROUTE | Unpacked Windows app rebuilt with Electron `43.2.0`. |
+| HMR probe | PASS | Vite reported two `/frontend/index.css` HMR updates; probe removed. |
+| Suppression audit | PASS | No migration-introduced suppression or broad cast. |
+| Protected-runtime guard | PASS | No output. |
+
+### Phase 8 manual checks
+
+- [x] Development app launched; renderer and backend ready.
+- [x] Development project, GenSpace, Settings, Model Manager, media attachment, Director, and Video Editor passed.
+- [x] Development visual/behavioural parity passed.
+- [x] Unpacked app launched from `file://`; preload-backed workflows passed.
+- [x] Unpacked project/media/navigation and visual/behavioural parity passed.
+- [x] Unpacked app closed cleanly.
+- [x] Existing project opened without migration/data loss.
+- [x] Protected runtime diff guard produced no output.
+
+### Phase 8 dependency review
+
+- Exact package command: `corepack pnpm --config.minimum-release-age=0 add -D typescript@6.0.3`.
+- Exact resolved version: TypeScript `6.0.3`; TypeScript 7 absent.
+- Peer dependency warnings: none.
+- `pnpm why` finding: one root TypeScript `6.0.3` copy.
+- Lockfile review: only TypeScript `5.9.3` to `6.0.3`.
+- Security advisory finding: no public GitHub advisory matched TypeScript `6.0.3` since runbook review.
+- Upstream documentation: official TypeScript 6 migration/release notes reviewed through Context7.
+- Deviation: command-scoped release-age exception was required; repository `.npmrc` policy remains unchanged.
+- TypeScript 7 remains deferred to Phase 12 on a separate branch after this modernisation branch merges.
+
+### Phase 8 issues and attempted fixes
+
+1. Inferred Phase 8 filename was absent. Listed phase documents and loaded `08_TYPESCRIPT_6_BRIDGE_MIGRATION.md`; resolved as projectmem issue `#0279`.
+2. Managed `corepack pnpm exec tsc` omitted `node_modules/.bin`. Used repository scripts plus explicit local `tsc.CMD`; resolved as projectmem issue `#0280`.
+3. Managed sandbox denied `C:\tmp` effective-config writes. Used disposable workspace files and deleted them after comparison; resolved as projectmem issue `#0281`.
+4. Managed npm registry query hung. Approved network route confirmed TypeScript `6.0.3` and advisory state; resolved as projectmem issue `#0282`.
+5. Managed install first selected a different pnpm store, then hit `minimumReleaseAge`. Approved existing-store route plus command-scoped release-age exception installed only TypeScript `6.0.3`; resolved as projectmem issue `#0283`.
+6. TypeScript 6 reported `TS5101` for `baseUrl`. Removed it and made the path target explicitly relative; resolved as projectmem issue `#0284`.
+7. Explicit node project check reported `TS6059` because root `vite.config.ts` sat outside `rootDir`. Set the shared root to `.`; resolved as projectmem issue `#0285`.
+8. Explicit node project check exposed invalid `logger.warning`. Changed it to existing `logger.warn`; resolved as projectmem issue `#0286`.
+9. Managed Pyright gate could not read the uv cache. Approved unchanged command passed; resolved as projectmem issue `#0287`.
+10. Managed backend suite could not read the uv cache. Approved unchanged command passed; resolved as projectmem issue `#0288`.
+11. Fast Windows build aborted dependency relinking without TTY. Approved `CI=true` build passed; resolved as projectmem issue `#0289`.
 
 ## Command evidence template
 

@@ -7,7 +7,7 @@
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "outDir": "dist-electron",
-    "rootDir": "electron",
+    "rootDir": ".",
     "esModuleInterop": true
   },
   "include": ["electron/**/*.ts", "vite.config.ts"]

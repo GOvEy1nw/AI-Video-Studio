@@ -146,7 +146,7 @@ export function getPythonPath(): string {
       logger.info(`Using override Python from AIVS_BACKEND_PYTHON: ${overridePython}`)
       return overridePython
     }
-    logger.warning(`AIVS_BACKEND_PYTHON does not exist: ${overridePython}`)
+    logger.warn(`AIVS_BACKEND_PYTHON does not exist: ${overridePython}`)
   }
 
   // In production, use bundled/downloaded Python first
