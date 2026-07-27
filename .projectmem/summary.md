@@ -16,6 +16,15 @@ Product principles:
 Current integration baseline: `dev`.
 
 ## Recent issues
+- [DONE] #0278 Phase 7 Pyright gate cannot read uv cache .git in managed sandbox [backend/typecheck:py; C:\Users\rais\AppData\Local\uv\cache] -> Approved validation route restored uv cache access; Phase 7 Pyright gate passes [backend/typecheck:py] (fixed)
+- [DONE] #0277 React 19 types expose nullable DOM refs incompatible with non-null RefObject contracts [frontend] -> React 19 DOM ref nullability is represented end-to-end in prop and helper contracts; TypeScript gate passes [frontend] (fixed)
+  - Failed attempt: Ran immediate React 19 TypeScript gate; 31 assignments failed because prop/helper contracts omit DOM-ref nullability [frontend]
+  - Partial attempt: Updated every DOM RefObject prop/helper contract and compatibility cast to include mount-time nullability [frontend]
+- [DONE] #0276 React-dropzone 14.4.1 peer range excludes React 19 required by Phase 7 [package.json] -> No react-dropzone upgrade required; installed 14.4.1 peer range is React 19-compatible [package.json] (fixed)
+- [DONE] #0275 Phase 7 local peer-range probe fails on package exports for package.json [node_modules/react-dropzone/package.json] -> Direct manifest parsing confirmed all peer ranges and exposed react-dropzone 14.4.1 as the only React 19 incompatibility [node_modules/react-dropzone/package.json] (fixed)
+  - Failed attempt: Loaded dependency package.json via require subpaths; react-dropzone exports blocked package.json access [node_modules/react-dropzone/package.json]
+- [DONE] #0274 Phase 7 npm registry target-version query hangs in managed sandbox [docs/dependency-modernisation/07_REACT_19_MIGRATION.md] -> Approved registry route confirmed React/React DOM 19.2.8 and compatible current React 19 type patches [docs/dependency-modernisation/07_REACT_19_MIGRATION.md] (fixed)
+  - Failed attempt: Queried four exact React 19.2 package families with npm view; only config warning returned before 30-second timeout [docs/dependency-modernisation/07_REACT_19_MIGRATION.md]
 - [DONE] #0273 Phase 6 implementation staging denied by managed sandbox Git index permissions [.git/index.lock] -> Approved Git route restored index writes and staged exact Phase 6 implementation scope [.git/index.lock] (fixed)
 - [DONE] #0272 Phase 6 rebuilt unpacked app cannot replace win-unpacked while previous test app holds output [release/win-unpacked] -> Unpacked Phase 6 package now rebuilds successfully after prior output-holding app tree exited [release/win-unpacked] (fixed)
   - Failed attempt: Rebuilt Phase 6 unpacked app after runtime token fix; electron-builder hit EPERM renaming win-unpacked.tmp over existing output [release/win-unpacked]
@@ -590,16 +599,16 @@ Current integration baseline: `dev`.
 - Tailwind 4 theme is CSS-first in frontend/index.css: @theme inline maps utilities to runtime :root tokens; retain app-wide v3 border-color base rule for visual parity; remove tailwind.config.js [frontend/index.css]
 
 ## Notes
-- gotcha: vite-plugin-electron 1.1 flat entry inherits package type=module; CommonJS preload must use explicit build.lib entry/formats/fileName or default formats merge emits ESM too [vite.config.ts]
-- Phase 3 PASSED: Vite 8.1.5, plugin-react 6.0.4, vite-plugin-electron 1.1.0; CommonJS preload, scoped dev scan, Tier A/B, lifecycle, unpacked, import, and data gates passed [docs/dependency-modernisation/STATUS.md]
-- User confirmed Phase 4 dev app renders normally, existing project opens, and no unexpected visible errors [docs/dependency-modernisation/STATUS.md]
-- Phase 4 Vitest 4 passed: Vitest 4.1.10, jsdom 30.0.0, Testing Library React 16.3.2, user-event 14.6.1; 22 files/75 tests, Tier A, dev visual, and protected-runtime gates passed; implementation commit 92012f3 [docs/dependency-modernisation/STATUS.md]
 - gotcha: Tailwind v4 automatic detection scans outside renderer in this monorepo; use source(none) with explicit ../index.html and ./ registrations [frontend/index.css]
 - User confirmed Phase 5 Tailwind 4 development UI matches saved Phase 1 spacing after removing redundant universal reset [docs/dependency-modernisation/STATUS.md]
 - User confirmed Phase 5 unpacked app styling, existing-project open, native file picker/import, and OS drag/drop all pass [docs/dependency-modernisation/STATUS.md]
 - Phase 5 Tailwind 4 compatibility PASSED at 50fcb190: Tailwind 4.3.3/Vite plugin, tailwind-merge 3.6.0, Tier A/B, dev and unpacked parity/file workflows, protected runtime clean; Phase 6 not started [docs/dependency-modernisation/STATUS.md]
 - Phase 6 freshness: Tailwind 4.3.3 remains registry latest; official Tailwind docs require @theme inline for mappings that reference runtime CSS variables; no new Tailwind advisories since 2026-07-26 [docs/dependency-modernisation/STATUS.md]
 - Phase 6 PASSED at 5a0df7d313f759d96648746d9e5690dd19230071: CSS-first Tailwind theme, runtime dual-accent retheming, Tier A/B, unpacked parity, project reopen, and protected-runtime gates passed; Phase 7 not started [docs/dependency-modernisation/STATUS.md]
+- User confirmed Phase 7 React 18 development baseline: all required views, console, and Phase 6 visual parity passed [docs/dependency-modernisation/STATUS.md]
+- User confirmed Phase 7 React 19 development smoke, console, persistence, media, and visual-parity exit gate passed [docs/dependency-modernisation/STATUS.md]
+- User confirmed Phase 7 React 19 unpacked app launch, file/import/media workflows, state, and visual-parity exit gate passed [docs/dependency-modernisation/STATUS.md]
+- Phase 7 React 19 PASSED at implementation commit 1c667c9d8f7d28c950fe475dd9fca0fb2766b280: React 19.2.8/types, nullable DOM refs, Tier A/B, dev/unpacked parity, protected runtime clean; Phase 8 not started [docs/dependency-modernisation/STATUS.md]
 
 ## Key files
 - `LTX-2.3_Cinematic_hardcut.safetensors`

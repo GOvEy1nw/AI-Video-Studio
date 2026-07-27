@@ -70,7 +70,7 @@ Use exactly one status: `NOT STARTED`, `IN PROGRESS`, `BLOCKED`, or `PASSED`.
 | 4 — Vitest 4 | PASSED | `08fa360ec108fed212c6c5495b4faff1068fe71a` | `92012f374438214367c74756e27e98c387d0ebdd` | 2026-07-27 | Exact test cluster, existing suite, strengthened native file-import coverage, Tier A, development launch, visual confirmation, and protected-runtime gates passed. Phase 5 not started. |
 | 5 — Tailwind 4 compatibility | PASSED | `92012f374438214367c74756e27e98c387d0ebdd` | `50fcb190234ba28289c12d8364c96191b8c7b1f8` | 2026-07-27 | Tailwind 4.3.3 compatibility migration, Tier A/B, development and unpacked visual/file workflows, and protected-runtime gates passed. Phase 6 not started. |
 | 6 — Tailwind CSS-first theme | PASSED | `4593f1d16ba2dfa36907342ba36eee3cb9250cce` | `5a0df7d313f759d96648746d9e5690dd19230071` | 2026-07-27 | CSS-first mappings, runtime retheming, Tier A/B, development and unpacked parity, project reopen, and protected-runtime gates passed. Phase 7 not started. |
-| 7 — React 19 | NOT STARTED |  |  |  |  |
+| 7 — React 19 | PASSED | `4d20cb815a8a19ea9ef4718098ddbfc6578e5503` | `1c667c9d8f7d28c950fe475dd9fca0fb2766b280` | 2026-07-27 | React 19.2.8 migration, nullable DOM-ref compatibility, Tier A/B, development and unpacked smoke/visual parity, and protected-runtime gates passed. Phase 8 not started. |
 | 8 — TypeScript 6 | NOT STARTED |  |  |  |  |
 | 9 — Low-risk package refresh | NOT STARTED |  |  |  |  |
 | 10 — Automation and CI | NOT STARTED |  |  |  |  |
@@ -643,6 +643,48 @@ Exit gate: user confirmed development and unpacked styling parity, dual-token ru
    - Attempt: reran staging through the approved Git route with the same three-file scope.
    - Result: exact implementation files staged, cached diff check passed, and checkpoint commit succeeded.
    - Final resolution or blocker: resolved as projectmem issue `#0273`.
+
+### Phase 7 pre-upgrade review
+
+- Starting SHA: `4d20cb815a8a19ea9ef4718098ddbfc6578e5503`; worktree was clean on `chore/dependency-modernisation-2026`.
+- Current versions: React/React DOM `18.3.1`; React types `18.3.31` / `18.3.7`; Node `24.18.0`; pnpm `10.30.3`; TypeScript `5.9.3`.
+- Reviewed targets: React/React DOM `19.2.8`; React types `19.2.17` / `19.2.3`.
+- Plan freshness, checked 2026-07-27: npm registry reports `19.2.8` as the newest stable patch in the approved React 19.2 family. It was published 2026-07-21; the upstream changelog has no additional client-renderer migration entry for this patch.
+- Security review: public GitHub advisory queries returned no advisory for any exact target package.
+- Official React 19 migration review: removed legacy renderer APIs, legacy context/string refs, function-component `defaultProps`, `react-dom/test-utils`, empty `useRef`, global JSX namespace, callback-ref implicit returns, and stricter `ReactElement` props were checked.
+- Repository inventory: modern `createRoot` plus `StrictMode` already used; no removed runtime API, legacy ref/context, function static, empty `useRef`, global JSX type, or `react-dom/test-utils` match. `frontend/components/ui/tooltip.tsx` uses supported `ReactDOM.createPortal`.
+- Lifecycle review: generation polling has explicit stop/abort/unmount guards and a Strict Mode replay test; inspected provider timers, subscriptions, media listeners, object URLs, portals, and timeline listeners retain their existing cleanup ownership.
+- Peer review: one React/React DOM runtime is installed. `react-dropzone` `14.4.1`, `lucide-react` `0.400.0`, and Testing Library React `16.3.2` peer ranges accept React 19; no test-library update or peer override is required.
+- Baseline `corepack pnpm typecheck:ts`: passed with TypeScript `5.9.3`.
+- Baseline `corepack pnpm test:frontend`: Vitest `4.1.10`, 22 files and 75 tests passed.
+- Baseline `corepack pnpm build:frontend`: renderer, Electron main, and CommonJS preload passed; existing chunk-size/dynamic-import warnings only.
+- Deviations so far: managed npm registry queries hung and required approved network execution. `pnpm outdated` applies the repository release-age policy and therefore reports React `19.2.7`; the exact reviewed `19.2.8` target is six days old and will require the same command-scoped release-age exception used by earlier phases.
+
+### Phase 7 React 18 warning baseline
+
+- [x] Development app launched.
+- [x] Home, GenSpace Image/Video/Music, Settings, Model Manager, Director, and Video Editor inspected.
+- [x] Terminal and renderer console checked; no React warnings or errors.
+- [x] User confirmed Phase 6 visual parity.
+
+### Phase 7 React 19 implementation and validation
+
+- Implementation commit: `1c667c9d8f7d28c950fe475dd9fca0fb2766b280` (`chore(deps): migrate renderer to React 19`).
+- Versions: React/React DOM `18.3.1` -> `19.2.8`; `@types/react` `18.3.31` -> `19.2.17`; `@types/react-dom` `18.3.7` -> `19.2.3`.
+- Compatibility change: DOM `RefObject` prop/helper contracts and compatibility casts now represent mount-time `null` under React 19 types. No runtime behaviour, provider ownership, or renderer API changed.
+- Peer and runtime graph: `react-dropzone` `14.4.1`, `lucide-react` `0.400.0`, and Testing Library React `16.3.2` accept React 19; `corepack pnpm list react react-dom --depth 20` confirmed one React/React DOM `19.2.8` runtime.
+- `corepack pnpm typecheck:ts`: passed with zero errors.
+- `corepack pnpm test:frontend`: 22 files and 75 tests passed.
+- `corepack pnpm build:frontend`: renderer, Electron main, and CommonJS preload passed; existing chunk-size/dynamic-import warnings only.
+- `corepack pnpm typecheck:py`: passed with zero errors and warnings.
+- `corepack pnpm backend:test`: 278 passed, 1 skipped; existing `pynvml` deprecation warning only.
+- `corepack pnpm build:fast:win`: passed; unpacked Windows app rebuilt with Electron `43.2.0`.
+- Development exit gate: user confirmed application shell, project/settings persistence, GenSpace modes and media, Director/editor interactions, console/Strict Mode state, and visual parity.
+- Unpacked exit gate: user confirmed `file://` launch, preload-backed file/import workflows, project state, media/navigation behaviour, and visual parity with no production-only error.
+- Diff review: phase-scoped dependency metadata plus React 19 DOM-ref typing only; `git diff --check` passed.
+- Protected runtime guard: no change under `backend/pyproject.toml`, `backend/uv.lock`, `scripts/wangp-stacks.json`, `scripts/wangp-source.json`, stack/source installers, update scripts, or `Wan2GP/`.
+- Deviations: exact targets required the documented command-scoped release-age exception. Managed Pyright needed approved uv-cache access. No codemod, peer override, dependency replacement, or TypeScript suppression was used.
+- Exit gate: `PASSED`. Phase 8 remains `NOT STARTED`.
 
 ## Command evidence template
 
