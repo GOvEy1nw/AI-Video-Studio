@@ -623,7 +623,6 @@ Current integration baseline: `dev`.
 - TypeScript 6 node project rootDir is repository root because it intentionally typechecks both electron/**/*.ts and root vite.config.ts; Vite still owns runtime/preload emission [tsconfig.node.json]
 
 ## Notes
-- Phase 5 Tailwind 4 compatibility PASSED at 50fcb190: Tailwind 4.3.3/Vite plugin, tailwind-merge 3.6.0, Tier A/B, dev and unpacked parity/file workflows, protected runtime clean; Phase 6 not started [docs/dependency-modernisation/STATUS.md]
 - Phase 6 freshness: Tailwind 4.3.3 remains registry latest; official Tailwind docs require @theme inline for mappings that reference runtime CSS variables; no new Tailwind advisories since 2026-07-26 [docs/dependency-modernisation/STATUS.md]
 - Phase 6 PASSED at 5a0df7d313f759d96648746d9e5690dd19230071: CSS-first Tailwind theme, runtime dual-accent retheming, Tier A/B, unpacked parity, project reopen, and protected-runtime gates passed; Phase 7 not started [docs/dependency-modernisation/STATUS.md]
 - User confirmed Phase 7 React 18 development baseline: all required views, console, and Phase 6 visual parity passed [docs/dependency-modernisation/STATUS.md]
@@ -633,6 +632,7 @@ Current integration baseline: `dev`.
 - Phase 8 development smoke passed by user: core screens, project, media attachment, preload-backed UI, and visual/behavioural parity confirmed [docs/dependency-modernisation/STATUS.md]
 - Phase 8 unpacked Windows smoke passed by user: file:// renderer, preload workflows, project/media/navigation, visual parity, and clean close confirmed [docs/dependency-modernisation/STATUS.md]
 - Phase 8 compiler baseline is TypeScript 6.0.3; TypeScript 7 remains deferred to Phase 12 on a separate post-merge branch [package.json]
+- Phase 8 PASSED at bca68bf614bc34cb8e62dc1862a04caca58e8759: TypeScript 6.0.3, strict renderer/node projects, Tier A/B, dev/unpacked parity, protected runtime clean; Phase 9 not started [docs/dependency-modernisation/STATUS.md]
 
 ## Key files
 - `LTX-2.3_Cinematic_hardcut.safetensors`

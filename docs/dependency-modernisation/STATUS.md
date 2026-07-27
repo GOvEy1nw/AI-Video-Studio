@@ -10,7 +10,7 @@
 - Branch created on: 2026-07-26
 - Executor: Codex
 - Baseline `dev` commit SHA: `a3b8cbdd750d167e3d88eb1c99df3ebd78b3a141`
-- Current implementation HEAD SHA: `1ee8ade9e09e8dcdd4439bb980e1ccf2a0053f63`
+- Current implementation HEAD SHA: `bca68bf614bc34cb8e62dc1862a04caca58e8759`
 - Last sync from `dev`: 2026-07-26 (`origin/dev` merged before Phase 1)
 - Node version: 24.18.0
 - pnpm version: 10.30.3 through Corepack
@@ -71,7 +71,7 @@ Use exactly one status: `NOT STARTED`, `IN PROGRESS`, `BLOCKED`, or `PASSED`.
 | 5 — Tailwind 4 compatibility | PASSED | `92012f374438214367c74756e27e98c387d0ebdd` | `50fcb190234ba28289c12d8364c96191b8c7b1f8` | 2026-07-27 | Tailwind 4.3.3 compatibility migration, Tier A/B, development and unpacked visual/file workflows, and protected-runtime gates passed. Phase 6 not started. |
 | 6 — Tailwind CSS-first theme | PASSED | `4593f1d16ba2dfa36907342ba36eee3cb9250cce` | `5a0df7d313f759d96648746d9e5690dd19230071` | 2026-07-27 | CSS-first mappings, runtime retheming, Tier A/B, development and unpacked parity, project reopen, and protected-runtime gates passed. Phase 7 not started. |
 | 7 — React 19 | PASSED | `4d20cb815a8a19ea9ef4718098ddbfc6578e5503` | `1c667c9d8f7d28c950fe475dd9fca0fb2766b280` | 2026-07-27 | React 19.2.8 migration, nullable DOM-ref compatibility, Tier A/B, development and unpacked smoke/visual parity, and protected-runtime gates passed. Phase 8 not started. |
-| 8 — TypeScript 6 | IN PROGRESS | `1ee8ade9e09e8dcdd4439bb980e1ccf2a0053f63` |  | 2026-07-27 | Phase 8 preflight started; Phase 9 remains unread. |
+| 8 — TypeScript 6 | PASSED | `1ee8ade9e09e8dcdd4439bb980e1ccf2a0053f63` | `bca68bf614bc34cb8e62dc1862a04caca58e8759` | 2026-07-27 | TypeScript 6.0.3 migration, strict renderer/node projects, Tier A/B, development and unpacked smoke/parity, and protected-runtime gates passed. Phase 9 not started. |
 | 9 — Low-risk package refresh | NOT STARTED |  |  |  |  |
 | 10 — Automation and CI | NOT STARTED |  |  |  |  |
 | 11 — Final validation and PR | NOT STARTED |  |  |  |  |
@@ -778,6 +778,14 @@ Exit gate: user confirmed development and unpacked styling parity, dual-token ru
 9. Managed Pyright gate could not read the uv cache. Approved unchanged command passed; resolved as projectmem issue `#0287`.
 10. Managed backend suite could not read the uv cache. Approved unchanged command passed; resolved as projectmem issue `#0288`.
 11. Fast Windows build aborted dependency relinking without TTY. Approved `CI=true` build passed; resolved as projectmem issue `#0289`.
+
+### Phase 8 commits
+
+| Purpose | Commit SHA | Message |
+|---|---|---|
+| TypeScript 6 implementation checkpoint | `bca68bf614bc34cb8e62dc1862a04caca58e8759` | `chore(tooling): migrate to TypeScript 6` |
+
+Exit gate: `PASSED`. TypeScript `6.0.3`, both strict projects, Tier A/B, development/unpacked smoke and parity, suppression audit, documentation, scoped diff, and protected-runtime guard passed. TypeScript 7 is absent. Phase 9 remains `NOT STARTED` and unread.
 
 ## Command evidence template
 
