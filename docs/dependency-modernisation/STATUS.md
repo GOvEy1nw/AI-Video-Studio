@@ -10,7 +10,7 @@
 - Branch created on: 2026-07-26
 - Executor: Codex
 - Baseline `dev` commit SHA: `a3b8cbdd750d167e3d88eb1c99df3ebd78b3a141`
-- Current implementation HEAD SHA: `50fcb190234ba28289c12d8364c96191b8c7b1f8`
+- Current implementation HEAD SHA: `5a0df7d313f759d96648746d9e5690dd19230071`
 - Last sync from `dev`: 2026-07-26 (`origin/dev` merged before Phase 1)
 - Node version: 24.18.0
 - pnpm version: 10.30.3 through Corepack
@@ -69,7 +69,7 @@ Use exactly one status: `NOT STARTED`, `IN PROGRESS`, `BLOCKED`, or `PASSED`.
 | 3 — Vite 8 | PASSED | `59d425e91284fdf2ac6cc1ad56c5e306b1de6310` | `3710866c35e7fe52370b586c39230abc3ee0c88f` | 2026-07-27 | Automated, development lifecycle, debug, unpacked, native file-import, data-preservation, and protected-runtime gates passed. Phase 4 not started. |
 | 4 — Vitest 4 | PASSED | `08fa360ec108fed212c6c5495b4faff1068fe71a` | `92012f374438214367c74756e27e98c387d0ebdd` | 2026-07-27 | Exact test cluster, existing suite, strengthened native file-import coverage, Tier A, development launch, visual confirmation, and protected-runtime gates passed. Phase 5 not started. |
 | 5 — Tailwind 4 compatibility | PASSED | `92012f374438214367c74756e27e98c387d0ebdd` | `50fcb190234ba28289c12d8364c96191b8c7b1f8` | 2026-07-27 | Tailwind 4.3.3 compatibility migration, Tier A/B, development and unpacked visual/file workflows, and protected-runtime gates passed. Phase 6 not started. |
-| 6 — Tailwind CSS-first theme | NOT STARTED |  |  |  |  |
+| 6 — Tailwind CSS-first theme | PASSED | `4593f1d16ba2dfa36907342ba36eee3cb9250cce` | `5a0df7d313f759d96648746d9e5690dd19230071` | 2026-07-27 | CSS-first mappings, runtime retheming, Tier A/B, development and unpacked parity, project reopen, and protected-runtime gates passed. Phase 7 not started. |
 | 7 — React 19 | NOT STARTED |  |  |  |  |
 | 8 — TypeScript 6 | NOT STARTED |  |  |  |  |
 | 9 — Low-risk package refresh | NOT STARTED |  |  |  |  |
@@ -545,6 +545,104 @@ Exit gate: user confirmed the development app renders normally, an existing proj
     - Attempt: reran the unchanged repository command through the approved route.
     - Result: Pyright passed with 0 errors and 0 warnings.
     - Final resolution or blocker: resolved as projectmem issue `#0265`.
+
+### Phase 6 preflight and token inventory
+
+- Starting SHA: `4593f1d16ba2dfa36907342ba36eee3cb9250cce`; worktree clean on `chore/dependency-modernisation-2026`.
+- Plan freshness, checked 2026-07-27: npm registry reports Tailwind CSS `4.3.3` remains latest; no Tailwind advisories were published from 2026-07-26 through 2026-07-27.
+- Upstream syntax review: official Tailwind CSS 4 documentation confirms `@theme inline` for theme values that reference runtime CSS variables.
+- Font mapping: `font-sans` maps to `Inter, system-ui, sans-serif`.
+- Radius mappings: `rounded-lg`, `rounded-md`, and `rounded-sm` retain `0.75rem`, `0.5rem`, and `0.25rem`.
+- Blue mappings: complete `blue-50` through `blue-950` brand scale moved unchanged.
+- Runtime semantic mappings: `accent`, `accent-dark`, `app-bg`, `surface`, `surface-raised`, `foreground`, `card-foreground`, `primary`, `primary-foreground`, `secondary-foreground`, and `muted-foreground` map through the existing `:root` tokens where values match.
+- Fixed semantic mappings: `background`, `card`, `border`, `input`, `secondary`, and `muted` retain their exact Phase 5 values.
+- Dynamic-class audit found no generated Tailwind class fragments. Two fixed-string matches were non-class `text-*` object IDs.
+- Border decision: retain the app-wide Tailwind v3 default-border compatibility base rule. Removing it would create broad visual drift or noisy repeated classes without semantic benefit.
+
+### Phase 6 migration result
+
+- Product-editable runtime tokens and Tailwind utility mappings now live together in `frontend/index.css`.
+- Runtime-dependent mappings use `@theme inline`; compiled primary, foreground, muted, and opacity-modified utilities continue to reference the runtime variables.
+- User's first runtime test exposed that visible AiVS brand controls use `blue-500`/`blue-600` rather than the sparse semantic `primary` utilities. Those two exact baseline shades now map to `--accent`/`--accent-dark`, preserving default appearance while enabling live runtime retheming of current UI.
+- Explicit source detection remains limited to `index.html` and `frontend/`.
+- `tailwind.config.js` and its `@config` reference were removed.
+- Font/radius, blue-palette, semantic-colour, and config-removal checkpoints each passed the frontend build and all 75 frontend tests.
+- No dependency version changed.
+
+### Phase 6 command evidence
+
+| Command | Result | Duration | Log/evidence |
+|---|---|---:|---|
+| `git diff --check` | PASS |  | No whitespace errors; expected line-ending conversion warnings only. |
+| `corepack pnpm typecheck:ts` | PASS |  | TypeScript 5.9.3, 0 errors. |
+| `corepack pnpm test:frontend` | PASS | 2.72s final Tier A | Vitest 4.1.10: 22 files and 75 tests passed. |
+| `corepack pnpm build:frontend` | PASS | 0.38s renderer build | CSS-first theme built; Electron main and CommonJS preload also built. |
+| `corepack pnpm typecheck:py` | PASS WITH APPROVED ROUTE | 3.12s | Pyright: 0 errors and 0 warnings. |
+| `corepack pnpm backend:test` | PASS WITH APPROVED ROUTE | 7.32s test time | 278 passed, 1 skipped; existing `pynvml` deprecation warning only. |
+| `corepack pnpm build:fast:win` | PASS WITH APPROVED ROUTE | 25.97s final rebuild | Restored 436 packages from existing pnpm store, then rebuilt `release\win-unpacked` successfully after the runtime accent mappings. |
+| CSS-first compiled-output assertions | PASS | 0.05s | Config removal, sources, inline mappings, radius, blue opacity, semantic opacity, muted text, and border contracts passed. |
+| Protected-runtime diff guard | PASS |  | No protected runtime path changed from Phase 6 starting SHA. |
+
+### Phase 6 manual checks
+
+- [x] Development visual matrix matches Phase 5.
+- [x] Runtime accent retheming updates buttons, progress, selected states, focus, highlights, and opacity variants. User confirmed both `--accent` and `--accent-dark` visibly retheme the current blue-500/600-backed UI.
+- [x] Unpacked app styling matches Phase 5.
+- [x] Existing project opens without migration/data loss.
+- [x] Protected runtime diff guard produced no output.
+
+Exit gate: user confirmed development and unpacked styling parity, dual-token runtime accent retheming, and existing-project reopen. Automated Tier A/B, compiled CSS, packaging, and protected-runtime gates passed. Phase 6 is `PASSED`; Phase 7 remains not started and unread.
+
+### Phase 6 dependency review
+
+- Exact package commands used: no dependency changes; `npm view tailwindcss version dist-tags.latest time.modified --json` for freshness.
+- Exact resolved versions: Tailwind CSS `4.3.3`, `@tailwindcss/vite` `4.3.3`, `tailwind-merge` `3.6.0`.
+- Peer dependency warnings: none introduced; package graph unchanged.
+- Lockfile review: no changes.
+- Security advisory findings: public GitHub advisory API returned no Tailwind advisories published since the 2026-07-26 runbook review.
+- Upstream release notes/docs reviewed: official Tailwind CSS 4 theme-variable, `@theme inline`, colour, and source-detection documentation through Context7.
+- Deviations from plan: registry query required approved network access after the managed route hung.
+
+### Phase 6 commits
+
+| Purpose | Commit SHA | Message |
+|---|---|---|
+| CSS-first theme implementation checkpoint | `5a0df7d313f759d96648746d9e5690dd19230071` | `refactor(styles): move Tailwind theme tokens into CSS` |
+
+### Phase 6 issues and attempted fixes
+
+1. Issue: managed npm registry freshness query hung and its process backend rejected interruption.
+   - Attempt: confirmed no matching process remained, then reran the exact query through approved network access.
+   - Result: Tailwind CSS `4.3.3` confirmed as latest.
+   - Final resolution or blocker: resolved as projectmem issue `#0266`.
+2. Issue: the first inline Node compiled-CSS assertion command failed because nested PowerShell quoting produced invalid JavaScript.
+   - Attempt: removed nested quoted `@source` literals and asserted the exact directive count instead.
+   - Result: all nine CSS-first compiled-output assertions passed.
+   - Final resolution or blocker: resolved as projectmem issue `#0267`.
+3. Issue: managed sandbox denied both Tier B Python gates access to the existing uv cache.
+   - Attempt: reran the unchanged repository commands through the approved uv-cache route.
+   - Result: Pyright passed; backend suite passed with 278 tests and 1 skip.
+   - Final resolution or blocker: resolved as projectmem issue `#0268`.
+4. Issue: the first fast Windows build stalled while recreating `node_modules` under restricted network access.
+   - Attempt: inspected and stopped only the confirmed stalled build tree, then reran through the approved route with `CI=true`.
+   - Result: dependencies restored from the existing pnpm store and unpacked packaging passed.
+   - Final resolution or blocker: resolved as projectmem issue `#0269`.
+5. Issue: changing `--accent` produced no visible change because current screens predominantly use fixed `blue-500`/`blue-600` utilities.
+   - Attempt: moved those exact baseline blue shades into `@theme inline` mappings backed by `--accent`/`--accent-dark`.
+   - Result: TypeScript, 75 frontend tests, production build, runtime-token mappings, and opacity compilation passed; user then confirmed dual-token runtime retheming in development.
+   - Final resolution or blocker: resolved as projectmem issue `#0270`.
+6. Issue: first compiled runtime assertion assumed standalone utility selectors, while Tailwind grouped selectors sharing the same declaration.
+   - Attempt: inspected generated selectors and changed the assertion to verify each class's nearby compiled value.
+   - Result: blue-500, blue-600, semantic primary, and opacity mappings passed.
+   - Final resolution or blocker: resolved as projectmem issue `#0271`.
+7. Issue: rebuilt unpacked app could not replace `release\win-unpacked` while the previous development process tree held packaging output.
+   - Attempt: identified the exact development tree, waited for it to exit, confirmed no AiVS process remained, and reran the unchanged fast Windows build.
+   - Result: electron-builder replaced `release\win-unpacked` and completed successfully in 25.97 seconds.
+   - Final resolution or blocker: resolved as projectmem issue `#0272`.
+8. Issue: managed sandbox denied the required Git index write for the Phase 6 implementation checkpoint.
+   - Attempt: reran staging through the approved Git route with the same three-file scope.
+   - Result: exact implementation files staged, cached diff check passed, and checkpoint commit succeeded.
+   - Final resolution or blocker: resolved as projectmem issue `#0273`.
 
 ## Command evidence template
 

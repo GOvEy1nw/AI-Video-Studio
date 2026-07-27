@@ -16,6 +16,24 @@ Product principles:
 Current integration baseline: `dev`.
 
 ## Recent issues
+- [DONE] #0273 Phase 6 implementation staging denied by managed sandbox Git index permissions [.git/index.lock] -> Approved Git route restored index writes and staged exact Phase 6 implementation scope [.git/index.lock] (fixed)
+- [DONE] #0272 Phase 6 rebuilt unpacked app cannot replace win-unpacked while previous test app holds output [release/win-unpacked] -> Unpacked Phase 6 package now rebuilds successfully after prior output-holding app tree exited [release/win-unpacked] (fixed)
+  - Failed attempt: Rebuilt Phase 6 unpacked app after runtime token fix; electron-builder hit EPERM renaming win-unpacked.tmp over existing output [release/win-unpacked]
+  - Partial attempt: Process inspection found live development Electron/backend tree during packaging; exact root PID 51612 identified [release/win-unpacked; development process tree]
+- [DONE] #0271 Phase 6 runtime accent compiled assertion expects wrong blue utility output form [frontend/index.css; dist CSS] -> Compiled assertion now accepts Tailwind grouped selectors while verifying exact runtime token values [frontend/index.css; dist CSS] (fixed)
+  - Failed attempt: Asserted exact standalone bg-blue-500/600 compiled rules; assertion failed despite successful build [frontend/index.css; dist CSS]
+- [DONE] #0270 Phase 6 runtime accent retheme command produces no visible UI change [frontend/index.css; frontend Tailwind utility usage] -> Runtime retheming confirmed by changing both accent tokens; current blue-500/600-backed UI updates visibly with opacity and state variants intact [frontend/index.css] (fixed)
+  - Partial attempt: Mapped blue-500 to --accent and blue-600 to --accent-dark via @theme inline; build, 75 tests, TypeScript, and compiled runtime/opacity assertions pass [frontend/index.css]
+  - Partial attempt: User confirmed development visuals match baseline; changing only --accent showed no visible difference because dominant solid controls use blue-600 mapped to --accent-dark [frontend/index.css]
+- [DONE] #0269 Phase 6 fast Windows build stalls while recreating node_modules in network-restricted sandbox [node_modules; scripts/local-build.ps1] -> Approved build route restored node_modules from existing pnpm store and produced Phase 6 win-unpacked app [node_modules; scripts/local-build.ps1] (fixed)
+  - Partial attempt: Ran CI=true fast Windows build in managed sandbox; build entered pnpm node_modules recreation then produced no output for 60 seconds [node_modules; scripts/local-build.ps1]
+- [DONE] #0268 Phase 6 Tier B Python gates cannot read uv cache .git in managed sandbox [backend/typecheck:py; backend:test] -> Approved validation route restored uv cache access; Phase 6 Python Tier B gates pass [backend/typecheck:py; backend:test] (fixed)
+  - Failed attempt: Ran repository Pyright and backend test gates in managed sandbox; both failed before execution on uv cache sdists-v9/.git access [backend/typecheck:py; backend:test]
+- [DONE] #0267 Phase 6 compiled CSS assertion command fails from PowerShell quote escaping [frontend/index.css] -> Compiled CSS assertion command now avoids nested quote escapes and verifies nine CSS-first contracts [frontend/index.css] (fixed)
+  - Failed attempt: Tried inline Node CSS assertions with nested quoted @source strings; PowerShell produced invalid JavaScript escape [frontend/index.css]
+- [DONE] #0266 Phase 6 npm registry freshness query hangs in managed sandbox [docs/dependency-modernisation/06_TAILWIND_CSS_FIRST_THEME_CONSOLIDATION.md] -> Approved network route confirmed Tailwind 4.3.3 remains latest and cleared freshness check [docs/dependency-modernisation/06_TAILWIND_CSS_FIRST_THEME_CONSOLIDATION.md] (fixed)
+  - Failed attempt: Tried npm registry query in managed sandbox and Ctrl+C; query hung and process backend rejected interruption [docs/dependency-modernisation/06_TAILWIND_CSS_FIRST_THEME_CONSOLIDATION.md]
+  - Failed attempt: Tried exact npm process inspection with Get-CimInstance; managed sandbox denied process metadata [tooling/process-inspection]
 - [DONE] #0265 Phase 5 final Pyright gate cannot read uv cache .git under managed sandbox [backend/typecheck:py; C:\Users\rais\AppData\Local\uv\cache] -> Approved validation route restored uv cache access; final Pyright gate passes cleanly [backend/typecheck:py] (fixed)
   - Failed attempt: Ran repository typecheck:py command in managed sandbox; uv failed before Pyright because cache sdists-v9/.git was unreadable [backend/typecheck:py]
 - [DONE] #0264 Windows host lacks wmic, so Phase 5 dev process-tree inspection cannot use planned parent/command-line query [tooling/process-inspection] -> Used approved Get-CimInstance fallback to identify exact dev tree; stopped Electron root and confirmed Vite/backend ports closed [tooling/process-inspection] (fixed)
@@ -569,10 +587,9 @@ Current integration baseline: `dev`.
 - Pin bundled WanGP to clean GOvEy1nw/Wan2GP commit 4f441a12f3a33f4466ed422428bf667d9651bc55 with manifest version 12.345 [scripts/wangp-source.json]
 - Phase 2 remains BLOCKED, not PASSED: mandatory real OS selection/drop and remembered native-dialog matrices were not verified because current automation cannot target owned dialogs or cross-window drags; do not start Phase 3 [docs/dependency-modernisation/STATUS.md]
 - Phase 2 Electron 43 exit gate now PASSED after user-assisted installed/unpacked OS-drop and native-dialog matrices, filename-only save-path fix, deleted-directory fallback, Tier A/B, packaging, data, and protected-runtime checks; Phase 3 remains not started. [docs/dependency-modernisation/STATUS.md]
+- Tailwind 4 theme is CSS-first in frontend/index.css: @theme inline maps utilities to runtime :root tokens; retain app-wide v3 border-color base rule for visual parity; remove tailwind.config.js [frontend/index.css]
 
 ## Notes
-- Installed directory picker opened at persisted Documents\AiVS, user selected C:\tmp\AiVS-phase1-media, app_state recorded it as lastDirectoryPickerPath, and Settings closed without saving checkpoint changes. [Phase 2 Electron 43 installed smoke]
-- Phase 2 final evidence committed in 59d425e after installed/unpacked manual checks, final installer SHA-256 9054E38F07FD22A966C1F95214B5EB49DD3E722FCD31524EEE97860632394885, 100/100 data hashes unchanged, and protected-runtime guard clean. [docs/dependency-modernisation/STATUS.md]
 - gotcha: vite-plugin-electron 1.1 flat entry inherits package type=module; CommonJS preload must use explicit build.lib entry/formats/fileName or default formats merge emits ESM too [vite.config.ts]
 - Phase 3 PASSED: Vite 8.1.5, plugin-react 6.0.4, vite-plugin-electron 1.1.0; CommonJS preload, scoped dev scan, Tier A/B, lifecycle, unpacked, import, and data gates passed [docs/dependency-modernisation/STATUS.md]
 - User confirmed Phase 4 dev app renders normally, existing project opens, and no unexpected visible errors [docs/dependency-modernisation/STATUS.md]
@@ -581,6 +598,8 @@ Current integration baseline: `dev`.
 - User confirmed Phase 5 Tailwind 4 development UI matches saved Phase 1 spacing after removing redundant universal reset [docs/dependency-modernisation/STATUS.md]
 - User confirmed Phase 5 unpacked app styling, existing-project open, native file picker/import, and OS drag/drop all pass [docs/dependency-modernisation/STATUS.md]
 - Phase 5 Tailwind 4 compatibility PASSED at 50fcb190: Tailwind 4.3.3/Vite plugin, tailwind-merge 3.6.0, Tier A/B, dev and unpacked parity/file workflows, protected runtime clean; Phase 6 not started [docs/dependency-modernisation/STATUS.md]
+- Phase 6 freshness: Tailwind 4.3.3 remains registry latest; official Tailwind docs require @theme inline for mappings that reference runtime CSS variables; no new Tailwind advisories since 2026-07-26 [docs/dependency-modernisation/STATUS.md]
+- Phase 6 PASSED at 5a0df7d313f759d96648746d9e5690dd19230071: CSS-first Tailwind theme, runtime dual-accent retheming, Tier A/B, unpacked parity, project reopen, and protected-runtime gates passed; Phase 7 not started [docs/dependency-modernisation/STATUS.md]
 
 ## Key files
 - `LTX-2.3_Cinematic_hardcut.safetensors`
