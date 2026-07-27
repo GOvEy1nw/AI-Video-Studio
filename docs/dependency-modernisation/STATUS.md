@@ -10,7 +10,7 @@
 - Branch created on: 2026-07-26
 - Executor: Codex
 - Baseline `dev` commit SHA: `a3b8cbdd750d167e3d88eb1c99df3ebd78b3a141`
-- Current implementation HEAD SHA: `92012f374438214367c74756e27e98c387d0ebdd`
+- Current implementation HEAD SHA: `50fcb190234ba28289c12d8364c96191b8c7b1f8`
 - Last sync from `dev`: 2026-07-26 (`origin/dev` merged before Phase 1)
 - Node version: 24.18.0
 - pnpm version: 10.30.3 through Corepack
@@ -68,7 +68,7 @@ Use exactly one status: `NOT STARTED`, `IN PROGRESS`, `BLOCKED`, or `PASSED`.
 | 2 — Electron 43 | PASSED | `43ed93f45d98e3b3bf80ea6ce19a423ee565dbb5` | `a9194ba700ba890c933c8d0543be99d71d429cee` | 2026-07-27 | Automated, development, unpacked, installed, file-workflow, native-dialog persistence/fallback, data-preservation, and protected-runtime gates passed. Phase 3 not started. |
 | 3 — Vite 8 | PASSED | `59d425e91284fdf2ac6cc1ad56c5e306b1de6310` | `3710866c35e7fe52370b586c39230abc3ee0c88f` | 2026-07-27 | Automated, development lifecycle, debug, unpacked, native file-import, data-preservation, and protected-runtime gates passed. Phase 4 not started. |
 | 4 — Vitest 4 | PASSED | `08fa360ec108fed212c6c5495b4faff1068fe71a` | `92012f374438214367c74756e27e98c387d0ebdd` | 2026-07-27 | Exact test cluster, existing suite, strengthened native file-import coverage, Tier A, development launch, visual confirmation, and protected-runtime gates passed. Phase 5 not started. |
-| 5 — Tailwind 4 compatibility | IN PROGRESS | `92012f374438214367c74756e27e98c387d0ebdd` |  | 2026-07-27 | Phase 1 visual baseline remains current through Phase 4; preflight and Tailwind 4.3 plan-freshness review started. |
+| 5 — Tailwind 4 compatibility | PASSED | `92012f374438214367c74756e27e98c387d0ebdd` | `50fcb190234ba28289c12d8364c96191b8c7b1f8` | 2026-07-27 | Tailwind 4.3.3 compatibility migration, Tier A/B, development and unpacked visual/file workflows, and protected-runtime gates passed. Phase 6 not started. |
 | 6 — Tailwind CSS-first theme | NOT STARTED |  |  |  |  |
 | 7 — React 19 | NOT STARTED |  |  |  |  |
 | 8 — TypeScript 6 | NOT STARTED |  |  |  |  |
@@ -460,6 +460,49 @@ Exit gate: user confirmed the development app renders normally, an existing proj
 - Plan freshness, checked 2026-07-27: Tailwind 4.3.3 is current stable and remains inside the approved 4.3 family; `tailwind-merge` 3.6.0 is current stable 3.x.
 - Deviations from plan so far: fast Windows preflight required `CI=true` and approved execution after pnpm attempted a non-interactive dependency-tree recreation.
 
+### Phase 5 migration result
+
+- Exact resolved versions: `tailwindcss` 4.3.3, `@tailwindcss/vite` 4.3.3, and `tailwind-merge` 3.6.0.
+- Tailwind now runs through the Vite plugin. Direct `postcss` and `autoprefixer` dependencies and `postcss.config.js` were removed.
+- `frontend/index.css` uses `@import 'tailwindcss' source(none)` with explicit renderer and `index.html` sources. The existing JavaScript theme remains loaded through `@config`; CSS-first theme work remains Phase 6.
+- Official `@tailwindcss/upgrade@4.3.3` migrated 78 renderer templates. Manual review restored DOM/persistence `blur` identifiers and AiVS's custom 0.25rem `rounded-sm` contract.
+- The first development visual check exposed an unlayered universal margin/padding reset overriding Tailwind 4 utility layers. Removing the redundant reset restored Phase 1 spacing parity.
+- Post-migration audits: removed aliases 0; legacy `@tailwind` directives 0; CSS-variable arbitrary syntax 0; direct-child variant stacking 0; bare ring tokens 0. Bare borders remain covered by the temporary v3 compatibility base rule.
+- Production CSS: 113.79 kB / 17.19 kB gzip. Renderer JavaScript: 936.91 kB / 243.80 kB gzip. Electron main and CommonJS preload built successfully.
+- Rollback checkpoint: `fc1c2e361784c94025f5be4d75e2ce858937e10f`.
+
+### Phase 5 post-upgrade command evidence
+
+| Command | Result | Duration | Log/evidence |
+|---|---|---:|---|
+| `git diff --check` | PASS | 0.06s | No whitespace errors; only expected line-ending conversion warnings. |
+| `corepack pnpm typecheck:ts` | PASS | 4.12s | TypeScript 5.9.3, 0 errors. |
+| `corepack pnpm test:frontend` | PASS | 2.56s test time | Vitest 4.1.10: 22 files and 75 tests passed. |
+| `corepack pnpm build:frontend` | PASS | 0.32s renderer build | Renderer, Electron main, and CommonJS preload built; existing chunk-size/dynamic-import warnings remain. |
+| `corepack pnpm typecheck:py` | PASS WITH APPROVED ROUTE | 3.08s | Pyright: 0 errors and 0 warnings. Managed sandbox could not read the existing uv cache. |
+| `corepack pnpm backend:test` | PASS WITH APPROVED ROUTE | 7.00s test time | 278 passed, 1 skipped; existing pynvml deprecation warning only. |
+| `$env:CI='true'; corepack pnpm build:fast:win` | PASS WITH APPROVED ROUTE | 16.25s | Produced `release\win-unpacked` with Electron 43.2.0 and the pinned WanGP revision. |
+| Protected-runtime diff guard from Phase 5 starting SHA | PASS | 0.15s | No protected runtime path changed. |
+
+### Phase 5 manual checks
+
+- [x] Development app launched; renderer and backend reached ready state.
+- [x] Phase 1 visual matrix compared at approximately 1400×900.
+- [x] Home, GenSpace Image/Video/Music, gallery grid/list, Settings, Model Manager, Director, and Video Editor retain expected spacing, borders, radii, focus states, and container-query behaviour.
+- [x] User confirmed development visual parity after the universal reset fix.
+- [x] Unpacked app loaded from `file://` without a blank renderer or FOUC.
+- [x] Existing project opened.
+- [x] Native file picker/import and OS drag/drop passed in the unpacked app.
+- [x] Protected runtime diff guard produced no output.
+
+### Phase 5 commits
+
+| Purpose | Commit SHA | Message |
+|---|---|---|
+| Pre-upgrade evidence | `042cf97c4958af8752a26a75a45ca6dae2b51e9f` | `docs: record Tailwind 4 preflight` |
+| Rollback checkpoint | `fc1c2e361784c94025f5be4d75e2ce858937e10f` | `chore(styles): checkpoint before Tailwind 4 migration` |
+| Tailwind 4 compatibility migration | `50fcb190234ba28289c12d8364c96191b8c7b1f8` | `chore(styles): migrate to Tailwind CSS 4` |
+
 ### Phase 5 issues and attempted fixes
 
 1. Issue: `gh` could not start for advisory queries because managed sandbox denied access to its AppData config.
@@ -474,6 +517,34 @@ Exit gate: user confirmed the development app renders normally, an existing proj
    - Attempt: scoped the audit to app-owned package/config/frontend/scripts/workflow paths.
    - Result: audit completed and confirmed no direct app workflow beyond the old Tailwind PostCSS configuration.
    - Final resolution or blocker: resolved as projectmem issue `#0258`.
+4. Issue: official upgrade tool used pnpm 11.10.0 and skipped dependency/PostCSS operations.
+   - Attempt: retained its reviewed template/CSS migration, then completed exact dependency and Vite-plugin changes with repository-pinned pnpm 10.30.3.
+   - Result: exact Tailwind cluster installed and production build passed.
+   - Final resolution or blocker: resolved as projectmem issue `#0259`.
+5. Issue: upgrade tool rewrote DOM event and persisted effect identifier `blur` to `blur-sm`.
+   - Attempt: restored non-class identifiers while retaining valid utility migrations.
+   - Result: TypeScript, frontend tests, and production build passed.
+   - Final resolution or blocker: resolved as projectmem issue `#0260`.
+6. Issue: exact Tailwind 4.3.3 install was blocked by `minimumReleaseAge` through transitive `undici` 7.29.0.
+   - Attempt: used a one-command release-age exception without changing repository policy.
+   - Result: exact reviewed versions installed.
+   - Final resolution or blocker: resolved as projectmem issue `#0261`.
+7. Issue: upgrade tool mapped AiVS custom `rounded-sm` uses to `rounded-xs`, halving the intended radius.
+   - Attempt: restored the four affected `rounded-sm` utilities.
+   - Result: generated CSS retains 0.25rem radius parity and Tier A passed.
+   - Final resolution or blocker: resolved as projectmem issue `#0262`.
+8. Issue: development visual gate showed compressed spacing across major screens.
+   - Attempt: compared saved Phase 1 screenshots and removed the redundant unlayered universal margin/padding reset.
+   - Result: user confirmed development spacing parity.
+   - Final resolution or blocker: resolved as projectmem issue `#0263`.
+9. Issue: `wmic` was unavailable and managed sandbox denied `Get-CimInstance` during safe process shutdown.
+   - Attempt: used approved read-only process inspection, stopped the exact Electron root, and verified Vite/backend ports closed.
+   - Result: dev tree exited cleanly before packaging.
+   - Final resolution or blocker: resolved as projectmem issue `#0264`.
+10. Issue: final Pyright gate could not read the existing uv cache under managed sandbox.
+    - Attempt: reran the unchanged repository command through the approved route.
+    - Result: Pyright passed with 0 errors and 0 warnings.
+    - Final resolution or blocker: resolved as projectmem issue `#0265`.
 
 ## Command evidence template
 
@@ -585,17 +656,17 @@ Use a stable 1400×900 app window where practical.
 
 | View | Baseline evidence | Tailwind 4 evidence | Final evidence | Result |
 |---|---|---|---|---|
-| Home/projects | `C:\tmp\AiVS-phase1-baseline-20260726\01-home.png` |  |  | PASS |
-| GenSpace Image | `C:\tmp\AiVS-phase1-baseline-20260726\02-genspace-image.png` |  |  | PASS |
-| GenSpace Video | `C:\tmp\AiVS-phase1-baseline-20260726\03-genspace-video.png` |  |  | PASS |
-| GenSpace Music | `C:\tmp\AiVS-phase1-baseline-20260726\04-genspace-music.png` |  |  | PASS |
-| Gallery list view | `C:\tmp\AiVS-phase1-baseline-20260726\05-gallery-list.png` |  |  | PASS |
-| Settings | `C:\tmp\AiVS-phase1-baseline-20260726\06-settings-general-output.png` |  |  | PASS |
-| Model Manager | `C:\tmp\AiVS-phase1-baseline-20260726\07-model-manager.png` |  |  | PASS |
-| Director | `C:\tmp\AiVS-phase1-baseline-20260726\08-director.png` |  |  | PASS |
-| Video Editor | `C:\tmp\AiVS-phase1-baseline-20260726\09-video-editor.png` |  |  | PASS |
+| Home/projects | `C:\tmp\AiVS-phase1-baseline-20260726\01-home.png` | User-confirmed development and unpacked parity, 2026-07-27 |  | PASS |
+| GenSpace Image | `C:\tmp\AiVS-phase1-baseline-20260726\02-genspace-image.png` | User-confirmed development and unpacked parity, 2026-07-27 |  | PASS |
+| GenSpace Video | `C:\tmp\AiVS-phase1-baseline-20260726\03-genspace-video.png` | User-confirmed development and unpacked parity, 2026-07-27 |  | PASS |
+| GenSpace Music | `C:\tmp\AiVS-phase1-baseline-20260726\04-genspace-music.png` | User-confirmed development and unpacked parity, 2026-07-27 |  | PASS |
+| Gallery list view | `C:\tmp\AiVS-phase1-baseline-20260726\05-gallery-list.png` | User-confirmed development and unpacked parity, 2026-07-27 |  | PASS |
+| Settings | `C:\tmp\AiVS-phase1-baseline-20260726\06-settings-general-output.png` | User-confirmed development and unpacked parity, 2026-07-27 |  | PASS |
+| Model Manager | `C:\tmp\AiVS-phase1-baseline-20260726\07-model-manager.png` | User-confirmed development and unpacked parity, 2026-07-27 |  | PASS |
+| Director | `C:\tmp\AiVS-phase1-baseline-20260726\08-director.png` | User-confirmed development and unpacked parity, 2026-07-27 |  | PASS |
+| Video Editor | `C:\tmp\AiVS-phase1-baseline-20260726\09-video-editor.png` | User-confirmed development and unpacked parity, 2026-07-27 |  | PASS |
 | Setup/first run |  |  |  |  |
-| Modal/popover/forms | `C:\tmp\AiVS-phase1-baseline-20260726\10-installed-gallery-drag-ready.png` |  |  | PASS |
+| Modal/popover/forms | `C:\tmp\AiVS-phase1-baseline-20260726\10-installed-gallery-drag-ready.png` | User-confirmed development and unpacked parity, 2026-07-27 |  | PASS |
 
 ## Final known limitations
 

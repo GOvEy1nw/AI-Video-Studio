@@ -16,6 +16,19 @@ Product principles:
 Current integration baseline: `dev`.
 
 ## Recent issues
+- [DONE] #0265 Phase 5 final Pyright gate cannot read uv cache .git under managed sandbox [backend/typecheck:py; C:\Users\rais\AppData\Local\uv\cache] -> Approved validation route restored uv cache access; final Pyright gate passes cleanly [backend/typecheck:py] (fixed)
+  - Failed attempt: Ran repository typecheck:py command in managed sandbox; uv failed before Pyright because cache sdists-v9/.git was unreadable [backend/typecheck:py]
+- [DONE] #0264 Windows host lacks wmic, so Phase 5 dev process-tree inspection cannot use planned parent/command-line query [tooling/process-inspection] -> Used approved Get-CimInstance fallback to identify exact dev tree; stopped Electron root and confirmed Vite/backend ports closed [tooling/process-inspection] (fixed)
+  - Failed attempt: Tried Get-CimInstance Win32_Process after wmic was unavailable; managed sandbox denied process metadata access [tooling/process-inspection]
+- [DONE] #0263 Tailwind 4 development visual gate shows compressed spacing and saturated blue asset-card backgrounds across major screens [frontend/index.css; renderer Tailwind utility output] -> Removed redundant unlayered universal reset; user confirmed Phase 1 spacing parity across development screens [frontend/index.css] (fixed)
+  - Partial attempt: Compared saved Phase 1 evidence; spacing regression is real, but saturated blue asset cards are intentional baseline fixtures rather than broken styling [C:\tmp\AiVS-phase1-baseline-20260726; frontend renderer]
+  - Partial attempt: Removed redundant unlayered universal reset so Tailwind 4 utility-layer margin and padding declarations regain precedence; visual confirmation pending [frontend/index.css]
+- [DONE] #0262 Tailwind tool maps custom v3 rounded-sm to v4 rounded-xs, halving AiVS radius despite custom sm override [frontend/views/VideoEditor.tsx; frontend/components/KeyboardShortcutsModal.tsx] -> Rounded-sm parity restored; generated Tailwind 4 CSS keeps rounded-sm at 0.25rem and Tier A passes [frontend/views/VideoEditor.tsx; frontend/components/KeyboardShortcutsModal.tsx] (fixed)
+- [DONE] #0261 Exact Tailwind 4.3.3 install blocked by minimumReleaseAge because Electron resolves two-day-old transitive undici 7.29.0 [package.json] -> Exact Tailwind 4.3.3 cluster installed through one-shot release-age exception without changing .npmrc [package.json] (fixed)
+  - Failed attempt: Ran exact Tailwind 4.3.3 dev dependency add under normal policy; transaction stopped before changes on transitive undici minimumReleaseAge [package.json]
+- [DONE] #0260 Tailwind upgrade tool incorrectly rewrote DOM event name "blur" to "blur-sm" in renderer logic [frontend/views/VideoEditor.tsx; frontend/views/director/DirectorWorkspacePanel.tsx] -> Restored blur event/effect contracts; TypeScript, 75 frontend tests, and Tailwind 4 production build pass [frontend/types/project.ts; frontend/views/director; frontend/views/editor] (fixed)
+- [DONE] #0259 Tailwind 4.3.3 upgrade tool migrated CSS/templates but its child pnpm used v11.10.0 and skipped dependency/PostCSS package changes [package.json / postcss.config.js] -> Tailwind 4.3.3 dependencies and Vite integration now complete under pnpm 10; obsolete PostCSS config removed and production build passes [package.json / vite.config.ts / frontend/index.css] (fixed)
+  - Partial attempt: Ran exact official @tailwindcss/upgrade 4.3.3 from clean checkpoint; CSS/config and 78 templates migrated, but child pnpm 11 rejected dependency add/remove operations [package.json / postcss.config.js]
 - [DONE] #0258 Phase 5 project-wide PostCSS audit hits access denied on linked WanGP documentation files in managed sandbox [docs/wan2gp-docs / tooling/rg] -> App-owned scoped audit avoids inaccessible linked docs and confirms project-level PostCSS/autoprefixer can be removed after Vite-plugin build proof [docs/wan2gp-docs / tooling/rg] (fixed)
   - Partial attempt: Ran repository-wide rg for postcss/autoprefixer; app/package/config hits were returned, but linked docs/wan2gp-docs paths emitted access-denied errors [docs/wan2gp-docs / tooling/rg]
 - [DONE] #0257 Phase 5 preflight fast Windows build aborts because pnpm wants to recreate node_modules without a TTY [node_modules / scripts/local-build.ps1] -> Phase 5 preflight fast Windows build passes via CI=true approved route; repository and lockfile unchanged [node_modules / scripts/local-build.ps1] (fixed)
@@ -558,16 +571,16 @@ Current integration baseline: `dev`.
 - Phase 2 Electron 43 exit gate now PASSED after user-assisted installed/unpacked OS-drop and native-dialog matrices, filename-only save-path fix, deleted-directory fallback, Tier A/B, packaging, data, and protected-runtime checks; Phase 3 remains not started. [docs/dependency-modernisation/STATUS.md]
 
 ## Notes
-- Post-install Phase 2 data check passes: all 100 Phase 1 backup project-asset files remain present and SHA-256 identical. [C:/Users/rais/Documents/AiVS]
-- Installed NSIS app accepted baseline-audio.wav on Music Cover Song; Computer Use captured populated slot in installed runtime. [installed AiVS]
-- User confirmed installed HTML media picker applied baseline-audio.wav to Transfer Timbre; UI re-observation showed both Cover Song and Transfer Timbre populated. [Phase 2 Electron 43 installed smoke]
-- Installed Director Import Media opened at persisted C:\tmp\AiVS-phase2-open; user cancelled and app_state.json SHA-256 remained unchanged. [Phase 2 Electron 43 installed smoke]
 - Installed directory picker opened at persisted Documents\AiVS, user selected C:\tmp\AiVS-phase1-media, app_state recorded it as lastDirectoryPickerPath, and Settings closed without saving checkpoint changes. [Phase 2 Electron 43 installed smoke]
 - Phase 2 final evidence committed in 59d425e after installed/unpacked manual checks, final installer SHA-256 9054E38F07FD22A966C1F95214B5EB49DD3E722FCD31524EEE97860632394885, 100/100 data hashes unchanged, and protected-runtime guard clean. [docs/dependency-modernisation/STATUS.md]
 - gotcha: vite-plugin-electron 1.1 flat entry inherits package type=module; CommonJS preload must use explicit build.lib entry/formats/fileName or default formats merge emits ESM too [vite.config.ts]
 - Phase 3 PASSED: Vite 8.1.5, plugin-react 6.0.4, vite-plugin-electron 1.1.0; CommonJS preload, scoped dev scan, Tier A/B, lifecycle, unpacked, import, and data gates passed [docs/dependency-modernisation/STATUS.md]
 - User confirmed Phase 4 dev app renders normally, existing project opens, and no unexpected visible errors [docs/dependency-modernisation/STATUS.md]
 - Phase 4 Vitest 4 passed: Vitest 4.1.10, jsdom 30.0.0, Testing Library React 16.3.2, user-event 14.6.1; 22 files/75 tests, Tier A, dev visual, and protected-runtime gates passed; implementation commit 92012f3 [docs/dependency-modernisation/STATUS.md]
+- gotcha: Tailwind v4 automatic detection scans outside renderer in this monorepo; use source(none) with explicit ../index.html and ./ registrations [frontend/index.css]
+- User confirmed Phase 5 Tailwind 4 development UI matches saved Phase 1 spacing after removing redundant universal reset [docs/dependency-modernisation/STATUS.md]
+- User confirmed Phase 5 unpacked app styling, existing-project open, native file picker/import, and OS drag/drop all pass [docs/dependency-modernisation/STATUS.md]
+- Phase 5 Tailwind 4 compatibility PASSED at 50fcb190: Tailwind 4.3.3/Vite plugin, tailwind-merge 3.6.0, Tier A/B, dev and unpacked parity/file workflows, protected runtime clean; Phase 6 not started [docs/dependency-modernisation/STATUS.md]
 
 ## Key files
 - `LTX-2.3_Cinematic_hardcut.safetensors`
