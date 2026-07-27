@@ -1,11 +1,8 @@
-# projectmem — AI Video Studio
+# projectmem - AI-Video-Studio
 
-_Last reviewed: 2026-07-26 against the `dev` branch._
-
-> This is a concise current-state brief for coding agents. Historical task attempts, sandbox failures, and resolved implementation bugs live in `.projectmem/issues/` and Git history; they are intentionally not repeated here.
+_Last updated: 2026-07-27_
 
 ## Project purpose
-
 AI Video Studio (AiVS) is a local-first, community-focused desktop app for AI image, video, and music generation. It is built on `deepbeepmeep/LTX-Desktop-WanGP`, uses a bundled WanGP / Wan2GP runtime, and does not expose cloud generation providers or require API keys.
 
 Product principles:
@@ -18,293 +15,558 @@ Product principles:
 
 Current integration baseline: `dev`.
 
-## Current product state
-
-### Quick Gen / GenSpace
-
-GenSpace is implemented as a persistent left generation sidebar plus the shared Asset Library. Its large original component has been split into one always-mounted controller, mode-owned panels, focused hooks, pure request/asset logic, and isolated gallery/overlay views.
-
-Implemented modes:
-
-- **Image** — Z-Image Turbo, Krea 2 Turbo, Flux 2 Klein 4B, and HiDream O1 through backend-owned curated profiles.
-- **Video** — LTX 2.3 Fast with text-to-video, start/end images, continuation, supported control video/audio roles, prompt enhancement, and Reframe.
-- **Music** — ACE-Step 1.5 Fast and XL with instrumental/Auto Lyrics/Custom Lyrics, Compose Lyrics, optional Think, duration/BPM/key/time/language/vocal controls, Cover Song, Transfer Timbre, and multiple variations.
-
-Video process modes:
-
-- Generate — available.
-- Reframe — available; trim plus aspect/zoom/pan outpainting.
-- Retake — visible but intentionally disabled until the WanGP path is reliable.
-
-Multi-segment prompt timing is owned by Director, not GenSpace. Legacy backend `shotPrompts` compatibility remains for old data/internal callers.
-
-### Shared generation lifecycle
-
-`frontend/hooks/use-generation.ts` remains the public compatibility facade. `frontend/hooks/generation/useGenerationJob.ts` owns the single active state object, abort controller, 500 ms polling loop, cancellation, terminal guards, and cleanup.
-
-GenSpace captures immutable submission snapshots containing project, prompt, settings, media roles/paths, and trim information. Completion persistence uses the snapshot rather than live UI state so project/mode changes during generation cannot misfile results.
-
-### Shared Asset Library
-
-`frontend/components/GalleryAssetLibrary.tsx` is the controlled shared implementation used by GenSpace, Director, and Video Editor.
-
-Current behaviour includes:
-
-- project-local uploaded and generated assets;
-- bins with bin-owned colours;
-- type/source filters and favourites;
-- grid and list views;
-- shared context actions;
-- duplicate filename handling;
-- multi-take image/video navigation;
-- independently previewable waveform rows for multi-variation music;
-- thumbnail-first video cards with live video only on hover;
-- inactive workspace media/compositor work suppressed while state remains mounted.
-
-GenSpace imports are copied to `{projectAssetsRoot}/{projectId}/uploads/`; completed generations are moved into `generated/`.
-
-### Director V1
-
-Director is a standalone frame-based generation workspace between Quick Gen and Video Editor. It shares visual primitives and the Asset Library, but owns separate state and is not stored as NLE clips.
-
-Implemented V1 behaviour:
-
-- multiple Director timelines per project;
-- Global Prompt plus movable/resizable local Prompt segments;
-- authored gaps and prompt relay compilation;
-- one Start/Centre/End image keyframe per Prompt segment;
-- optional Continue Video prefix anchored at frame zero;
-- fixed 24 fps integer-frame authoring;
-- output snapped upward to WanGP `8n+1` frames;
-- maximum 20-second sequences;
-- independent playhead, preview, playback, focus, zoom, scroll, and undo/redo;
-- Generated track and regeneration takes;
-- project Asset creation after successful generation.
-
-Guide Audio and Control Media tracks remain visible but locked for later work.
-
-### Video Editor
-
-The inherited NLE-style Video Editor remains a separate project tab. Director recipe objects and editor `TimelineClip` objects must remain separate because they use different time models and editing rules.
-
-### Setup, runtime, and Model Manager
-
-The Windows installer/dev setup prepares bundled Python and the curated WanGP GPU stack. Optional model packs can be downloaded during first-run setup, from Settings > Model Manager, or automatically when a generation needs missing files.
-
-Model-pack progress ownership remains deliberately split:
-
-- generation-triggered downloads flow through backend generation polling;
-- setup/Model Manager downloads flow through Electron IPC;
-- both normalise to one renderer transfer shape while retaining detailed filenames and counters.
-
-Settings uses persistent left navigation for General, Model Manager, Advanced, and About. Project, checkpoint, and LoRA storage locations can be configured without moving executable/cache/update state into project folders.
-
-## Current architecture
-
-```text
-React renderer
-  ├─ authenticated localhost HTTP ──> FastAPI backend
-  │                                  └─ in-process WanGP bridge/session
-  │                                     └─ bundled Wan2GP checkout
-  └─ context-isolated preload ──────> Electron main
-                                     ├─ project/file IPC
-                                     ├─ Python/runtime setup and supervision
-                                     ├─ model-pack child process
-                                     ├─ ffmpeg export/frame extraction
-                                     └─ updater/lifecycle
-```
-
-Renderer/native boundary:
-
-- All native access goes through typed `window.electronAPI` in `electron/preload.ts`.
-- `contextIsolation` is enabled and renderer `nodeIntegration` is disabled.
-- Native paths must be approved or validated before filesystem operations.
-
-Backend request flow:
-
-```text
-_routes/* -> AppHandler -> handlers/* -> services/* + state/*
-```
-
-- Routes are thin.
-- `AppHandler` is the composition root.
-- Shared generation state and cancellation are owned by `GenerationHandler`.
-- Heavy GPU/IO work must not hold the shared `RLock`.
-- Tests replace heavy services with fakes; `unittest.mock` is not the project pattern.
-- Exception traceback/logging policy is owned at the app boundary.
-
-## Current stack and pins
-
-Pre-modernisation frontend/desktop stack:
-
-- React 18.3.1
-- TypeScript 5.9.3
-- Vite 5.4.21
-- Tailwind CSS 3.4.19
-- Vitest 2.1.9
-- Electron 31.7.7
-- pnpm 10.30.3
-- electron-builder 26.x
-
-Backend/runtime:
-
-- Python 3.11.9
-- Torch 2.10.0
-- torchvision 0.25.0
-- torchaudio 2.10.0
-- CUDA 13.0 package index
-- FastAPI/Pydantic/uvicorn managed with `uv`
-- hardware-specific Triton, SageAttention, Sparge, Flash Attention, Nunchaku, GGUF, and LightX2V wheels installed through the curated stack script
-
-Bundled WanGP source:
-
-- Repository: `GOvEy1nw/Wan2GP`
-- Branch: `AiVS`
-- Revision: `4f441a12f3a33f4466ed422428bf667d9651bc55`
-- WanGP version: `12.34`
-
-Canonical runtime files:
-
-- `scripts/wangp-source.json`
-- `scripts/wangp-stacks.json`
-- `scripts/ensure-wan2gp.ps1` / `.sh`
-- `scripts/update-wangp.ps1`
-- `scripts/install-wangp-stack.ps1`
-- `backend/pyproject.toml`
-- `backend/uv.lock`
-
-The Python/Torch/CUDA/WanGP stack is one curated compatibility unit. Generic dependency automation must not upgrade it package-by-package.
-
-## Curated model source of truth
-
-`backend/model_profiles/profiles.py` owns product-visible profiles. WanGP metadata/discovery is used for validation and availability; it does not automatically become UI.
-
-Visible profiles:
-
-- Image: `z_image_turbo`, `krea2_turbo`, `flux2_klein_4b`, `hidream_o1_dev`
-- Video: `ltx2_22b_distilled` (LTX 2.3 Fast)
-- Music: `ace_step_15_turbo`, `ace_step_15_xl_turbo`
-
-The renderer reads `GET /api/model-profiles`. Profile IDs and curated settings are revalidated by the backend before WanGP execution.
-
-Model packs currently cover utility assets, the visible image/video/music models, and the prompt enhancer. Adding a pack or raw WanGP metadata does not by itself expose a product profile.
-
-## Important current decisions
-
-- AiVS stores no cloud generation credentials and has no cloud generation fallback.
-- GenSpace has one always-mounted controller and one generation job instance; mode panels are statically imported.
-- Image/video/music panels do not call endpoints or persist project assets directly.
-- Director is the canonical prompt-timeline workflow; GenSpace stays focused on quick single-generation flows.
-- Director and Video Editor share domain-neutral visuals only; their data models remain separate.
-- All project workspaces stay mounted for state preservation, but only the active workspace may own playback, shortcuts, visible compositor layers, or media warming.
-- Gallery/asset presentation is shared; each workspace supplies only data and surface-specific callbacks.
-- Bin colour is bin-owned and appears through media badges/folder icons rather than card-edge accents.
-- Music has one canonical full settings mode; legacy `experienceMode` remains only for saved-data compatibility.
-- Music supports independent Cover and Timbre inputs; the backend still accepts the legacy single-input shape.
-- Empty Custom Lyrics can fall back to generation-time composition, except Cover Song requires original supplied lyrics.
-- Reframe behaviour and padding limits are established; its files now live under `frontend/views/genspace/video/`.
-- WanGP updates are transactional and must preserve the exact source pin or roll back.
-- Current implementation is not frozen: extension is preferred only where the existing owner still fits. A substantial refactor or replacement requires evidence, preserved-contract/parity tests, data migration where relevant, staged rollback, and a clear deletion path for the superseded system.
-
-## Active constraints and known risks
-
-- **Primary target:** Windows 10/11 with NVIDIA RTX 20/30/40/50 series hardware.
-- **Driver requirement:** current Windows runtime expects NVIDIA driver 580+.
-- **Frontend/desktop age:** Electron 31, Vite 5, Tailwind 3, and React 18 are scheduled for phased modernisation on a separate branch.
-- **Electron breaking point:** `frontend/lib/media-import.ts` still uses Electron's removed non-standard `File.path`; the Electron upgrade must expose `webUtils.getPathForFile` through preload before moving beyond Electron 31.
-- **Retake:** visible but unavailable; do not imply the user-facing mode works.
-- **TTS:** not implemented.
-- **LoRA UI:** runtime paths exist, but user-facing selection/strength controls are not implemented.
-- **Director deferred tracks:** Guide Audio and Control Media authoring remain locked.
-- **Installer signing:** the Windows installer is currently not Authenticode-signed.
-- **Manual QA:** native drag/drop, audio/video playback/seeking, Reframe geometry, model downloads, and real generation outputs require Electron/runtime checks beyond unit tests.
-- **Agent capture:** some managed Windows sessions deny `GetCursorPos`, preventing automated screenshots despite a healthy app; record this as tooling limitation rather than product failure.
-
-## Active roadmap
-
-Current near-term directions, not old implementation phase numbers:
-
-1. Execute the phased frontend/Electron dependency modernisation on a dedicated branch.
-2. Run real-runtime regression testing across image, video, Reframe, Director, music, and all model-download entry points.
-3. Implement/expose Retake once WanGP support is reliable.
-4. Add curated user-facing LoRA selection and strength controls.
-5. Add TTS generation.
-6. Add Director Guide Audio and Control Media authoring after Prompt Track V1 is stable.
-7. Continue curated model expansion through backend profiles and tested model packs.
-8. Continue evidence-based architecture, maintainability, performance, accessibility, and packaging work, including bounded subsystem replacements where extension would compound debt.
-
-## Last recorded validation baseline
-
-After the current GenSpace split and Music workflow work, the recorded full gates were:
-
-- TypeScript: 0 errors.
-- Pyright: 0 errors.
-- Frontend Vitest: 56 passed.
-- Backend pytest: 278 passed, 1 skipped.
-- Production renderer/Electron main/preload build: passed.
-- `git diff --check`: clean.
-
-These figures are evidence of that checkpoint only. Every new task must rerun the checks relevant to its change.
-
-## Common commands
-
-| Command | Purpose |
-| --- | --- |
-| `pnpm dev` | Start Vite, Electron, and backend |
-| `pnpm dev:debug` | Electron inspector + Python debugpy |
-| `pnpm typecheck` | TypeScript and Pyright |
-| `pnpm typecheck:ts` | TypeScript only |
-| `pnpm typecheck:py` | Pyright only |
-| `pnpm test:frontend` | Full frontend test suite |
-| `pnpm backend:test` | Full backend pytest suite |
-| `pnpm build:frontend` | Renderer, Electron main, and preload build |
-| `pnpm build:fast:win` | Unpacked Windows build without rebuilding Python |
-| `pnpm build:win` | Full Windows installer |
-| `pnpm wangp:check` | Compare bundled pin with fork head |
-| `pnpm wangp:update` | Transactional focused WanGP update |
-| `pnpm wangp:update:full` | Transactional WanGP update with full validation |
-
-## First files to read
-
-1. `AGENTS_PRD.md`
-2. `AGENTS.md`
-3. `.projectmem/PROJECT_MAP.md`
-4. `.projectmem/summary.md`
-5. `docs/GENSPACE_ARCHITECTURE.md`
-6. `docs/DIRECTOR_MODE_V1.md`
-7. `docs/REFRAME_MODE.md`
-8. `backend/architecture.md`
-9. `backend/WANGP_BACKEND.md`
-10. `scripts/wangp-source.json`
-11. `scripts/wangp-stacks.json`
-
-Key implementation entry points:
-
-- `frontend/views/genspace/`
-- `frontend/hooks/generation/`
-- `frontend/components/GalleryAssetLibrary.tsx`
-- `frontend/views/director/`
-- `frontend/views/editor/`
-- `frontend/contexts/ProjectContext.tsx`
-- `frontend/types/project.ts`
-- `frontend/types/music.ts`
-- `frontend/types/director.ts`
-- `electron/preload.ts`
-- `electron/python-setup.ts`
-- `backend/app_handler.py`
-- `backend/api_types.py`
-- `backend/model_profiles/profiles.py`
-- `backend/services/wangp_bridge.py`
-- `backend/wangp_model_packs.py`
-
-## Historical memory policy
-
-- `.projectmem/summary.md` and `PROJECT_MAP.md` describe the current system only.
-- Granular resolved issues, failed tool attempts, and one-off sandbox workarounds remain in `.projectmem/issues/`.
-- Completed implementation plans remain under `docs/` as historical rationale and parity evidence.
-- Do not re-execute old phase checklists merely because they remain in the repository.
-- When a completed plan conflicts with current code or a focused current-state document, current code/tests and the focused document win.
+## Recent issues
+- [DONE] #0248 Installed save dialog ignores persisted lastSaveDirectory when caller defaultPath is filename-only; opens in prior directory-picker location. [electron/ipc/file-handlers.ts] -> Filename-only save defaults now resolve under valid persisted lastSaveDirectory; regression tests pass and installed Video Editor dialog opened at C:\tmp\AiVS-phase2-save with expected filename. [electron/ipc/file-handlers.ts] (fixed)
+  - Partial attempt: Added pure save-default resolver so filename-only defaults join valid remembered/fallback directory; wired IPC handler and regression tests. Awaiting automated/native confirmation. [electron/dialog-paths.ts]
+- [DONE] #0247 Phase 2 fast packaging fails EPERM renaming win-unpacked.tmp to win-unpacked after gallery drop-zone rebuild [release/win-unpacked] -> Closed running dev Electron before packaging; Electron Builder then renamed output and completed unpacked build. [release/win-unpacked] (fixed)
+  - Failed attempt: Rebuilt with build:fast:win outside sandbox; electron-builder completed bundles but EPERM blocked final win-unpacked.tmp rename. [release/win-unpacked]
+  - Failed attempt: Exact build:fast:win retry failed identically at win-unpacked.tmp directory rename; no release-path process was running. [release/win-unpacked]
+  - Failed attempt: Reversible rename probe was denied inside managed sandbox; permissions are otherwise full and local open-handle tracking is unavailable. [release/win-unpacked.tmp]
+- [DONE] #0246 New gallery boundary regression cannot collect because GenSpaceGallery imports DownloadProgressView with unresolved @ alias in focused Vitest [frontend/views/genspace/GenSpaceGallery.test.tsx] -> Isolated gallery geometry test from unrelated heavy component imports with focused module mocks. [frontend/views/genspace/GenSpaceGallery.test.tsx] (fixed)
+  - Partial attempt: Mocked DownloadProgressView and GalleryAssetLibrary runtime modules so focused boundary test can collect without unrelated @ alias imports. [frontend/views/genspace/GenSpaceGallery.test.tsx]
+- [DONE] #0245 GenSpace gallery OS-drop target geometry extends behind left generation sidebar and competes with media input dropzones [frontend/views/genspace/GenSpaceGallery.tsx] -> Moved gallery drag handlers and overlay into right-hand gallery pane; user confirmed drag-input now works without gallery interception. [frontend/views/genspace] (fixed)
+  - Partial attempt: Moved OS-drop handlers from workspace root onto a gallery-only pane starting at 480px; reverted sidebar child propagation workaround and added boundary regression test. [frontend/views/genspace/GenSpaceGallery.tsx]
+- [DONE] #0244 Focused Phase 2 drag regression command cannot resolve vitest through current Corepack pnpm exec route [package.json] -> Use explicit local vitest.CMD under approved execution when Corepack pnpm exec cannot resolve the Windows Vitest shim. [node_modules/.bin/vitest.CMD] (fixed)
+  - Failed attempt: Tried corepack pnpm exec vitest run for the focused drag test; Windows wrapper reported vitest not recognized while TypeScript and diff checks passed. [package.json]
+  - Failed attempt: Explicit vitest.CMD resolved the binary but managed sandbox blocked esbuild from loading vitest.config.ts; focused test did not start. [vitest.config.ts]
+- [DONE] #0243 Phase 2 dev OS drop into GenSpace media input is intercepted by gallery dropzone and imported into gallery instead [frontend/views/genspace] -> Media input dropzones now stop gallery-root drag/drop propagation while preserving local visual state and file import; native OS drop confirmed. [frontend/views/genspace] (fixed)
+  - Partial attempt: Moved video guide-slot drag-state updates to capture phase so local highlight remains while shared slot blocks gallery bubbling. [frontend/views/genspace/video/VideoMediaInputs.tsx]
+  - Partial attempt: Stopped custom music audio dropzone drag enter/leave/over/drop events from bubbling to GenSpace gallery root. [frontend/views/genspace/music/MusicMediaInputs.tsx]
+  - Partial attempt: Added focused regressions proving shared image/video slots and custom music slots prevent gallery-root drag/drop handlers while preserving local capture. [frontend/views/genspace/components/MediaInputSlot.test.tsx]
+- [DONE] #0242 Managed sandbox denied git index.lock while staging Phase 2 Electron runtime commit [.git/index.lock] -> Approved git route restored index writes without changing commit scope [.git/index.lock] (fixed)
+- [OPEN] #0241 Installed app log reports resources/icon.ico missing; window still displays executable icon [electron/main.ts; electron-builder.yml] (open)
+- [OPEN] #0240 Installed app updater check logs GitHub releases HTTP 406 but remains stable and usable [electron/updater.ts] (open)
+  - Partial attempt: Verified updater error is caught and logged; installed app stays responsive with backend Ready [electron/updater.ts]
+- [DONE] #0239 Unpacked AiVS launched via start:unpacked:win shows uncaught main-process EPIPE after parent PowerShell pipe exits [release/win-unpacked/AiVS.exe] -> Packaged apps now keep backend logs on disk without writing to detached stdout/stderr; unpacked launch is clean [electron/logger.ts; electron/python-backend.ts] (fixed)
+  - Partial attempt: Stopped packaged logger console writes unless VITE_DEV_SERVER_URL is set; file logging remains unchanged [electron/logger.ts]
+  - Failed attempt: Rebuilt and relaunched after logger.ts guard; EPIPE persisted from python-backend direct process.stdout/stderr writes [electron/logger.ts]
+  - Partial attempt: Guarded python-backend console stream mirroring behind isDev while preserving packaged file logging and startup detection [electron/python-backend.ts]
+- [DONE] #0238 Playwright Electron fallback could not reuse live AiVS userData; lock and DevToolsActivePort creation failed with access denied [Phase 2 Electron 43 renderer/preload validation] -> Used same-integrity app launch plus CDP attachment instead of sandbox-spawned Electron; live AppData access and backend startup succeeded [Phase 2 Electron 43 renderer/preload validation] (fixed)
+  - Failed attempt: Tried creating isolated C:\tmp userData path in managed sandbox; New-Item was denied [Phase 2 Electron 43 renderer/preload validation]
+  - Failed attempt: Tried --user-data-dir override; app-paths.ts resets Electron userData from LOCALAPPDATA, so Chromium switch did not change target [Phase 2 Electron 43 renderer/preload validation]
+  - Partial attempt: LOCALAPPDATA override let Playwright launch isolated Electron and verify preload bridge, but sandboxed child could not start venv base Python [Phase 2 Electron 43 renderer/preload validation]
+- [OPEN] #0237 Computer-use cannot target Electron-owned Windows Open dialog; list_windows omits modal and input rejects child HWND as non-target [Phase 2 Electron 43 native dialog validation] (open)
+  - Failed attempt: Retried installed Transfer Timbre picker while RDP session was active; dialog opened but remained absent from list_windows and untargetable by Computer Use. [Phase 2 Electron 43 native dialog validation]
+  - Failed attempt: With RDP active, Computer Use captured the owned Open dialog as a secondary screenshot but screenshot-backed click still rejected the modal child target. [Phase 2 Electron 43 native dialog validation]
+  - Failed attempt: After modal accessibility tree became visible under RDP, direct click on dialog list item still failed because cached input only accepts the parent Electron window. [Phase 2 Electron 43 native dialog validation]
+- [DONE] #0236 Windows automation REPL timed out and reset while waiting 45 seconds without a matching timeout override [Phase 2 Electron 43 native validation] -> Recovered fresh automation session; future waits use explicit timeout or shorter duration [Phase 2 Electron 43 native validation] (fixed)
+- [DONE] #0235 Electron 43 command-line -e runtime-version probe hung because Electron treated inline code as an app target [Phase 2 Electron 43 runtime version validation] -> Replaced unsupported inline Electron probe with temporary entry script and verified exact runtime versions [Phase 2 Electron 43 runtime version validation] (fixed)
+  - Partial attempt: Stopped only hung temporary probe PID 24796; development AiVS process tree remained running [Phase 2 Electron 43 runtime version validation]
+- [DONE] #0234 Windows automation screenshot capture failed with IGraphicsCaptureItemInterop.CreateForMonitor 0x80070057 during Phase 2 dev smoke [Phase 2 Electron 43 native validation] -> Native UI automation restored by launching Electron through the automation session's integrity level [Phase 2 Electron 43 native validation] (fixed)
+  - Failed attempt: Element click and keyboard injection both fail with GetCursorPos access denied; accessibility reads work but computer-use input is blocked [Phase 2 Electron 43 native validation]
+  - Failed attempt: Tried launching a temporary CMD wrapper through computer-use; API rejected non-executable launch targets [Phase 2 Electron 43 native validation]
+  - Failed attempt: Tried compiling a temporary same-integrity launcher; legacy csc could not generate Win32 resources in managed C:\tmp sandbox [Phase 2 Electron 43 native validation]
+- [DONE] #0233 Phase 2 scripted focused Vitest syntax forwarded a literal -- and ran the full suite instead of one file [package.json] -> Recorded valid focused Vitest invocation using pnpm exec vitest run [package.json] (fixed)
+- [DONE] #0232 Electron 43 bundle audit command failed because PowerShell parsed the quoted renderer-import regex incorrectly [dist-electron/preload.js] -> Bundle inspection completed with fixed-string matching and all Electron security/preload checks passed [dist-electron/preload.js] (fixed)
+- [DONE] #0231 Electron 43 warm-up command cannot find the electron executable after install because binary is now downloaded on first bin execution [node_modules/electron] -> Electron 43 runtime binary warmed through Windows .CMD shim and version verified as v43.2.0 [node_modules/electron] (fixed)
+  - Failed attempt: Ran plan command corepack pnpm exec electron --version; Windows wrapper reported electron not recognized despite generated .bin shims [node_modules/electron]
+- [DONE] #0230 Exact Electron 43.2.0 install is blocked by repository minimumReleaseAge because patch is five days old [package.json] -> Installed exact reviewed Phase 2 targets through a one-shot release-age exception without weakening repository policy [package.json] (fixed)
+  - Failed attempt: Installed exact reviewed Electron 43.2.0 normally; pnpm rejected it under 10080-minute minimum release age [package.json]
+- [DONE] #0229 Phase 2 ledger entry accidentally expanded short rollback SHA without verifying full commit ID [docs/dependency-modernisation/STATUS.md] -> Ledger now records exact verified pre-bump rollback SHA [docs/dependency-modernisation/STATUS.md] (fixed)
+- [DONE] #0228 Pre-bump frontend build cannot load vite.config.ts inside managed sandbox because esbuild is denied parent-directory access [electron/preload.ts] -> Approved execution route bypassed host sandbox restriction; production build passed unchanged [electron/preload.ts] (fixed)
+- [DONE] #0227 Pre-bump full Vitest gate cannot load vitest.config.ts inside managed sandbox because esbuild is denied parent-directory access [frontend/lib/native-file-path.test.ts] -> Approved execution route bypassed host sandbox restriction; full frontend suite passed unchanged [frontend/lib/native-file-path.test.ts] (fixed)
+- [DONE] #0226 Pre-bump TypeScript gate cannot see getPathForFile because renderer Window electronAPI is declared outside electron/preload.ts [frontend/lib/native-file-path.ts] -> Updated both renderer and preload Window electronAPI declarations; TypeScript gate confirmed [frontend/vite-env.d.ts] (fixed)
+  - Partial attempt: Added optional getPathForFile to renderer-owned Window declaration; TypeScript rerun pending [frontend/vite-env.d.ts]
+- [DONE] #0225 Phase 2 Electron import search failed because PowerShell quoting produced an invalid ripgrep regex [docs/dependency-modernisation/02_ELECTRON_43_MIGRATION.md] -> Replaced fragile quoted regex with fixed-string import patterns and completed inventory [docs/dependency-modernisation/02_ELECTRON_43_MIGRATION.md] (fixed)
+  - Failed attempt: Retried exact regex with nested PowerShell quoting; parser rejected the expression before ripgrep ran [docs/dependency-modernisation/02_ELECTRON_43_MIGRATION.md]
+- [OPEN] #0224 Managed process backend rejected interrupt for hanging npm registry query [tooling/exec] (open)
+  - Failed attempt: Sent Ctrl+C to hanging registry query; process backend does not support interrupts [tooling/exec]
+- [DONE] #0223 Phase 2 registry freshness query failed in managed sandbox with npm EACCES [docs/dependency-modernisation/02_ELECTRON_43_MIGRATION.md] -> Approved network route completed registry freshness check and confirmed exact target versions [docs/dependency-modernisation/02_ELECTRON_43_MIGRATION.md] (fixed)
+  - Failed attempt: Queried npm registry for Electron 43 and @types/node 24 in sandbox; both requests failed with EACCES [docs/dependency-modernisation/02_ELECTRON_43_MIGRATION.md]
+- [OPEN] #0222 projectmem get_project_map timed out after 300 seconds at session start [.projectmem/PROJECT_MAP.md] (open)
+  - Failed attempt: Called projectmem get_project_map; MCP request timed out after 300 seconds [.projectmem/PROJECT_MAP.md]
+  - Partial attempt: Read PROJECT_MAP.md directly as fallback; project context recovered but MCP timeout remains unresolved [.projectmem/PROJECT_MAP.md]
+- [DONE] #0221 Installed app rejects valid PNG dropped into Assets gallery as unsupported file type [frontend/components/GalleryAssetLibrary.tsx] -> Approved user-dropped File.path before native copy; installed gallery OS drag/drop now passes [frontend/lib/media-import.ts] (fixed)
+  - Failed attempt: TypeScript validation caught incomplete electronAPI test stub cast; test object needs explicit unknown bridge [frontend/lib/media-import.test.ts]
+  - Partial attempt: Adjusted partial electronAPI test stub through explicit unknown bridge to satisfy strict structural typing [frontend/lib/media-import.test.ts]
+  - Partial attempt: Updated installer completed successfully with exit code 0 [release\AiVS-Setup.exe]
+- [DONE] #0220 Installed-app accessibility inspection command failed with PowerShell empty-pipe parser error [Phase 1 installed-app smoke] -> PowerShell parser error fixed; installed Electron window confirmed opaque to Windows UI Automation [Phase 1 installed-app smoke] (fixed)
+- [DONE] #0219 Phase 1 visual-evidence copy failed because -LiteralPath treated wildcard as literal [C:\tmp\AiVS-phase1-baseline-20260726] -> Durable Phase 1 visual evidence now stored under C:\tmp\AiVS-phase1-baseline-20260726 [C:\tmp\AiVS-phase1-baseline-20260726] (fixed)
+  - Failed attempt: Retried evidence copy with -Path wildcard; source exists but target write returned access denied on 01-home.png [C:\tmp\AiVS-phase1-baseline-20260726]
+  - Failed attempt: Single-file copy probe into C:\tmp also failed access denied; failure is sandbox destination write, not wildcard handling [C:\tmp]
+- [DONE] #0218 Unpacked AiVS launch command exits without process or visible window under managed sandbox [release/win-unpacked/AiVS.exe] -> Confirmed unpacked app starts outside sandbox and completes required packaged smoke checks [release/win-unpacked/AiVS.exe] (fixed)
+- [DONE] #0217 Managed sandbox blocks Vite/esbuild config load during Phase 1 dev restart [vite.config.ts] -> Confirmed Vite, Electron window, authenticated backend, and WanGP preload start outside sandbox [vite.config.ts] (fixed)
+- [OPEN] #0216 Computer Use cross-window drag from Explorer to AiVS gallery returned unknown outcome [Phase 1 OS drag-and-drop smoke] (open)
+  - Failed attempt: Tried dragging drag-gallery.png beyond Explorer bounds onto visible AiVS gallery; Computer Use reported unknown outcome [Phase 1 OS drag-and-drop smoke]
+- [DONE] #0215 Managed sandbox denied Copy-Item writes to documented writable C:\tmp fixture folder during drag-drop smoke [C:\tmp\AiVS-phase1-media] -> Disposable drag fixtures created under approved elevated C:\tmp route [C:\tmp\AiVS-phase1-media] (fixed)
+  - Failed attempt: Tried Copy-Item for two disposable drag fixtures; sandbox returned Access denied [C:\tmp\AiVS-phase1-media]
+- [DONE] #0214 Computer Use approval timed out when switching from AiVS to revealed uploads Explorer window [Phase 1 manual file workflow smoke] -> Recovered Computer Use Explorer approval; Show in Explorer and parent-folder navigation both verified [Phase 1 manual file workflow smoke] (fixed)
+  - Failed attempt: Selected unique uploads Explorer window and requested activation/state capture; Computer Use app approval timed out [Phase 1 manual file workflow smoke]
+- [DONE] #0213 Phase 1 section extraction assumed heading text not used by runbook and failed with negative Substring index [docs/dependency-modernisation/00_MASTER_RUNBOOK.md] -> Resolved extraction error by using separate numbered phase document rather than assuming Phase headings in master runbook [docs/dependency-modernisation/00_MASTER_RUNBOOK.md] (fixed)
+  - Failed attempt: Searched expected Markdown Phase/Exit headings with rg; runbook uses different section labels and returned no matches [docs/dependency-modernisation/00_MASTER_RUNBOOK.md]
+- [DONE] #0212 Electron-builder pnpm node-module collector invokes global pnpm 11.10.0 and fails strict packageManager 10.30.3 check. [scripts/create-installer.ps1 / electron-builder 26.15.3] -> Removed outer Corepack marker at electron-builder boundary so direct pnpm honors repository packageManager 10.30.3. [scripts/create-installer.ps1] (fixed)
+  - Partial attempt: Clear inherited COREPACK_ROOT before electron-builder so its PATH-discovered pnpm can honor packageManager 10.30.3; packaging verification pending. [scripts/create-installer.ps1]
+- [DONE] #0211 Phase 1 fast Windows packaging fails because Microsoft.PowerShell.Security cannot load for Get-AuthenticodeSignature on VC++ redistributable. [scripts/create-installer.ps1] -> Pinned Windows PowerShell 5.1 security-module manifest prevents PS7 module-path contamination while preserving Authenticode validation. [scripts/create-installer.ps1] (fixed)
+  - Partial attempt: Explicitly import Windows PowerShell 5.1 Microsoft.PowerShell.Security manifest before Authenticode validation; packaging verification pending. [scripts/create-installer.ps1]
+- [DONE] #0210 Phase 1 fast Windows build aborts non-interactively because pnpm 10 must recreate node_modules previously managed by global pnpm 11. [node_modules / scripts/local-build.ps1] -> Restored dependency tree under pinned pnpm 10.30.3; non-TTY version-mismatch reinstall gate no longer applies. [node_modules] (fixed)
+- [DONE] #0209 Windows build script invokes global pnpm 11.10 instead of pinned Corepack pnpm 10.30.3 [scripts/local-build.ps1] -> Local Windows build now resolves repository-pinned pnpm through Corepack; fast packaging passes on Node 24. [scripts/local-build.ps1] (fixed)
+  - Partial attempt: Changed local Windows build install and frontend-build invocations from global pnpm to Corepack-managed pnpm; verification pending. [scripts/local-build.ps1]
+- [DONE] #0208 Phase 1 ledger recorded a guessed full SHA for WanGP pin commit instead of verified rev-parse output [docs/dependency-modernisation/STATUS.md] -> Phase 1 ledger now uses verified WanGP pin commit SHA [docs/dependency-modernisation/STATUS.md] (fixed)
+- [DONE] #0207 Exact WanGP 4f441a12 source contains one upstream trailing-whitespace line [Wan2GP/README.md] -> Known upstream whitespace preserved to keep WanGP checkout exact; pin commit completed and nested checkout remains clean [Wan2GP/README.md] (fixed)
+- [DONE] #0206 Parent vendored Wan2GP snapshot did not match its nested checkout/manifest pin [Wan2GP] -> Parent vendored WanGP source now matches clean nested checkout and manifest revision 4f441a12 [Wan2GP] (fixed)
+- [DONE] #0205 WanGP pin check reports source version 12.345 while manifest records 12.34 [scripts/wangp-source.json] -> Manifest version metadata now matches pinned WanGP 12.345 source [scripts/wangp-source.json] (fixed)
+  - Partial attempt: Aligned manifest wangpVersion metadata to 12.345 from pinned checkout wgp.py; verification pending [scripts/wangp-source.json]
+- [DONE] #0204 Phase 1 fast Windows build blocked because nested Wan2GP checkout has local source changes [Wan2GP] -> Phase 1 packaging blocker cleared: clean Wan2GP checkout pinned to 4f441a12f3a33f4466ed422428bf667d9651bc55 [Wan2GP] (fixed)
+  - Failed attempt: Tried nested Git status in sandbox; Git rejected Wan2GP as dubious ownership before showing changes [Wan2GP]
+  - Partial attempt: Elevated inspection found 19 tracked changes/deletions and export_wan2gp_model_metadata.py untracked at pinned SHA; no files touched [Wan2GP]
+- [DONE] #0203 Phase 1 Vitest cannot load config because sandbox denies esbuild parent-directory access [vitest.config.ts] -> Frontend baseline validated through approved elevated route; code tests are green [vitest.config.ts] (fixed)
+- [DONE] #0202 Frozen install fails in sandbox on registry metadata fetch and no-TTY node_modules replacement [package.json] -> Frozen install verified under Node 24.18.0 and pnpm 10.30.3; host requires explicit Corepack, CI mode, and network route [package.json] (fixed)
+- [DONE] #0201 Backend venv Python launcher cannot start inside managed sandbox during Phase 1 inventory [backend/.venv/Scripts/python.exe] -> Python inventory completed through approved elevated backend venv route [backend/.venv/Scripts/python.exe] (fixed)
+- [DONE] #0200 Phase 1 backup cannot create approved C:\tmp target inside managed sandbox [C:\tmp\AiVS-phase1-backup-20260726] -> Verified Phase 1 backup at C:\tmp\AiVS-phase1-backup-20260726 with matching file count and bytes [C:\tmp\AiVS-phase1-backup-20260726] (fixed)
+- [DONE] #0199 Corepack-backed pnpm --version hangs during Phase 1 toolchain inventory [packageManager/pnpm] -> Phase commands can use corepack pnpm at exact 10.30.3; global shim EPERM remains a host limitation [packageManager/pnpm] (fixed)
+  - Failed attempt: Tried to inspect hanging pnpm process through CIM; managed sandbox denied process enumeration [packageManager/pnpm]
+  - Failed attempt: Broad pnpm command-line filter matched the cleanup PowerShell itself; command terminated before reporting target details [packageManager/pnpm]
+  - Partial attempt: Corepack downloaded pnpm 10.30.3 and runs it explicitly; global shim enable failed with EPERM under Program Files [packageManager/pnpm]
+- [DONE] #0198 Projectmem write regenerated historical issue files as untracked worktree changes [.projectmem/issues] -> Projectmem-generated worktree noise cleaned without touching events or tracked issue history [.projectmem] (fixed)
+- [DONE] #0197 Git merge cannot create .git/ORIG_HEAD.lock in managed workspace [.git/ORIG_HEAD] -> Escalated git merge succeeded; branch now contains origin/dev with no divergence behind [.git/ORIG_HEAD] (fixed)
+- [DONE] #0196 Full pytest launched from repository root breaks inspector subprocess import because the test expects backend as its working directory [backend/tests/test_wangp_creation_inspector.py] -> Full backend suite now runs from its expected backend working directory; inspector import regression passes [backend/tests/test_wangp_creation_inspector.py] (fixed)
+- [DONE] #0195 Full backend suite retains a lower-snap expectation of 145 frames after nearest 8n+1 normalization now returns 153 [backend/tests/test_wangp_bridge.py] -> WanGP bridge timing tests now distinguish exact 145-frame duration from nearest-snapped 153-frame source input [backend/tests/test_wangp_bridge.py] (fixed)
+  - Partial attempt: Updated bridge source-frame regression to nearest 8n+1 result 153; full backend rerun pending [backend/tests/test_wangp_bridge.py]
+  - Failed attempt: First assertion edit changed the unrelated exact 6s timing case to 153 while leaving the source-frame case at 145; apply contextual correction [backend/tests/test_wangp_bridge.py]
+- [DONE] #0194 Krea Edit identity source is reduced to WanGP role I instead of required KI by hard-coded reference-role selection [backend/handlers/image_generation_handler.py] -> Krea whole-image Edit now binds identity source as WanGP KI and passes its integration regression [backend/handlers/image_generation_handler.py] (fixed)
+  - Partial attempt: Included identity_image in the shared KI reference-role selection; focused regression rerun pending [backend/handlers/image_generation_handler.py]
+- [DONE] #0193 Pyright cannot launch in the managed sandbox because the venv executable points to uv-managed Python outside the workspace [backend/.venv/Scripts/pyright.exe] -> Pyright validation now runs outside the managed sandbox; code-level typing failures remain under issue #0188 [backend/.venv/Scripts/pyright.exe] (fixed)
+- [DONE] #0192 Focused backend tests cannot launch because the venv points to the managed uv Python outside the workspace sandbox [backend/.venv/Scripts/python.exe] -> Backend pytest execution works outside the managed sandbox; test failures are tracked under the active feature correction [backend/.venv/Scripts/python.exe] (fixed)
+- [DONE] #0191 Focused Vitest cannot load config in managed sandbox because esbuild is denied reading the workspace parent [vitest.config.ts] -> Focused frontend validation completed outside the sandbox: 4 files and 7 tests pass [vitest.config.ts] (fixed)
+- [DONE] #0190 PowerShell ConvertFrom-Json cannot parse the cached MSR schema because it contains an empty property name [.cache/wangp-creation-diagnostics/ltx2_22B_msr_v2.json] -> Exact creation-model defaults were recovered with text search; no repository change required [.cache/wangp-creation-diagnostics] (fixed)
+- [DONE] #0189 Gallery library inspection assumed a nonexistent useGenSpaceGalleryLibrary.ts file [frontend/views/genspace/hooks] -> Correct gallery hook path identified; no repository change was required [frontend/views/genspace/hooks/useGenSpaceGallery.ts] (fixed)
+- [DONE] #0188 Advanced creation delivery hides required Image/Edit/Region/finishing and video motion/identity/finish controls, with incorrect duration/FPS UX [frontend/views/genspace] -> Image Edit/Region/Post-Gen Finish and video timing/FPS/motion/identity/RIFE/4K Finish are exposed with working WanGP bindings and full validation [frontend/views/genspace; backend/handlers; backend/model_profiles] (fixed)
+  - Partial attempt: Focused backend suite improved to 95 passed with two stale assertions remaining for the expanded image-profile ID set and resolved reframe frame count [backend/tests/test_model_profiles.py; backend/tests/test_generation.py]
+  - Failed attempt: Combined strict-typing fix missed the current processor-catalog context; no typing fix applied and changes were split by file [backend/handlers/media_handler.py; backend/model_profiles/profiles.py]
+  - Partial attempt: Strict typing fixes removed profile constant redefinitions; Pyright now reports only two literal-inference errors in the static processor catalogue [backend/handlers/media_handler.py; backend/model_profiles/profiles.py]
+- [DONE] #0187 Cropped assets record parent/source lineage but omit the crop recipe required for reproducible derivative metadata [frontend/views/genspace/hooks/useGenSpaceController.tsx] -> Crop derivatives now persist the complete MediaCropRecipe alongside parent/source lineage [frontend/views/genspace/hooks/useGenSpaceController.tsx] (fixed)
+  - Partial attempt: Added the canonical crop recipe to AssetLineage and populated it when materializing a crop derivative; validation pending [frontend/types/project.ts]
+- [DONE] #0186 WanGP compatibility check cannot reach the fork because managed sandbox blocks GitHub network access [scripts/update-wangp.ps1] -> WanGP check-only compatibility gate passes with approved network access; checkout and manifest remain unchanged [scripts/update-wangp.ps1] (fixed)
+  - Failed attempt: Ran the documented direct PowerShell check-only script; git ls-remote failed because github.com:443 is blocked in the sandbox [scripts/update-wangp.ps1]
+- [DONE] #0185 Edit-profile inspection used an over-escaped ripgrep pattern and returned no model IDs [backend/model_profiles/profiles.py] -> Edit and Region implementation remains correctly gated by the absence of validated profiles [backend/model_profiles/profiles.py] (fixed)
+- [DONE] #0184 Postprocess source inspection included nonexistent backend/Wan2GP path [backend] -> Postprocess implementation now follows the audit gate instead of scanning a nonexistent bundled WanGP source path [docs/ADVANCED_CREATION_CAPABILITY_AUDIT.md] (fixed)
+- [DONE] #0183 Exact guide and Reframe duration behavior invalidated two legacy ceil-based request assertions [frontend/views/genspace/logic/generation-requests.test.ts] -> Guide and Reframe request tests confirm exact decimal durations without ceil rounding [frontend/views/genspace/logic/generation-requests.test.ts] (fixed)
+- [DONE] #0182 Video timing component test passed compatibility GenSpaceSettings instead of the panel's VideoGenSettings shape [frontend/views/genspace/video/VideoTimingControls.test.tsx] -> Video timing controls use the correct panel settings fixture and pass component tests [frontend/views/genspace/video/VideoTimingControls.test.tsx] (fixed)
+- [DONE] #0181 Phase 6 frontend wiring mixed string motion IDs with persisted motion objects and applied resolved timing to the Reframe branch [frontend/views/genspace/logic/generation-assets.ts] -> Phase 6 motion and timing persistence types are aligned and focused frontend regressions pass [frontend/views/genspace/logic/generation-assets.ts] (fixed)
+- [DONE] #0180 Model availability cache test reaches the real missing WanGP root before its injected session [backend/tests/test_wangp_bridge.py] -> Availability cache regression is independent of the local WanGP installation and passes [backend/tests/test_wangp_bridge.py] (fixed)
+- [DONE] #0179 Authoritative source timing overwrote WanGP continuation duration_seconds with total output duration [backend/handlers/video_generation_handler.py] -> Continuation preserves its requested extension duration while reporting normalized total timing [backend/handlers/video_generation_handler.py] (fixed)
+- [DONE] #0178 Video timing unit test expected 129 frames for 5.7s at 24fps, but the specified floor-and-snap formula yields 137 [backend/tests/test_video_timing.py] -> Decimal video timing test now matches the verified resolver formula [backend/tests/test_video_timing.py] (fixed)
+- [DONE] #0177 Video timing typecheck found a duplicate normalize function declaration and an unchanged bridge duration annotation [backend/services/video_timing.py] -> Video timing and WanGP duration types are clean under strict Pyright [backend/services/video_timing.py] (fixed)
+  - Failed attempt: First cleanup removed both normalizer declarations and still missed the concrete bridge signature [backend/services/video_timing.py]
+  - Failed attempt: A second identical normalizer block remained after the exact restoration [backend/services/video_timing.py]
+- [DONE] #0176 Installed lucide-react version does not export ImageSearch used by Image to Prompt controls [frontend/views/genspace/image/ImagePromptTools.tsx] -> Image to Prompt uses an available icon and frontend typecheck plus focused tests pass [frontend/views/genspace/image/ImagePromptTools.tsx] (fixed)
+- [DONE] #0175 Camera persistence made the shared image snapshot base require camera fields for video snapshots and existing hook fixtures [frontend/views/genspace/types.ts] -> Camera metadata remains compatible with shared video snapshots and focused persistence tests pass [frontend/views/genspace/types.ts] (fixed)
+- [DONE] #0174 Camera compiler contract addition broke the exact model-profile response assertion [backend/tests/test_model_profiles.py] -> Model profile contract assertion includes the camera compiler and the focused suite passes [backend/tests/test_model_profiles.py] (fixed)
+- [DONE] #0173 Focused camera regression command referenced nonexistent tests/test_image_generation.py [backend/tests] -> Focused image regressions now run from the correct tests/test_generation.py target [backend/tests/test_generation.py] (fixed)
+- [DONE] #0172 Camera persistence inspection assumed useGenerationJob.tsx instead of the existing .ts file [frontend/hooks/generation/useGenerationJob.ts] -> Camera result persistence now targets the correct useGenerationJob.ts state flow [frontend/hooks/generation/useGenerationJob.ts] (fixed)
+- [DONE] #0171 Crop dialog test queried a decorative empty-alt image by the img role [frontend/views/genspace/image/MediaCropDialog.test.tsx] -> Crop source preview is accessible and all focused crop component tests pass [frontend/views/genspace/image/MediaCropDialog.tsx] (fixed)
+- [DONE] #0170 Crop overlay inspection used a Windows-incompatible ripgrep path glob [frontend/views/genspace] -> GenSpace overlay mount point was located with a Windows-safe ripgrep invocation [frontend/views/genspace/GenSpaceWorkspace.tsx] (fixed)
+- [DONE] #0169 Crop integration inspection used the wrong AssetContextMenu path before locating it under views/editor [frontend/views/editor/AssetContextMenu.tsx] -> Correct AssetContextMenu path is now used for crop integration work [frontend/views/editor/AssetContextMenu.tsx] (fixed)
+- [DONE] #0168 Image workflow hook emits duplicate profile fallback while the parent profile update is pending [frontend/views/genspace/hooks/useGenSpaceImageTools.tsx] -> Workflow profile changes now suppress duplicate fallback callbacks while controlled state catches up [frontend/views/genspace/hooks/useGenSpaceImageTools.tsx] (fixed)
+  - Failed attempt: Pending-profile guard still allowed a duplicate edit callback because the fallback effect ran after the prop caught up and the mode transition had not settled [frontend/views/genspace/hooks/useGenSpaceImageTools.tsx]
+- [DONE] #0167 Phase 2 tab test uses jest-dom matchers not installed in this Vitest type environment [frontend/views/genspace/image/ImageWorkflowTabs.test.tsx] -> Phase 2 tab test now uses supported DOM assertions and passes [frontend/views/genspace/image/ImageWorkflowTabs.test.tsx] (fixed)
+- [DONE] #0166 Frontend strict typecheck fails because existing role-policy test fixtures predate the new required media/crop/influence fields. [frontend/types/model-profiles.ts] -> New role policies are backwards-compatible with old in-memory fixtures/projects and remain fully populated by current API responses. [frontend/types/model-profiles.ts] (fixed)
+  - Partial attempt: Added the exact frontend profile contract and ran tsc; three legacy test fixtures lacked the new role policy fields. [frontend/types/model-profiles.ts]
+- [DONE] #0165 FakeWanGPBridge.generate_music now returns None in regressions because the availability-method insertion disrupted Fake bridge method boundaries. [backend/tests/fakes/fake_wangp_bridge.py] -> FakeWanGPBridge preserves the existing music output contract while exposing configurable model availability. [backend/tests/fakes/fake_wangp_bridge.py] (fixed)
+  - Failed attempt: Added fake availability support and ran broader regressions; twelve music tests showed generate_music no longer produced its placeholder path. [backend/tests/fakes/fake_wangp_bridge.py]
+- [DONE] #0164 New model availability test accidentally retained unrelated profile assertions outside its local response/data scope, causing NameError. [backend/tests/test_model_profiles.py] -> Model profile availability and existing video-profile assertions now share a valid local response payload. [backend/tests/test_model_profiles.py] (fixed)
+  - Partial attempt: Added Phase 1 policy/availability assertions; the focused suite exposed a misplaced block in the new availability test. [backend/tests/test_model_profiles.py]
+- [DONE] #0163 Model-pack ID lookup used a malformed escaped ripgrep expression in PowerShell and returned no source data. [electron/python-setup.ts] -> Existing downloadPackId values can be assigned from the discovered exact pack catalogue; no placeholder IDs are needed. [electron/python-setup.ts] (fixed)
+  - Failed attempt: Tried a combined quoted regex for pack IDs; PowerShell escaping produced an unclosed group in ripgrep. [electron/python-setup.ts]
+- [DONE] #0162 Phase 1 IPC inspection assumed electron/ipc/project-handlers.ts, but project asset handlers live in a different Electron module. [electron/ipc] -> Phase 1 asset materialization work is scoped to electron/ipc/file-handlers.ts and the shared import library. [electron/ipc/file-handlers.ts] (fixed)
+  - Partial attempt: Read the asset import library and API declarations, but the assumed project-specific IPC handler file was absent. [electron/ipc]
+- [DONE] #0161 Phase 1 symbol scan included a nonexistent frontend/types/electron.d.ts path; Electron API typing is declared inside electron/preload.ts. [electron/preload.ts] -> Phase 1 Electron API work will update the two actual declaration sites; no phantom type file is used. [electron/preload.ts] (fixed)
+  - Partial attempt: Scanned phase-foundation symbols across backend/frontend/Electron and an assumed electron typing file; all real symbols were found, but the assumed file does not exist. [electron/preload.ts]
+- [DONE] #0160 Phase 0 inspector passes runtime tests but strict Pyright rejects recursive normalization because object container branches remain Unknown. [backend/tools/inspect_wangp_creation_models.py] -> Inspector normalization is strictly typed and retains passing runtime tests. [backend/tools/inspect_wangp_creation_models.py] (fixed)
+  - Partial attempt: Added the inspector and focused tests; runtime checks passed, but focused strict Pyright reported ten Unknown-type errors in recursive dict/list normalization. [backend/tools/inspect_wangp_creation_models.py]
+- [DONE] #0159 Phase 0 ignore-rule lookup included a nonexistent backend/.gitignore path; repository uses only the root .gitignore. [.gitignore] -> Ignore-rule inspection now targets the repository's single root .gitignore; no repository change was needed to resolve the lookup error. [.gitignore] (fixed)
+  - Partial attempt: Searched both root and assumed backend ignore files; backend/.gitignore does not exist, while source discovery succeeded. [.gitignore]
+- [DONE] #0158 Windows ripgrep rejected a nonexistent Wan2GP/shared/api/*.py path while locating the pinned API surface; shared/api.py search still succeeded. [Wan2GP/shared/api.py] -> Pinned API inspection now uses Windows-safe explicit file paths; no repository change was required. [Wan2GP/shared/api.py] (fixed)
+  - Partial attempt: Searched shared/api.py plus an assumed shared/api package glob; the nonexistent package path produced an error although the real file returned all required symbols. [Wan2GP/shared/api.py]
+- [DONE] #0157 Baseline frontend build cannot load vite.config.ts because managed sandbox denies esbuild parent-directory access. [vite.config.ts] -> Baseline production build passes through the approved Vite route; no repository change was required. [vite.config.ts] (fixed)
+  - Failed attempt: Ran the installed Vite build directly; esbuild was denied access while resolving vite.config.ts before compilation. [vite.config.ts]
+- [DONE] #0156 Baseline frontend Vitest cannot load vitest.config.ts because managed sandbox denies esbuild parent-directory access. [vitest.config.ts] -> Baseline frontend suite passes through the approved Vitest route; no repository change was required. [vitest.config.ts] (fixed)
+  - Failed attempt: Ran the installed Vitest executable directly; esbuild was denied access while resolving the repository config before tests started. [vitest.config.ts]
+  - Failed attempt: Final direct Vitest run again hit the known managed-sandbox esbuild config access denial [vitest.config.ts]
+- [DONE] #0155 Baseline Pyright cannot start in the managed sandbox because uv is denied access to its cache metadata under AppData. [backend/pyrightconfig.json] -> Baseline strict Pyright passes through the approved uv cache route; no repository change was required. [backend/pyrightconfig.json] (fixed)
+  - Failed attempt: Ran uv run pyright from backend; uv failed before Pyright with access denied on its AppData cache metadata. [backend/pyrightconfig.json]
+- [DONE] #0154 Baseline pnpm typecheck is blocked by the managed pnpm wrapper's registry signature/version-switch check before project checks run. [package.json] -> Baseline typecheck is confirmed clean via direct tsc and approved uv Pyright execution; dependency repair was neither needed nor performed. [package.json] (fixed)
+  - Failed attempt: Ran the plan's standard pnpm typecheck baseline gate; the wrapper failed its registry signature/version-switch check before invoking TypeScript or Pyright. [package.json]
+  - Failed attempt: Retried through the documented bundled node plus pnpm.mjs path; this runtime still invoked the same signature/version-switch guard and failed before checks. [package.json]
+  - Failed attempt: Retried with pnpm --pm-on-fail=ignore; the outer CLI proceeded but its automatic dependency-status repair spawned a nested install without the flag and failed at the same signature check. [package.json]
+- [DONE] #0153 Advanced-creation baseline inspection cannot read submodule/Wan2GP HEAD: Git helper tools are missing and nested checkout fails safe-directory ownership. [Wan2GP] -> Baseline WanGP HEAD and branch are readable with a command-scoped safe-directory override; no repository or global configuration change was required. [Wan2GP] (fixed)
+  - Failed attempt: Ran the plan's baseline Git commands; root branch/HEAD succeeded, but submodule status and nested Wan2GP HEAD were blocked by the managed Git environment. [Wan2GP]
+- [DONE] #0152 Focused Music gallery Vitest run cannot read vitest.config.ts through the managed sandbox's esbuild process. [vitest.config.ts] -> Focused Music gallery validation passes through the approved Vitest route; no repository change was required. [vitest.config.ts] (fixed)
+  - Failed attempt: Ran the installed Vitest executable directly; esbuild was denied parent-directory/config access before tests started. [vitest.config.ts]
+- [DONE] #0151 Windows ripgrep again rejected shell-style frontend/test* and vitest.setup.* path arguments during test harness audit. [frontend/] -> Test source discovery now uses Windows-safe rg filters; no repository change was required. [frontend/] (fixed)
+  - Failed attempt: Tried shell-style wildcard path arguments while locating ResizeObserver/media test setup; ripgrep rejected them on Windows. [frontend/]
+- [DONE] #0150 Music keyword overflow has no edge affordance and multi-variation audio assets render only one waveform at a time. [frontend/views/genspace/music/MusicGenPanel.tsx; frontend/components/GalleryAssetLibrary.tsx] -> Music keyword overflow now shows directional fades and generated multi-variation music renders as independently previewable stacked waveform rows. [frontend/views/genspace/music/MusicGenPanel.tsx; frontend/components/GalleryAssetLibrary.tsx] (fixed)
+  - Partial attempt: Added state-driven keyword edge fades, stacked multi-take audio rows, active-take selection, and focused tests; review found the existing card hover overlay can intercept row hover input. [frontend/views/genspace/music/MusicGenPanel.tsx; frontend/components/GalleryAssetLibrary.tsx]
+- [DONE] #0149 PowerShell range helper produced nested arrays that Math.Min could not compare during targeted Music asset audit. [frontend/types/project.ts] -> Targeted source audit now uses simple explicit PowerShell slices; no repository change was required. [frontend/types/project.ts] (fixed)
+  - Failed attempt: Tried a generic nested PowerShell range loop to read three targeted source slices; Math.Min rejected the nested array shape. [frontend/types/project.ts]
+- [DONE] #0148 Windows ripgrep rejected a shell-style GalleryAsset*.tsx path during the Music variations card audit. [frontend/components/] -> Gallery audit completed with Windows-safe explicit paths; no repository fix was needed. [frontend/components/] (fixed)
+- [DONE] #0147 Strict TypeScript finds stale ChevronDown/ChevronUp imports in MusicGenPanel after current UI no longer renders their controls. [frontend/views/genspace/music/MusicGenPanel.tsx] -> MusicGenPanel imports now match its rendered controls and strict TypeScript passes. [frontend/views/genspace/music/MusicGenPanel.tsx] (fixed)
+  - Partial attempt: Removed only the two stale chevron imports from MusicGenPanel. [frontend/views/genspace/music/MusicGenPanel.tsx]
+- [DONE] #0146 Strict TypeScript exposes three stale PromptEditor call sites missing title and an unused MusicMediaInputs task variable in current shared worktree. [frontend/views/genspace/] -> PromptEditor call sites compile through an optional title contract and MusicMediaInputs has no stale task calculation. [frontend/views/genspace/] (fixed)
+  - Partial attempt: Made PromptEditor title optional at the shared component boundary and removed the unused Music media task label calculation. [frontend/views/genspace/]
+- [DONE] #0145 Merged lyrics patch shadows the outer prompt value with the compose result, creating a temporal-dead-zone reference in compose(). [frontend/views/genspace/music/MusicSettings.tsx] -> Music compose flow now reads the merged prompt buffer without shadowing and replaces it with the composed lyrics. [frontend/views/genspace/music/MusicSettings.tsx] (fixed)
+  - Partial attempt: Renamed the unified prompt buffer and compose result so compose() references the intended outer value. [frontend/views/genspace/music/MusicSettings.tsx]
+- [DONE] #0144 Required project summary lookup timed out after 300 seconds before the merged lyrics prompt update. [.projectmem/summary.md] -> Project summary became available on retry; no repository change was required. [.projectmem/summary.md] (fixed)
+- [DONE] #0143 Focused MusicGenPanel Vitest run cannot read the repository config under the managed sandbox. [vitest.config.ts] -> Focused MusicGenPanel Vitest validation passes through the approved config-access route. [vitest.config.ts] (fixed)
+  - Failed attempt: Ran the installed Vitest executable directly; esbuild was denied parent-directory/config access before tests started. [vitest.config.ts]
+- [DONE] #0142 PowerShell stripped quotes from a combined rg pattern while searching for tab and scrollbar patterns. [frontend/] -> Pattern audit completed with PowerShell-safe fixed-string searches. [frontend/] (fixed)
+- [DONE] #0141 PowerShell stripped the quoted type="range" alternation and left the final Music source audit regex unclosed. [frontend/views/genspace/music/] -> Final Music source audit uses PowerShell-safe fixed-string patterns. [frontend/views/genspace/music/] (fixed)
+- [DONE] #0140 Strict Pyright infers GenerateMusicRequest.audioInputs as list[Unknown] from the constrained Pydantic Field declaration. [backend/api_types.py] -> GenerateMusicRequest.audioInputs retains its concrete element type under strict Pyright. [backend/api_types.py] (fixed)
+  - Partial attempt: Gave the Pydantic audioInputs default factory an explicit MusicAudioInputRequest element type. [backend/api_types.py]
+- [DONE] #0139 Root-started Pyright scanned far beyond backend and unified exec cannot interrupt the long-running process. [backend/pyrightconfig.json] -> Backend Pyright now runs from the backend directory with correct scope; the runaway validation tree was safely removed. [backend/pyrightconfig.json] (fixed)
+  - Failed attempt: Tried to verify the exact Pyright process tree before stopping it; managed sandbox denied Win32 process command-line access. [backend/pyrightconfig.json]
+  - Partial attempt: Verified and stopped only the root-started uv/Pyright process tree; prepared to rerun from backend so pyrightconfig scope applies. [backend/pyrightconfig.json]
+- [DONE] #0138 Focused backend Music tests still call the old single audio resolver shape and expect empty Custom lyrics to be rejected. [backend/tests/] -> Backend Music tests now match the canonical two-input contract and generation-time lyric fallback behavior. [backend/tests/] (fixed)
+  - Partial attempt: Migrated backend Music tests to list-based A/B/AB routing and added hidden Auto/Custom composition seed/Think coverage. [backend/tests/]
+- [DONE] #0137 Backend virtualenv python launcher points to an unavailable uv-managed Python and cannot start focused Music tests. [backend/.venv/Scripts/python.exe] -> Backend validation runs through approved uv instead of the stale virtualenv launcher. [backend/.venv/Scripts/python.exe] (fixed)
+  - Failed attempt: Tried uv run as a fallback; managed sandbox denied access to uv cache metadata before pytest started. [backend/.venv/Scripts/python.exe]
+- [DONE] #0136 Two frontend Music tests still expect empty Custom lyrics rejection and hidden Auto lyrics controls after behavior changed. [frontend/views/genspace/] -> Music settings and request tests now match the requested always-visible lyrics controls and generation-time fallback behavior. [frontend/views/genspace/] (fixed)
+  - Partial attempt: Updated Music controls and focused tests for always-visible disabled lyrics fields, empty-Custom fallback, and dual audio mapping. [frontend/views/genspace/]
+  - Failed attempt: Focused frontend rerun passed lyrics behavior but the new dual-input test expected Windows separators and omitted explicit undefined optional fields. [frontend/views/genspace/logic/generation-requests.test.ts]
+  - Partial attempt: Adjusted the dual-input assertion to the canonical file URL conversion and optional request fields. [frontend/views/genspace/logic/generation-requests.test.ts]
+- [DONE] #0135 Focused frontend Vitest cannot load vitest.config.ts because managed sandbox denies esbuild parent-directory access. [vitest.config.ts] -> Approved Vitest route reliably loads the repository config and runs the focused frontend suite. [vitest.config.ts] (fixed)
+- [DONE] #0134 Required project map lookup timed out after 300 seconds during resumed Music mode implementation. [.projectmem/PROJECT_MAP.md] -> Project map became available on retry; no repository change was required. [.projectmem/PROJECT_MAP.md] (fixed)
+- [DONE] #0133 Small accessibility/test patch was rejected because the first update hunk lacked enough closing context before the second file. [frontend/views/genspace/music/MusicMediaInputs.tsx] -> Music audio slots have distinct accessible Add Cover Song/Add Transfer Timbre labels and focused test targeting. [frontend/views/genspace/music/MusicMediaInputs.tsx] (fixed)
+  - Failed attempt: Tried adding an audio-slot aria label and matching test selector in one underspecified patch; apply_patch rejected the hunk. [frontend/views/genspace/music/MusicMediaInputs.tsx]
+- [DONE] #0132 Strict TypeScript found four legacy music request/test fixtures missing new lyricsThink/audioInputs or using removed single-input props. [frontend/] -> All frontend request, media, and recipe fixtures use the canonical two-input music contract; strict TypeScript passes. [frontend/] (fixed)
+  - Failed attempt: Ran strict TypeScript after the contract change; four test fixtures still used the legacy request/media shape. [frontend/]
+- [DONE] #0131 Combined backend schema/resolver patch did not match the resolver import block and applied no changes. [backend/services/music_request_resolver.py] -> Backend schema and resolver now support canonical none/A/B/AB music audio routing with legacy single-input compatibility. [backend/services/music_request_resolver.py] (fixed)
+  - Failed attempt: Tried one combined backend resolver/schema patch; the resolver import context differed and apply_patch rejected it atomically. [backend/services/music_request_resolver.py]
+  - Partial attempt: Inspection showed apply_patch moved the resolver to sequence-based '', A, B, AB mapping before failing on api_types.py; backend change is partial, not atomic. [backend/services/music_request_resolver.py]
+- [DONE] #0130 Combined music type/compiler patch did not match ComposeMusicLyricsRequest field ordering, so no changes were applied. [frontend/types/music.ts] -> Canonical frontend music contracts now support two inputs, lyrics fallback/seed, and fixed advanced compatibility state. [frontend/types/music.ts] (fixed)
+  - Failed attempt: Tried one combined frontend type/compiler/persistence patch; apply_patch could not match the compose-request block and rejected the patch atomically. [frontend/types/music.ts]
+  - Partial attempt: Split the rejected patch and updated the canonical frontend music settings/request/recipe types successfully. [frontend/types/music.ts]
+- [DONE] #0129 Documentation path audit hit access-denied files under the vendored docs/wan2gp-docs tree. [docs/wan2gp-docs/] -> Project documentation audit now targets owned docs and avoids the inaccessible vendored WanGP documentation tree. [docs/] (fixed)
+  - Partial attempt: Searched all docs for stale GenSpace paths; vendored WanGP docs rejected access, while project-owned docs returned the relevant references. [docs/wan2gp-docs/]
+- [DONE] #0128 Combined music extraction/reorg patch was rejected because the MusicModeTabs move hunk contained no file change. [frontend/views/genspace/components/MusicModeTabs.tsx] -> Music extraction/reorg completed through small apply_patch moves; strict TypeScript confirms the result. [frontend/views/genspace/music/] (fixed)
+  - Failed attempt: Tried applying the full music extraction and moves in one patch; apply_patch rejected the empty MusicModeTabs move hunk, so no files changed. [frontend/views/genspace/components/MusicModeTabs.tsx]
+  - Partial attempt: Split the failed combined patch; shared AspectIcon, consolidated music keywords, and MusicSettings were added successfully. [frontend/views/genspace/music/MusicSettings.tsx]
+- [DONE] #0127 Music request test lookup used a nonexistent frontend/lib path while tracing vocal-mode coverage. [frontend/lib/compile-music-request.test.ts] -> Located the actual music request coverage under GenSpace generation-request tests; no missing source file remains relevant. [frontend/views/genspace/logic/generation-requests.test.ts] (fixed)
+  - Failed attempt: Tried reading compile-music-request.test.ts beside the source; that test file does not exist at the assumed path. [frontend/lib/compile-music-request.test.ts]
+- [DONE] #0126 PowerShell stripped quotes from the final rg alternation and produced an unclosed regex group. [frontend/views/genspace/] -> Final source lookup now uses PowerShell-safe fixed-string ripgrep patterns. [frontend/views/genspace/] (fixed)
+  - Failed attempt: Tried one quoted rg alternation for final line references; PowerShell removed the embedded quotes and rg rejected the regex. [frontend/views/genspace/]
+- [DONE] #0125 Focused pnpm Vitest command stalled without output and the unified exec backend rejected Ctrl+C. [frontend/views/genspace/GenSpaceModeTabs.test.tsx] -> Focused Vitest validation completes through the installed executable with approved config access; 3 mode-tab tests pass. [frontend/views/genspace/GenSpaceModeTabs.test.tsx] (fixed)
+  - Failed attempt: Tried the standard pnpm Vitest route; registry signature verification failed before Vitest started, and Ctrl+C was unsupported while it was pending. [frontend/views/genspace/GenSpaceModeTabs.test.tsx]
+  - Failed attempt: Ran the installed Vitest executable directly; managed sandbox denied esbuild access while loading vitest.config.ts. [vitest.config.ts]
+- [DONE] #0124 Required projectmem get_project_map call timed out after 300 seconds at session start. [.projectmem/PROJECT_MAP.md] -> The required project map is available after one retry; no repository change was needed. [.projectmem/PROJECT_MAP.md] (fixed)
+- [DONE] #0123 Fallback in-app browser smoke test timed out waiting for its webview to attach to the local renderer page. [http://localhost:5173/] -> Local renderer fallback attachment now works; direct browser rendering remains blank because Electron preload APIs are absent. [http://localhost:5173/] (fixed)
+- [DONE] #0122 Final smoke-test unified exec session again rejected Ctrl+C, so the verified workspace process tree needs targeted cleanup. [dev-session/52458] -> Temporary smoke-test session and its verified workspace process tree are stopped. [dev-session/52458] (fixed)
+- [DONE] #0121 Final Electron smoke launch found Vite port 5173 already occupied and started the new renderer on 5174, risking inspection of a stale app instance. [localhost:5173] -> Clean single-instance dev launch now owns port 5173, creates one AiVS Electron window, and starts the FastAPI/WanGP backend successfully. [localhost:5173] (fixed)
+- [DONE] #0120 Full pnpm typecheck was intercepted by registry-signature verification before TypeScript/Pyright could run on this host. [package.json] -> Full typecheck completed through the approved route with zero TypeScript or Pyright errors. [package.json] (fixed)
+- [DONE] #0119 jsdom URL lacks createObjectURL/revokeObjectURL, so the new owned-blob cleanup test cannot spy on those methods directly. [frontend/views/genspace/hooks/useGenSpaceMediaInputs.test.ts] -> Owned object-URL cleanup test now supplies the missing jsdom URL methods and passes. [frontend/views/genspace/hooks/useGenSpaceMediaInputs.test.ts] (fixed)
+- [DONE] #0118 Expanded frontend tests omitted required progress fields and passed GenSpace defaults without the GenerationSettings cameraMotion field. [frontend/hooks/generation/progress.test.ts] -> Expanded progress and compatibility-facade tests now satisfy strict frontend types. [frontend/hooks/generation/progress.test.ts] (fixed)
+- [DONE] #0117 Combined media-role canonicalization patch did not match the current media-inputs import/type names, so no changes were applied. [frontend/views/genspace/logic/media-inputs.ts] -> Canonical guide/audio role sets now replace duplicated collections across GenSpace and shared request/restore logic; TypeScript passes. [frontend/views/genspace/constants.ts] (fixed)
+  - Failed attempt: Tried canonicalizing all guide/audio role consumers in one patch; an outdated media-input import context prevented any edit. [frontend/views/genspace/logic/media-inputs.ts]
+- [DONE] #0116 New Director request-builder test used an incomplete fixture that fails strict GenerateDirectorRequest typing. [frontend/hooks/generation/request-builders.test.ts] -> Director and music transport builder coverage compiles with a complete typed Director request. [frontend/hooks/generation/request-builders.test.ts] (fixed)
+- [DONE] #0115 Panel-contract split removed the GenSpaceSettings import still required by image/video/reframe snapshot types. [frontend/views/genspace/types.ts] -> Panel contracts and snapshot types compile cleanly with the canonical settings import restored. [frontend/views/genspace/types.ts] (fixed)
+- [DONE] #0114 An in-flight progress poll can still publish after the terminal POST response because clearing the interval does not invalidate the already-running poll. [frontend/hooks/generation/useGenerationJob.ts] -> Late in-flight polling updates are ignored after terminal response; focused regression test passes. [frontend/hooks/generation/useGenerationJob.ts] (fixed)
+- [DONE] #0113 Shared job error parsing ignores FastAPI `detail` responses and may consume plain-text bodies before fallback, changing visible backend error messages. [frontend/hooks/generation/useGenerationJob.ts] -> Backend error bodies are preserved through single-read parsing; focused lifecycle suite passes. [frontend/hooks/generation/useGenerationJob.ts] (fixed)
+- [DONE] #0112 StrictMode effect replay leaves mountedRef false because setup never restores it, causing subsequent job progress/results to be ignored in development. [frontend/hooks/generation/useGenerationJob.ts] -> StrictMode replay now restores mounted state; focused lifecycle suite passes all six tests. [frontend/hooks/generation/useGenerationJob.ts] (fixed)
+- [DONE] #0111 Reframe submission snapshots always persist prompt `outpaint`, discarding a non-blank user prompt from generated asset metadata. [frontend/views/genspace/hooks/useGenSpaceGenerationActions.ts] -> Non-blank Reframe prompts now survive submission and asset persistence; focused asset-builder regression test passes. [frontend/views/genspace/hooks/useGenSpaceGenerationActions.ts] (fixed)
+- [DONE] #0110 Windows ripgrep rejected shell-style glob paths while auditing panel context imports; the earlier file and pattern checks still completed. [frontend/views/genspace/] -> Panel context-import audit completed with Windows-safe ripgrep filters. [frontend/views/genspace/] (fixed)
+- [DONE] #0109 Combined generation-command patch did not match the existing request-builder test imports, so no changes were applied. [frontend/views/genspace/logic/generation-requests.test.ts] -> Generation command extraction now compiles and all 19 frontend tests pass, including music and disabled-Retake coverage. [frontend/views/genspace/logic/generation-requests.ts] (fixed)
+- [DONE] #0108 Moving gallery state/actions into useGenSpaceGallery left deletion, import, duplicate-choice, and filter imports in GenSpaceWorkspace. [frontend/views/genspace/GenSpaceWorkspace.tsx] -> Strict TypeScript passes after gallery controller import cleanup. [frontend/views/genspace/GenSpaceWorkspace.tsx] (fixed)
+- [DONE] #0107 Overlay extraction left presentation-only imports in GenSpaceWorkspace and narrowed the context-menu setter below AssetContextMenu's Dispatch contract. [frontend/views/genspace/GenSpaceOverlays.tsx] -> Strict TypeScript passes after overlay contract and workspace import cleanup. [frontend/views/genspace/GenSpaceOverlays.tsx] (fixed)
+- [DONE] #0106 Gallery view extraction left gallery-only icons and components imported by GenSpaceWorkspace, failing strict TypeScript. [frontend/views/genspace/GenSpaceWorkspace.tsx] -> Strict TypeScript passes after the gallery view import cleanup. [frontend/views/genspace/GenSpaceWorkspace.tsx] (fixed)
+- [DONE] #0105 Snapshot hardening inserted assetPaths into the video command-builder arguments instead of the video submission snapshot, and left one stale import. [frontend/views/genspace/hooks/useGenSpaceGenerationActions.ts] -> Strict TypeScript confirms submission snapshot asset paths are attached at the correct boundary. [frontend/views/genspace/hooks/useGenSpaceGenerationActions.ts] (fixed)
+- [DONE] #0104 Settings-restore extraction left the canonical GenSpaceMediaInput import unused in GenSpaceWorkspace. [frontend/views/genspace/GenSpaceWorkspace.tsx] -> Strict TypeScript passes with the stale workspace media type import removed. [frontend/views/genspace/GenSpaceWorkspace.tsx] (fixed)
+- [DONE] #0103 VideoMediaInputs imports Music after the shared MediaInputSlot took ownership of the audio icon, failing strict TypeScript. [frontend/views/genspace/components/VideoMediaInputs.tsx] -> Strict TypeScript passes after removing the stale VideoMediaInputs icon import. [frontend/views/genspace/components/VideoMediaInputs.tsx] (fixed)
+- [DONE] #0102 PowerShell parsed a double-quoted rg pattern containing escaped TypeScript quotes as syntax instead of passing it to ripgrep. [frontend/hooks/use-generation.ts] -> Confirmed PowerShell-safe single-quoted ripgrep patterns avoid the parser error and return the source audit results. [frontend/hooks/use-generation.ts] (fixed)
+- [DONE] #0101 The unified exec backend could not interrupt the temporary Vite/Electron smoke-test session. [dev-session/59622] -> Temporary Vite/Electron smoke-test session is confirmed stopped. [dev-session/59622] (fixed)
+- [OPEN] #0100 Final Electron smoke capture failed because Windows Computer Use could not access GetCursorPos. [frontend/views/genspace/] (open)
+  - Failed attempt: Refreshed the unique AiVS window handle and retried capture; Windows Graphics Capture still failed for the monitor. [frontend/views/genspace/]
+  - Failed attempt: Clean final Electron smoke window was found, but Computer Use state capture again failed at GetCursorPos with access denied. [frontend/views/genspace/]
+  - Failed attempt: Refreshed the clean AiVS window handle and retried screenshot capture; GetCursorPos access denial persisted. [frontend/views/genspace/]
+- [DONE] #0099 Image request-builder extraction left a local numSteps value used only by the moved body builder. [frontend/hooks/use-generation.ts] -> Image and video transport request bodies are isolated and covered by passing tests. [frontend/hooks/generation/request-builders.ts] (fixed)
+  - Partial attempt: Removed the numSteps local now computed by buildImageRequestBody. [frontend/hooks/use-generation.ts]
+- [DONE] #0098 Progress extraction test omitted required response fields and the facade retained an unused getPhaseMessage import. [frontend/hooks/generation/progress.test.ts] -> Progress helpers are isolated and fully covered by passing typed tests. [frontend/hooks/generation/progress.ts] (fixed)
+  - Partial attempt: Completed the typed progress fixture and removed the facade’s unused message helper import. [frontend/hooks/generation/progress.test.ts]
+- [DONE] #0097 Gallery-state hook extraction left three state-type/default imports in GenSpaceWorkspace. [frontend/views/genspace/GenSpaceWorkspace.tsx] -> Gallery state is isolated in useGenSpaceGallery with a clean workspace compile. [frontend/views/genspace/hooks/useGenSpaceGallery.ts] (fixed)
+  - Partial attempt: Removed gallery state imports now owned by useGenSpaceGallery. [frontend/views/genspace/GenSpaceWorkspace.tsx]
+- [DONE] #0096 Result-persistence extraction left five side-effect helper imports in GenSpaceWorkspace. [frontend/views/genspace/GenSpaceWorkspace.tsx] -> Result persistence is isolated in its own hook with idempotency refs preserved and a clean compile. [frontend/views/genspace/hooks/useGenSpaceResultPersistence.ts] (fixed)
+  - Partial attempt: Removed generated-path, asset-copy, logger, and media-storage helpers now owned by the persistence hook. [frontend/views/genspace/GenSpaceWorkspace.tsx]
+- [DONE] #0095 Generation-action hooks left obsolete backendFetch and fileUrlToPath imports in the workspace. [frontend/views/genspace/GenSpaceWorkspace.tsx] -> Generation actions and prompt enhancement are isolated with a clean workspace compile. [frontend/views/genspace/hooks/useGenSpaceGenerationActions.ts] (fixed)
+  - Partial attempt: Removed backend and URL helpers now owned by the extracted action/enhancement hooks. [frontend/views/genspace/GenSpaceWorkspace.tsx]
+- [DONE] #0094 Generation-request extraction left GUIDE_MEDIA_ROLES unused in GenSpaceWorkspace. [frontend/views/genspace/GenSpaceWorkspace.tsx] -> Guide-role request logic is isolated in generation-requests with a clean workspace compile. [frontend/views/genspace/logic/generation-requests.ts] (fixed)
+  - Partial attempt: Removed the role list now owned by the pure request builder. [frontend/views/genspace/GenSpaceWorkspace.tsx]
+- [DONE] #0093 Mode-hook extraction left obsolete GenSpaceMode and VideoProcessMode type imports in the workspace. [frontend/views/genspace/GenSpaceWorkspace.tsx] -> Mode state and types are isolated cleanly in the dedicated hook and pure transition module. [frontend/views/genspace/hooks/useGenSpaceModeState.ts] (fixed)
+  - Partial attempt: Removed the two mode types now owned by useGenSpaceModeState. [frontend/views/genspace/GenSpaceWorkspace.tsx]
+- [DONE] #0092 Settings-hook extraction left an obsolete MusicSettings import in GenSpaceWorkspace. [frontend/views/genspace/GenSpaceWorkspace.tsx] -> GenSpace settings state now compiles cleanly in its dedicated hook. [frontend/views/genspace/hooks/useGenSpaceSettingsState.ts] (fixed)
+  - Partial attempt: Removed the now hook-owned MusicSettings import from the workspace. [frontend/views/genspace/GenSpaceWorkspace.tsx]
+- [DONE] #0091 Direct Vitest startup cannot read the repo config path inside the managed sandbox. [vitest.config.ts] -> Approved direct Vitest route resolves the config and executes frontend tests successfully. [vitest.config.ts] (fixed)
+  - Failed attempt: Direct Vitest run again hit the managed sandbox esbuild config-directory access denial. [vitest.config.ts]
+- [DONE] #0090 Frontend test command was intercepted by pnpm signature verification and never reached Vitest. [package.json] -> Frontend tests run reliably through the installed vitest.cmd binary on this host. [package.json] (fixed)
+- [DONE] #0089 VideoModeTabs extraction left obsolete Expand and RETAKE_AVAILABLE imports in GenSpaceSidebar. [frontend/views/genspace/GenSpaceSidebar.tsx] -> Video mode tab ownership is isolated with no stale sidebar imports. [frontend/views/genspace/components/VideoModeTabs.tsx] (fixed)
+  - Partial attempt: Removed the two imports now owned by VideoModeTabs. [frontend/views/genspace/GenSpaceSidebar.tsx]
+- [DONE] #0088 Mechanical sidebar move left obsolete parent imports and omitted Asset/Trash2/Pencil imports in the new file. [frontend/views/genspace/GenSpaceSidebar.tsx] -> GenSpaceSidebar extraction compiles with complete dependencies and no obsolete parent imports. [frontend/views/genspace/GenSpaceSidebar.tsx] (fixed)
+  - Partial attempt: Added the sidebar’s missing Asset/edit/delete imports and removed all imports migrated out of GenSpace. [frontend/views/genspace/GenSpaceSidebar.tsx]
+  - Partial attempt: Restored the one guide-role import still required by GenSpace request preparation. [frontend/views/GenSpace.tsx]
+- [DONE] #0087 ImageModelControls extraction moved AspectIcon although Video output settings still use it in GenSpace. [frontend/views/GenSpace.tsx] -> AspectIcon remains available to both extracted image controls and existing video output controls. [frontend/views/genspace/components/ImageModelControls.tsx] (fixed)
+  - Partial attempt: Exported the shared AspectIcon from ImageModelControls and imported it for Video settings. [frontend/views/genspace/components/ImageModelControls.tsx]
+- [DONE] #0086 GuideMediaTrimEditor extraction left five obsolete GenSpace imports, failing strict TypeScript. [frontend/views/GenSpace.tsx] -> Removed all stale trim imports; GenSpace and the extracted editor compile cleanly. [frontend/views/GenSpace.tsx] (fixed)
+  - Partial attempt: Removed the trim component’s obsolete Play/Pause/volume and VideoTrimPanel imports from GenSpace. [frontend/views/GenSpace.tsx]
+- [DONE] #0085 Automated GuideMediaTrimEditor move missed the blank-line boundary before the next component; no files changed. [frontend/views/GenSpace.tsx] -> GuideMediaTrimEditor moved successfully with behavior-preserving code and passing TypeScript. [frontend/views/genspace/components/GuideMediaTrimEditor.tsx] (fixed)
+  - Partial attempt: Included the exact blank-line boundary and complete icon imports; GuideMediaTrimEditor moved to its dedicated file. [frontend/views/genspace/components/GuideMediaTrimEditor.tsx]
+- [DONE] #0084 Canonical constants narrowed guide-role includes and default model state, causing eight GenSpace TypeScript errors. [frontend/views/genspace/constants.ts] -> Canonical roles/default settings preserve prior inference and strict TypeScript now passes. [frontend/views/genspace/constants.ts] (fixed)
+  - Partial attempt: Widened the canonical role list to readonly strings and the default model state to the existing fast/pro union. [frontend/views/genspace/constants.ts]
+  - Partial attempt: Narrowed restored GenSpace model settings to the already-enforced fast/pro union at the shared settings adapter. [frontend/lib/apply-generation-params.ts]
+- [DONE] #0083 Combined canonical-types patch did not match the current DEFAULT_VIDEO_SETTINGS block; no files changed. [frontend/views/GenSpace.tsx] -> Canonical type/constants extraction completed with the current defaults preserved and TypeScript passing. [frontend/views/GenSpace.tsx] (fixed)
+  - Partial attempt: Split the canonical-types change and matched the actual current defaults; all intended type/constants edits applied. [frontend/views/GenSpace.tsx]
+- [DONE] #0082 PowerShell rejected mixed-quote rg command while locating GenerationSettings consumers. [package.json; frontend] -> Used PowerShell-safe rg quoting and completed the requested inventory. [package.json; frontend] (fixed)
+- [DONE] #0081 Managed sandbox blocks process enumeration needed to stop the temporary Vite/Electron QA runtime. [vite.config.ts] -> Approved workspace-scoped process enumeration enabled safe targeted cleanup and verified the temporary runtime is gone. [vite.config.ts] (fixed)
+  - Failed attempt: Queried workspace-scoped Node/Electron/Python processes in the sandbox; Win32 process access was denied. [vite.config.ts]
+- [DONE] #0080 Temporary Vite/Electron QA session does not support PTY interrupt through write_stdin. [vite.config.ts] -> Cleanly removed the temporary Vite/Electron/backend QA process tree using validated PIDs. [vite.config.ts] (fixed)
+  - Failed attempt: Sent Ctrl+C to the temporary Vite/Electron unified session; the process backend rejected interactive interrupt. [vite.config.ts]
+  - Partial attempt: Stopped the exact temporary Electron PID 29480 and Vite PID 32016 after validating their workspace command lines. [vite.config.ts]
+- [DONE] #0079 Focused Pyright reports unused MusicDurationMode import after Music V2 handler refactor. [backend/handlers/music_generation_handler.py:15] -> Removed the obsolete MusicDurationMode import; final Pyright is clean. [backend/handlers/music_generation_handler.py] (fixed)
+  - Partial attempt: Ran focused Pyright after backend Music V2 implementation; all types passed but one obsolete enum import remained. [backend/handlers/music_generation_handler.py:15]
+  - Partial attempt: Removed the unused MusicDurationMode import; Pyright rerun remains to confirm the warning is gone. [backend/handlers/music_generation_handler.py:15]
+- [DONE] #0078 Combined Music V2 test patch did not match the current bridge manifest assertion; no test files changed. [backend/tests/test_wangp_bridge.py] -> Split test patches are confirmed by the focused Music suite: 67 tests pass. [backend/tests/test_wangp_bridge.py] (fixed)
+  - Failed attempt: Tried adding resolver/profile tests and updating the bridge test in one patch; a duplicate context assumption failed and the patch applied nothing. [backend/tests/test_wangp_bridge.py]
+- [DONE] #0077 PowerShell stripped quoted rg alternation while locating GenSpace Music references, producing an invalid regex. [frontend/views/GenSpace.tsx] -> GenSpace Music references were located using PowerShell-safe rg quoting. [frontend/views/GenSpace.tsx] (fixed)
+  - Failed attempt: Ran one quoted rg alternation for GenSpace Music references; PowerShell removed embedded quotes and rg rejected the pattern. [frontend/views/GenSpace.tsx]
+- [DONE] #0076 Baseline Vite build cannot read the repo config path inside the managed sandbox. [vite.config.ts] -> Baseline production build succeeds through the approved Vite route for renderer, Electron main, and preload. [vite.config.ts] (fixed)
+  - Failed attempt: Ran the baseline direct Vite build in the managed sandbox; esbuild was denied access while resolving vite.config.ts. [vite.config.ts]
+- [DONE] #0075 Baseline backend tests cannot read uv cache metadata inside the managed sandbox. [backend/.venv] -> Baseline backend validation succeeds with approved access to the existing uv cache: 239 passed, 1 skipped. [backend/.venv] (fixed)
+  - Failed attempt: Ran baseline backend pytest inside the managed sandbox; uv failed on cache metadata access before tests started. [backend/.venv]
+- [DONE] #0074 Recomposed Settings into a wide left-navigation modal, merged Output controls into General, and redesigned Model Manager cards to show missing/selected/downloading/ready/failed states inline. TypeScript and diff checks passed. -> Settings now uses a wide full-height modal with persistent left navigation. Output controls are part of General, Model Manager has its own tab, and model cards show grey missing, blue selected, yellow inline progress with transfer details, green ready, and red retryable failure states. TypeScript, diff validation, and production Vite build pass. (fixed)
+- [DONE] #0073 TypeScript validation is blocked by an unused Film import in the user's current ReframePanel changes. [frontend/components/ReframePanel.tsx:3] -> Removed the obsolete Film import without changing the user's Reframe layout; TypeScript passes. [frontend/components/ReframePanel.tsx:2] (fixed)
+  - Failed attempt: Ran the full TypeScript check after the model selector update; it stopped on the pre-existing unused Film import in ReframePanel. [frontend/components/ReframePanel.tsx:3]
+- [DONE] #0072 New model trigger imports ReactNode from lucide-react instead of React. [frontend/components/ModelDropdownTrigger.tsx:1] -> ModelDropdownTrigger now imports ReactNode from React and type-checks. [frontend/components/ModelDropdownTrigger.tsx] (fixed)
+  - Partial attempt: Added the shared rich model trigger, then caught its ReactNode type imported from the icon package. [frontend/components/ModelDropdownTrigger.tsx]
+- [DONE] #0071 PowerShell stripped embedded rg quotes during final line-reference lookup, producing invalid regular expressions. [frontend/views/GenSpace.tsx] -> Final source line lookup now uses PowerShell-safe rg quoting. [frontend/views/GenSpace.tsx] (fixed)
+  - Failed attempt: Combined final status and quoted rg patterns in one PowerShell command; the line-reference regex quoting was malformed. [frontend/views/GenSpace.tsx]
+- [DONE] #0070 First full dev launch creates a hidden Electron BrowserWindow; ready-to-show never exposes a targetable AiVS window despite renderer/backend success. [electron/window.ts:40] -> Confirmed the Electron window and Gen Space sidebar after a warm dev restart; user visually approved the layout. [electron/window.ts:40] (fixed)
+  - Failed attempt: Launched the full Electron dev stack; backend and renderer became healthy, but the main BrowserWindow remained hidden with no window handle for Computer Use. [electron/window.ts:40]
+- [DONE] #0069 Managed sandbox denies inspecting the local Vite port owner, preventing shutdown before full Electron QA. [localhost:5173] -> Freed localhost:5173 after verifying and stopping the workspace-only Vite process. [localhost:5173] (fixed)
+  - Failed attempt: Tried to identify and stop only the verified workspace Vite listener; Get-NetTCPConnection was access denied. [localhost:5173]
+- [DONE] #0068 Vite development server cannot resolve its config inside the managed sandbox, blocking browser layout QA. [vite.config.ts] -> Started the local Vite/Electron development stack with approved config access and completed visual QA. [vite.config.ts] (fixed)
+  - Failed attempt: Started the Vite dev server inside the managed sandbox; esbuild hit the same parent-directory access denial. [vite.config.ts]
+- [DONE] #0067 Frontend Vite build again cannot read the parent directory/config inside the managed sandbox. [vite.config.ts] -> Verified the Gen Space redesign with the approved Vite build route; all frontend and Electron bundles compile. [vite.config.ts] (fixed)
+  - Failed attempt: Ran the direct Vite frontend build in the managed sandbox; esbuild was denied access while resolving vite.config.ts. [vite.config.ts]
+- [DONE] #0066 Gen Space sidebar refactor leaves two obsolete media-input expansion setters, causing TypeScript compile errors. [frontend/views/GenSpace.tsx:771; frontend/views/GenSpace.tsx:1339] -> Removed all obsolete media-input expansion setter calls; the full-height sidebar compiles cleanly. [frontend/views/GenSpace.tsx] (fixed)
+  - Partial attempt: Recomposed Gen Space into the sidebar layout; TypeScript found two remaining calls to the removed collapse-state setter. [frontend/views/GenSpace.tsx]
+- [DONE] #0065 Electron production build reports missing closing brace in model-pack JSON event parser [electron/python-setup.ts:637] -> Model-pack JSON event parser syntax corrected; full Vite/Electron build passes [electron/python-setup.ts:626] (fixed)
+- [DONE] #0064 Frontend Vite build cannot read parent directory/config inside managed sandbox [vite.config.ts] -> Approved build route bypasses managed-sandbox esbuild config access restriction [vite.config.ts] (fixed)
+- [DONE] #0063 Pyright rejects broad string download units and partially unknown Mapping normalization in structured progress implementation [backend/handlers/generation_handler.py:127; backend/services/wangp_bridge.py:892] -> Structured progress units and external detail mappings are strictly typed; Pyright passes [backend/progress_types.py; backend/services/wangp_bridge.py:892] (fixed)
+  - Partial attempt: Narrowed progress units to a Literal alias and cast external mappings; unit errors cleared but empty mapping branch remained partially unknown [backend/progress_types.py; backend/services/wangp_bridge.py:892]
+- [DONE] #0062 Focused backend tests cannot read uv cache metadata inside managed sandbox [backend/.venv] -> Focused validation confirmed with approved uv-cache access; 39 backend progress tests pass [backend/.venv] (fixed)
+- [DONE] #0061 Baseline pnpm typecheck/backend:test blocked by registry signature verification in managed sandbox [package.json#packageManager] -> Baseline validation confirmed by rerunning pnpm checks with approved registry access; typecheck and 232 backend tests pass [package.json#packageManager] (fixed)
+- [DONE] #0060 final nested Wan2GP HEAD/status check failed under sandbox dubious-ownership protection without per-command safe.directory [Wan2GP/.git] -> verified nested Wan2GP state using scoped safe.directory without changing global Git configuration [Wan2GP/.git] (fixed)
+  - Failed attempt: ran nested git verification without the updater's per-command safe.directory override; sandbox rejected ownership [Wan2GP/.git]
+- [DONE] #0059 PowerShell path inspection command parsed an empty pipeline after foreach output [Wan2GP/] -> corrected PowerShell inspection shape and confirmed no partial backup directory exists [Wan2GP/] (fixed)
+  - Failed attempt: piped foreach output directly to Format-Table; PowerShell rejected the expression [Wan2GP/]
+- [DONE] #0058 sandboxed Move-Item partially split the transient Wan2GP .git directory into C:\tmp before access-denied errors [Wan2GP/] -> confirmed failed move caused no filesystem split; transient checkout remains intact at Wan2GP/.git [Wan2GP/] (fixed)
+- [DONE] #0057 ensure-wan2gp rejects its own fresh --no-checkout clone as dirty because all tracked files are absent [scripts/ensure-wan2gp.ps1] -> fresh setup clones the configured AiVS branch with a populated worktree before exact-pin verification [scripts/ensure-wan2gp.ps1] (fixed)
+  - Partial attempt: changed fresh clone to check out the configured branch instead of creating an intentionally empty worktree [scripts/ensure-wan2gp.ps1]
+- [DONE] #0056 tracked Wan2GP checkout is entirely missing before requested pin update while the main worktree has unrelated edits [Wan2GP/] -> restored the tracked Wan2GP checkout at its prior pinned revision without touching unrelated worktree edits [Wan2GP/] (fixed)
+  - Failed attempt: ensure-wan2gp clone failed inside sandbox because github.com:443 was blocked [Wan2GP/]
+  - Partial attempt: network-enabled ensure clone created the nested Git repository but stopped before checkout because the fresh no-checkout clone appeared dirty [Wan2GP/]
+  - Failed attempt: attempted to preserve the transient empty clone in C:\tmp before rerunning setup; sandbox permissions caused a partial move and did not restore Wan2GP [Wan2GP/]
+- [DONE] #0055 projectmem get_project_map hung for over a minute and required termination during session start [.projectmem/PROJECT_MAP.md] -> mandatory project map read completed successfully on retry after terminating the stalled call [.projectmem/PROJECT_MAP.md] (fixed)
+- [DONE] #0054 After restart and refresh, UI still marks downloaded ACE-Step packs unready while standalone scanner reports installed. [electron/python-setup.ts; frontend/components/ModelPackManager.tsx] -> Dev model-pack operations now use backend .venv rather than stale python-embed; live model state recognizes both ACE-Step packs. [electron/python-setup.ts] (fixed)
+  - Partial attempt: Routed dev model-pack refresh/download/delete through backend .venv instead of stale python-embed; packaged builds still use bundled runtime. [electron/python-setup.ts]
+- [DONE] #0053 ACE-Step packs are omitted or misdetected by model-pack download/readiness flow despite generation-time auto-download. [backend/wangp_model_packs.py; electron/python-setup.ts] -> Model-pack validation now checks only each pack's own WanGP dependencies; existing ACE-Step Fast and XL files are detected as ready. [backend/wangp_model_packs.py] (fixed)
+  - Partial attempt: Stopped model packs from requiring the separate Utility/MatAnyone file set during download validation and readiness scans. [backend/wangp_model_packs.py]
+- [DONE] #0052 Music prompt controls diverge from image/video selector and duration styling; settings button is oversized. [frontend/components/music/MusicModeControls.tsx] -> Music model/vocal controls now reuse the shared GenSpace dropdown; duration uses clock/seconds with a single-thumb slider; settings is cog-only. [frontend/components/music/MusicModeControls.tsx] (fixed)
+  - Partial attempt: Extracted the existing GenSpace dropdown and reused it for music model/vocal controls; replaced duration presets with a native single-thumb slider and settings text with a cog. [frontend/components/music/MusicModeControls.tsx; frontend/components/SettingsDropdown.tsx; frontend/views/GenSpace.tsx]
+- [DONE] #0051 Windows installer release build fails through default sandbox/package script route before NSIS completion. [scripts/local-build.ps1] -> Use escalated/network-enabled PowerShell 7 direct script route: & 'C:\Program Files\PowerShell\7\pwsh.exe' -NoProfile -File 'scripts\local-build.ps1'. Verified release\AiVS-Setup.exe at 336031723 bytes (320.46 MiB), latest.yml matching size, SHA-256 1E671112A38CF8B3FA35D2707935BCEE60B0BFA4A68C10E09F5D0DB952B75FF7. Installer is not Authenticode-signed. [release/AiVS-Setup.exe] (fixed)
+  - Failed attempt: FAILED: Explicit C:\Users\rais\AppData\Roaming\npm\pnpm.cmd plus PATH override was still intercepted before shell execution and produced same pnpm signature/network error. PATH/shim changes do not bypass runtime package-manager verification. [package.json#packageManager]
+  - Failed attempt: FAILED: Invoking installed pnpm.mjs directly with node was also intercepted and failed registry signature verification. Runtime interception occurs before the intended Node entrypoint; do not use this workaround. [package.json#packageManager]
+  - Partial attempt: PARTIAL: Escalated pnpm build:win verified pnpm, reused bootstraps, installed deps, and completed Vite/Electron builds, but package.json launches Windows PowerShell 5.1; create-installer.ps1 failed at Get-AuthenticodeSignature because Microsoft.PowerShell.Security could not autoload. [scripts/create-installer.ps1:56]
+- [DONE] #0050 Final validation cannot read uv cache .git metadata inside managed sandbox (Access denied). [backend/.venv] -> Ran validation from backend with approved uv-cache access; Pyright and 217 backend tests pass. [backend/pyrightconfig.json] (fixed)
+  - Failed attempt: Ran pyright, backend pytest, and Vite validation inside sandbox; uv failed before checks with cache access denied. [backend/.venv]
+  - Failed attempt: Elevated combined check started Pyright from repo root, so it scanned bundled WanGP; stopped exact Pyright child and will rerun from backend. [backend/pyrightconfig.json]
+- [DONE] #0049 TypeScript validation fails because SettingsModal imports unused RefreshCw. [frontend/components/SettingsModal.tsx] -> Removed unused SettingsModal RefreshCw import; TypeScript validation passes. [frontend/components/SettingsModal.tsx] (fixed)
+- [DONE] #0048 Added shared GalleryAssetLibrary/GalleryAssetCard source and size-container rule; caller migration and compile verification remain. [frontend/components/GalleryAssetLibrary.tsx] -> Extracted one GalleryAssetLibrary/GalleryAssetCard used by Gen Space, Director, and Video Editor; shared toolbar, filters, bins, grid/list, takes, aspect-aware media, and compact-size hover suppression verified by TypeScript, Vite build, and native Electron QA. [frontend/components/GalleryAssetLibrary.tsx] (fixed)
+  - Partial attempt: Added shared GalleryAssetLibrary/GalleryAssetCard source and size-container rule; caller migration and compile verification remain. [frontend/components/GalleryAssetLibrary.tsx]
+- [DONE] #0047 Asset cards always render blurred media regardless of aspect ratio and may contribute to slow restore/loading. Gen Space duplicates media elements for blur; hidden Director and Video Editor remain mounted and both generate thumbnails for all videos without sharing in-flight work. Implement aspect-aware blur and eliminate duplicate/background media decoding. [frontend/views/GenSpace.tsx] -> #0047: Video cards now retain static thumbnails through renderer/compositor changes, decode live video only on hover, apply blur only for materially non-16:9 media, deduplicate thumbnail work, and gate warming to active tabs. Inactive workspace layers no longer render, preventing asset/timeline residue during tab switches. [frontend/views/Project.tsx] (fixed)
+- [DONE] #0046 Bin color currently draws an awkward card-edge accent. Move bin color to media-type icon backgrounds in Gen Space, Director, and Video Editor. Add Favorite, Create Video/Reframe, and Copy Settings to Gen Space asset context menu. [frontend/views/GenSpace.tsx] -> #0046: Replaced bin-colored card-edge accents with colored media badges across all asset libraries; colored Move to Bin entries; expanded Gen Space context menu with Favorite, Create Video/Reframe, and Copy Settings. [frontend/views/GenSpace.tsx] (fixed)
+- [DONE] #0045 Asset color labels are attached to individual assets in Director/Video Editor menus instead of bins, and Gen Space uses a reduced asset context menu. Move color labeling to bins across Gen Space, Director, and Video Editor; reuse Director AssetContextMenu in Gen Space without label controls. [frontend/views/editor/AssetContextMenu.tsx] -> #0045: Removed asset label picker from shared asset context menu; added label picker to bin menus in Gen Space, Director, and Video Editor; Gen Space now uses full shared asset context menu. [frontend/components/GalleryBinBar.tsx] (fixed)
+- [DONE] #0044 Gen Space asset cards need persistent top-left identity controls: always-visible media type icon before an always-visible multi-take selector, independent of hover overlays. [frontend/views/GenSpace.tsx] -> Gen Space grid cards now always show media type at top-left, followed by persistent take navigation when multiple takes exist. [frontend/views/GenSpace.tsx] (fixed)
+- [DONE] #0043 Asset card overlay controls need reference layout: take selector at top-left, vertical actions at top-right, icon-only buttons that expand labels on hover, red Remove, and local Download replaced by Open in File Explorer. [frontend/views/GenSpace.tsx] -> Updated Gen Space asset-card control layout to reference design and local-first behavior. Controls are Favorite, Open, Create video/Reframe, Copy settings when available, and red Remove; each expands its label on hover. [frontend/views/GenSpace.tsx] (fixed)
+- [DONE] #0042 Asset-library UX drift and generation bugs: Gen Space gallery drops ignored by frame slots, stacked takes absent, continue-video duration locked/replaced instead of extending, non-16:9 cards lacked blurred fill, filter/view controls diverged, Director and Gen Space list layouts differed from Video Editor, grid sizing was fixed, and portrait hover video stretched. [frontend/views/GenSpace.tsx] -> Fixed asset-library and Gen Space regressions across GenSpace, DirectorSidebar, LeftPanel, VideoThumbnailCard, GalleryFilters, shared GalleryAssetList/GalleryViewControls, and backend continue-video handling. Continue Video duration now adds requested seconds to existing clip length. [backend/handlers/video_generation_handler.py] (fixed)
+- [DONE] #0041 Director timeline has no focused Space shortcut for play/pause while all project workspaces stay mounted. [frontend/views/DirectorEditor.tsx; frontend/views/director/DirectorWorkspacePanel.tsx] -> Space now toggles Director play/pause only while Director is active, ignores editable controls and repeats, and Director stops when its tab hides. [frontend/views/DirectorEditor.tsx; frontend/views/director/DirectorWorkspacePanel.tsx] (fixed)
+  - Partial attempt: Added active-only Director Space handler with editable-control guards and stopped Director playback when its tab becomes inactive. [frontend/views/DirectorEditor.tsx; frontend/views/director/DirectorWorkspacePanel.tsx]
+- [DONE] #0040 Director playback keyboard input also drives the still-mounted Video Editor timeline because inactive editor shortcuts remain global. [frontend/views/editor/useEditorKeyboard.ts; frontend/views/VideoEditor.tsx] -> Video Editor playback and keyboard transport now stop/ignore input whenever its project tab is inactive, preventing Director playback from driving it. [frontend/views/editor/useEditorKeyboard.ts; frontend/views/VideoEditor.tsx] (fixed)
+  - Partial attempt: Gated Video Editor global shortcuts to its active tab and stop timeline/source playback whenever Video Editor becomes inactive. [frontend/views/editor/useEditorKeyboard.ts; frontend/views/VideoEditor.tsx]
+- [DONE] #0039 Director workspace JSX used class instead of className, breaking TypeScript compilation and blanking the UI. [frontend/views/director/DirectorWorkspacePanel.tsx] -> Director workspace JSX now uses className; TypeScript passes and manual styling remains unchanged. [frontend/views/director/DirectorWorkspacePanel.tsx] (fixed)
+- [OPEN] #0038 Retake is not currently compatible with WanGP despite visible UI routing; it must be disabled and documented as coming soon. [frontend/views/GenSpace.tsx] (open)
+  - Failed attempt: Combined Retake UI patch did not apply because AssetCard props use a different destructuring context; no files changed. [frontend/views/GenSpace.tsx]
+  - Failed attempt: Release installer build command exceeded the shell timeout before reporting completion; inspecting its temporary output before retrying. [electron-builder.yml]
+- [OPEN] #0037 Model-pack progress UI remains at 0 then 100 because WanGP/Hugging Face transfer output is not captured as progress; first-run needs project storage selection with Documents\\AiVS default. [electron/python-setup.ts; frontend/components/ModelPackManager.tsx; frontend/components/PythonSetup.tsx] (open)
+  - Failed attempt: Installer file appeared before NSIS finished writing; initial copied retest was only 361 KB. Waiting for final archive size before replacing it. [electron-builder.yml]
+- [OPEN] #0036 Model-pack download IPC exits with code 2 from both first-run and Settings; pack runner argument forwarding must be corrected and pack cards should show approximate download sizes. [electron/python-setup.ts; backend/wangp_model_packs.py; frontend/components/ModelPackManager.tsx] (open)
+  - Failed attempt: CLI isolation removed argparse exit 2, but smoke import then failed because WanGP resolves models/_settings.json relative to its checkout. Runner must use Wan2GP as its working directory. [backend/wangp_model_packs.py]
+- [OPEN] #0035 First-run setup exposes pynvml FutureWarning and raw dependency output; model assets should be optional WanGP-managed packs with live progress and cancellation, plus settings management. [electron/python-setup.ts; frontend/components/PythonSetup.tsx] (open)
+  - Failed attempt: Final unpacked build retry still hit electron-builder EPERM renaming win-unpacked.tmp, despite escalation. Code and test checks remain green; retry once before treating it as environment contention. [electron-builder.yml]
+  - Partial attempt: All code checks passed (TypeScript, Pyright, 150 pytest, PowerShell parser, Vite, model-pack runner list). Electron Builder remains blocked before resource copy by Windows EPERM rename; staged package cannot verify files until that external file lock clears. [electron-builder.yml]
+  - Failed attempt: Electron Builder reached NSIS build/signing output but no AiVS-Setup.exe was present afterward. Inspecting temporary output before retrying. [electron-builder.yml]
+- [OPEN] #0034 Fresh install reports dependency setup near 50% without detailed transfer progress, then first generation downloads WanGP utility models despite ready status; bootstrap should expose useful progress and trigger first WanGP preparation before the first generation. [scripts/install-python-dependencies.ps1; electron/python-setup.ts; backend/handlers/health_handler.py] (open)
+  - Failed attempt: Added streamed setup detail and default WanGP asset pre-download code. TypeScript and focused WanGP bridge tests pass; initial PowerShell parser command was malformed and did not validate the installer script.
+  - Partial attempt: Implemented streamed installer stdout/stderr detail with heartbeat, switched setup subprocess to streaming spawn, and added best-effort default WanGP shared-asset/model pre-download. Verified 151 pytest tests, Pyright, TypeScript, PowerShell parser, Vite build, and fresh unpacked/NSIS package resources; clean-machine UX retest remains.
+- [DONE] #0033 First-run UI and /api/models/download still invoke legacy standalone LTX/Z-Image model downloader instead of WanGP model acquisition. [backend/_routes/models.py] -> Removed FirstRun model installation calls and /api/models routes, downloader handlers, direct pipeline services, IC-LoRA panel, stale downloader hook, and LTX/Fal key-page IPC. WanGP remains sole model acquisition and generation owner. Verified with Pyright, 150 pytest tests, TypeScript, and grep for stale runtime endpoints. (fixed)
+  - Failed attempt: Removed legacy standalone downloader routes, services, and hidden IC-LoRA panel. Residual IC-LoRA API DTO patch did not match current file, so no DTO changes applied in that attempt.
+- [DONE] #0032 prepare-python.ps1 leaves generated backend/requirements-dist.txt after filtering GPU Torch requirements for the embedded runtime. [scripts/prepare-python.ps1] -> prepare-python cleanup now removes both generated requirements files; compact bootstrap uses bundled uv and copies matching Python headers/import libraries for native WanGP kernels. [scripts/prepare-python.ps1] (fixed)
+  - Partial attempt: Adjusted GPU stack installer to accept bundled uv and a packaged Wan2GP source directory; bootstrap scripts can now reuse it without global tools or Git. [scripts/install-wangp-stack.ps1]
+- [OPEN] #0031 Final AiVS-Setup.exe is not Authenticode-signed; release build needs a valid Windows code-signing certificate/configuration. [electron-builder.yml] (open)
+  - Partial attempt: Updated audit runtime strategy and definition of done to document compact bundled Python+pip+uv bootstrap; code-signing remains externally unresolved. [docs/AiVS_Pre-Release_Code_Audit_and_Cleanup_Plan.md]
+  - Failed attempt: Built and verified fresh NSIS installer release/verify-installer-network/AiVS-Setup.exe (305,862,379 bytes), then promoted it to release/. Authenticode remains NotSigned because no code-signing certificate/configuration is available.
+  - Failed attempt: Updated v0.1 audit definition of done with fresh NSIS package-resource validation. Clean user-profile first-run and Authenticode signing remain unchecked.
+- [DONE] #0030 NSIS cannot mmap the 3.39 GB app archive because python-embed is accidentally included in packaged app despite verified runtime-download design. [electron-builder.yml] -> Wan2GP user-local LoRA weights and codegraph cache are excluded from the installer; resulting NSIS build succeeds. [electron-builder.yml] (fixed)
+  - Partial attempt: Excluded user-local Wan2GP LoRA weights and codegraph cache from extraResources; bundled FFmpeg remains for backend media operations. [electron-builder.yml]
+- [DONE] #0029 NSIS installer build fails because custom installer script requires resources/vc_redist.x64.exe but the file is absent. [resources] -> VC++ redistributable is provisioned, signature-checked at build time, packaged as an Electron resource, and the final NSIS installer builds successfully. [scripts/create-installer.ps1] (fixed)
+  - Partial attempt: Added VC++ redistributable download plus Authenticode/Microsoft signer verification before NSIS build, and switched installer script to local electron-builder. [scripts/create-installer.ps1]
+  - Failed attempt: Full NSIS build no longer misses VC++ payload but fails with NSIS internal mmap error while embedding its 25.7 MB executable through custom File macro. [resources/installer.nsh]
+  - Partial attempt: Moved VC++ redistributable into electron-builder extraResources and execute it from installed resources, removing NSIS custom File embedding. [electron-builder.yml]
+- [DONE] #0028 Backend pytest exits with status 1 but emits no diagnostics when invoked through uv; test failure cause needs capture. [backend/tests] -> Removed deleted cloud/direct-pipeline test dependencies and aligned remaining state tests to WanGP terminal behavior; 186 backend tests pass. [backend/tests] (fixed)
+  - Partial attempt: Removed stale cloud-credential and direct-pipeline expectations; generation state tests now cover WanGP jobs and settings tests no longer assert removed text cache. [backend/tests/test_state_actions.py]
+  - Failed attempt: WanGP job completion keeps generation progress at complete, so the migrated test's idle expectation was incorrect. [backend/tests/test_state_actions.py]
+  - Partial attempt: Changed migrated generation progress test to assert the actual complete terminal state; final backend test rerun pending. [backend/tests/test_state_actions.py]
+- [DONE] #0027 Pyright fails: ImageGenerationHandler references Path without import, causing unknown types; VideoGenerationHandler has unused duration helper. [backend/handlers/image_generation_handler.py] -> Image input paths are typed via pathlib.Path and unused direct-API duration code removed; pyright reports 0 errors. [backend/handlers/image_generation_handler.py] (fixed)
+  - Partial attempt: Imported pathlib.Path for image input validation and removed orphaned direct-API duration constants/helper; Pyright recheck pending. [backend/handlers/image_generation_handler.py]
+- [DONE] #0026 TypeScript build fails: persistence IPC methods are absent from Electron API renderer typing; GenSpace has unused formatAutoDuration import. [frontend/contexts/ProjectContext.tsx] -> Renderer persistence IPC methods are typed and unused GenSpace formatter removed; local tsc --noEmit passes. [frontend/vite-env.d.ts] (fixed)
+  - Partial attempt: Added persistence IPC methods to renderer Window typing and removed unused GenSpace duration formatter; TypeScript recheck pending. [frontend/vite-env.d.ts]
+- [DONE] #0025 Runtime asset splitter fails for archives larger than 2 GB because Math.Min coerces remaining bytes to Int32. [scripts/create-python-runtime-assets.ps1] -> Runtime asset splitter supports >2 GB archives and writes BOM-free JSON under Windows PowerShell 5.1 and 7. [scripts/create-python-runtime-assets.ps1] (fixed)
+  - Partial attempt: Changed splitter calculations to Int64 while casting individual buffer reads back to Int32; rerun pending. [scripts/create-python-runtime-assets.ps1]
+  - Failed attempt: Int64 splitter passed, but archive manifest write failed under Windows PowerShell 5.1 because utf8NoBOM encoding is unsupported. [scripts/create-python-runtime-assets.ps1]
+  - Partial attempt: Replaced PowerShell-version-specific manifest encoding with .NET UTF8Encoding without BOM; rerun pending. [scripts/create-python-runtime-assets.ps1]
+- [DONE] #0024 Clean runtime preparation cannot start: pnpm refuses the locked 10.30.3 binary because registry signature fetch verification fails. [package.json] -> Replaced separate prebuilt runtime archive with bundled Python+pip+uv bootstrap; final compact installer builds and first-run installs pinned GPU dependencies automatically. [electron/python-setup.ts] (fixed)
+  - Partial attempt: Elevated local Vite build completed: frontend, Electron main, and preload bundles built successfully. [vite.config.ts]
+  - Failed attempt: Unpacked Windows package reached Electron but failed when electron-builder downloaded a Windows helper: sandbox network EACCES. [electron-builder.yml]
+  - Partial attempt: Elevated electron-builder --win --dir succeeded and created release/win-unpacked. [electron-builder.yml]
+- [DONE] #0023 ProjectContext synchronously saved entire project library and repeatedly approved every stored path after each change. [frontend/contexts/ProjectContext.tsx] -> Project persistence now uses debounced per-project atomic Electron files with localStorage migration and cached approvals. [frontend/contexts/ProjectContext.tsx] (fixed)
+- [DONE] #0022 Hidden IC-LoRA route still instantiated direct LTX pipelines, keeping legacy runtime graph reachable. [backend/_routes/ic_lora.py] -> Hidden IC-LoRA direct route and pipeline composition removed; no reachable direct pipeline is instantiated. [backend/app_handler.py] (fixed)
+- [DONE] #0021 Cloud API credentials and dead LTX/fal generation clients remained in release settings and runtime wiring. [backend/state/app_settings.py] -> Cloud API credentials and LTX/fal clients removed; saved settings purge legacy secret keys. [backend/state/app_settings.py] (fixed)
+- [DONE] #0020 Image handler retained unreachable fal.ai generation fallback despite WanGP-only enforcement. [backend/handlers/image_generation_handler.py] -> Unreachable fal.ai image generation fallback and its app wiring were removed. [backend/handlers/image_generation_handler.py] (fixed)
+- [DONE] #0019 Runtime could choose an API-only fallback despite the WanGP-only local product boundary. [backend/runtime_config/runtime_policy.py] -> Forced cloud API runtime policy and its routes were removed; generation requires WanGP. [backend/runtime_config/runtime_policy.py] (fixed)
+- [DONE] #0018 WanGP preview events synchronously rewrote JPEG output for every event, causing unnecessary disk encoding during generation. [backend/services/wangp_bridge.py] -> WanGP preview image writes are throttled to two per second. [backend/services/wangp_bridge.py] (fixed)
+- [DONE] #0017 Image variations were submitted as one WanGP GPU batch, risking avoidable VRAM OOM on heavy profiles. [backend/handlers/image_generation_handler.py] -> Image variations are profile-bounded and submitted to WanGP in conservative sequential chunks. [backend/handlers/image_generation_handler.py] (fixed)
+- [DONE] #0016 AiVS globally monkey-patched torch SDPA to SageAttention, overriding WanGP model-specific attention selection. [backend/ltx2_server.py] -> AiVS no longer monkey-patches torch attention; WanGP selects its own attention implementation. [backend/ltx2_server.py] (fixed)
+- [DONE] #0015 Packaged Python download still targets Lightricks assets and extracts unverified runtime parts; release GPU setup diverges from tested WanGP stack. [electron/python-setup.ts; scripts/prepare-python.ps1] -> Removed packaged Lightricks runtime download path; bundled Python+pip+uv now installs the pinned WanGP stack on first run. [electron/python-setup.ts] (fixed)
+  - Failed attempt: Initial deterministic-runtime patch did not apply because its source-context regex did not exactly match electron/python-setup.ts; no files changed.
+  - Partial attempt: Deterministic-runtime patch passes TypeScript typecheck and PowerShell parser validation; Bash syntax check could not run because this Windows host has no WSL distribution.
+- [DONE] #0014 IC-LoRA remains a reachable direct pipeline route, contradicting the WanGP-only product boundary. [backend/_routes/ic_lora.py; backend/handlers/ic_lora_handler.py] -> Hidden unsupported IC-LoRA route and direct pipeline handler removed from AiVS v0.1. [backend/_routes/ic_lora.py] (fixed)
+- [DONE] #0013 Visible Retake control posts to /api/retake, whose WanGP-only handler returns 503; inherited direct Retake path remains. [frontend/hooks/use-retake.ts; backend/handlers/retake_handler.py] -> Retake remains visible and now translates to a trimmed WanGP control-video generation request. [backend/handlers/retake_handler.py] (fixed)
+  - Partial attempt: Removed all GenSpace Retake controls, state, request path, and result handling; TypeScript check passes. Legacy editor and Playground Retake controls remain. [frontend/views/GenSpace.tsx]
+  - Partial attempt: Removed remaining visible Retake controls and editor handoff; TypeScript check passes. Retake backend and unused frontend files remain for deletion. [frontend/views/Playground.tsx; frontend/views/VideoEditor.tsx; frontend/views/editor/ClipContextMenu.tsx]
+- [OPEN] #0012 projectmem precheck_file rejected documented `path` argument; MCP schema requires `file_path`. [docs/AiVS_Pre-Release_Code_Audit_and_Cleanup_Plan.md] (open)
+- [DONE] #0011 Guide remove still needs second click while trim editor is open despite pointer/mouse remove handler [frontend/views/GenSpace.tsx] -> Late trim editor updates no longer re-add removed guide video, so first remove click persists while trim UI is open [frontend/views/GenSpace.tsx] (fixed)
+- [DONE] #0010 Remove still takes two clicks when normal guide trim UI is open [frontend/views/GenSpace.tsx] -> Remove now clears guide trim/menu state and removes the guide media through a functional update on first activation [frontend/views/GenSpace.tsx] (fixed)
+- [DONE] #0009 Remove action still only closes trim editor, and media inputs collapse on mode changes [frontend/views/GenSpace.tsx] -> Remove now deletes guide media during first pointer activation, and media input expansion persists across mode/profile changes [frontend/views/GenSpace.tsx] (fixed)
+- [DONE] #0008 Normal guide video remove closes trim editor first, and video input leaks into image mode [frontend/views/GenSpace.tsx] -> Remove now completes on first click, and switching to image mode drops video/audio guide inputs [frontend/views/GenSpace.tsx] (fixed)
+- [DONE] #0007 Guide trim regressed: duration remains zero so timeline hides, and preview still appears left aligned [frontend/views/GenSpace.tsx; frontend/components/VideoTrimPanel.tsx] -> Fixed guide trim duration regression and centered video frame sizing [frontend/views/GenSpace.tsx] (fixed)
+  - Failed attempt: Combined duration and centering patch did not apply because current class text differed; no files changed [frontend/views/GenSpace.tsx]
+- [DONE] #0006 Normal guide trim layout needs centered preview, trim before media slots, and outside-click closure for media role menus [frontend/views/GenSpace.tsx] -> Confirmed trim preview/layout and media role menu interaction refinements [frontend/views/GenSpace.tsx] (fixed)
+- [DONE] #0005 Normal guide trim duration path should mirror Retake/Reframe local videoRef state instead of parent mediaDuration synchronization [frontend/views/GenSpace.tsx] -> Normal guide trim now mirrors Retake/Reframe duration ownership and loadedmetadata handling exactly [frontend/views/GenSpace.tsx] (fixed)
+- [DONE] #0004 Visible normal-guide preview renders but media duration stays zero, hiding trim filmstrip and leaving time display 00:00 [frontend/views/GenSpace.tsx; frontend/components/VideoTrimPanel.tsx] -> Fixed zero-duration guide trim by probing media immediately and on all duration readiness events, allowing VideoTrimPanel to render filmstrip and range [frontend/views/GenSpace.tsx] (fixed)
+- [DONE] #0003 Normal video-guide trim renders empty header because metadata is unavailable; UI needs Retake-style preview and filmstrip [frontend/views/GenSpace.tsx; frontend/components/VideoTrimPanel.tsx] -> Confirmed normal guide trim renders visible media preview, playback controls, five-second default range, and shared Retake-style filmstrip before Confirm [frontend/views/GenSpace.tsx] (fixed)
+  - Failed attempt: First visible trim UI compile exposed missing Play/Pause imports after adding Retake-style playback controls [frontend/views/GenSpace.tsx]
+  - Failed attempt: Visual Vite launch failed in sandbox because esbuild could not read parent directory/config; static TypeScript check remained clean [frontend/views/GenSpace.tsx]
+- [DONE] #0002 Regression: reframe zoom disabled for every aspect, normal video-guide trim and auto duration fail, previews stop updating [frontend/components/ReframePanel.tsx; frontend/views/GenSpace.tsx; frontend/hooks/use-generation.ts] -> Confirmed fixes: fit-based reframe zoom guard, committed normal guide trim with Trim action and auto duration, cache-busted WanGP preview updates [frontend/components/ReframePanel.tsx; frontend/views/GenSpace.tsx; backend/services/wangp_bridge.py] (fixed)
+  - Failed attempt: Initial TypeScript check command was quoted for nested PowerShell and never invoked tsc; backend focused tests passed [frontend/components/ReframePanel.tsx]
+  - Failed attempt: Second TypeScript check hit bundled pnpm dependency-layout repair and offline registry failure before compiling [frontend/components/ReframePanel.tsx]
+- [DONE] #0001 Sliding-window WanGP video generation persists first/intermediate output instead of final combined output in gallery [backend/services/wangp_bridge.py] -> WanGP sliding-window gallery output now uses final/newest generated media path; verified by test_select_final_output_prefers_newest_combined_file plus full backend pytest. [backend/services/wangp_bridge.py] (fixed)
+
+## Decisions
+- Multi-shot video generation auto-injects LTX-2.3_Cinematic_hardcut.safetensors at strength 1.0 via WanGP activated_loras/loras_multipliers in video_generation_handler when shotPrompts present; no frontend changes needed.
+- Media library plan: GenSpace copies uploads into project assets for generation reuse; video editor keeps in-place references for heavy imports. Shared importMediaAsset helper bridges both paths.
+- Media library plan phases A–D complete in GenSpace (drag inputs, import/dedup, filters, bins, list view). Phase E mini picker cancelled — bins + filter chips + gallery drag/drop cover input picking for v1. [docs/MEDIA_LIBRARY_PLAN.md]
+- GenSpace seed control: per-project genSpaceSeedLocked/genSpaceLockedSeed on Project, SeedControl popover (dice/lock icons) beside Enhance, syncs to backend app settings on change and project switch.
+- Reframe padding limits: MAX_PADDING_UI=100 for zoom and custom edge expand; MAX_PADDING_INTERNAL=200 for pan redistribution only (e.g. 0/200 when total horizontal is 200). Zoom never introduces >100% per edge; pan is the only path above 100%. [frontend/lib/reframe-outpaint.ts]
+- Reframe overlay UX: aspect-locked modes (1:1/16:9/9:16) use zoom slider (0=fit, 100=aspect-correct max from computeMaxAspectZoomPadding) plus pan; custom mode uses mirrored edge drag (both sides on axis) plus pan; refresh button resets zoom+padding for current mode without switching aspect. [frontend/components/OutpaintFrameOverlay.tsx]
+- Reframe mode uses WanGP video_prompt_type `VG` (not `VG|`), `audio_prompt_type=K`, optional user prompt with blank fallback `outpaint`, and reframe-only defaults `force_fps=auto` plus `sliding_window_overlap=33`. [backend/handlers/video_generation_handler.py]
+- Input-video WanGP generations may pass source `video_length_frames`; bridge normalizes this to WanGP `8n+1` video_length so reframe/control-video output length follows source clip frames instead of request FPS. [backend/services/wangp_bridge.py]
+- Supersedes earlier Reframe `VG|` decision: Reframe now lives under Video process mode, renders inside the prompt bar with optional prompt field, and sends `VG` plus blank-prompt fallback `outpaint`. [frontend/views/GenSpace.tsx]
+- Supersedes earlier Reframe backend `VG|` decision: backend uses `video_prompt_type=VG`, `audio_prompt_type=K`, explicit padding outpaint fields, `force_fps=auto`, `sliding_window_overlap=33`, and source-frame video_length where available. [backend/handlers/video_generation_handler.py]
+- WanGP Outputs settings are persisted under AppSettings.output_settings and mapped into WanGP server_config/default manifest keys: video/audio/image codec, container, metadata mode, and sliding-window retention. [backend/state/app_settings.py]
+- v0.1 Retake remains visible and is implemented as a WanGP normal-video request using a trimmed control-video guide; inherited LTX API/direct Retake execution is no longer used.
+- AiVS environment variables are canonical (AIVS_APP_DATA_DIR, AIVS_AUTH_TOKEN, AIVS_PORT, AIVS_BACKEND_PYTHON); LTX equivalents are read-only fallbacks for one compatibility period.
+- AiVS v0.1 stores no cloud API credentials; all generation routes use WanGP only. [backend]
+- User confirms Phases 6 (QuickGen image polish) and 7 (QuickGen video) are complete; project map phase table is stale. [AGENTS_PRD.md]
+- v0.1 will bundle embedded Python with pip/uv and install the pinned WanGP GPU runtime automatically on first run; it will not publish a separate prebuilt python-embed archive. [electron/python-setup.ts]
+- AiVS v0.1 removes its standalone model downloader and first-run model installer; WanGP remains sole owner of model acquisition, while AiVS exposes only generation/readiness status. [backend/_routes/models.py]
+- First-run setup will pre-download WanGP shared utility assets and AiVS's default image model after Python/GPU dependencies install, without generating media or loading models on the GPU. The preparation is best-effort so unsupported/offline systems can still launch and retry on first generation.
+- Model downloads are optional WanGP-defined packs: first-run setup installs only runtime dependencies; the renderer controls an Electron-owned Python child downloader for live sanitized progress and cancellation, reused by Settings Model Manager. [electron/python-setup.ts; frontend/components/PythonSetup.tsx]
+- First-run order is runtime setup, optional model packs, then project storage confirmation. New projects default to Documents\\AiVS; runtime and updater remain per-user app data because they are executable/cache/update state, not user project content. [frontend/components/PythonSetup.tsx; electron/app-state.ts]
+- GenSpace video generation no longer exposes Timing/multi-shot editing or sends shotPrompts; standalone Director Mode is the canonical multi-segment prompt-timing workflow. Legacy backend shotPrompts compatibility remains internal. [frontend/views/GenSpace.tsx]
+- Director Mode is a standalone workspace between GenSpace and Video Editor: shared asset library and bins at left, multiple Director timelines, global/contextual settings, preview transport, and Director timeline at bottom. It visually reuses editor primitives but owns separate frame-based state and behavior. [frontend/views/director/]
+- Director V1 supports the Prompt track only; Guide Audio and Control Media remain visible and locked. V1 is fixed at 24 fps, uses 8n+1 output lengths, caps timelines at 20 seconds, and sends all key frames through image_refs plus frames_positions. [frontend/types/director.ts]
+- Because project workspaces remain mounted to preserve state, transport playback and keyboard shortcuts are owned exclusively by the active project tab; inactive Director/Video Editor workspaces stop playback and ignore transport keys. [frontend/views/Project.tsx; frontend/views/VideoEditor.tsx; frontend/views/DirectorEditor.tsx]
+- Asset-library presentation shared through GalleryAssetList and GalleryViewControls so Gen Space and Director stay aligned with Video Editor while retaining surface-specific actions. [frontend/components/GalleryAssetList.tsx]
+- Asset-library label color is bin-owned. Assets inherit their containing bin label; legacy Asset.colorLabel remains for non-library/timeline compatibility. [frontend/types/project.ts]
+- Bin colors use media-type badge backgrounds on grid cards and colored folder icons in bin menus; card borders remain neutral so selection state stays visually distinct. [frontend/views/editor/AssetContextMenu.tsx]
+- Asset video cards are thumbnail-first: idle cards never own a live visible video surface; live video loads only on hover. Blur is used only when source aspect differs from 16:9 by more than 5%. Inactive workspaces stay mounted but use display:none via hidden containers to prevent stale compositor layers. [frontend/lib/media-aspect.ts]
+- Use one controlled GalleryAssetLibrary component for Gen Space, Director, and Video Editor. Shared component owns identical toolbar/grid/list/card rendering; each workspace supplies only data, persistence, selection, and workspace-specific action callbacks. Hide card hover action rail with a size container query below its usable height. [frontend/components/GalleryAssetLibrary.tsx]
+- AiVS keeps WanGP bundled for offline/reproducible installs, while GOvEy1nw/Wan2GP AiVS is source of truth; scripts/wangp-source.json pins an exact commit and immutable AiVS tag. [scripts/wangp-source.json]
+- WanGP updates use transactional scripts/update-wangp.ps1: check AiVS branch head, report sensitive bridge/dependency/model/default changes, validate, and roll back checkout plus manifest on failure. [scripts/update-wangp.ps1]
+- Pin bundled WanGP to GOvEy1nw/Wan2GP AiVS commit da205e246f4139601c829fefb8c25d2e2e6d6857 (WanGP 12.34) after focused and full compatibility validation. [scripts/wangp-source.json]
+- WanGP model download progress keeps existing transport ownership: generation events flow through backend polling, model packs through Electron IPC; both normalize to one renderer transfer shape and shared progress view. [backend/progress_types.py; frontend/types/progress.ts; frontend/components/DownloadProgressView.tsx]
+- Gen Space uses a persistent full-height left generation sidebar with surface Image/Video/Music tabs; the shared asset gallery fills the remaining right pane, while existing generation controls and handlers are preserved. [frontend/views/GenSpace.tsx]
+- Video Generate/Reframe/Retake choices are exposed as a segmented row beneath the video model selector; unavailable Retake remains visible but disabled. [frontend/views/GenSpace.tsx]
+- Gen Space model selectors use a shared substantial card trigger showing the selected model name and real profile availability; active generation downloads override the label with Downloading only when they match the selected profile. [frontend/components/ModelDropdownTrigger.tsx; frontend/views/GenSpace.tsx]
+- Redesign Settings around persistent left navigation with General, Model Manager, Advanced, and About. Merge all former Output controls into General. Model pack cards communicate state directly: grey missing, blue selected, yellow inline download progress, green installed, red failed/retryable.
+- Compose Lyrics Think uses the pinned WanGP prompt-enhancer mode `TK`; `process_prompt_enhancer` maps `K` to `thinking_enabled`, so no WanGP fork or pin change is needed. [backend/services/wangp_bridge.py]
+- Music V2 will not add Vitest/Testing Library dependencies; required compiler/keyword coverage stays in pure modules and backend tests, with frontend interaction covered by build/manual QA. [frontend/]
+- GenSpace split keeps one workspace-level useGeneration instance, statically imports panels, and preserves Music V2 submission snapshots/persistence while moving responsibilities under frontend/views/genspace/. [frontend/views/genspace/]
+- The GenSpace full-split plan supersedes the earlier Music V2 no-frontend-test-runner choice: Vitest/jsdom/Testing Library are now dev-only dependencies for extracted pure logic and focused tab interactions. [package.json; frontend/views/genspace/]
+- GenSpace uses one always-mounted controller with explicit Image/Video/Music panel contracts, pure commands/assets, immutable project-scoped snapshots, and isolated gallery/overlay views. [frontend/views/genspace/]
+- Keep use-generation.ts as the compatibility facade; useGenerationJob exclusively owns one abort controller, 500 ms poll loop, cancellation, terminal guards, and cleanup. [frontend/hooks/generation/]
+- Organize GenSpace by direct image/, video/, and music/ ownership folders; keep genuinely shared controls/hooks/types at the GenSpace root, and avoid extra components/views/lib nesting until each category has enough files. [frontend/views/genspace/]
+- ReframePanel, RetakePanel, OutpaintFrameOverlay, VideoTrimPanel, and reframe-outpaint move under GenSpace video because every frontend caller is GenSpace video; shared project/music types remain in frontend/types. [frontend/views/genspace/video/]
+- MusicGenPanel directly owns description/style prompt UI; MusicSettings owns vocal mode, lyrics, vocals, parameters, and advanced settings, so MusicComposerPanel is removed. [frontend/views/genspace/music/]
+- Music Simple/Advanced tabs remain panel-level; MusicSettings owns the three-way Instrumental/Auto Lyrics/Custom Lyrics switch and all trailing settings. [frontend/views/genspace/music/]
+- MusicMediaInputs owns advanced-mode audio import/drop/role/strength; MusicGenPanel owns prompt composition and MusicSettings owns remaining controls. [frontend/views/genspace/music/]
+- Music exposes one canonical full settings mode; the legacy experienceMode field remains fixed to advanced only for saved-generation compatibility and no longer controls behavior. [frontend/views/genspace/music/]
+- Music accepts independent Cover Song and Transfer Timbre inputs; backend maps none/A/B/both to WanGP audio_prompt_type '', 'A', 'B', and 'AB' while accepting legacy single audioInput requests. [backend/services/music_request_resolver.py]
+- Auto Lyrics always composes hidden lyrics from the song description; Custom Lyrics without provided lyrics uses the same generation-time composer with optional idea/Think/seed, except Cover Song still requires original custom lyrics. [backend/handlers/music_generation_handler.py]
+- Music style keywords use four compact local-state tabs (Genre, Mood, Vibe, Instruments) with one nowrap, scrollbar-hidden horizontal chip row. [frontend/views/genspace/music/MusicGenPanel.tsx]
+- Music uses one song-prompt-style lyrics box: direct text is Custom Lyrics, Compose treats that text as the idea and replaces it; seed, Compose, and Think switch are inline. [frontend/views/genspace/music/MusicSettings.tsx]
+- MusicSettings owns vocal-mode and merged lyrics UI; MusicAdvancedSettings independently owns vocals, music parameters, and variability in its own GenPanelSection. [frontend/views/genspace/music/]
+- GenPanelSection accepts an optional collapsible prop backed by native details/summary; existing sections remain expanded because the default is false, while Music Advanced Settings opts in. [frontend/views/genspace/components/GenPanelSection.tsx]
+- Multi-take audio assets render one independently previewable waveform row per take in the shared gallery card; image/video keep arrow navigation and row clicks select the active take. [frontend/components/GalleryAssetLibrary.tsx]
+- Non-destructive crop uses EXIF-aware Pillow transforms staged under outputs/transforms, then Electron moves results into project derivatives with crop lineage [backend/services/media_transform.py]
+- Camera controls persist semantic settings and compile once server-side into a returned effectivePrompt; authored prompt remains unchanged [backend/services/prompt_compiler.py]
+- Crop derivatives store the complete MediaCropRecipe directly in AssetLineage so the transform remains reproducible without fabricating generationParams. [frontend/types/project.ts]
+- Use the pinned, reviewed WanGP processor IDs for Finish and let submit_media_postprocessing report runtime availability errors; this supersedes the discovery-only gate [backend/handlers/media_handler.py]
+- Expose reviewed Krea Edit, Ideogram Region, LTX Identity, and pinned Finish bindings as experimental/unknown-availability controls; WanGP reports missing runtime assets, while Smart Mask remains deferred [docs/ADVANCED_CREATION_CAPABILITY_AUDIT.md]
+- Pin bundled WanGP to clean GOvEy1nw/Wan2GP commit 4f441a12f3a33f4466ed422428bf667d9651bc55 with manifest version 12.345 [scripts/wangp-source.json]
+- Phase 2 remains BLOCKED, not PASSED: mandatory real OS selection/drop and remembered native-dialog matrices were not verified because current automation cannot target owned dialogs or cross-window drags; do not start Phase 3 [docs/dependency-modernisation/STATUS.md]
+- Phase 2 Electron 43 exit gate now PASSED after user-assisted installed/unpacked OS-drop and native-dialog matrices, filename-only save-path fix, deleted-directory fallback, Tier A/B, packaging, data, and protected-runtime checks; Phase 3 remains not started. [docs/dependency-modernisation/STATUS.md]
+
+## Notes
+- Phase 2 data validation: all 100 files from Phase 1 project-assets backup remain present and SHA-256 identical; live tree only added new test media [docs/dependency-modernisation/STATUS.md]
+- Phase 2 dev image gallery/input OS drops now pass; updated win-unpacked build is open for user-assisted Music Cover Song drop verification before installer rebuild. [docs/dependency-modernisation/STATUS.md]
+- User confirmed updated win-unpacked app accepts baseline-audio.wav on Music Cover Song; app closed for NSIS rebuild. [docs/dependency-modernisation/STATUS.md]
+- Fresh Phase 2 NSIS build passed after gallery drop-zone fix; installer and blockmap regenerated. [release/AiVS-Setup.exe]
+- Post-install Phase 2 data check passes: all 100 Phase 1 backup project-asset files remain present and SHA-256 identical. [C:/Users/rais/Documents/AiVS]
+- Installed NSIS app accepted baseline-audio.wav on Music Cover Song; Computer Use captured populated slot in installed runtime. [installed AiVS]
+- User confirmed installed HTML media picker applied baseline-audio.wav to Transfer Timbre; UI re-observation showed both Cover Song and Transfer Timbre populated. [Phase 2 Electron 43 installed smoke]
+- Installed Director Import Media opened at persisted C:\tmp\AiVS-phase2-open; user cancelled and app_state.json SHA-256 remained unchanged. [Phase 2 Electron 43 installed smoke]
+- Installed directory picker opened at persisted Documents\AiVS, user selected C:\tmp\AiVS-phase1-media, app_state recorded it as lastDirectoryPickerPath, and Settings closed without saving checkpoint changes. [Phase 2 Electron 43 installed smoke]
+- Phase 2 final evidence committed in 59d425e after installed/unpacked manual checks, final installer SHA-256 9054E38F07FD22A966C1F95214B5EB49DD3E722FCD31524EEE97860632394885, 100/100 data hashes unchanged, and protected-runtime guard clean. [docs/dependency-modernisation/STATUS.md]
+
+## Key files
+- `LTX-2.3_Cinematic_hardcut.safetensors`
+- `1.0`
+- `docs/MEDIA_LIBRARY_PLAN.md`
+- `frontend/lib/media-import.ts`
+- `electron/lib/project-asset-import.ts`
+- `asset.path`
+- `gallery-filters.ts`
+- `Asset.bin`
+- `shell.trashItem`
+- `video.removeAttribute`
+- `frontend/lib/apply-generation-params.ts`
+- `e.g`
+- `reframe_wangp_mapping.py`
+- `use-generation.ts`
+- `apply-generation-params.ts`
+- `test_reframe_wangp_mapping.py`
+- `test_generation.py`
+- `tests/test_reframe_wangp_mapping.py`
+- `tests/test_generation.py`
+- `AppSettings.output`
 
 ## Open questions
-
-- No unresolved architecture question is currently recorded here. Feature-specific unknowns should be added only when they materially affect the active roadmap or implementation contract.
+- None logged yet.
