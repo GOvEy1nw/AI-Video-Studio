@@ -73,7 +73,7 @@ Use exactly one status: `NOT STARTED`, `IN PROGRESS`, `BLOCKED`, or `PASSED`.
 | 7 — React 19 | PASSED | `4d20cb815a8a19ea9ef4718098ddbfc6578e5503` | `1c667c9d8f7d28c950fe475dd9fca0fb2766b280` | 2026-07-27 | React 19.2.8 migration, nullable DOM-ref compatibility, Tier A/B, development and unpacked smoke/visual parity, and protected-runtime gates passed. Phase 8 not started. |
 | 8 — TypeScript 6 | PASSED | `1ee8ade9e09e8dcdd4439bb980e1ccf2a0053f63` | `bca68bf614bc34cb8e62dc1862a04caca58e8759` | 2026-07-27 | TypeScript 6.0.3 migration, strict renderer/node projects, Tier A/B, development and unpacked smoke/parity, and protected-runtime gates passed. Phase 9 not started. |
 | 9 — Low-risk package refresh | PASSED | `bca68bf614bc34cb8e62dc1862a04caca58e8759` | `c285bbbbc966b41f1931be1b40f42b0f34e3af4f` | 2026-07-27 | All direct packages decided; focused/full automated, development, unpacked, installed, uninstall, deterministic graph, audit, and protected-runtime gates passed. Phase 10 not started. |
-| 10 — Automation and CI | NOT STARTED |  |  |  |  |
+| 10 — Automation and CI | IN PROGRESS | `32688a5e702c894be8eac0399365dc1b00b83526` |  | 2026-07-27 | Phase document read; automation/CI inventory and plan-freshness review in progress. |
 | 11 — Final validation and PR | NOT STARTED |  |  |  |  |
 
 ### Phase 1 command evidence

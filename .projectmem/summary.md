@@ -16,6 +16,46 @@ Product principles:
 Current integration baseline: `dev`.
 
 ## Recent issues
+- [DONE] #0323 Phase 10 boundary guard omitted three protected WanGP source/runtime installer paths listed in policy [scripts/check-dependency-boundaries.mjs] -> Boundary guard now covers every protected runtime/source installer path declared by Renovate policy; 5/5 tests and package guard pass [scripts/check-dependency-boundaries.mjs] (fixed)
+  - Partial attempt: Added ensure-wan2gp PowerShell/shell installers and update-wangp.ps1 to protected path list with Windows/POSIX test coverage [scripts/check-dependency-boundaries.mjs]
+- [DONE] #0322 Managed sandbox denies C:\tmp directory creation for temporary actionlint validation [Phase 10 workflow validation temp tooling] -> Approved isolated temp route provides verified actionlint workflow validation [.github/workflows/frontend-toolchain.yml] (fixed)
+  - Failed attempt: Tried creating isolated C:\tmp\aivs-actionlint-phase10 directory; sandbox denied path write [Phase 10 workflow validation temp tooling]
+  - Failed attempt: Queried latest actionlint release with expected Windows x86_64 ZIP pattern; release asset name did not match [Phase 10 workflow validation temp tooling]
+- [DONE] #0321 Managed sandbox blocks Phase 10 full typecheck from reading existing uv cache [corepack pnpm typecheck; backend uv cache] -> Approved uv-cache route completes Phase 10 full typecheck cleanly [Phase 10 full typecheck] (fixed)
+  - Failed attempt: Ran full typecheck in sandbox; TypeScript passed but Pyright launcher failed access to uv cache sdists-v9/.git [Phase 10 full typecheck]
+- [DONE] #0320 Vitest discovers Node-only dependency-boundary test and transforms import.meta.url into non-file URL [scripts/check-dependency-boundaries.test.mjs; frontend Vitest suite] -> Node boundary tests use .node-test.mjs and no longer enter frontend Vitest discovery [scripts/check-dependency-boundaries.node-test.mjs] (fixed)
+  - Failed attempt: Ran full frontend suite; Vitest included scripts/check-dependency-boundaries.test.mjs and failed Node fileURLToPath under transformed URL [frontend Vitest suite]
+  - Partial attempt: Renamed Node test away from Vitest *.test discovery while keeping explicit node --test package script [scripts/check-dependency-boundaries.node-test.mjs]
+- [DONE] #0319 validate:frontend nested bare pnpm resolves host pnpm 11 instead of project pnpm 10.30.3 [package.json validate:frontend] -> validate:frontend now pins all nested package commands to project Corepack pnpm 10.30.3 [package.json] (fixed)
+  - Failed attempt: Ran validate:frontend under Corepack pnpm 10; nested bare pnpm commands selected global pnpm 11.10.0 and failed package-manager guard [package.json validate:frontend]
+  - Partial attempt: Pinned all validate:frontend child commands through Corepack pnpm, matching existing full typecheck discipline [package.json validate:frontend]
+- [DONE] #0318 Windows Corepack pnpm exec cannot resolve local Electron binary after frozen reinstall [Phase 10 workflow Electron verification; .github/workflows/frontend-toolchain.yml] -> Windows workflow verifies Electron 43.2.0 through deterministic generated CMD shim [.github/workflows/frontend-toolchain.yml] (fixed)
+  - Failed attempt: Ran required corepack pnpm exec electron --version; Windows runner reported electron not recognized despite installed package [Phase 10 workflow Electron verification]
+- [DONE] #0317 Phase 10 frozen install aborts non-TTY node_modules relink unless CI mode is set [pnpm install --frozen-lockfile; Phase 10 validation] -> CI-mode frozen install succeeds deterministically through existing pnpm 10 store after scoped stalled-process recovery [Phase 10 validation] (fixed)
+  - Failed attempt: Ran exact frozen install in managed non-TTY shell; pnpm aborted node_modules removal and requested CI=true [Phase 10 validation]
+  - Failed attempt: Retried frozen install with CI=true; pnpm removed node_modules then stalled for over 90 seconds with no package progress under restricted store/network access [Phase 10 validation]
+  - Failed attempt: Tried tasklist to identify stalled pnpm node process; managed host denied process enumeration [Phase 10 validation process recovery]
+- [DONE] #0316 Combined documentation patch failed because README install block was mistakenly matched inside shorter CONTRIBUTING file [docs/CONTRIBUTING.md; README.md; AGENTS.md; docs/DEPENDENCY_POLICY.md] -> Phase 10 documentation updates now apply cleanly and match each file's actual structure [docs/DEPENDENCY_POLICY.md; docs/CONTRIBUTING.md; README.md; AGENTS.md] (fixed)
+  - Failed attempt: Applied one multi-file docs patch; context verification failed before changes because CONTRIBUTING lacks README development section [docs/CONTRIBUTING.md]
+  - Partial attempt: Split documentation edits by actual file structure; dependency policy and contributing guidance applied successfully [docs/DEPENDENCY_POLICY.md; docs/CONTRIBUTING.md]
+- [DONE] #0315 Renovate extract dry-run still discovers npm package files under protected Wan2GP tree with initial ignorePaths globs [renovate.json] -> Renovate includePaths and protected ignorePaths prevent generic runtime proposals; full dry-run produces only app/tooling branches [renovate.json] (fixed)
+  - Partial attempt: Changed protected ignorePaths to repository-agnostic **/prefix/** globs matching Renovate documentation examples [renovate.json]
+  - Partial attempt: Added allowlisted includePaths plus Node/pnpm major limits and disabled GitHub Actions Python-version updates as defense-in-depth [renovate.json]
+- [DONE] #0314 Context7 Renovate 41.140.1 is deprecated and incompatible with project Node 24 for local dry-run [Phase 10 Renovate validator/dry-run version selection] -> Phase 10 validation uses mature Node-24-compatible Renovate 43.272.4 instead of deprecated Context7 41.x build [renovate.json] (fixed)
+  - Partial attempt: Queried npm registry; current Renovate 43.284.1 supports Node ^24.11.0, unlike deprecated Context7 version 41.140.1 [Phase 10 Renovate validator/dry-run version selection]
+  - Failed attempt: Tried current Renovate 43.284.1 validator; repository minimumReleaseAge rejected the 65-minute-old release before execution [Phase 10 Renovate validator/dry-run version selection]
+- [DONE] #0313 Renovate local dry-run rejects --log-level CLI option and exits before repository extraction [Phase 10 Renovate dry-run] -> Renovate debug dry-run now uses supported LOG_LEVEL environment variable and explicit config file [Phase 10 Renovate dry-run] (fixed)
+  - Failed attempt: Ran Renovate local extract dry-run with --log-level=debug; CLI rejected unsupported option after RE2 fallback warning [Phase 10 Renovate dry-run]
+  - Failed attempt: Retried with LOG_LEVEL env; local extract ran but ignored untracked renovate.json and exited nonzero because Renovate 41 only supports Node 22 [Phase 10 Renovate dry-run]
+- [DONE] #0312 Sandboxed Renovate validator cannot resolve user path and exits EPERM before downloading tooling [Phase 10 Renovate config validation; corepack pnpm dlx renovate@41.140.1] -> Approved explicit Renovate validator route now validates Phase 10 config successfully [renovate.json] (fixed)
+  - Failed attempt: Ran exact ephemeral Renovate 41.140.1 validator in managed sandbox; pnpm dlx failed on realpath C:\Users\rais [Phase 10 Renovate config validation]
+  - Failed attempt: Approved pnpm dlx fetched Renovate 41.140.1, but invocation selected renovate main binary; it required a GitHub token instead of running config validator [Phase 10 Renovate config validation]
+- [DONE] #0311 Package-manager guard flags vendored Wan2GP package-lock even though policy targets app root lockfiles [scripts/check-dependency-boundaries.mjs; Wan2GP/shared/gradio/wangp_image_editor/frontend/package-lock.json] -> Package-manager guard now enforces only root package-manager lockfiles and preserves vendored runtime contents [scripts/check-dependency-boundaries.mjs] (fixed)
+  - Partial attempt: Scoped foreign lockfile enforcement to repository root while retaining path normalization and vendored-tree coverage [scripts/check-dependency-boundaries.mjs]
+- [DONE] #0310 Dependency-boundary module runs CLI path when imported by Node tests, which would set exit code 2 [scripts/check-dependency-boundaries.mjs] -> CLI dispatch now executes only when dependency-boundary module is the direct entry point [scripts/check-dependency-boundaries.mjs] (fixed)
+  - Partial attempt: Guarded dependency-boundary CLI dispatch so importing exported helpers does not execute command-line usage path [scripts/check-dependency-boundaries.mjs]
+- [DONE] #0309 Managed sandbox denies GitHub CLI config access during Phase 10 action-version and workflow checks [Phase 10 GitHub Actions validation; C:\Users\rais\AppData\Roaming\GitHub CLI\config.yml] -> Approved GitHub CLI config access restores authenticated Phase 10 action and workflow queries [Phase 10 GitHub Actions validation] (fixed)
+  - Failed attempt: Ran gh auth status in managed sandbox; GitHub CLI failed before startup on denied AppData config read [Phase 10 GitHub Actions validation]
 - [DONE] #0308 Phase 9 ledger patch inserted an unverified expanded c285bbb SHA instead of reading the canonical full commit ID [docs/dependency-modernisation/STATUS.md] -> Phase 9 status now records the canonical full implementation SHA obtained from Git [docs/dependency-modernisation/STATUS.md] (fixed)
 - [DONE] #0307 Final full audit finds concurrently 10 resolved vulnerable shell-quote 1.8.4 despite patched compatible shell-quote 1.9.0 [pnpm-lock.yaml; concurrently 10.0.3; shell-quote] -> Parent-scoped override keeps concurrently 10 on API-compatible shell-quote 1.9.0; typecheck passes and advisory is absent from final audit [pnpm-workspace.yaml; pnpm-lock.yaml] (fixed)
   - Failed attempt: Added parent-scoped shell-quote 1.9.0 override and ran normal lock refresh; pnpm stopped on existing three-day-old undici 7.29.0 minimumReleaseAge before applying changes [pnpm-lock.yaml; pnpm-workspace.yaml; concurrently 10.0.3; shell-quote]
@@ -660,10 +700,10 @@ Current integration baseline: `dev`.
 - Phase 9 uses package-scoped pnpm overrides at minimum patched versions for Electron Builder transitive advisories because pnpm 10 cannot refresh named transitive lock entries directly; remove when parents resolve patched graph [package.json; pnpm-lock.yaml; electron-builder]
 - Retain two dev-only GHSA-mh99 findings under Electron Builder: brace-expansion 5 changes callable CommonJS API to named expand export, so forcing it under minimatch 3/9 is unsafe; defer until upstream parents migrate [package.json; pnpm-lock.yaml; electron-builder]
 - Override only concurrently 10.0.3's shell-quote edge from vulnerable exact 1.8.4 to compatible patched 1.9.0; remove when concurrently publishes a patched dependency [pnpm-workspace.yaml; concurrently 10.0.3]
+- Phase 10 selects Renovate as sole npm/GitHub Actions update bot; automerge stays off and generic managers exclude Python/WanGP runtime paths. [renovate.json; docs/DEPENDENCY_POLICY.md]
+- Phase 10 adds a dedicated read-only Windows frontend toolchain workflow targeting dev, while preserving existing backend CI unchanged. [.github/workflows/frontend-toolchain.yml; .github/workflows/ci.yml]
 
 ## Notes
-- Phase 7 React 19 PASSED at implementation commit 1c667c9d8f7d28c950fe475dd9fca0fb2766b280: React 19.2.8/types, nullable DOM refs, Tier A/B, dev/unpacked parity, protected runtime clean; Phase 8 not started [docs/dependency-modernisation/STATUS.md]
-- Phase 8 development smoke passed by user: core screens, project, media attachment, preload-backed UI, and visual/behavioural parity confirmed [docs/dependency-modernisation/STATUS.md]
 - Phase 8 unpacked Windows smoke passed by user: file:// renderer, preload workflows, project/media/navigation, visual parity, and clean close confirmed [docs/dependency-modernisation/STATUS.md]
 - Phase 8 compiler baseline is TypeScript 6.0.3; TypeScript 7 remains deferred to Phase 12 on a separate post-merge branch [package.json]
 - Phase 8 PASSED at bca68bf614bc34cb8e62dc1862a04caca58e8759: TypeScript 6.0.3, strict renderer/node projects, Tier A/B, dev/unpacked parity, protected runtime clean; Phase 9 not started [docs/dependency-modernisation/STATUS.md]
@@ -672,6 +712,8 @@ Current integration baseline: `dev`.
 - Final Phase 9 installer built successfully after all package changes: 358,840,946 bytes, SHA-256 A1ECA9B98CF80DEE6FA2AB984CB698930F5184A4E682EE24F1183D6E19FD3929 [release/AiVS-Setup.exe; Phase 9]
 - User confirmed final Phase 9 installer, installed launch, project-data preservation, native import, uninstall, and post-uninstall project-data preservation all pass [release/AiVS-Setup.exe; Phase 9]
 - Phase 9 PASSED at c285bbbbc966b41f1931be1b40f42b0f34e3af4f: all 29 starting direct packages decided, production audit clean, two documented dev-only findings, full automated/dev/unpacked/installed/uninstall gates passed, runtime protected; Phase 10 not started [docs/dependency-modernisation/STATUS.md]
+- Phase 10 ownership map: renovate.json owns npm/GitHub Actions proposals; .github/workflows/frontend-toolchain.yml owns deterministic Windows frontend CI; scripts/check-dependency-boundaries.mjs owns runtime and package-manager guards; docs/DEPENDENCY_POLICY.md owns maintenance policy. [dependency automation and CI]
+- User confirmed Phase 10 unpacked Windows smoke passes: app launches, core project/media/preload workflows and visual behaviour remain healthy. [docs/dependency-modernisation/STATUS.md]
 
 ## Key files
 - `LTX-2.3_Cinematic_hardcut.safetensors`

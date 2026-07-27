@@ -1,0 +1,60 @@
+name: Frontend Toolchain
+
+on:
+  pull_request:
+    branches: [dev]
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    name: Windows frontend toolchain
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: 10.30.3
+          run_install: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24.18.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Verify Node and pnpm
+        shell: pwsh
+        run: |
+          if ((node --version) -ne 'v24.18.0') { throw 'Expected Node v24.18.0' }
+          if ((pnpm --version) -ne '10.30.3') { throw 'Expected pnpm 10.30.3' }
+
+      - name: Enforce package-manager policy
+        run: pnpm check:package-manager
+
+      - name: Test dependency boundaries
+        run: pnpm test:dependency-boundaries
+
+      - name: Enforce Renovate runtime boundaries
+        if: github.event_name == 'pull_request' && github.actor == 'renovate[bot]'
+        run: node scripts/check-dependency-boundaries.mjs --base "${{ github.event.pull_request.base.sha }}"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify Electron binary
+        run: .\node_modules\.bin\electron.CMD --version
+
+      - name: Validate frontend
+        run: pnpm validate:frontend

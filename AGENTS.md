@@ -34,6 +34,8 @@ Current high-level layers:
 - **Backend** (`backend/`) — FastAPI, typed domain handlers, state, services, curated model profiles, tests, and the in-process WanGP bridge.
 - **WanGP** (`Wan2GP/`) — bundled source pinned by `scripts/wangp-source.json`.
 
+Current desktop toolchain: Node 24, pnpm 10.30.3, Electron 43, React 19, Vite 8, Vitest 4, Tailwind CSS 4, and TypeScript 6.
+
 Current product surfaces:
 
 - Quick Gen image, video, Reframe, and music.
@@ -163,6 +165,9 @@ Internal implementation may evolve, but the following require explicit migration
 | `pnpm typecheck:py` | Pyright only |
 | `pnpm test:frontend` | Run the full Vitest suite |
 | `pnpm test:frontend:watch` | Run frontend tests in watch mode |
+| `pnpm validate:frontend` | Run TypeScript, frontend tests, and frontend production builds |
+| `pnpm check:package-manager` | Verify Node/pnpm metadata and reject foreign root lockfiles |
+| `pnpm test:dependency-boundaries` | Test generic dependency-update runtime boundaries |
 | `pnpm backend:test` | Sync declared backend test/dev dependencies and run pytest |
 | `pnpm build:frontend` | Build renderer, Electron main, and preload bundles |
 | `pnpm build:fast:win` | Create an unpacked Windows build without rebuilding Python |
@@ -419,11 +424,9 @@ This boundary may be reorganised internally, but its security properties cannot 
 - Ensure event subscriptions return or provide matching cleanup; avoid `removeAllListeners` when listener-specific cleanup is available and safer.
 - Preserve project-scoped duplicate handling and deletion boundaries.
 
-### 8.3 Current Electron upgrade hazard
+### 8.3 Electron native-file compatibility
 
-The current pre-modernisation renderer still reads Electron's removed non-standard `File.path` in `frontend/lib/media-import.ts`.
-
-Any upgrade beyond Electron 31 must first expose `webUtils.getPathForFile(file)` through the context-isolated preload and migrate every file/drop import path. Do not cast around the removal or fall back to temporary blob URLs for project imports.
+Electron 43 file/drop imports resolve native paths through the narrow preload `webUtils.getPathForFile(file)` bridge. Keep every renderer path on that bridge. Do not restore removed `File.path` casts or fall back to temporary blob URLs for project imports.
 
 ### 8.4 Packaging
 
@@ -651,6 +654,10 @@ Do not append every bug fix or command transcript to the summary or project map.
 
 ## 15. Dependency upgrade rules
 
+- Follow `docs/DEPENDENCY_POLICY.md`.
+- Renovate is the sole npm/GitHub Actions proposal bot. Automerge remains disabled.
+- Move Electron, Vite, React, Tailwind, tests, and TypeScript only in their documented compatibility groups.
+- Keep Node on major 24, pnpm on 10.30.3, and TypeScript below 7 until dedicated migrations approve movement.
 - Major frontend/desktop upgrades require a dedicated branch and phased plan.
 - Upgrade compatibility clusters together where required, but isolate independent majors into reviewable phases.
 - Keep product behaviour stable during dependency work; do not hide a redesign or rewrite inside a migration.
