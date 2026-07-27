@@ -21,3 +21,15 @@ export function directoryForDialogSelection(
 ): string {
   return selectionType === 'directory' ? selectedPath : path.dirname(selectedPath)
 }
+
+export function resolveSaveDialogDefaultPath(
+  requestedPath: string | undefined,
+  rememberedDirectory: string | null,
+  fallbackDirectory: string,
+): string {
+  const directory = rememberedDirectory || fallbackDirectory
+  if (!requestedPath) return directory
+  return path.basename(requestedPath) === requestedPath
+    ? path.join(directory, requestedPath)
+    : requestedPath
+}

@@ -18,6 +18,7 @@ import {
 import {
   directoryForDialogSelection,
   firstUsableDirectory,
+  resolveSaveDialogDefaultPath,
 } from '../dialog-paths'
 import { importProjectAsset, projectAssetCategoryDir, type DuplicateStrategy } from '../lib/project-asset-import'
 import { deleteProjectAssetFiles } from '../lib/project-asset-delete'
@@ -138,8 +139,11 @@ export function registerFileHandlers(): void {
   }) => {
     const mainWindow = getMainWindow()
     if (!mainWindow) return null
-    const defaultPath =
-      options.defaultPath || getLastSaveDirectory() || getDialogFallbackDirectory()
+    const defaultPath = resolveSaveDialogDefaultPath(
+      options.defaultPath,
+      getLastSaveDirectory(),
+      getDialogFallbackDirectory(),
+    )
     const result = await dialog.showSaveDialog(mainWindow, {
       title: options.title || 'Save File',
       defaultPath,
