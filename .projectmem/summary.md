@@ -16,6 +16,9 @@ Product principles:
 Current integration baseline: `dev`.
 
 ## Recent issues
+- [DONE] #0324 GitHub CLI inferred upstream repository instead of origin fork for frontend workflow dispatch [Phase 10 GitHub workflow dispatch] -> Explicit --repo targets origin correctly; remaining 404 is expected because GitHub only dispatches workflows present on default branch [Phase 10 GitHub workflow dispatch] (fixed)
+  - Failed attempt: Dispatched by workflow filename without --repo; gh queried deepbeepmeep/LTX-Desktop-WanGP and returned HTTP 404 [Phase 10 GitHub workflow dispatch]
+  - Partial attempt: Retried with explicit origin repo; gh reached GOvEy1nw/AI-Video-Studio but GitHub cannot dispatch workflow absent from default branch [Phase 10 GitHub workflow dispatch]
 - [DONE] #0323 Phase 10 boundary guard omitted three protected WanGP source/runtime installer paths listed in policy [scripts/check-dependency-boundaries.mjs] -> Boundary guard now covers every protected runtime/source installer path declared by Renovate policy; 5/5 tests and package guard pass [scripts/check-dependency-boundaries.mjs] (fixed)
   - Partial attempt: Added ensure-wan2gp PowerShell/shell installers and update-wangp.ps1 to protected path list with Windows/POSIX test coverage [scripts/check-dependency-boundaries.mjs]
 - [DONE] #0322 Managed sandbox denies C:\tmp directory creation for temporary actionlint validation [Phase 10 workflow validation temp tooling] -> Approved isolated temp route provides verified actionlint workflow validation [.github/workflows/frontend-toolchain.yml] (fixed)
@@ -704,9 +707,6 @@ Current integration baseline: `dev`.
 - Phase 10 adds a dedicated read-only Windows frontend toolchain workflow targeting dev, while preserving existing backend CI unchanged. [.github/workflows/frontend-toolchain.yml; .github/workflows/ci.yml]
 
 ## Notes
-- Phase 8 unpacked Windows smoke passed by user: file:// renderer, preload workflows, project/media/navigation, visual parity, and clean close confirmed [docs/dependency-modernisation/STATUS.md]
-- Phase 8 compiler baseline is TypeScript 6.0.3; TypeScript 7 remains deferred to Phase 12 on a separate post-merge branch [package.json]
-- Phase 8 PASSED at bca68bf614bc34cb8e62dc1862a04caca58e8759: TypeScript 6.0.3, strict renderer/node projects, Tier A/B, dev/unpacked parity, protected runtime clean; Phase 9 not started [docs/dependency-modernisation/STATUS.md]
 - warning: Phase 9 pnpm audit requires explicit maintainer approval because npm receives the project dependency graph; sandbox route fails EACCES and escalated route is policy-rejected without consent [docs/dependency-modernisation/STATUS.md; pnpm audit]
 - gotcha: dev:debug expects an IDE/debugpy listener on 127.0.0.1:5678; without one, backend debug connection is refused after Electron/Node debug launch, which confirms BACKEND_DEBUG propagation rather than normal backend readiness [package.json; pnpm dev:debug]
 - Final Phase 9 installer built successfully after all package changes: 358,840,946 bytes, SHA-256 A1ECA9B98CF80DEE6FA2AB984CB698930F5184A4E682EE24F1183D6E19FD3929 [release/AiVS-Setup.exe; Phase 9]
@@ -714,6 +714,9 @@ Current integration baseline: `dev`.
 - Phase 9 PASSED at c285bbbbc966b41f1931be1b40f42b0f34e3af4f: all 29 starting direct packages decided, production audit clean, two documented dev-only findings, full automated/dev/unpacked/installed/uninstall gates passed, runtime protected; Phase 10 not started [docs/dependency-modernisation/STATUS.md]
 - Phase 10 ownership map: renovate.json owns npm/GitHub Actions proposals; .github/workflows/frontend-toolchain.yml owns deterministic Windows frontend CI; scripts/check-dependency-boundaries.mjs owns runtime and package-manager guards; docs/DEPENDENCY_POLICY.md owns maintenance policy. [dependency automation and CI]
 - User confirmed Phase 10 unpacked Windows smoke passes: app launches, core project/media/preload workflows and visual behaviour remain healthy. [docs/dependency-modernisation/STATUS.md]
+- Phase 10 implementation committed at 5287b79d97005d5403b45d0ad2251c6101438886; remote push was not attempted because managed approval requires explicit user authorization to export commit to origin. [docs/dependency-modernisation/STATUS.md]
+- Supersedes prior push-approval note: user explicitly authorized and Phase 10 implementation SHA 5287b79d97005d5403b45d0ad2251c6101438886 was pushed to origin; workflow dispatch remains unavailable until workflow exists on default branch. [docs/dependency-modernisation/STATUS.md]
+- Phase 10 PASSED: Renovate-only automation, deterministic read-only Windows frontend CI, package/runtime guards, full local gates, and unpacked smoke passed; real CI awaits first PR because GitHub cannot dispatch a workflow absent from default branch. [docs/dependency-modernisation/STATUS.md]
 
 ## Key files
 - `LTX-2.3_Cinematic_hardcut.safetensors`

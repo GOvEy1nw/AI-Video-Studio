@@ -73,7 +73,7 @@ Use exactly one status: `NOT STARTED`, `IN PROGRESS`, `BLOCKED`, or `PASSED`.
 | 7 — React 19 | PASSED | `4d20cb815a8a19ea9ef4718098ddbfc6578e5503` | `1c667c9d8f7d28c950fe475dd9fca0fb2766b280` | 2026-07-27 | React 19.2.8 migration, nullable DOM-ref compatibility, Tier A/B, development and unpacked smoke/visual parity, and protected-runtime gates passed. Phase 8 not started. |
 | 8 — TypeScript 6 | PASSED | `1ee8ade9e09e8dcdd4439bb980e1ccf2a0053f63` | `bca68bf614bc34cb8e62dc1862a04caca58e8759` | 2026-07-27 | TypeScript 6.0.3 migration, strict renderer/node projects, Tier A/B, development and unpacked smoke/parity, and protected-runtime gates passed. Phase 9 not started. |
 | 9 — Low-risk package refresh | PASSED | `bca68bf614bc34cb8e62dc1862a04caca58e8759` | `c285bbbbc966b41f1931be1b40f42b0f34e3af4f` | 2026-07-27 | All direct packages decided; focused/full automated, development, unpacked, installed, uninstall, deterministic graph, audit, and protected-runtime gates passed. Phase 10 not started. |
-| 10 — Automation and CI | IN PROGRESS | `32688a5e702c894be8eac0399365dc1b00b83526` |  | 2026-07-27 | Phase document read; automation/CI inventory and plan-freshness review in progress. |
+| 10 — Automation and CI | PASSED | `32688a5e702c894be8eac0399365dc1b00b83526` | `5287b79d97005d5403b45d0ad2251c6101438886` | 2026-07-27 | Renovate-only policy, deterministic Windows frontend CI, dependency guards, documentation, full local gates, packaging, and user-confirmed unpacked smoke passed. GitHub cannot dispatch a new workflow until it exists on the default branch; the pushed branch has no run and no PR was opened. Phase 11 not started. |
 | 11 — Final validation and PR | NOT STARTED |  |  |  |  |
 
 ### Phase 1 command evidence
@@ -869,6 +869,97 @@ Exit gate: `PASSED`. TypeScript `6.0.3`, both strict projects, Tier A/B, develop
 15. Final `pnpm outdated` required explicit direct-dependency metadata approval; approved query completed.
 16. `concurrently` introduced vulnerable exact `shell-quote` `1.8.4`; parent-scoped `1.9.0` override passed typecheck and cleared its advisory.
 
+### Phase 10 pre-implementation review
+
+- Starting SHA: `32688a5e702c894be8eac0399365dc1b00b83526`; branch is `chore/dependency-modernisation-2026`.
+- Existing `.github/workflows/ci.yml` remains unchanged and continues to own backend checks.
+- No existing Renovate or Dependabot configuration competed for npm or GitHub Actions updates.
+- Renovate was selected as sole npm/GitHub Actions proposal bot. Automerge remains disabled.
+- Generic automation is limited to app/tooling manifests and workflows; curated Python, WanGP, source-pin, and GPU-stack paths remain manually owned.
+
+### Phase 10 implementation
+
+- `renovate.json` targets `dev`, enables only npm and GitHub Actions managers, groups every core compatibility family, enforces a seven-day release age, schedules weekly proposals and monthly lockfile maintenance, and caps Node, pnpm, and TypeScript majors.
+- `.github/workflows/frontend-toolchain.yml` adds a read-only Windows job with Node `24.18.0`, pnpm `10.30.3`, frozen install, Electron verification, package-manager and runtime-boundary guards, TypeScript, frontend tests, and production bundles.
+- `scripts/check-dependency-boundaries.mjs` rejects protected runtime changes in generic dependency PRs and rejects foreign root lockfiles. Its Node tests cover Windows/POSIX paths and exact toolchain metadata.
+- `package.json` exposes `validate:frontend`, `check:package-manager`, and `test:dependency-boundaries`; nested package commands use Corepack so host pnpm drift cannot bypass the repository pin.
+- `docs/DEPENDENCY_POLICY.md`, `docs/CONTRIBUTING.md`, `README.md`, and `AGENTS.md` now describe actual stack, ownership classes, validation, and update rules.
+
+### Phase 10 command evidence
+
+| Command | Result | Evidence |
+|---|---|---|
+| `corepack pnpm install --frozen-lockfile` | PASS | Reconstructed 430 packages from the existing pnpm 10 store with zero downloads; repeated frozen install remained deterministic. |
+| `node --version` / `corepack pnpm --version` | PASS | Node `v24.18.0`; pnpm `10.30.3`. |
+| `.\node_modules\.bin\electron.CMD --version` | PASS | Electron `v43.2.0`. |
+| `corepack pnpm check:package-manager` | PASS | Node/pnpm metadata and pnpm-only root lockfile policy passed. |
+| `corepack pnpm test:dependency-boundaries` | PASS | Node test runner: 5 tests passed, 0 failed. |
+| `node scripts/check-dependency-boundaries.mjs --base 32688a5e702c894be8eac0399365dc1b00b83526` | PASS | Committed Phase 10 diff contains no protected runtime path or foreign root lockfile. |
+| Renovate `43.272.4` config validator | PASS | `renovate.json` validated successfully with a mature Node-24-compatible release. |
+| Renovate `43.272.4` full no-write dry-run | PASS | Only app/tooling dependency contexts and branches were produced; no protected backend/WanGP proposal context appeared. |
+| actionlint `1.7.12` | PASS | Workflow had no findings; downloaded ZIP matched published SHA-256 `6E7241B51E6817EA6A047693D8E6FED13B31819C9A0DD6C5A726E1592D22F6E9`. |
+| `corepack pnpm validate:frontend` | PASS | TypeScript passed; Vitest `4.1.10` passed 22 files/75 tests; renderer, Electron main, and CommonJS preload built. |
+| `corepack pnpm typecheck` | PASS | TypeScript and Pyright completed with 0 errors and 0 warnings. |
+| `corepack pnpm backend:test` | PASS | 278 passed, 1 skipped; existing warning only. |
+| `corepack pnpm build:frontend` | PASS | Renderer, Electron main, and CommonJS preload production bundles built. |
+| `corepack pnpm build:fast:win` | PASS | Unpacked Windows app built with Electron `43.2.0`. |
+| Protected-runtime diff from Phase 10 start | PASS | No changes under backend runtime locks, WanGP pins/installers, or `Wan2GP/`. |
+| `git diff --check` | PASS | No whitespace errors; Windows line-ending notices only. |
+
+### Phase 10 workflow and supply-chain evidence
+
+- Branch push: `5287b79d97005d5403b45d0ad2251c6101438886` pushed to `origin/chore/dependency-modernisation-2026`.
+- Manual dispatch against `GOvEy1nw/AI-Video-Studio` returned `HTTP 404: workflow frontend-toolchain.yml not found on the default branch`.
+- `gh run list` for the pushed branch returned `[]`; no workflow run URL/ID exists.
+- Limitation: GitHub only dispatches workflows already present on the default branch. This phase does not open the final PR or push directly to `dev`, so a real run is unavailable until integration. No CI result is claimed.
+- Workflow runner: `windows-latest`; exact Node/pnpm checks require `24.18.0` and `10.30.3`.
+- Actions are official and pinned to reviewed commit SHAs: `actions/checkout` v6, `actions/setup-node` v7, and `pnpm/action-setup` v4.
+- Workflow permissions are `contents: read`. It does not use `pull_request_target`, secrets, artifact publishing, release publishing, or write permissions.
+- First pull request to `dev` must supply the real workflow run and cache evidence before merge.
+
+### Phase 10 manual checks
+
+- [x] Final unpacked Windows app launched.
+- [x] Core project, media, and preload-backed workflows remained healthy.
+- [x] Visual and behavioural parity passed by user confirmation.
+- [x] Clean shutdown passed.
+- [x] Protected runtime diff guard produced no output.
+
+### Phase 10 owner-side follow-up
+
+- Install or enable the Renovate GitHub App for `GOvEy1nw/AI-Video-Studio`.
+- Confirm the Dependency Dashboard issue and review first proposals before routine operation.
+- Make `Frontend Toolchain / Windows frontend toolchain` required for `dev` pull requests after its first successful run.
+- Preserve required backend checks and configure branch protection against inappropriate direct pushes.
+
+### Phase 10 commits
+
+| Purpose | Commit SHA | Message |
+|---|---|---|
+| Dependency automation, policy, CI, guards, and documentation | `5287b79d97005d5403b45d0ad2251c6101438886` | `chore(ci): add dependency automation and upgrade gates` |
+
+### Phase 10 issues and attempted fixes
+
+1. Managed GitHub CLI config access was denied; approved scoped access restored authenticated action/version queries.
+2. Boundary module executed its CLI branch when imported by tests; direct-entry detection isolated CLI execution.
+3. Foreign-lockfile scan flagged vendored WanGP content; enforcement was narrowed to repository-root package-manager files.
+4. Sandboxed Renovate validation could not resolve user paths; approved tooling access completed validation.
+5. Renovate rejected unsupported `--log-level`; supported environment configuration and explicit config-file selection fixed invocation.
+6. Context7's Renovate 41 build was deprecated and Node-22-only; mature Node-24-compatible Renovate `43.272.4` was selected.
+7. Initial Renovate ignore globs still exposed protected extraction contexts; allowlisted `includePaths` plus `ignorePaths` eliminated protected proposals.
+8. One combined documentation patch used mismatched context; file-specific patches applied cleanly.
+9. Frozen install required CI mode, then stalled under restricted store access; scoped process recovery and existing-store access completed deterministic install.
+10. Windows `pnpm exec electron` could not resolve the local executable; the deterministic pnpm-generated `electron.CMD` shim passed.
+11. `validate:frontend` child commands selected host pnpm 11; Corepack-pinned child commands restored pnpm `10.30.3`.
+12. Vitest discovered the Node-only boundary test; the explicit `.node-test.mjs` name removed it from frontend test discovery.
+13. Full typecheck could not read the existing uv cache in the sandbox; approved cache access completed Pyright cleanly.
+14. Temporary actionlint tooling could not use managed `C:\tmp`; approved isolated temp access completed checksum and lint validation.
+15. Final review found three source/runtime installer paths missing from the boundary guard; all policy-declared paths and tests now align.
+16. GitHub CLI initially inferred the upstream repository; explicit `--repo GOvEy1nw/AI-Video-Studio` targeted origin.
+17. GitHub rejected manual dispatch because the new workflow is absent from the default branch; this expected platform limitation is recorded without claiming a CI pass.
+
+Exit gate: `PASSED`. Repository configuration, full local validation, unpacked smoke, protected-runtime proof, implementation commit, and status evidence are complete. Real GitHub execution is deferred only by GitHub's default-branch workflow requirement and must run on the first pull request to `dev`. Phase 11 remains `NOT STARTED`.
+
 ## Command evidence template
 
 Duplicate this section beneath each phase heading.
@@ -965,19 +1056,19 @@ Complete one row for every direct JavaScript dependency and dev dependency.
 
 ## Dependency automation evidence
 
-- Selected bot:
-- Duplicate bot configuration removed/disabled:
-- Renovate validator command/version:
-- Renovate dry-run result:
-- Enabled managers:
-- Protected paths/manager proof:
-- Automerge policy:
-- Dependency Dashboard status:
-- Windows CI workflow:
-- Required workflow run URL/ID:
-- Required check/branch-protection owner action:
-- Lockfile/package-manager guard result:
-- Dependency-boundary test result:
+- Selected bot: Renovate.
+- Duplicate bot configuration removed/disabled: none existed; Dependabot remains absent.
+- Renovate validator command/version: Renovate `43.272.4` config validator; PASS.
+- Renovate dry-run result: full no-write run; app/tooling proposals only, no protected runtime proposal context.
+- Enabled managers: npm and GitHub Actions only.
+- Protected paths/manager proof: allowlisted app/tooling paths, explicit backend/WanGP ignores, Python runner updates disabled, boundary tests 5/5.
+- Automerge policy: disabled globally and in every compatibility group.
+- Dependency Dashboard status: enabled in config; creation requires Renovate App activation after merge.
+- Windows CI workflow: `.github/workflows/frontend-toolchain.yml`, `windows-latest`, Node `24.18.0`, pnpm `10.30.3`, read-only.
+- Required workflow run URL/ID: unavailable; GitHub returned 404 because new workflow is absent from default branch, and branch run list is empty.
+- Required check/branch-protection owner action: require frontend toolchain plus existing backend checks on `dev` after first successful run.
+- Lockfile/package-manager guard result: PASS.
+- Dependency-boundary test result: PASS, 5/5.
 
 ## Final release candidate evidence
 
