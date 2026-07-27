@@ -1,15 +1,77 @@
 @import 'tailwindcss' source(none);
 
-@config "../tailwind.config.js";
 @source "../index.html";
 @source "./";
 
-/*
-  The default border color has changed to `currentcolor` in Tailwind CSS v4,
-  so we've added these compatibility styles to make sure everything still
-  looks the same as it did with Tailwind CSS v3.
+/* Product-editable runtime tokens. Values are RGB channels: R G B. */
+:root {
+  /* Accent color (used for buttons, progress, highlights) */
+  --accent: 43 97 255;        /* #2B61FF */
+  --accent-dark: 26 80 224;   /* #1A50E0 — darker shade for hover states */
 
-  If we ever want to remove these styles, we need to add an explicit border
+  /* Surface colors */
+  --bg: 9 9 11;               /* zinc-950 — main app background */
+  --surface: 24 24 27;        /* zinc-900 — panels, cards */
+  --surface-raised: 39 39 42; /* zinc-800 — inputs, hover states */
+  --border-color: 63 63 70;   /* zinc-700 — dividers, borders */
+
+  /* Text */
+  --text: 255 255 255;
+  --text-muted: 161 161 170;  /* zinc-400 */
+}
+
+/*
+  Tailwind utility mappings. Add new semantic utility tokens here and keep
+  product-editable values in :root. `inline` preserves runtime retheming.
+*/
+@theme {
+  --font-sans: Inter, system-ui, sans-serif;
+
+  --color-blue-50: #eef3ff;
+  --color-blue-100: #e0e9ff;
+  --color-blue-200: #c7d7fe;
+  --color-blue-300: #a5bafd;
+  --color-blue-400: #7394fb;
+  --color-blue-700: #1540b8;
+  --color-blue-800: #163090;
+  --color-blue-900: #162970;
+  --color-blue-950: #0f1a45;
+
+  --radius-lg: 0.75rem;
+  --radius-md: 0.5rem;
+  --radius-sm: 0.25rem;
+}
+
+@theme inline {
+  --color-blue-500: rgb(var(--accent));
+  --color-blue-600: rgb(var(--accent-dark));
+
+  --color-accent: rgb(var(--accent));
+  --color-accent-dark: rgb(var(--accent-dark));
+  --color-app-bg: rgb(var(--bg));
+  --color-surface: rgb(var(--surface));
+  --color-surface-raised: rgb(var(--surface-raised));
+
+  --color-background: #1a1a1a;
+  --color-foreground: rgb(var(--text));
+  --color-card: #242424;
+  --color-card-foreground: rgb(var(--text));
+  --color-border: #333333;
+  --color-input: #2a2a2a;
+  --color-primary: rgb(var(--accent));
+  --color-primary-foreground: rgb(var(--text));
+  --color-secondary: #3f3f46;
+  --color-secondary-foreground: rgb(var(--text));
+  --color-muted: #27272a;
+  --color-muted-foreground: rgb(var(--text-muted));
+}
+
+/*
+  Tailwind CSS v4 changed the default border color to `currentcolor`.
+  This app-wide base rule intentionally preserves AiVS's established v3
+  border contract without repeating a color utility on every bare border.
+
+  Removing it requires adding an explicit border
   color utility to any element that depends on these defaults.
 */
 @layer base {
@@ -48,26 +110,6 @@
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
-}
-
-/* ─────────────────────────────────────────
-   THEME — edit this block to retheme the app
-   Values are RGB channels: R G B
-   ───────────────────────────────────────── */
-:root {
-  /* Accent color (used for buttons, progress, highlights) */
-  --accent: 43 97 255;        /* #2B61FF */
-  --accent-dark: 26 80 224;   /* #1A50E0 — darker shade for hover states */
-
-  /* Surface colors */
-  --bg: 9 9 11;               /* zinc-950 — main app background */
-  --surface: 24 24 27;        /* zinc-900 — panels, cards */
-  --surface-raised: 39 39 42; /* zinc-800 — inputs, hover states */
-  --border-color: 63 63 70;   /* zinc-700 — dividers, borders */
-
-  /* Text */
-  --text: 255 255 255;
-  --text-muted: 161 161 170;  /* zinc-400 */
 }
 
 body {

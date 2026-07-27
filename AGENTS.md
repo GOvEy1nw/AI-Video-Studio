@@ -393,7 +393,7 @@ Frontend tests exist and are required.
 
 ### 7.8 Styling
 
-- Tailwind uses semantic colour tokens backed by CSS variables in `frontend/index.css` and configuration in `tailwind.config.js` on the current pre-modernisation branch.
+- Tailwind CSS 4 uses CSS-first semantic theme tokens and explicit source detection in `frontend/index.css`.
 - Utilities commonly use `class-variance-authority`, `clsx`, and `tailwind-merge`.
 - Preserve explicit focus, disabled, selected, hover, progress, and error states.
 - Container queries are used for size-dependent Asset Library card controls.
