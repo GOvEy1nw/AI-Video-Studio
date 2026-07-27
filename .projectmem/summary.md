@@ -16,6 +16,19 @@ Product principles:
 Current integration baseline: `dev`.
 
 ## Recent issues
+- [DONE] #0255 Phase 4 npm registry freshness query hangs then fails EACCES inside managed sandbox [docs/dependency-modernisation/04_VITEST_4_TEST_STACK_MIGRATION.md] -> Approved registry route completed Phase 4 version freshness and compatibility checks [docs/dependency-modernisation/04_VITEST_4_TEST_STACK_MIGRATION.md] (fixed)
+- [DONE] #0254 Phase 4 baseline Vitest cannot load vitest.config.ts inside managed sandbox; esbuild gets access denied [vitest.config.ts] -> Approved Vitest execution route bypasses managed sandbox config access; Phase 4 baseline suite passes [vitest.config.ts] (fixed)
+- [DONE] #0253 Phase 3 requires pnpm dev:debug but package.json has no dev:debug script [package.json] -> Confirmed Phase 3 debug script already exists; no package script change required [package.json] (fixed)
+- [DONE] #0252 Vite 8 dev dependency scan traverses embedded Gradio sources under python-embed and reports unresolved Svelte/@gradio imports [vite.config.ts] -> Vite dependency optimization now scans only root index.html, preserving clean dev startup while excluding embedded Gradio HTML sources [vite.config.ts] (fixed)
+  - Partial attempt: Started Vite 8 dev and touched frontend CSS; app stayed running and optimizer resumed, but initial scan traversed python-embed Gradio sources and logged unresolved imports [vite.config.ts]
+- [DONE] #0251 Vite 8 final build emits ESM preload despite rolldownOptions output.format cjs, breaking CommonJS preload contract [vite.config.ts] -> Vite 8 now emits exactly dist-electron/preload.js as CommonJS without an ESM pass or stale alternate output [vite.config.ts] (fixed)
+  - Failed attempt: Set preload build.rolldownOptions.output.format='cjs'; build passed but emitted ESM createRequire/import.meta preload [vite.config.ts]
+  - Failed attempt: Tried moving preload entry from flat shortcut into build.lib to avoid merged ESM+CJS formats; patch context missed existing blank-line layout [vite.config.ts]
+  - Partial attempt: Moved preload entry into build.lib; eliminated duplicate ESM pass and produced real CJS, but Vite named it dist-electron/aivs.cjs instead of required preload.js [vite.config.ts]
+- [DONE] #0250 Phase 3 exact Vite cluster install blocked by minimumReleaseAge for plugin-react 6.0.4 and transitive undici 7.29.0 [package.json] -> Exact Phase 3 packages installed through a command-scoped release-age exception; .npmrc policy remains unchanged [package.json] (fixed)
+  - Failed attempt: Ran exact reviewed add/remove commands under normal release-age policy; all transactions were rejected before changing dependencies [package.json]
+- [DONE] #0249 Phase 3 renderer import audit command failed because PowerShell parsed nested regex quoting [docs/dependency-modernisation/03_VITE_8_TOOLCHAIN_MIGRATION.md] -> Fixed-string renderer audit completed without PowerShell parsing errors and confirmed preload-only Electron access [docs/dependency-modernisation/03_VITE_8_TOOLCHAIN_MIGRATION.md] (fixed)
+  - Failed attempt: Combined quoted regex audit was rejected by PowerShell before rg ran; no files changed [docs/dependency-modernisation/03_VITE_8_TOOLCHAIN_MIGRATION.md]
 - [DONE] #0248 Installed save dialog ignores persisted lastSaveDirectory when caller defaultPath is filename-only; opens in prior directory-picker location. [electron/ipc/file-handlers.ts] -> Filename-only save defaults now resolve under valid persisted lastSaveDirectory; regression tests pass and installed Video Editor dialog opened at C:\tmp\AiVS-phase2-save with expected filename. [electron/ipc/file-handlers.ts] (fixed)
   - Partial attempt: Added pure save-default resolver so filename-only defaults join valid remembered/fallback directory; wired IPC handler and regression tests. Awaiting automated/native confirmation. [electron/dialog-paths.ts]
 - [DONE] #0247 Phase 2 fast packaging fails EPERM renaming win-unpacked.tmp to win-unpacked after gallery drop-zone rebuild [release/win-unpacked] -> Closed running dev Electron before packaging; Electron Builder then renamed output and completed unpacked build. [release/win-unpacked] (fixed)
@@ -71,6 +84,7 @@ Current integration baseline: `dev`.
   - Failed attempt: Retried exact regex with nested PowerShell quoting; parser rejected the expression before ripgrep ran [docs/dependency-modernisation/02_ELECTRON_43_MIGRATION.md]
 - [OPEN] #0224 Managed process backend rejected interrupt for hanging npm registry query [tooling/exec] (open)
   - Failed attempt: Sent Ctrl+C to hanging registry query; process backend does not support interrupts [tooling/exec]
+  - Failed attempt: Phase 3 npm registry freshness query hung in managed sandbox; process backend again rejected Ctrl+C [tooling/exec]
 - [DONE] #0223 Phase 2 registry freshness query failed in managed sandbox with npm EACCES [docs/dependency-modernisation/02_ELECTRON_43_MIGRATION.md] -> Approved network route completed registry freshness check and confirmed exact target versions [docs/dependency-modernisation/02_ELECTRON_43_MIGRATION.md] (fixed)
   - Failed attempt: Queried npm registry for Electron 43 and @types/node 24 in sandbox; both requests failed with EACCES [docs/dependency-modernisation/02_ELECTRON_43_MIGRATION.md]
 - [OPEN] #0222 projectmem get_project_map timed out after 300 seconds at session start [.projectmem/PROJECT_MAP.md] (open)
@@ -535,16 +549,16 @@ Current integration baseline: `dev`.
 - Phase 2 Electron 43 exit gate now PASSED after user-assisted installed/unpacked OS-drop and native-dialog matrices, filename-only save-path fix, deleted-directory fallback, Tier A/B, packaging, data, and protected-runtime checks; Phase 3 remains not started. [docs/dependency-modernisation/STATUS.md]
 
 ## Notes
-- Phase 2 data validation: all 100 files from Phase 1 project-assets backup remain present and SHA-256 identical; live tree only added new test media [docs/dependency-modernisation/STATUS.md]
-- Phase 2 dev image gallery/input OS drops now pass; updated win-unpacked build is open for user-assisted Music Cover Song drop verification before installer rebuild. [docs/dependency-modernisation/STATUS.md]
-- User confirmed updated win-unpacked app accepts baseline-audio.wav on Music Cover Song; app closed for NSIS rebuild. [docs/dependency-modernisation/STATUS.md]
-- Fresh Phase 2 NSIS build passed after gallery drop-zone fix; installer and blockmap regenerated. [release/AiVS-Setup.exe]
 - Post-install Phase 2 data check passes: all 100 Phase 1 backup project-asset files remain present and SHA-256 identical. [C:/Users/rais/Documents/AiVS]
 - Installed NSIS app accepted baseline-audio.wav on Music Cover Song; Computer Use captured populated slot in installed runtime. [installed AiVS]
 - User confirmed installed HTML media picker applied baseline-audio.wav to Transfer Timbre; UI re-observation showed both Cover Song and Transfer Timbre populated. [Phase 2 Electron 43 installed smoke]
 - Installed Director Import Media opened at persisted C:\tmp\AiVS-phase2-open; user cancelled and app_state.json SHA-256 remained unchanged. [Phase 2 Electron 43 installed smoke]
 - Installed directory picker opened at persisted Documents\AiVS, user selected C:\tmp\AiVS-phase1-media, app_state recorded it as lastDirectoryPickerPath, and Settings closed without saving checkpoint changes. [Phase 2 Electron 43 installed smoke]
 - Phase 2 final evidence committed in 59d425e after installed/unpacked manual checks, final installer SHA-256 9054E38F07FD22A966C1F95214B5EB49DD3E722FCD31524EEE97860632394885, 100/100 data hashes unchanged, and protected-runtime guard clean. [docs/dependency-modernisation/STATUS.md]
+- gotcha: vite-plugin-electron 1.1 flat entry inherits package type=module; CommonJS preload must use explicit build.lib entry/formats/fileName or default formats merge emits ESM too [vite.config.ts]
+- Phase 3 PASSED: Vite 8.1.5, plugin-react 6.0.4, vite-plugin-electron 1.1.0; CommonJS preload, scoped dev scan, Tier A/B, lifecycle, unpacked, import, and data gates passed [docs/dependency-modernisation/STATUS.md]
+- User confirmed Phase 4 dev app renders normally, existing project opens, and no unexpected visible errors [docs/dependency-modernisation/STATUS.md]
+- Phase 4 Vitest 4 passed: Vitest 4.1.10, jsdom 30.0.0, Testing Library React 16.3.2, user-event 14.6.1; 22 files/75 tests, Tier A, dev visual, and protected-runtime gates passed; implementation commit 92012f3 [docs/dependency-modernisation/STATUS.md]
 
 ## Key files
 - `LTX-2.3_Cinematic_hardcut.safetensors`
