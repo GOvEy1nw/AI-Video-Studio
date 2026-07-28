@@ -16,6 +16,7 @@ Product principles:
 Current integration baseline: `dev`.
 
 ## Recent issues
+- [DONE] #0332 PowerShell expands multiline PR body into separate gh pr edit arguments instead of one --body value [Phase 11 draft PR evidence update] -> Draft PR #9 now records final SHA and successful hosted CI run using stdin-safe body update [Phase 11 draft PR evidence update] (fixed)
 - [DONE] #0331 Post-uninstall verification still finds LocalAppData Programs\AiVS\AiVS.exe despite user installer-pass confirmation [Phase 11 installer uninstall verification] -> Installed candidate fully uninstalled after explicit rerun; project media and user-data directory preserved [Phase 11 installer uninstall verification] (fixed)
   - Partial attempt: Compared Phase 1 project backup after user uninstall: 100/100 project files remain byte-identical, but default installed executable still exists [Phase 11 installer uninstall verification]
 - [DONE] #0330 git worktree remove left ignored node_modules directory under temporary C:\tmp validation path [Phase 11 clean validation worktree cleanup] -> Temporary validation worktree and leftover ignored node_modules fully removed; target path no longer exists [Phase 11 clean validation worktree cleanup] (fixed)
@@ -721,7 +722,6 @@ Current integration baseline: `dev`.
 - Phase 10 adds a dedicated read-only Windows frontend toolchain workflow targeting dev, while preserving existing backend CI unchanged. [.github/workflows/frontend-toolchain.yml; .github/workflows/ci.yml]
 
 ## Notes
-- Phase 10 implementation committed at 5287b79d97005d5403b45d0ad2251c6101438886; remote push was not attempted because managed approval requires explicit user authorization to export commit to origin. [docs/dependency-modernisation/STATUS.md]
 - Supersedes prior push-approval note: user explicitly authorized and Phase 10 implementation SHA 5287b79d97005d5403b45d0ad2251c6101438886 was pushed to origin; workflow dispatch remains unavailable until workflow exists on default branch. [docs/dependency-modernisation/STATUS.md]
 - Phase 10 PASSED: Renovate-only automation, deterministic read-only Windows frontend CI, package/runtime guards, full local gates, and unpacked smoke passed; real CI awaits first PR because GitHub cannot dispatch a workflow absent from default branch. [docs/dependency-modernisation/STATUS.md]
 - User confirmed Phase 11 complete development Electron regression matrix passes, including projects, file workflows, GenSpace, Settings/Model Manager, Director, Video Editor, visual/focus behaviour, and clean shutdown. [docs/dependency-modernisation/STATUS.md]
@@ -731,6 +731,7 @@ Current integration baseline: `dev`.
 - Phase 11 post-uninstall verification passed: install directory/executable removed, zero AiVS processes remain, Documents\AiVS persists, all 100 Phase 1 backup files remain byte-identical, and LocalAppData user state remains. [docs/dependency-modernisation/STATUS.md]
 - Phase 11 hosted PR run 30337359848 passed in 1m22s on Windows; GitHub annotated pnpm/action-setup v4 as Node-20-targeting but forced it onto Node 24 successfully—review v5 when mature. [.github/workflows/frontend-toolchain.yml]
 - Phase 11 PASSED at PR evidence checkpoint c2e8b31: draft PR #9 targets dev; hosted Windows Frontend Toolchain run 30337359848 passed all steps in 1m22s; all 11 mandatory phases complete. [docs/dependency-modernisation/STATUS.md]
+- Phase 11 final closure HEAD a02628c hosted Windows Frontend Toolchain run 30337555965 passed in 1m36s; draft PR #9 evidence updated. [docs/dependency-modernisation/STATUS.md]
 
 ## Key files
 - `LTX-2.3_Cinematic_hardcut.safetensors`
