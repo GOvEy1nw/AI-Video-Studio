@@ -3,6 +3,7 @@
 _Last updated: 2026-07-28_
 
 ## Project purpose
+
 AI Video Studio (AiVS) is a local-first, community-focused desktop app for AI image, video, and music generation. It is built on `deepbeepmeep/LTX-Desktop-WanGP`, uses a bundled WanGP / Wan2GP runtime, and does not expose cloud generation providers or require API keys.
 
 Product principles:
@@ -16,6 +17,7 @@ Product principles:
 Current integration baseline: `dev`.
 
 ## Recent issues
+
 - [DONE] #0334 PR #9 was already merged, so Windows-only CI commit d3d9fdc pushed only to stale feature branch and did not reach dev or trigger CI [chore/dependency-modernisation-2026 / PR #9] -> Windows-only CI cleanup now targets dev through draft PR #11 with passing hosted Windows validation [codex/windows-only-ci / PR #11] (fixed)
   - Partial attempt: Fetched merged dev, created fresh codex/windows-only-ci from origin/dev, and cherry-picked CI cleanup plus audit records cleanly [codex/windows-only-ci]
 - [DONE] #0333 Recursive actionlint lookup under C:\tmp hits inaccessible wangp-hf-runtime paths and returns nonzero despite finding cached binary [Phase 11 CI workflow cleanup validation] -> Both GitHub Actions workflows pass actionlint using cached Phase 10 binary [Phase 11 CI workflow cleanup validation] (fixed)
@@ -46,7 +48,7 @@ Current integration baseline: `dev`.
   - Failed attempt: Ran full typecheck in sandbox; TypeScript passed but Pyright launcher failed access to uv cache sdists-v9/.git [Phase 10 full typecheck]
 - [DONE] #0320 Vitest discovers Node-only dependency-boundary test and transforms import.meta.url into non-file URL [scripts/check-dependency-boundaries.test.mjs; frontend Vitest suite] -> Node boundary tests use .node-test.mjs and no longer enter frontend Vitest discovery [scripts/check-dependency-boundaries.node-test.mjs] (fixed)
   - Failed attempt: Ran full frontend suite; Vitest included scripts/check-dependency-boundaries.test.mjs and failed Node fileURLToPath under transformed URL [frontend Vitest suite]
-  - Partial attempt: Renamed Node test away from Vitest *.test discovery while keeping explicit node --test package script [scripts/check-dependency-boundaries.node-test.mjs]
+  - Partial attempt: Renamed Node test away from Vitest \*.test discovery while keeping explicit node --test package script [scripts/check-dependency-boundaries.node-test.mjs]
 - [DONE] #0319 validate:frontend nested bare pnpm resolves host pnpm 11 instead of project pnpm 10.30.3 [package.json validate:frontend] -> validate:frontend now pins all nested package commands to project Corepack pnpm 10.30.3 [package.json] (fixed)
   - Failed attempt: Ran validate:frontend under Corepack pnpm 10; nested bare pnpm commands selected global pnpm 11.10.0 and failed package-manager guard [package.json validate:frontend]
   - Partial attempt: Pinned all validate:frontend child commands through Corepack pnpm, matching existing full typecheck discipline [package.json validate:frontend]
@@ -359,7 +361,7 @@ Current integration baseline: `dev`.
   - Partial attempt: Added the inspector and focused tests; runtime checks passed, but focused strict Pyright reported ten Unknown-type errors in recursive dict/list normalization. [backend/tools/inspect_wangp_creation_models.py]
 - [DONE] #0159 Phase 0 ignore-rule lookup included a nonexistent backend/.gitignore path; repository uses only the root .gitignore. [.gitignore] -> Ignore-rule inspection now targets the repository's single root .gitignore; no repository change was needed to resolve the lookup error. [.gitignore] (fixed)
   - Partial attempt: Searched both root and assumed backend ignore files; backend/.gitignore does not exist, while source discovery succeeded. [.gitignore]
-- [DONE] #0158 Windows ripgrep rejected a nonexistent Wan2GP/shared/api/*.py path while locating the pinned API surface; shared/api.py search still succeeded. [Wan2GP/shared/api.py] -> Pinned API inspection now uses Windows-safe explicit file paths; no repository change was required. [Wan2GP/shared/api.py] (fixed)
+- [DONE] #0158 Windows ripgrep rejected a nonexistent Wan2GP/shared/api/\*.py path while locating the pinned API surface; shared/api.py search still succeeded. [Wan2GP/shared/api.py] -> Pinned API inspection now uses Windows-safe explicit file paths; no repository change was required. [Wan2GP/shared/api.py] (fixed)
   - Partial attempt: Searched shared/api.py plus an assumed shared/api package glob; the nonexistent package path produced an error although the real file returned all required symbols. [Wan2GP/shared/api.py]
 - [DONE] #0157 Baseline frontend build cannot load vite.config.ts because managed sandbox denies esbuild parent-directory access. [vite.config.ts] -> Baseline production build passes through the approved Vite route; no repository change was required. [vite.config.ts] (fixed)
   - Failed attempt: Ran the installed Vite build directly; esbuild was denied access while resolving vite.config.ts before compilation. [vite.config.ts]
@@ -382,7 +384,7 @@ Current integration baseline: `dev`.
   - Partial attempt: Added state-driven keyword edge fades, stacked multi-take audio rows, active-take selection, and focused tests; review found the existing card hover overlay can intercept row hover input. [frontend/views/genspace/music/MusicGenPanel.tsx; frontend/components/GalleryAssetLibrary.tsx]
 - [DONE] #0149 PowerShell range helper produced nested arrays that Math.Min could not compare during targeted Music asset audit. [frontend/types/project.ts] -> Targeted source audit now uses simple explicit PowerShell slices; no repository change was required. [frontend/types/project.ts] (fixed)
   - Failed attempt: Tried a generic nested PowerShell range loop to read three targeted source slices; Math.Min rejected the nested array shape. [frontend/types/project.ts]
-- [DONE] #0148 Windows ripgrep rejected a shell-style GalleryAsset*.tsx path during the Music variations card audit. [frontend/components/] -> Gallery audit completed with Windows-safe explicit paths; no repository fix was needed. [frontend/components/] (fixed)
+- [DONE] #0148 Windows ripgrep rejected a shell-style GalleryAsset\*.tsx path during the Music variations card audit. [frontend/components/] -> Gallery audit completed with Windows-safe explicit paths; no repository fix was needed. [frontend/components/] (fixed)
 - [DONE] #0147 Strict TypeScript finds stale ChevronDown/ChevronUp imports in MusicGenPanel after current UI no longer renders their controls. [frontend/views/genspace/music/MusicGenPanel.tsx] -> MusicGenPanel imports now match its rendered controls and strict TypeScript passes. [frontend/views/genspace/music/MusicGenPanel.tsx] (fixed)
   - Partial attempt: Removed only the two stale chevron imports from MusicGenPanel. [frontend/views/genspace/music/MusicGenPanel.tsx]
 - [DONE] #0146 Strict TypeScript exposes three stale PromptEditor call sites missing title and an unused MusicMediaInputs task variable in current shared worktree. [frontend/views/genspace/] -> PromptEditor call sites compile through an optional title contract and MusicMediaInputs has no stale task calculation. [frontend/views/genspace/] (fixed)
@@ -580,7 +582,7 @@ Current integration baseline: `dev`.
 - [OPEN] #0037 Model-pack progress UI remains at 0 then 100 because WanGP/Hugging Face transfer output is not captured as progress; first-run needs project storage selection with Documents\\AiVS default. [electron/python-setup.ts; frontend/components/ModelPackManager.tsx; frontend/components/PythonSetup.tsx] (open)
   - Failed attempt: Installer file appeared before NSIS finished writing; initial copied retest was only 361 KB. Waiting for final archive size before replacing it. [electron-builder.yml]
 - [OPEN] #0036 Model-pack download IPC exits with code 2 from both first-run and Settings; pack runner argument forwarding must be corrected and pack cards should show approximate download sizes. [electron/python-setup.ts; backend/wangp_model_packs.py; frontend/components/ModelPackManager.tsx] (open)
-  - Failed attempt: CLI isolation removed argparse exit 2, but smoke import then failed because WanGP resolves models/_settings.json relative to its checkout. Runner must use Wan2GP as its working directory. [backend/wangp_model_packs.py]
+  - Failed attempt: CLI isolation removed argparse exit 2, but smoke import then failed because WanGP resolves models/\_settings.json relative to its checkout. Runner must use Wan2GP as its working directory. [backend/wangp_model_packs.py]
 - [OPEN] #0035 First-run setup exposes pynvml FutureWarning and raw dependency output; model assets should be optional WanGP-managed packs with live progress and cancellation, plus settings management. [electron/python-setup.ts; frontend/components/PythonSetup.tsx] (open)
   - Failed attempt: Final unpacked build retry still hit electron-builder EPERM renaming win-unpacked.tmp, despite escalation. Code and test checks remain green; retry once before treating it as environment contention. [electron-builder.yml]
   - Partial attempt: All code checks passed (TypeScript, Pyright, 150 pytest, PowerShell parser, Vite, model-pack runner list). Electron Builder remains blocked before resource copy by Windows EPERM rename; staged package cannot verify files until that external file lock clears. [electron-builder.yml]
@@ -652,6 +654,7 @@ Current integration baseline: `dev`.
 - [DONE] #0001 Sliding-window WanGP video generation persists first/intermediate output instead of final combined output in gallery [backend/services/wangp_bridge.py] -> WanGP sliding-window gallery output now uses final/newest generated media path; verified by test_select_final_output_prefers_newest_combined_file plus full backend pytest. [backend/services/wangp_bridge.py] (fixed)
 
 ## Decisions
+
 - Multi-shot video generation auto-injects LTX-2.3_Cinematic_hardcut.safetensors at strength 1.0 via WanGP activated_loras/loras_multipliers in video_generation_handler when shotPrompts present; no frontend changes needed.
 - Media library plan: GenSpace copies uploads into project assets for generation reuse; video editor keeps in-place references for heavy imports. Shared importMediaAsset helper bridges both paths.
 - Media library plan phases A–D complete in GenSpace (drag inputs, import/dedup, filters, bins, list view). Phase E mini picker cancelled — bins + filter chips + gallery drag/drop cover input picking for v1. [docs/MEDIA_LIBRARY_PLAN.md]
@@ -717,7 +720,7 @@ Current integration baseline: `dev`.
 - Phase 2 remains BLOCKED, not PASSED: mandatory real OS selection/drop and remembered native-dialog matrices were not verified because current automation cannot target owned dialogs or cross-window drags; do not start Phase 3 [docs/dependency-modernisation/STATUS.md]
 - Phase 2 Electron 43 exit gate now PASSED after user-assisted installed/unpacked OS-drop and native-dialog matrices, filename-only save-path fix, deleted-directory fallback, Tier A/B, packaging, data, and protected-runtime checks; Phase 3 remains not started. [docs/dependency-modernisation/STATUS.md]
 - Tailwind 4 theme is CSS-first in frontend/index.css: @theme inline maps utilities to runtime :root tokens; retain app-wide v3 border-color base rule for visual parity; remove tailwind.config.js [frontend/index.css]
-- TypeScript 6 node project rootDir is repository root because it intentionally typechecks both electron/**/*.ts and root vite.config.ts; Vite still owns runtime/preload emission [tsconfig.node.json]
+- TypeScript 6 node project rootDir is repository root because it intentionally typechecks both electron/\*_/_.ts and root vite.config.ts; Vite still owns runtime/preload emission [tsconfig.node.json]
 - Phase 9 uses package-scoped pnpm overrides at minimum patched versions for Electron Builder transitive advisories because pnpm 10 cannot refresh named transitive lock entries directly; remove when parents resolve patched graph [package.json; pnpm-lock.yaml; electron-builder]
 - Retain two dev-only GHSA-mh99 findings under Electron Builder: brace-expansion 5 changes callable CommonJS API to named expand export, so forcing it under minimatch 3/9 is unsafe; defer until upstream parents migrate [package.json; pnpm-lock.yaml; electron-builder]
 - Override only concurrently 10.0.3's shell-quote edge from vulnerable exact 1.8.4 to compatible patched 1.9.0; remove when concurrently publishes a patched dependency [pnpm-workspace.yaml; concurrently 10.0.3]
@@ -726,6 +729,7 @@ Current integration baseline: `dev`.
 - AiVS CI no longer runs macOS tests; Python test coverage is Windows-only, while existing Ubuntu typecheck and frontend build jobs remain unchanged. [.github/workflows/ci.yml]
 
 ## Notes
+
 - Supersedes prior push-approval note: user explicitly authorized and Phase 10 implementation SHA 5287b79d97005d5403b45d0ad2251c6101438886 was pushed to origin; workflow dispatch remains unavailable until workflow exists on default branch. [docs/dependency-modernisation/STATUS.md]
 - Phase 10 PASSED: Renovate-only automation, deterministic read-only Windows frontend CI, package/runtime guards, full local gates, and unpacked smoke passed; real CI awaits first PR because GitHub cannot dispatch a workflow absent from default branch. [docs/dependency-modernisation/STATUS.md]
 - User confirmed Phase 11 complete development Electron regression matrix passes, including projects, file workflows, GenSpace, Settings/Model Manager, Director, Video Editor, visual/focus behaviour, and clean shutdown. [docs/dependency-modernisation/STATUS.md]
@@ -738,6 +742,7 @@ Current integration baseline: `dev`.
 - Phase 11 final closure HEAD a02628c hosted Windows Frontend Toolchain run 30337555965 passed in 1m36s; draft PR #9 evidence updated. [docs/dependency-modernisation/STATUS.md]
 
 ## Key files
+
 - `LTX-2.3_Cinematic_hardcut.safetensors`
 - `1.0`
 - `docs/MEDIA_LIBRARY_PLAN.md`
@@ -760,4 +765,5 @@ Current integration baseline: `dev`.
 - `AppSettings.output`
 
 ## Open questions
+
 - None logged yet.
