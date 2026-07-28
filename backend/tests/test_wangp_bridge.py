@@ -3,9 +3,135 @@ from __future__ import annotations
 import json
 import sys
 import os
+from collections import deque
 from pathlib import Path
+from types import SimpleNamespace
 
-from services.wangp_bridge import WanGPBridge
+import pytest
+
+from services.wangp_bridge import WanGPBridge, resolve_audio_performance_profile
+
+
+@pytest.mark.parametrize("profile", [1.0, 2.0, 3.0, 4.5, 5.0])
+def test_audio_performance_profile_passes_through_other_values(profile: float) -> None:
+    assert resolve_audio_performance_profile(profile) == profile
+
+
+def test_audio_performance_profile_maps_four_to_three_plus() -> None:
+    assert resolve_audio_performance_profile(4.0) == 3.5
+
+
+def _capture_progress_event(data: object) -> tuple[object, ...]:
+    captured: list[tuple[object, ...]] = []
+    _make_bridge()._handle_event(
+        SimpleNamespace(kind="progress", data=data),
+        lambda *args: captured.append(args),
+        deque(),
+        {"phase": "", "progress": -1, "logged_at": 0.0},
+    )
+    return captured[-1]
+
+
+def test_structured_model_download_preserves_exact_transfer_progress() -> None:
+    args = _capture_progress_event(
+        SimpleNamespace(
+            phase="downloading_model",
+            progress=10,
+            current_step=6_895_321_088,
+            total_steps=12_992_123_904,
+            unit="bytes",
+            status="Downloading LTX 2.3",
+            details={
+                "kind": "model_download",
+                "phase": "downloading",
+                "model_type": "ltx2_22B_distilled_1_1",
+                "model_name": "LTX 2.3 Fast",
+                "source": "huggingface",
+                "repo_id": "owner/repo",
+                "filename": "model-00003-of-00006.safetensors",
+                "speed_bps": 88_080_384.0,
+                "eta_seconds": 68.0,
+                "file_index": 3,
+                "file_count": 6,
+            },
+        )
+    )
+
+    transfer = args[14]
+    assert args[:4] == ("downloading_model", 10, 6_895_321_088, 12_992_123_904)
+    assert args[13] == "bytes"
+    assert transfer.filename == "model-00003-of-00006.safetensors"
+    assert transfer.repo_id == "owner/repo"
+    assert transfer.speed_bps == 88_080_384.0
+    assert transfer.eta_seconds == 68.0
+    assert round(transfer.percent, 1) == 53.1
+
+
+def test_structured_model_download_supports_file_counts_and_unknown_totals() -> None:
+    file_args = _capture_progress_event(
+        SimpleNamespace(
+            phase="downloading_model",
+            progress=10,
+            current_step=None,
+            total_steps=None,
+            unit="files",
+            status="Downloading snapshot",
+            details={
+                "kind": "model_download",
+                "completed_files": 3,
+                "total_files": 8,
+                "speed_bps": 99,
+            },
+        )
+    )
+    unknown_args = _capture_progress_event(
+        SimpleNamespace(
+            phase="downloading_model",
+            progress=10,
+            current_step=None,
+            total_steps=None,
+            unit="bytes",
+            status="Downloading file",
+            details={"kind": "model_download", "downloaded_bytes": 1234},
+        )
+    )
+
+    files = file_args[14]
+    unknown = unknown_args[14]
+    assert (files.unit, files.current, files.total, files.percent) == ("files", 3, 8, 37.5)
+    assert files.speed_bps is None
+    assert (unknown.current, unknown.total, unknown.percent) == (1234, None, None)
+
+
+def test_model_download_optional_details_are_defensive() -> None:
+    args = _capture_progress_event(
+        SimpleNamespace(
+            phase="downloading_model",
+            progress=10,
+            current_step=5,
+            total_steps=10,
+            unit="bytes",
+            status="Downloading model",
+            details={
+                "kind": "model_download",
+                "speed_bps": float("nan"),
+                "eta_seconds": -1,
+                "file_index": "bad",
+            },
+        )
+    )
+
+    transfer = args[14]
+    assert transfer.speed_bps is None
+    assert transfer.eta_seconds is None
+    assert transfer.file_index is None
+
+
+def test_model_lifecycle_phase_classification_is_specific() -> None:
+    assert WanGPBridge._classify_phase("Checking model files for X...") == "checking_model_files"
+    assert WanGPBridge._classify_phase("Downloading model X...") == "downloading_model"
+    assert WanGPBridge._classify_phase("Loading model X into memory...") == "loading_model"
+    assert WanGPBridge._classify_phase("Model loaded") == "loading_model"
 
 
 def _make_bridge(*, image_model_type: str = "z_image") -> WanGPBridge:
@@ -38,6 +164,83 @@ def test_non_qwen_image_resolution_is_left_unchanged() -> None:
     bridge = _make_bridge(image_model_type="z_image")
 
     assert bridge._map_image_resolution(1920, 1072) == (1920, 1072)
+
+
+def test_generate_music_maps_verified_wangp_settings() -> None:
+    bridge = _make_bridge()
+    captured: dict[str, object] = {}
+
+    def fake_run_manifest(*, manifest, media_suffixes, on_progress, is_cancelled):  # type: ignore[no-untyped-def]
+        del on_progress, is_cancelled
+        captured["manifest"] = manifest
+        captured["media_suffixes"] = media_suffixes
+        return [r"E:\tmp\song.wav"]
+
+    bridge._run_manifest = fake_run_manifest  # type: ignore[method-assign]
+
+    output = bridge.generate_music(
+        description="Warm cinematic ambient music",
+        lyrics="[Verse]\nHello",
+        duration_seconds=45,
+        bpm=96,
+        key_scale="A minor",
+        time_signature="6/8",
+        language="en",
+        model_mode=3,
+        temperature=1.15,
+        top_p=0.9,
+        top_k=0,
+        lm_guidance_scale=2.5,
+        source_audio_path=r"E:\tmp\cover.wav",
+        reference_timbre_path=None,
+        audio_prompt_type="A",
+        cover_strength=0.5,
+        seed=42,
+        model_type="ace_step_v1_5_turbo_lm_1_7b",
+        default_settings={"num_inference_steps": 8, "duration_seconds": 99},
+        on_progress=lambda *_args: None,
+        is_cancelled=lambda: False,
+    )
+
+    assert output == r"E:\tmp\song.wav"
+    assert captured["manifest"] == [
+        {
+            "id": 1,
+            "params": {
+                "model_type": "ace_step_v1_5_turbo_lm_1_7b",
+                "prompt": "[Verse]\nHello",
+                "alt_prompt": "Warm cinematic ambient music",
+                "duration_seconds": 45,
+                "audio_prompt_type": "A",
+                "repeat_generation": 1,
+                "multi_prompts_gen_type": "FG",
+                "num_inference_steps": 8,
+                "model_mode": 3,
+                "temperature": 1.15,
+                "top_p": 0.9,
+                "top_k": 0,
+                "alt_guidance_scale": 2.5,
+                "custom_settings": {
+                    "bpm": 96,
+                    "keyscale": "A minor",
+                    "timesignature": 6,
+                    "language": "en",
+                },
+                "audio_guide": r"E:\tmp\cover.wav",
+                "audio_scale": 0.5,
+                "seed": 42,
+            },
+            "plugin_data": {},
+        }
+    ]
+    assert captured["media_suffixes"] == {
+        ".wav",
+        ".mp3",
+        ".flac",
+        ".ogg",
+        ".m4a",
+        ".aac",
+    }
 
 
 def test_runtime_preferences_update_wangp_config(tmp_path: Path) -> None:
@@ -78,6 +281,10 @@ def test_runtime_preferences_update_wangp_config(tmp_path: Path) -> None:
     )
 
     saved = json.loads(config_path.read_text(encoding="utf-8"))
+    assert saved["profile"] == 4
+    assert saved["video_profile"] == 4
+    assert saved["image_profile"] == 4
+    assert saved["audio_profile"] == 3.5
     assert saved["vae_config"] == 0
     assert saved["boost"] == 1
 
@@ -98,6 +305,24 @@ def test_custom_checkpoints_directory_updates_wangp_config(tmp_path: Path) -> No
 
     saved = json.loads((tmp_path / "config" / "wgp_config.json").read_text(encoding="utf-8"))
     assert saved["checkpoints_paths"] == [str(checkpoints_dir.resolve()), "."]
+
+
+def test_custom_loras_directory_updates_wangp_config(tmp_path: Path) -> None:
+    loras_dir = tmp_path / "existing-wangp" / "loras"
+    WanGPBridge(
+        enabled=True,
+        root=tmp_path,
+        python_executable=None,
+        config_dir=tmp_path / "config",
+        output_dir=tmp_path / "outputs",
+        video_model_type="ltx2_22B_distilled_1_1",
+        image_model_type="z_image",
+        camera_motion_prompts={},
+        loras_dir=loras_dir,
+    )
+
+    saved = json.loads((tmp_path / "config" / "wgp_config.json").read_text(encoding="utf-8"))
+    assert saved["loras_root"] == str(loras_dir.resolve())
 
 
 def test_z_image_uses_eight_step_floor() -> None:

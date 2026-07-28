@@ -1,0 +1,8 @@
+# #0301 Phase 9 concurrently 10 dev launch builds Electron but shows no backend-ready signal after 65 seconds
+
+- 2026-07-27T14:56:41Z `issue`: Phase 9 concurrently 10 dev launch builds Electron but shows no backend-ready signal after 65 seconds [package.json; electron/main.ts; development process lifecycle]
+- 2026-07-27T14:57:12Z `attempt`: Inspected dev process tree and session log: Electron/Vite are alive but no Python process; sandbox denied port 1771 ownership check [package.json; electron/main.ts; development process lifecycle] (partial)
+- 2026-07-27T14:59:30Z `attempt`: Continued observing same dev session; Python backend started and reached application-ready state on port 5571, showing earlier 65-second window was too short for runtime preload [package.json; electron/main.ts; development process lifecycle] (worked)
+- 2026-07-27T15:01:03Z `attempt`: Tried sandboxed Win32 process inspection during silent dev:debug launch; Get-CimInstance was denied, so process/debug-environment state could not be confirmed [development process lifecycle] (failed)
+- 2026-07-27T15:04:51Z `attempt`: Verified dev and dev:debug process cleanup: Ctrl+C plus batch confirmation closed Vite, backend, Electron, Node inspector, and Chromium DevTools listeners with no scoped ports left open [package.json; electron/main.ts; development process lifecycle] (worked)
+- 2026-07-27T15:04:56Z `fix`: Group E dev lifecycle is healthy: normal dev reaches backend-ready after slow WanGP preload, debug mode applies debugger options, and both terminate without orphan listeners [package.json; electron/main.ts; development process lifecycle]

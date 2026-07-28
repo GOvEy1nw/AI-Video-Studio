@@ -73,7 +73,7 @@ export function ImageResult({
             
             {/* Hover overlay - LTX Studio style */}
             <div 
-              className={`absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 transition-opacity duration-200 ${
+              className={`absolute inset-0 bg-linear-to-t from-black/80 via-transparent to-black/40 transition-opacity duration-200 ${
                 isHovered ? 'opacity-100' : 'opacity-0'
               }`}
             >
@@ -83,7 +83,7 @@ export function ImageResult({
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="h-9 w-9 bg-black/50 hover:bg-black/70 text-white rounded-full backdrop-blur-sm"
+                    className="h-9 w-9 bg-black/50 hover:bg-black/70 text-white rounded-full backdrop-blur-xs"
                     title="Favorite"
                   >
                     <Heart className="h-4 w-4" />
@@ -94,7 +94,7 @@ export function ImageResult({
                     size="icon"
                     variant="ghost"
                     onClick={handleDownload}
-                    className="h-9 w-9 bg-black/50 hover:bg-black/70 text-white rounded-full backdrop-blur-sm"
+                    className="h-9 w-9 bg-black/50 hover:bg-black/70 text-white rounded-full backdrop-blur-xs"
                     title="Download"
                   >
                     <Download className="h-4 w-4" />
@@ -102,7 +102,7 @@ export function ImageResult({
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="h-9 w-9 bg-black/50 hover:bg-black/70 text-white rounded-full backdrop-blur-sm"
+                    className="h-9 w-9 bg-black/50 hover:bg-black/70 text-white rounded-full backdrop-blur-xs"
                     title="More options"
                   >
                     <MoreHorizontal className="h-4 w-4" />
@@ -114,7 +114,7 @@ export function ImageResult({
               <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center gap-3">
                 <Button
                   variant="ghost"
-                  className="h-10 px-4 bg-black/50 hover:bg-black/70 text-white rounded-full backdrop-blur-sm flex items-center gap-2"
+                  className="h-10 px-4 bg-black/50 hover:bg-black/70 text-white rounded-full backdrop-blur-xs flex items-center gap-2"
                   title="Edit image"
                 >
                   <Pencil className="h-4 w-4" />

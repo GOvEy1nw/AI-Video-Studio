@@ -31,7 +31,7 @@ export function ToolsPanel({
   addTextClip, kbLayout,
 }: ToolsPanelProps) {
   return (
-    <div className="w-10 flex-shrink-0 bg-zinc-900 border-r border-zinc-800 flex flex-col items-center py-1 gap-0.5 overflow-y-auto">
+    <div className="w-10 shrink-0 bg-zinc-900 border-r border-zinc-800 flex flex-col items-center py-1 gap-0.5 overflow-y-auto">
       {PRIMARY_TOOLS.map(tool => (
         <Tooltip
           key={tool.id}
@@ -40,7 +40,7 @@ export function ToolsPanel({
         >
           <button
             onClick={() => setActiveTool(tool.id)}
-            className={`p-1.5 rounded-lg transition-colors flex-shrink-0 ${
+            className={`p-1.5 rounded-lg transition-colors shrink-0 ${
               activeTool === tool.id
                 ? 'bg-blue-600 text-white'
                 : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'
@@ -57,7 +57,7 @@ export function ToolsPanel({
         const isTrimActive = trimToolIds.has(activeTool)
         const currentTrimTool = TRIM_TOOLS.find(t => t.id === (isTrimActive ? activeTool : lastTrimTool)) || TRIM_TOOLS[0]
         return (
-          <div className="relative flex-shrink-0">
+          <div className="relative shrink-0">
             <Tooltip
               side="right"
               content={(() => { const s = getShortcutLabel(kbLayout, currentTrimTool.actionId); return <>{currentTrimTool.label}<span className="text-zinc-400">{s ? ` (${s}) — ` : ' — '}right-click or hold for more</span></>; })()}
@@ -98,7 +98,7 @@ export function ToolsPanel({
                 }`}
               >
                 <currentTrimTool.icon className="h-4 w-4" />
-                <div className="absolute bottom-0 right-0 w-0 h-0 border-l-[4px] border-l-transparent border-b-[4px] border-b-current opacity-60" />
+                <div className="absolute bottom-0 right-0 w-0 h-0 border-l-4 border-l-transparent border-b-4 border-b-current opacity-60" />
               </button>
             </Tooltip>
             {showTrimFlyout && (() => {
@@ -106,9 +106,9 @@ export function ToolsPanel({
               const rect = btnEl?.getBoundingClientRect()
               return (
                 <>
-                  <div className="fixed inset-0 z-[9998]" onMouseDown={() => setShowTrimFlyout(false)} onContextMenu={(e) => { e.preventDefault(); setShowTrimFlyout(false) }} />
+                  <div className="fixed inset-0 z-9998" onMouseDown={() => setShowTrimFlyout(false)} onContextMenu={(e) => { e.preventDefault(); setShowTrimFlyout(false) }} />
                   <div
-                    className="fixed bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl py-1 z-[9999] min-w-[160px]"
+                    className="fixed bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl py-1 z-9999 min-w-[160px]"
                     style={{ top: rect?.top ?? 0, left: (rect?.right ?? 44) + 4 }}
                   >
                     {TRIM_TOOLS.map(t => (
@@ -136,12 +136,12 @@ export function ToolsPanel({
         )
       })()}
 
-      <div className="w-6 h-px bg-zinc-700 my-1 flex-shrink-0" />
+      <div className="w-6 h-px bg-zinc-700 my-1 shrink-0" />
 
       <Tooltip side="right" content={snapEnabled ? 'Snapping On' : 'Snapping Off'}>
         <button
           onClick={() => setSnapEnabled(!snapEnabled)}
-          className={`p-1.5 rounded-lg transition-colors flex-shrink-0 ${
+          className={`p-1.5 rounded-lg transition-colors shrink-0 ${
             snapEnabled
               ? 'bg-blue-600 text-white'
               : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'
@@ -152,12 +152,12 @@ export function ToolsPanel({
       </Tooltip>
 
       {/* EFFECTS HIDDEN - FX button hidden because effects are not applied during export
-      <div className="w-6 h-px bg-zinc-700 my-1 flex-shrink-0" />
+      <div className="w-6 h-px bg-zinc-700 my-1 shrink-0" />
 
       <Tooltip side="right" content="Effects Browser">
         <button
           onClick={() => setShowEffectsBrowser(!showEffectsBrowser)}
-          className={`p-1.5 rounded-lg transition-colors flex-shrink-0 text-[10px] font-bold ${
+          className={`p-1.5 rounded-lg transition-colors shrink-0 text-[10px] font-bold ${
             showEffectsBrowser
               ? 'bg-blue-600 text-white'
               : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'
@@ -168,12 +168,12 @@ export function ToolsPanel({
       </Tooltip>
       EFFECTS HIDDEN */}
 
-      <div className="w-6 h-px bg-zinc-700 my-1 flex-shrink-0" />
+      <div className="w-6 h-px bg-zinc-700 my-1 shrink-0" />
 
       <Tooltip side="right" content="Add Text Overlay">
         <button
           onClick={() => addTextClip()}
-          className="p-1.5 rounded-lg transition-colors flex-shrink-0 text-cyan-400 hover:bg-cyan-900/30 hover:text-cyan-300"
+          className="p-1.5 rounded-lg transition-colors shrink-0 text-cyan-400 hover:bg-cyan-900/30 hover:text-cyan-300"
         >
           <Type className="h-4 w-4" />
         </button>

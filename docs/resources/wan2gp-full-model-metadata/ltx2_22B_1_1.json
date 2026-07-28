@@ -29,6 +29,18 @@
       "ltx2_hdr_scene_embeddings_file": "ltx-2.3-22b-ic-lora-hdr-scene-emb.safetensors",
       "self_refiner": true,
       "self_refiner_max_plans": 2,
+      "custom_settings": [
+        {
+          "id": "prompt_relay_epsilon",
+          "name": "Prompt Relay Epsilon",
+          "label": "Prompt Relay Epsilon (higher values create softer transitions)",
+          "type": "float",
+          "default": 0.001,
+          "min": 0.0001,
+          "max": 0.99,
+          "inc": 0.0001
+        }
+      ],
       "vae_block_size": 64,
       "keep_frames_video_guide_not_supported": true,
       "ltx2_lora_distilled": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-distilled-lora-384-1.1.safetensors",
@@ -47,8 +59,6 @@
         1
       ],
       "video_guide_outpainting_label": "Enable Spatial Outpainting on Control Video using LTX2 Outpainting IC-LoRA",
-      "guide_inpaint_color": "<function ltx2_guide_inpaint_color at 0x00000110BEE0CD60>",
-      "background_removal_color": "<function ltx2_background_removal_color at 0x00000110BEE0CE00>",
       "preset_profiles_dir": [
         "ltx2_presets"
       ],

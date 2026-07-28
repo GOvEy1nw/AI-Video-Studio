@@ -1,7 +1,7 @@
 {
   "ltx2_22B_msr": {
     "model_type": "ltx2_22B_msr",
-    "name": "LTX-2 2.3 MSR Ref Distilled 1.1 22B",
+    "name": "LTX-2 2.3 MSR Ref V1 Distilled 1.1 22B",
     "model_def": {
       "ltx2_22B_class": true,
       "ltx2_edit_anything": false,
@@ -28,6 +28,18 @@
       "ltx2_hdr_scene_embeddings_file": "ltx-2.3-22b-ic-lora-hdr-scene-emb.safetensors",
       "self_refiner": true,
       "self_refiner_max_plans": 2,
+      "custom_settings": [
+        {
+          "id": "prompt_relay_epsilon",
+          "name": "Prompt Relay Epsilon",
+          "label": "Prompt Relay Epsilon (higher values create softer transitions)",
+          "type": "float",
+          "default": 0.001,
+          "min": 0.0001,
+          "max": 0.99,
+          "inc": 0.0001
+        }
+      ],
       "vae_block_size": 64,
       "keep_frames_video_guide_not_supported": true,
       "ltx2_lora_distilled": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-distilled-lora-384.safetensors",
@@ -154,7 +166,7 @@
       "lock_inference_steps": true,
       "guidance_max_phases": 2,
       "visible_phases": 0,
-      "name": "LTX-2 2.3 MSR Ref Distilled 1.1 22B",
+      "name": "LTX-2 2.3 MSR Ref V1 Distilled 1.1 22B",
       "architecture": "ltx2_22B_msr",
       "description": "LTX-2.3 distilled 1.1 checkpoint (22B) configured for the LiconStudio Multiple Subject Reference LoRA. Provide 2 to 5 reference images; background first, then subjects and objects.",
       "URLs": "ltx2_22B_distilled_1_1",

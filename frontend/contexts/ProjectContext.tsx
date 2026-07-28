@@ -125,11 +125,23 @@ function migrateProject(project: Project): Project {
     const sequence = normalizeDirectorSequence(timeline.sequence)
     return sequence ? [{ ...timeline, sequence }] : []
   })
+  const assets = project.assets.map((asset) => {
+    const params = asset.generationParams
+    if (!params || params.mode !== 'text-to-music') return asset
+    const music: unknown = params.music
+    if (music === undefined || (typeof music === 'object' && music !== null)) {
+      return asset
+    }
+    const legacyParams = { ...params }
+    delete legacyParams.music
+    return { ...asset, generationParams: legacyParams }
+  })
   return {
     ...project,
+    assets,
     assetBins: Array.from(new Set([
       ...(project.assetBins || []),
-      ...project.assets.flatMap((asset) => asset.bin ? [asset.bin] : []),
+      ...assets.flatMap((asset) => asset.bin ? [asset.bin] : []),
     ])).sort((a, b) => a.localeCompare(b)),
     assetBinColors: project.assetBinColors || {},
     timelines: sourceTimelines.map((timeline) => ({

@@ -1,0 +1,27 @@
+import { GenSpaceModeTabs } from "./GenSpaceModeTabs";
+import { ImageGenPanel } from "./image/ImageGenPanel";
+import { MusicGenPanel } from "./music/MusicGenPanel";
+import type { GenSpaceSidebarController } from "./types";
+import { VideoGenPanel } from "./video/VideoGenPanel";
+
+export function GenSpaceSidebar({
+  controller,
+}: {
+  controller: GenSpaceSidebarController;
+}) {
+  return (
+    <div className="flex h-full flex-col overflow-y-auto border-r border-zinc-800 bg-zinc-900">
+      <GenSpaceModeTabs
+        mode={controller.mode}
+        onChange={controller.setMode}
+      />
+      {controller.mode === "image" ? (
+        <ImageGenPanel controller={controller.image} />
+      ) : controller.mode === "video" ? (
+        <VideoGenPanel controller={controller.video} />
+      ) : (
+        <MusicGenPanel controller={controller.music} />
+      )}
+    </div>
+  );
+}

@@ -28,6 +28,15 @@
         1,
         2
       ],
+      "vae_upsamplers": {
+        "qwen_vae_pid(1.5)": [
+          1,
+          2
+        ]
+      },
+      "excluded_spatial_upsamplers": [
+        "qwen_pid(1.5)"
+      ],
       "inpaint_support": true,
       "image_ref_inpaint": false,
       "image_ref_choices": {

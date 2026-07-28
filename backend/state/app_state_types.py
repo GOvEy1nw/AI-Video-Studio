@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from progress_types import DownloadUnit, ModelDownloadProgress
+
 if TYPE_CHECKING:
     from state.app_settings import AppSettings
 
@@ -24,6 +26,8 @@ class GenerationProgress:
     download_current_file: str | None = None
     download_current_file_progress: int | None = None
     download_total_progress: int | None = None
+    progress_unit: DownloadUnit | None = None
+    model_download: ModelDownloadProgress | None = None
 
 
 @dataclass

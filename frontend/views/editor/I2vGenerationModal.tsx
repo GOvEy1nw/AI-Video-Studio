@@ -1,6 +1,6 @@
 import { Play, X, Film, Loader2 } from 'lucide-react'
 import { SettingsPanel } from '../../components/SettingsPanel'
-import type { GenerationSettings } from '../../components/SettingsPanel'
+import type { GenerationSettings } from '../../types/generation'
 import type { TimelineClip } from '../../types/project'
 
 interface I2vGenerationModalProps {
@@ -41,7 +41,7 @@ export function I2vGenerationModal({
   const i2vImageUrl = resolveClipSrc(i2vClip)
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col items-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-100 flex flex-col items-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
       <div className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl w-[520px] max-h-[calc(100vh-2rem)] flex flex-col overflow-hidden my-auto shrink-0">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-800">
@@ -86,7 +86,7 @@ export function I2vGenerationModal({
               onChange={(e) => setI2vPrompt(e.target.value)}
               onKeyDown={(e) => e.stopPropagation()}
               placeholder="Describe the motion and action for the video..."
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-3 text-sm text-white resize-none focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30 placeholder-zinc-600"
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-3 text-sm text-white resize-none focus:outline-hidden focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30 placeholder-zinc-600"
               rows={3}
             />
           </div>

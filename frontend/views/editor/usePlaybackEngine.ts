@@ -26,14 +26,14 @@ export interface UsePlaybackEngineParams {
   activePoolSrcRef: React.MutableRefObject<string>
   previewVideoRef: React.RefObject<HTMLVideoElement | null>
   dissolveOutVideoRef: React.RefObject<HTMLVideoElement | null>
-  trackContainerRef: React.RefObject<HTMLDivElement>
-  rulerScrollRef: React.RefObject<HTMLDivElement>
+  trackContainerRef: React.RefObject<HTMLDivElement | null>
+  rulerScrollRef: React.RefObject<HTMLDivElement | null>
   centerOnPlayheadRef: React.MutableRefObject<boolean>
   clipsRef: React.MutableRefObject<TimelineClip[]>
   tracksRef: React.MutableRefObject<Track[]>
   assetsRef: React.MutableRefObject<Asset[]>
-  playheadOverlayRef: React.RefObject<HTMLDivElement>
-  playheadRulerRef: React.RefObject<HTMLDivElement>
+  playheadOverlayRef: React.RefObject<HTMLDivElement | null>
+  playheadRulerRef: React.RefObject<HTMLDivElement | null>
   lastStateUpdateRef: React.MutableRefObject<number>
   preSeekDoneRef: React.MutableRefObject<string | null>
   rafActiveClipIdRef: React.MutableRefObject<string | null>

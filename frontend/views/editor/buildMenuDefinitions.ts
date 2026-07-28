@@ -20,8 +20,8 @@ export interface MenuDepsParams {
   activeTimeline: any
   timelines: any[]
   kbLayout: KeyboardLayout
-  fileInputRef: React.RefObject<HTMLInputElement>
-  subtitleFileInputRef: React.RefObject<HTMLInputElement>
+  fileInputRef: React.RefObject<HTMLInputElement | null>
+  subtitleFileInputRef: React.RefObject<HTMLInputElement | null>
   setShowImportTimelineModal: (v: boolean) => void
   setShowExportModal: (v: boolean) => void
   handleExportTimelineXml: () => void

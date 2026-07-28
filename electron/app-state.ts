@@ -1,10 +1,15 @@
 import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
+import { firstUsableDirectory } from './dialog-paths'
 
 export interface AppState {
   projectAssetsPath?: string
   checkpointsPath?: string
+  lorasPath?: string
+  lastOpenDirectory?: string
+  lastSaveDirectory?: string
+  lastDirectoryPickerPath?: string
   [key: string]: unknown
 }
 
@@ -59,4 +64,62 @@ export function setCustomCheckpointsPath(value: string | null): void {
   if (value) state.checkpointsPath = value
   else delete state.checkpointsPath
   writeAppState(state)
+}
+
+export function getCustomLorasPath(): string | null {
+  const value = readAppState().lorasPath
+  return typeof value === 'string' && value.trim() ? value : null
+}
+
+export function setCustomLorasPath(value: string | null): void {
+  const state = readAppState()
+  if (value) state.lorasPath = value
+  else delete state.lorasPath
+  writeAppState(state)
+}
+
+type RememberedDirectoryKey =
+  | 'lastOpenDirectory'
+  | 'lastSaveDirectory'
+  | 'lastDirectoryPickerPath'
+
+function isExistingDirectory(candidate: string): boolean {
+  return fs.existsSync(candidate) && fs.statSync(candidate).isDirectory()
+}
+
+function getRememberedDirectory(key: RememberedDirectoryKey): string | null {
+  return firstUsableDirectory([readAppState()[key]], isExistingDirectory)
+}
+
+function setRememberedDirectory(
+  key: RememberedDirectoryKey,
+  directory: string,
+): void {
+  const state = readAppState()
+  state[key] = directory
+  writeAppState(state)
+}
+
+export function getLastOpenDirectory(): string | null {
+  return getRememberedDirectory('lastOpenDirectory')
+}
+
+export function setLastOpenDirectory(directory: string): void {
+  setRememberedDirectory('lastOpenDirectory', directory)
+}
+
+export function getLastSaveDirectory(): string | null {
+  return getRememberedDirectory('lastSaveDirectory')
+}
+
+export function setLastSaveDirectory(directory: string): void {
+  setRememberedDirectory('lastSaveDirectory', directory)
+}
+
+export function getLastDirectoryPickerPath(): string | null {
+  return getRememberedDirectory('lastDirectoryPickerPath')
+}
+
+export function setLastDirectoryPickerPath(directory: string): void {
+  setRememberedDirectory('lastDirectoryPickerPath', directory)
 }

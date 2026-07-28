@@ -1,4 +1,12 @@
-import { Folder, Info, Settings, SlidersHorizontal, X } from "lucide-react";
+import {
+  ExternalLink,
+  Folder,
+  Info,
+  Package,
+  Settings,
+  SlidersHorizontal,
+  X,
+} from "lucide-react";
 
 import { useEffect, useState } from "react";
 import { Button } from "./ui/button";
@@ -16,10 +24,10 @@ interface SettingsModalProps {
   initialTab?: TabId;
 }
 
-export type SettingsTabId = "general" | "advanced" | "outputs" | "about";
+export type SettingsTabId = "general" | "models" | "advanced" | "about";
 type TabId = SettingsTabId;
 
-interface CheckpointsLocation {
+interface FolderLocation {
   path: string;
   custom: boolean;
   defaultPath: string;
@@ -63,9 +71,15 @@ export function SettingsModal({
   );
   const [advancedReloaded, setAdvancedReloaded] = useState(false);
   const [checkpointsLocation, setCheckpointsLocation] =
-    useState<CheckpointsLocation | null>(null);
+    useState<FolderLocation | null>(null);
   const [savedCheckpointsLocation, setSavedCheckpointsLocation] =
-    useState<CheckpointsLocation | null>(null);
+    useState<FolderLocation | null>(null);
+  const [lorasLocation, setLorasLocation] =
+    useState<FolderLocation | null>(null);
+  const [savedLorasLocation, setSavedLorasLocation] =
+    useState<FolderLocation | null>(null);
+  const [openingWanGP, setOpeningWanGP] = useState(false);
+  const [openWanGPError, setOpenWanGPError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen && initialTab) {
@@ -94,11 +108,15 @@ export function SettingsModal({
     setAdvancedSettings(getAdvancedSettings(settings));
     setAdvancedSaveError(null);
     setAdvancedReloaded(false);
-    window.electronAPI
-      .getCheckpointsLocation()
-      .then((location) => {
-        setCheckpointsLocation(location);
-        setSavedCheckpointsLocation(location);
+    Promise.all([
+      window.electronAPI.getCheckpointsLocation(),
+      window.electronAPI.getLorasLocation(),
+    ])
+      .then(([checkpoints, loras]) => {
+        setCheckpointsLocation(checkpoints);
+        setSavedCheckpointsLocation(checkpoints);
+        setLorasLocation(loras);
+        setSavedLorasLocation(loras);
       })
       .catch((error: unknown) => {
         setAdvancedSaveError(
@@ -119,7 +137,9 @@ export function SettingsModal({
     advancedSettings.performanceProfile !== settings.performanceProfile ||
     advancedSettings.reduceVram !== settings.reduceVram ||
     checkpointsLocation?.path !== savedCheckpointsLocation?.path ||
-    checkpointsLocation?.custom !== savedCheckpointsLocation?.custom;
+    checkpointsLocation?.custom !== savedCheckpointsLocation?.custom ||
+    lorasLocation?.path !== savedLorasLocation?.path ||
+    lorasLocation?.custom !== savedLorasLocation?.custom;
 
   const handleSaveAdvancedSettings = async () => {
     setAdvancedSaving(true);
@@ -138,6 +158,17 @@ export function SettingsModal({
         setCheckpointsLocation(savedLocation);
         setSavedCheckpointsLocation(savedLocation);
       }
+      if (
+        lorasLocation &&
+        (lorasLocation.path !== savedLorasLocation?.path ||
+          lorasLocation.custom !== savedLorasLocation?.custom)
+      ) {
+        const savedLocation = await window.electronAPI.setLorasLocation(
+          lorasLocation.custom ? lorasLocation.path : null,
+        );
+        setLorasLocation(savedLocation);
+        setSavedLorasLocation(savedLocation);
+      }
       await window.electronAPI.restartPythonBackend();
       setAdvancedReloaded(true);
     } catch (error) {
@@ -148,6 +179,18 @@ export function SettingsModal({
       setAdvancedSaveError(message);
     } finally {
       setAdvancedSaving(false);
+    }
+  };
+
+  const handleOpenWanGP = async () => {
+    setOpeningWanGP(true);
+    setOpenWanGPError(null);
+    try {
+      await window.electronAPI.openWanGP();
+    } catch (error) {
+      setOpenWanGPError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setOpeningWanGP(false);
     }
   };
 
@@ -179,29 +222,26 @@ export function SettingsModal({
 
   const tabs = [
     { id: "general" as TabId, label: "General", icon: Settings },
+    { id: "models" as TabId, label: "Model Manager", icon: Package },
     { id: "advanced" as TabId, label: "Advanced", icon: SlidersHorizontal },
-    { id: "outputs" as TabId, label: "Outputs", icon: Folder },
     { id: "about" as TabId, label: "About", icon: Info },
   ];
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/60 backdrop-blur-xs"
         onClick={onClose}
       />
 
       {/* Modal */}
-      <div className="relative bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl w-full max-w-xl mx-4">
+      <div className="relative flex h-[min(820px,88vh)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-900 shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
-          <div className="flex items-center gap-2">
-            <Settings className="h-5 w-5 text-zinc-400" />
-            <h2 className="text-lg font-semibold text-white">Settings</h2>
-          </div>
+        <div className="flex items-center justify-between border-b border-zinc-800 px-7 py-5">
+          <h2 className="text-xl font-semibold text-white">Settings</h2>
           <Button
             variant="ghost"
             size="icon"
@@ -212,29 +252,32 @@ export function SettingsModal({
           </Button>
         </div>
 
-        {/* Tabs */}
-        <div className="flex border-b border-zinc-800">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
-                  activeTab === tab.id
-                    ? "text-white border-b-2 border-blue-500 -mb-px"
-                    : "text-zinc-400 hover:text-white"
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
+        <div className="flex min-h-0 flex-1">
+          {/* Tabs */}
+          <nav className="w-56 shrink-0 border-r border-zinc-800 bg-zinc-950/25 p-4 sm:w-64">
+            <div className="space-y-1">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left text-sm font-medium transition-colors ${
+                      activeTab === tab.id
+                        ? "bg-zinc-800 text-white"
+                        : "text-zinc-400 hover:bg-zinc-800/60 hover:text-white"
+                    }`}
+                  >
+                    <Icon className={`h-4 w-4 ${activeTab === tab.id ? "text-blue-400" : "text-zinc-500"}`} />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+          </nav>
 
-        {/* Content */}
-        <div className="px-6 py-5 space-y-6 h-[60vh] overflow-y-auto">
+          {/* Content */}
+          <div className="min-w-0 flex-1 space-y-7 overflow-y-auto px-7 py-6 sm:px-10 sm:py-8">
           {activeTab === "general" && (
             <>
               {/* Project Assets Path */}
@@ -257,7 +300,7 @@ export function SettingsModal({
                   </div>
                   <Button
                     variant="outline"
-                    className="border-zinc-700 flex-shrink-0"
+                    className="border-zinc-700 shrink-0"
                     onClick={async () => {
                       const dir =
                         await window.electronAPI.showOpenDirectoryDialog({
@@ -274,69 +317,94 @@ export function SettingsModal({
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-zinc-800">
-                <ModelPackManager />
-              </div>
             </>
           )}
 
+          {activeTab === "models" && <ModelPackManager />}
+
           {activeTab === "advanced" && (
             <div className="space-y-5">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-white">
-                  Custom WanGP Checkpoints Folder
-                </label>
-                <div className="flex gap-2">
-                  <div
-                    className="min-w-0 flex-1 truncate rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-300 select-text"
-                    title={checkpointsLocation?.path}
-                  >
-                    {checkpointsLocation?.path ?? "Loading…"}
-                  </div>
-                  {checkpointsLocation?.custom && (
+              {[
+                {
+                  key: "checkpoints",
+                  label: "Custom WanGP Checkpoints Folder",
+                  location: checkpointsLocation,
+                  setLocation: setCheckpointsLocation,
+                },
+                {
+                  key: "loras",
+                  label: "Custom WanGP LoRAs Folder",
+                  location: lorasLocation,
+                  setLocation: setLorasLocation,
+                },
+              ].map(({ key, label, location, setLocation }) => (
+                <div key={key} className="space-y-2">
+                  <label className="text-sm font-medium text-white">{label}</label>
+                  <div className="flex gap-2">
+                    <div
+                      className="min-w-0 flex-1 truncate rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-300 select-text"
+                      title={location?.path}
+                    >
+                      {location?.path ?? "Loading…"}
+                    </div>
+                    {location?.custom && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        disabled={advancedSaving}
+                        onClick={() => {
+                          setLocation((current) => current && {
+                            ...current,
+                            path: current.defaultPath,
+                            custom: false,
+                          });
+                          setAdvancedReloaded(false);
+                        }}
+                        className="shrink-0 text-xs"
+                      >
+                        Use default
+                      </Button>
+                    )}
                     <Button
                       type="button"
-                      variant="ghost"
-                      disabled={advancedSaving}
-                      onClick={() => {
-                        setCheckpointsLocation((current) =>
-                          current
-                            ? {
-                                ...current,
-                                path: current.defaultPath,
-                                custom: false,
-                              }
-                            : current,
-                        );
+                      variant="outline"
+                      className="shrink-0 border-zinc-700"
+                      disabled={advancedSaving || !location}
+                      onClick={async () => {
+                        const directory = await window.electronAPI.showOpenDirectoryDialog({
+                          title: `Select ${label}`,
+                        });
+                        if (!directory) return;
+                        setLocation((current) => current && {
+                          ...current,
+                          path: directory,
+                          custom: true,
+                        });
                         setAdvancedReloaded(false);
                       }}
-                      className="shrink-0 text-xs"
                     >
-                      Use default
+                      <Folder className="h-4 w-4" />
                     </Button>
-                  )}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="shrink-0 border-zinc-700"
-                    disabled={advancedSaving || !checkpointsLocation}
-                    onClick={async () => {
-                      const directory =
-                        await window.electronAPI.showOpenDirectoryDialog({
-                          title: "Select Custom WanGP Checkpoints Folder",
-                        });
-                      if (!directory) return;
-                      setCheckpointsLocation((current) =>
-                        current
-                          ? { ...current, path: directory, custom: true }
-                          : current,
-                      );
-                      setAdvancedReloaded(false);
-                    }}
-                  >
-                    <Folder className="h-4 w-4" />
-                  </Button>
+                  </div>
                 </div>
+              ))}
+
+              <div className="space-y-2 border-t border-zinc-800 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full border-zinc-700"
+                  disabled={openingWanGP}
+                  onClick={() => void handleOpenWanGP()}
+                >
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  {openingWanGP ? "Opening WanGP…" : "Open WanGP"}
+                </Button>
+                {openWanGPError && (
+                  <p className="text-xs text-red-400" role="alert">
+                    Could not open WanGP: {openWanGPError}
+                  </p>
+                )}
               </div>
               {/* Torch Compile */}
               <div className="space-y-3 pt-4 border-t border-zinc-800">
@@ -358,7 +426,7 @@ export function SettingsModal({
                       }));
                       setAdvancedReloaded(false);
                     }}
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${
+                    className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors ${
                       advancedSettings.useTorchCompile
                         ? "bg-blue-600"
                         : "bg-zinc-700"
@@ -485,7 +553,7 @@ export function SettingsModal({
             </div>
           )}
 
-          {activeTab === "outputs" && (
+          {activeTab === "general" && (
             <div className="space-y-5">
               <div className="space-y-3">
                 <h3 className="text-sm font-semibold text-white">
@@ -814,9 +882,10 @@ export function SettingsModal({
             </>
           )}
         </div>
+        </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-zinc-800 flex justify-end">
+        <div className="flex justify-end border-t border-zinc-800 px-7 py-4">
           <Button
             onClick={onClose}
             className="bg-zinc-700 hover:bg-zinc-600 text-white"

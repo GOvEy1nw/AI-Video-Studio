@@ -9,19 +9,19 @@ interface ContextMenuState {
 interface UseContextMenuEffectsParams {
   timelineContextMenu: ContextMenuState | null
   setTimelineContextMenu: (v: any) => void
-  timelineContextMenuRef: React.RefObject<HTMLDivElement>
+  timelineContextMenuRef: React.RefObject<HTMLDivElement | null>
   clipContextMenu: { clipId: string; x: number; y: number } | null
   setClipContextMenu: (v: any) => void
-  clipContextMenuRef: React.RefObject<HTMLDivElement>
+  clipContextMenuRef: React.RefObject<HTMLDivElement | null>
   assetContextMenu: ContextMenuState | null
   setAssetContextMenu: (v: any) => void
-  assetContextMenuRef: React.RefObject<HTMLDivElement>
+  assetContextMenuRef: React.RefObject<HTMLDivElement | null>
   takeContextMenu: ContextMenuState | null
   setTakeContextMenu: (v: any) => void
-  takeContextMenuRef: React.RefObject<HTMLDivElement>
+  takeContextMenuRef: React.RefObject<HTMLDivElement | null>
   binContextMenu: ContextMenuState | null
   setBinContextMenu: (v: any) => void
-  binContextMenuRef: React.RefObject<HTMLDivElement>
+  binContextMenuRef: React.RefObject<HTMLDivElement | null>
   previewZoomOpen: boolean
   setPreviewZoomOpen: (v: boolean) => void
   playbackResOpen: boolean
@@ -29,13 +29,13 @@ interface UseContextMenuEffectsParams {
   previewZoom: number | 'fit'
   setPreviewZoom: React.Dispatch<React.SetStateAction<number | 'fit'>>
   setPreviewPan: (v: { x: number; y: number }) => void
-  previewContainerRef: React.RefObject<HTMLDivElement>
+  previewContainerRef: React.RefObject<HTMLDivElement | null>
   setIsFullscreen: (v: boolean) => void
   setVideoFrameSize: React.Dispatch<React.SetStateAction<{ width: number; height: number }>>
   timelineAddMenuOpen: boolean
   setTimelineAddMenuOpen: (v: boolean) => void
   creatingBin: boolean
-  newBinInputRef: React.RefObject<HTMLInputElement>
+  newBinInputRef: React.RefObject<HTMLInputElement | null>
 }
 
 export function useContextMenuEffects(params: UseContextMenuEffectsParams) {

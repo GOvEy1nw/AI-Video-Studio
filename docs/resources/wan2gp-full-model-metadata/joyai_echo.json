@@ -28,6 +28,26 @@
       "ltx2_hdr_scene_embeddings_file": "ltx-2.3-22b-ic-lora-hdr-scene-emb.safetensors",
       "self_refiner": true,
       "self_refiner_max_plans": 2,
+      "custom_settings": [
+        {
+          "id": "prompt_relay_epsilon",
+          "name": "Prompt Relay Epsilon",
+          "label": "Prompt Relay Epsilon (higher values create softer transitions)",
+          "type": "float",
+          "default": 0.001,
+          "min": 0.0001,
+          "max": 0.99,
+          "inc": 0.0001
+        },
+        {
+          "id": "joyai_control_memory_positions",
+          "name": "Control Video Memory Positions",
+          "label": "Joy Memory Positions from Control Video (frames or seconds, comma-separated)",
+          "type": "text",
+          "default": "",
+          "video_prompt_type": "1"
+        }
+      ],
       "vae_block_size": 64,
       "keep_frames_video_guide_not_supported": true,
       "ltx2_lora_distilled": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-distilled-lora-384.safetensors",
@@ -97,16 +117,6 @@
         "default": "",
         "label": "Control Video Memory"
       },
-      "custom_settings": [
-        {
-          "id": "joyai_control_memory_positions",
-          "name": "Control Video Memory Positions",
-          "label": "Joy Memory Positions from Control Video (frames or seconds, comma-separated)",
-          "type": "text",
-          "default": "",
-          "video_prompt_type": "1"
-        }
-      ],
       "sliding_window_defaults": {
         "overlap_min": 1,
         "overlap_max": 97,

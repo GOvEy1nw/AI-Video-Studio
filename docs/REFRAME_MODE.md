@@ -4,10 +4,10 @@ Reframe is AiVS's video outpainting workflow. It lives under GenSpace video mode
 
 ## UI Flow
 
-- `frontend/views/GenSpace.tsx` owns video process mode state: `generate`, `reframe`, or `retake`.
-- `frontend/components/ReframePanel.tsx` renders inside the prompt bar area so the gallery remains visible.
-- `frontend/components/VideoTrimPanel.tsx` is shared by Retake and Reframe for trim selection and seeking.
-- `frontend/components/OutpaintFrameOverlay.tsx` handles aspect, zoom, pan, reset, and padding adjustment.
+- `frontend/views/genspace/hooks/useGenSpaceVideoTools.tsx` owns video process mode state: `generate`, `reframe`, or `retake`.
+- `frontend/views/genspace/video/ReframePanel.tsx` renders inside the prompt bar area so the gallery remains visible.
+- `frontend/views/genspace/video/VideoTrimPanel.tsx` is shared by Retake and Reframe for trim selection and seeking.
+- `frontend/views/genspace/video/OutpaintFrameOverlay.tsx` handles aspect, zoom, pan, reset, and padding adjustment.
 - Reframe shows an optional prompt textarea below the trim panel. Placeholder: `optional text prompt to drive outpainting...`.
 - Blank prompt submits `outpaint`, because WanGP requires a text prompt even for outpainting.
 
@@ -18,7 +18,7 @@ Reframe is AiVS's video outpainting workflow. It lives under GenSpace video mode
 - Preset modes use zoom plus pan.
 - UI expansion/zoom is capped at 100% per edge.
 - Pan redistribution can internally produce up to 200% on one side; backend `ReframePadding` therefore allows 0-200 per edge.
-- `frontend/lib/reframe-outpaint.ts` owns the padding/layout math.
+- `frontend/views/genspace/video/reframe-outpaint.ts` owns the padding/layout math.
 
 ## Backend Flow
 

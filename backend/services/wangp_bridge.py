@@ -5,17 +5,26 @@ from __future__ import annotations
 import importlib
 import json
 import logging
+import math
 import re
 import sys
 import threading
 import time
 from collections import deque
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
+from numbers import Real
 from pathlib import Path
 from typing import Any, cast
 
+from progress_types import DownloadUnit, ModelDownloadProgress
+
 logger = logging.getLogger(__name__)
+AUDIO_PROFILE_THREE_PLUS = 3.5
+
+
+def resolve_audio_performance_profile(global_profile: float) -> float:
+    return AUDIO_PROFILE_THREE_PLUS if global_profile == 4.0 else global_profile
 
 ProgressCallback = Callable[..., None]
 CancelledCallback = Callable[[], bool]
@@ -64,6 +73,7 @@ class WanGPBridge:
         camera_motion_prompts: dict[str, str],
         extra_args: Iterable[str] = (),
         checkpoints_dir: Path | None = None,
+        loras_dir: Path | None = None,
     ) -> None:
         self._enabled = enabled
         self._root = root
@@ -78,10 +88,13 @@ class WanGPBridge:
         self._submitted_manifest_once = False
         self._session_lock = threading.Lock()
         self._last_preview_write_at = 0.0
+        runtime_overrides: dict[str, object] = {}
         if checkpoints_dir is not None:
-            self._write_runtime_config(
-                {"checkpoints_paths": [str(checkpoints_dir.resolve()), "."]}
-            )
+            runtime_overrides["checkpoints_paths"] = [str(checkpoints_dir.resolve()), "."]
+        if loras_dir is not None:
+            runtime_overrides["loras_root"] = str(loras_dir.resolve())
+        if runtime_overrides:
+            self._write_runtime_config(runtime_overrides)
 
     def set_compile_enabled(self, enabled: bool) -> None:
         with self._session_lock:
@@ -99,6 +112,13 @@ class WanGPBridge:
     ) -> None:
         vae_config = 0 if reduce_vram == "disabled" else int(reduce_vram)
         boost = 1 if reduce_vram == "disabled" else 2
+        audio_profile = resolve_audio_performance_profile(performance_profile)
+        if audio_profile != performance_profile:
+            logger.info(
+                "WanGP performance profile override for audio: requested=%s effective=%s",
+                performance_profile,
+                audio_profile,
+            )
         with self._session_lock:
             self._write_runtime_config(
                 {
@@ -106,7 +126,7 @@ class WanGPBridge:
                     "profile": performance_profile,
                     "video_profile": performance_profile,
                     "image_profile": performance_profile,
-                    "audio_profile": performance_profile,
+                    "audio_profile": audio_profile,
                     "vae_config": vae_config,
                     "boost": boost,
                 }
@@ -376,6 +396,113 @@ class WanGPBridge:
             raise RuntimeError("WanGP completed without producing any images")
         return outputs
 
+    def generate_music(
+        self,
+        *,
+        description: str,
+        lyrics: str,
+        duration_seconds: int,
+        bpm: int | None,
+        key_scale: str | None,
+        time_signature: str | None,
+        language: str | None,
+        model_mode: int,
+        temperature: float,
+        top_p: float,
+        top_k: int,
+        lm_guidance_scale: float,
+        source_audio_path: str | None,
+        reference_timbre_path: str | None,
+        audio_prompt_type: str,
+        cover_strength: float | None,
+        seed: int | None,
+        model_type: str,
+        default_settings: dict[str, object] | None,
+        on_progress: ProgressCallback,
+        is_cancelled: CancelledCallback,
+    ) -> str:
+        settings: dict[str, object] = dict(default_settings or {})
+        settings.update({
+            "model_type": model_type,
+            "prompt": lyrics,
+            "alt_prompt": description,
+            "duration_seconds": duration_seconds,
+            "audio_prompt_type": audio_prompt_type,
+            "repeat_generation": 1,
+            "multi_prompts_gen_type": "FG",
+            "model_mode": model_mode,
+            "temperature": temperature,
+            "top_p": top_p,
+            "top_k": top_k,
+            "alt_guidance_scale": lm_guidance_scale,
+        })
+
+        custom_settings: dict[str, object] = {}
+        if bpm is not None:
+            custom_settings["bpm"] = bpm
+        if key_scale is not None:
+            custom_settings["keyscale"] = key_scale
+        if time_signature is not None:
+            custom_settings["timesignature"] = int(time_signature.split("/", 1)[0])
+        if language is not None:
+            custom_settings["language"] = language
+        settings["custom_settings"] = custom_settings or None
+        if source_audio_path is not None:
+            settings["audio_guide"] = source_audio_path
+        if reference_timbre_path is not None:
+            settings["audio_guide2"] = reference_timbre_path
+        if cover_strength is not None:
+            settings["audio_scale"] = cover_strength
+        if seed is not None:
+            settings["seed"] = seed
+
+        outputs = self._run_manifest(
+            manifest=[{"id": 1, "params": settings, "plugin_data": {}}],
+            media_suffixes={".wav", ".mp3", ".flac", ".ogg", ".m4a", ".aac"},
+            on_progress=on_progress,
+            is_cancelled=is_cancelled,
+        )
+        if not outputs:
+            raise RuntimeError("WanGP completed without producing music")
+        return self._select_final_output(outputs)
+
+    def compose_music_lyrics(
+        self,
+        *,
+        description: str,
+        lyrics_prompt: str | None,
+        language: str,
+        duration_seconds: int,
+        model_type: str,
+        think: bool,
+        seed: int | None,
+    ) -> str:
+        idea = lyrics_prompt.strip() if lyrics_prompt else description
+        prompt = (
+            f"Lyrics idea:\n{idea}\n\n"
+            f"Song description:\n{description}\n\n"
+            f"Language:\n{language}\n\n"
+            f"Target duration:\n{duration_seconds} seconds\n\n"
+            "Write complete, singable lyrics with suitable section headers. "
+            "Return lyrics only."
+        )
+        lyrics = self._run_prompt_enhancer(
+            prompt=prompt,
+            model_type=model_type,
+            mode="audio",
+            image_path=None,
+            think=think,
+            seed=seed,
+        ).strip()
+        if not lyrics or lyrics.casefold() == "[instrumental]":
+            raise RuntimeError("WanGP did not produce usable lyrics")
+        lowered = lyrics.casefold()
+        if lowered.startswith(("here are", "here's", "sure,")):
+            raise RuntimeError("WanGP returned explanatory text instead of lyrics")
+        if len(lyrics) > 4096:
+            raise RuntimeError("WanGP lyrics exceed the supported 4096 character limit")
+        return lyrics
+
     def enhance_prompt(
         self,
         *,
@@ -384,9 +511,26 @@ class WanGPBridge:
         model_type: str,
         image_path: str | None = None,
     ) -> str:
+        return self._run_prompt_enhancer(
+            prompt=prompt,
+            mode=mode,
+            model_type=model_type,
+            image_path=image_path,
+        )
+
+    def _run_prompt_enhancer(
+        self,
+        *,
+        prompt: str,
+        mode: str,
+        model_type: str,
+        image_path: str | None,
+        think: bool = False,
+        seed: int | None = None,
+    ) -> str:
         session = self._get_session()
         runtime = session._ensure_runtime()
-        prompt_enhancer = "TI" if image_path else "T"
+        prompt_enhancer = ("TI" if image_path else "T") + ("K" if think else "")
         image_start = [str(Path(image_path).resolve())] if image_path else [None]
         is_image = mode == "image"
 
@@ -408,7 +552,7 @@ class WanGPBridge:
                 None,
                 is_image,
                 bool(model_def.get("audio_only", False)),
-                -1,
+                seed if seed is not None else -1,
                 _PromptEnhanceProgress(),
                 -1,
                 enhancer_kwargs={
@@ -613,23 +757,28 @@ class WanGPBridge:
 
         if kind == "progress":
             phase = str(getattr(data, "phase", "inference"))
-            raw_progress = int(getattr(data, "progress", 0))
-            current_step = getattr(data, "current_step", None)
-            total_steps = getattr(data, "total_steps", None)
+            raw_progress = self._optional_non_negative_int(getattr(data, "progress", 0)) or 0
+            current_step = self._optional_non_negative_int(getattr(data, "current_step", None))
+            total_steps = self._optional_non_negative_int(getattr(data, "total_steps", None))
             status_text = str(getattr(data, "status", "")).strip()
-            progress = self._scale_phase_progress(
-                phase,
-                raw_progress,
-                current_step if isinstance(current_step, int) else None,
-                total_steps if isinstance(total_steps, int) else None,
+            progress_unit, model_download = self._extract_model_download_progress(
+                data,
+                phase=phase,
+                current_step=current_step,
+                total_steps=total_steps,
+            )
+            progress = (
+                max(0, min(100, raw_progress))
+                if progress_unit is not None
+                else self._scale_phase_progress(phase, raw_progress, current_step, total_steps)
             )
             detail = self._parse_progress_detail(status_text, phase)
             self._emit_console_progress(
                 console_progress,
                 phase,
                 progress,
-                current_step if isinstance(current_step, int) else None,
-                total_steps if isinstance(total_steps, int) else None,
+                None if progress_unit is not None else current_step,
+                None if progress_unit is not None else total_steps,
                 status_text,
             )
             on_progress(
@@ -642,6 +791,14 @@ class WanGPBridge:
                 detail["section_index"],
                 detail["section_count"],
                 status_text or None,
+                None,
+                model_download.filename if model_download is not None else None,
+                round(model_download.percent)
+                if model_download is not None and model_download.percent is not None
+                else None,
+                None,
+                progress_unit,
+                model_download,
             )
             return
 
@@ -721,7 +878,11 @@ class WanGPBridge:
             return "inference_stage_2"
         if "denoising third pass" in lowered or "denoising 3rd pass" in lowered:
             return "inference_stage_3"
-        if "loading" in lowered:
+        if "checking model files" in lowered:
+            return "checking_model_files"
+        if "downloading model" in lowered:
+            return "downloading_model"
+        if "loading model" in lowered or "model loaded" in lowered or lowered.startswith("loading"):
             return "loading_model"
         if "enhancing prompt" in lowered or "encoding" in lowered:
             return "encoding_text"
@@ -734,10 +895,97 @@ class WanGPBridge:
         return "inference"
 
     @staticmethod
+    def _optional_non_negative_int(value: object) -> int | None:
+        if isinstance(value, bool) or not isinstance(value, Real):
+            return None
+        number = float(value)
+        return int(number) if math.isfinite(number) and number >= 0 else None
+
+    @staticmethod
+    def _optional_non_negative_float(value: object) -> float | None:
+        if isinstance(value, bool) or not isinstance(value, Real):
+            return None
+        number = float(value)
+        return number if math.isfinite(number) and number >= 0 else None
+
+    @staticmethod
+    def _optional_string(value: object) -> str | None:
+        return value.strip() if isinstance(value, str) and value.strip() else None
+
+    def _extract_model_download_progress(
+        self,
+        data: object,
+        *,
+        phase: str,
+        current_step: int | None,
+        total_steps: int | None,
+    ) -> tuple[DownloadUnit | None, ModelDownloadProgress | None]:
+        raw_details = getattr(data, "details", None)
+        details: Mapping[object, object] = (
+            cast(Mapping[object, object], raw_details)
+            if isinstance(raw_details, Mapping)
+            else cast(Mapping[object, object], {})
+        )
+        unit_value = getattr(data, "unit", None)
+        unit: DownloadUnit | None = (
+            unit_value if unit_value == "bytes" or unit_value == "files" else None
+        )
+        if unit is None or not (
+            details.get("kind") == "model_download" or phase == "downloading_model"
+        ):
+            return None, None
+
+        if unit == "bytes":
+            current = current_step
+            if current is None:
+                current = self._optional_non_negative_int(details.get("downloaded_bytes"))
+            total = total_steps
+            if total is None:
+                total = self._optional_non_negative_int(details.get("total_bytes"))
+        else:
+            current = current_step
+            if current is None:
+                current = self._optional_non_negative_int(details.get("completed_files"))
+            total = total_steps
+            if total is None:
+                total = self._optional_non_negative_int(details.get("total_files"))
+
+        if total is not None and total <= 0:
+            total = None
+        current = current or 0
+        percent = min(100.0, current / total * 100) if total is not None else None
+        return unit, ModelDownloadProgress(
+            phase=self._optional_string(details.get("phase")),
+            model_type=self._optional_string(details.get("model_type")),
+            model_name=self._optional_string(details.get("model_name")),
+            source=self._optional_string(details.get("source")),
+            repo_id=self._optional_string(details.get("repo_id")),
+            filename=self._optional_string(details.get("filename")),
+            unit=unit,
+            current=current,
+            total=total,
+            percent=percent,
+            speed_bps=(
+                self._optional_non_negative_float(details.get("speed_bps"))
+                if unit == "bytes"
+                else None
+            ),
+            eta_seconds=(
+                self._optional_non_negative_float(details.get("eta_seconds"))
+                if unit == "bytes"
+                else None
+            ),
+            file_index=self._optional_non_negative_int(details.get("file_index")),
+            file_count=self._optional_non_negative_int(details.get("file_count")),
+        )
+
+    @staticmethod
     def _estimate_progress(phase: str, current_step: int | None, total_steps: int | None) -> int:
         if total_steps is None or total_steps <= 0 or current_step is None:
             if phase == "preparing_model":
                 return 4
+            if phase == "checking_model_files":
+                return 3
             if phase == "downloading_model":
                 return 5
             if phase == "loading_model":
@@ -760,6 +1008,8 @@ class WanGPBridge:
         ratio = max(0.0, min(1.0, current_step / total_steps))
         if phase == "preparing_model":
             return min(6, 2 + int(ratio * 4))
+        if phase == "checking_model_files":
+            return min(4, 2 + int(ratio * 2))
         if phase == "downloading_model":
             return min(9, 3 + int(ratio * 6))
         if phase == "loading_model":
@@ -788,6 +1038,7 @@ class WanGPBridge:
         ratio = max(0.0, min(1.0, raw_progress / 100))
         ranges = {
             "preparing_model": (2, 6),
+            "checking_model_files": (2, 4),
             "downloading_model": (3, 9),
             "loading_model": (5, 15),
             "encoding_text": (12, 22),
@@ -851,6 +1102,7 @@ class WanGPBridge:
         labels = {
             "starting_wangp": "Starting WanGP",
             "preparing_model": "Preparing model",
+            "checking_model_files": "Checking model files",
             "downloading_model": "Downloading model",
             "loading_model": "Loading model",
             "encoding_text": "Encoding text",

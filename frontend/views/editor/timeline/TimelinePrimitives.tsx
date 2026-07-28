@@ -72,7 +72,7 @@ export const TimelinePlayhead = forwardRef<HTMLDivElement, TimelinePlayheadProps
       style={{ left: position, ...style }}
       {...props}
     >
-      {rulerHead && <div className="absolute -top-1 left-1/2 h-0 w-0 -translate-x-1/2 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent border-t-red-500" />}
+      {rulerHead && <div className="absolute -top-1 left-1/2 h-0 w-0 -translate-x-1/2 border-l-[6px] border-r-[6px] border-t-8 border-l-transparent border-r-transparent border-t-red-500" />}
     </div>
   )
 })
@@ -81,7 +81,7 @@ export const TimelineSegmentFrame = forwardRef<HTMLDivElement, HTMLAttributes<HT
   className,
   ...props
 }, ref) {
-  return <div ref={ref} className={cn('overflow-hidden rounded border select-none outline-none', className)} {...props} />
+  return <div ref={ref} className={cn('overflow-hidden rounded-sm border select-none outline-hidden', className)} {...props} />
 })
 
 interface TimelineTrackRowProps {
@@ -128,7 +128,7 @@ export const TimelineViewport = forwardRef<HTMLDivElement, TimelineViewportProps
     <div
       ref={ref}
       className={cn(
-        'min-w-0 overflow-hidden rounded border bg-zinc-950 transition-colors',
+        'min-w-0 overflow-hidden rounded-sm border bg-zinc-950 transition-colors',
         focused ? 'border-blue-500 ring-1 ring-blue-500/30' : 'border-zinc-800',
         className,
       )}
@@ -152,16 +152,16 @@ export function TimelineZoomControls({ value, min, max, step, onChange, onFit, c
   const clamp = (next: number) => Math.max(min, Math.min(max, next))
   return (
     <div className={cn('flex items-center gap-2', className)}>
-      <button type="button" title="Zoom out" aria-label="Zoom out" onClick={() => onChange(clamp(value - step))} className="rounded p-0.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300">
+      <button type="button" title="Zoom out" aria-label="Zoom out" onClick={() => onChange(clamp(value - step))} className="rounded-sm p-0.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300">
         <ZoomOut className="h-3.5 w-3.5" />
       </button>
       <input type="range" min={Math.round(min * 100)} max={Math.round(max * 100)} step={Math.max(1, Math.round(step * 100 / 5))} value={percent} onChange={(event) => onChange(clamp(Number(event.target.value) / 100))} className="h-1 w-24 cursor-pointer accent-blue-500" title={`Zoom: ${percent}%`} />
-      <button type="button" title="Zoom in" aria-label="Zoom in" onClick={() => onChange(clamp(value + step))} className="rounded p-0.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300">
+      <button type="button" title="Zoom in" aria-label="Zoom in" onClick={() => onChange(clamp(value + step))} className="rounded-sm p-0.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300">
         <ZoomIn className="h-3.5 w-3.5" />
       </button>
       <span className="w-8 text-right text-[10px] tabular-nums text-zinc-500">{percent}%</span>
       {onFit && (
-        <button type="button" title="Fit to view" aria-label="Fit to view" onClick={onFit} className="ml-0.5 rounded p-0.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300">
+        <button type="button" title="Fit to view" aria-label="Fit to view" onClick={onFit} className="ml-0.5 rounded-sm p-0.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300">
           <Maximize2 className="h-3.5 w-3.5" />
         </button>
       )}

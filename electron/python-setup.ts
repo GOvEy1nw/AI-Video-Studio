@@ -1,9 +1,9 @@
 import { spawn, type ChildProcess } from 'child_process'
 import crypto from 'crypto'
-import { app } from 'electron'
+import { app, shell } from 'electron'
 import fs from 'fs'
 import path from 'path'
-import { getCustomCheckpointsPath, setCustomCheckpointsPath } from './app-state'
+import { getCustomCheckpointsPath, getCustomLorasPath, setCustomCheckpointsPath, setCustomLorasPath } from './app-state'
 import { isDev } from './config'
 import { logger } from './logger'
 
@@ -25,14 +25,26 @@ export interface ModelPack {
 }
 
 export interface ModelPackProgress {
-  status: 'downloading' | 'complete' | 'cancelled' | 'error'
-  packId?: string
-  packName?: string
-  file?: string
-  percent?: number
-  downloadedBytes?: number
-  totalBytes?: number
-  speed?: number
+  status: 'preparing' | 'downloading' | 'complete' | 'cancelled' | 'error'
+  packId: string | null
+  packName: string | null
+  packIndex: number | null
+  packCount: number | null
+  message: string | null
+  transfer: {
+    phase: string | null
+    source: string | null
+    repoId: string | null
+    filename: string | null
+    unit: 'bytes' | 'files'
+    current: number
+    total: number | null
+    percent: number | null
+    speedBps: number | null
+    etaSeconds: number | null
+    fileIndex: number | null
+    fileCount: number | null
+  } | null
 }
 
 const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
@@ -42,6 +54,8 @@ const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
   { id: 'krea2_turbo', name: 'Krea 2 Turbo', estimatedSize: '20.5 GB' },
   { id: 'hidream_o1', name: 'HiDream O1', estimatedSize: '15.4 GB' },
   { id: 'ltx2_turbo', name: 'LTX 2.3 Turbo 1.1', estimatedSize: '42.8 GB' },
+  { id: 'ace_step_15_turbo', name: 'ACE-Step 1.5 Fast', estimatedSize: '12.0 GB' },
+  { id: 'ace_step_15_xl_turbo', name: 'ACE-Step 1.5 XL', estimatedSize: '20.0 GB' },
   { id: 'prompt_enhancer', name: 'Prompt Enhancer', estimatedSize: '36.0 GB' },
 ]
 
@@ -50,8 +64,9 @@ let activeModelPackDeleteProcess: ChildProcess | null = null
 let activeModelPackRefreshProcess: ChildProcess | null = null
 let activeModelPackRefreshPromise: Promise<ModelPack[]> | null = null
 let activeModelPackProgress: ModelPackProgress | null = null
+let activeWanGPProcess: ChildProcess | null = null
 
-export interface CheckpointsLocation {
+export interface FolderLocation {
   path: string
   custom: boolean
   defaultPath: string
@@ -61,7 +76,7 @@ function getWanGPRoot(): string {
   return path.join(isDev ? process.cwd() : process.resourcesPath, 'Wan2GP')
 }
 
-export function getCheckpointsLocation(): CheckpointsLocation {
+export function getCheckpointsLocation(): FolderLocation {
   const customPath = getCustomCheckpointsPath()
   const defaultPath = path.join(getWanGPRoot(), 'ckpts')
   return {
@@ -71,7 +86,7 @@ export function getCheckpointsLocation(): CheckpointsLocation {
   }
 }
 
-export function setCheckpointsLocation(value: string | null): CheckpointsLocation {
+export function setCheckpointsLocation(value: string | null): FolderLocation {
   if (value !== null) {
     const resolved = path.resolve(value)
     if (!fs.statSync(resolved).isDirectory()) throw new Error('Checkpoint path must be a folder.')
@@ -80,6 +95,90 @@ export function setCheckpointsLocation(value: string | null): CheckpointsLocatio
     setCustomCheckpointsPath(null)
   }
   return getCheckpointsLocation()
+}
+
+export function getLorasLocation(): FolderLocation {
+  const customPath = getCustomLorasPath()
+  const defaultPath = path.join(getWanGPRoot(), 'loras')
+  return {
+    path: customPath ?? defaultPath,
+    custom: customPath !== null,
+    defaultPath,
+  }
+}
+
+export function setLorasLocation(value: string | null): FolderLocation {
+  if (value !== null) {
+    const resolved = path.resolve(value)
+    if (!fs.statSync(resolved).isDirectory()) throw new Error('LoRA path must be a folder.')
+    setCustomLorasPath(resolved)
+  } else {
+    setCustomLorasPath(null)
+  }
+  return getLorasLocation()
+}
+
+function getWanGPPythonExecutable(): string {
+  const developmentPython = process.platform === 'win32'
+    ? path.join(process.cwd(), 'backend', '.venv', 'Scripts', 'python.exe')
+    : path.join(process.cwd(), 'backend', '.venv', 'bin', 'python')
+  if (isDev && fs.existsSync(developmentPython)) return developmentPython
+
+  const bundledPython = process.platform === 'win32'
+    ? path.join(getPythonDir(), 'python.exe')
+    : path.join(getPythonDir(), 'bin', 'python3')
+  if (fs.existsSync(bundledPython)) return bundledPython
+  return process.platform === 'win32' ? 'python' : 'python3'
+}
+
+export async function openWanGP(): Promise<void> {
+  const port = process.env.SERVER_PORT || '7860'
+  if (activeWanGPProcess) {
+    await shell.openExternal(`http://127.0.0.1:${port}`)
+    return
+  }
+
+  const wangpRoot = getWanGPRoot()
+  const script = path.join(wangpRoot, 'wgp.py')
+  if (!fs.existsSync(script)) throw new Error('WanGP GUI entrypoint is missing.')
+
+  const guiArgs = [
+    '--open-browser',
+    '--config', path.join(app.getPath('userData'), 'wangp_bridge'),
+    '--loras', getLorasLocation().path,
+  ]
+  const pythonArgs = !isDev && process.platform === 'win32'
+    ? [
+        '-u',
+        '-c',
+        `import sys; sys.path.insert(0, r"${wangpRoot}"); import runpy; runpy.run_path(r"${script}", run_name="__main__")`,
+        ...guiArgs,
+      ]
+    : ['-u', script, ...guiArgs]
+
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn(getWanGPPythonExecutable(), pythonArgs, {
+      cwd: wangpRoot,
+      env: getRuntimeEnvironment(),
+      windowsHide: true,
+      stdio: 'ignore',
+    })
+    activeWanGPProcess = child
+    child.once('spawn', resolve)
+    child.once('error', (error) => {
+      if (activeWanGPProcess === child) activeWanGPProcess = null
+      reject(new Error(`WanGP GUI failed to start: ${error.message}`))
+    })
+    child.once('exit', (code, signal) => {
+      if (activeWanGPProcess === child) activeWanGPProcess = null
+      logger.info(`[WanGP GUI] exited (code ${code ?? 'null'}, signal ${signal ?? 'none'})`)
+    })
+  })
+}
+
+export function stopWanGP(): void {
+  activeWanGPProcess?.kill('SIGTERM')
+  activeWanGPProcess = null
 }
 
 function getRuntimeFiles(): string[] {
@@ -136,6 +235,7 @@ function findBundledGitExecutable(): string | null {
 export function getRuntimeEnvironment(): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env }
   env.WANGP_CHECKPOINTS_DIR = getCheckpointsLocation().path
+  env.WANGP_LORAS_DIR = getLorasLocation().path
   const gitExe = findBundledGitExecutable()
   if (!gitExe) {
     if (!isDev && process.platform === 'win32') throw new Error('Bundled Git runtime is missing.')
@@ -327,7 +427,7 @@ export function refreshModelPacks(): Promise<ModelPack[]> {
   if (activeModelPackProcess || activeModelPackDeleteProcess) {
     throw new Error('Another model-pack operation is already running.')
   }
-  const pythonExe = path.join(getPythonDir(), 'python.exe')
+  const pythonExe = getWanGPPythonExecutable()
   const runner = path.join(isDev ? process.cwd() : process.resourcesPath, 'backend', 'wangp_model_packs.py')
   const wangpRoot = getWanGPRoot()
   const checkpointsDir = getCheckpointsLocation().path
@@ -382,16 +482,71 @@ function parseByteSize(value: string): number {
   return Number(match[1]) * 1024 ** units.indexOf(normalized)
 }
 
-function parseTransferProgress(line: string): Omit<ModelPackProgress, 'status'> | null {
+function nonNegativeNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null
+}
+
+function optionalText(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null
+}
+
+function normalizeTransfer(value: unknown): NonNullable<ModelPackProgress['transfer']> | null {
+  if (!value || typeof value !== 'object') return null
+  const data = value as Record<string, unknown>
+  if (data.unit !== 'bytes' && data.unit !== 'files') return null
+  const current = nonNegativeNumber(data.current)
+  if (current === null) return null
+  const rawTotal = nonNegativeNumber(data.total)
+  const total = rawTotal && rawTotal > 0 ? rawTotal : null
+  return {
+    phase: optionalText(data.phase),
+    source: optionalText(data.source),
+    repoId: optionalText(data.repoId),
+    filename: optionalText(data.filename),
+    unit: data.unit,
+    current,
+    total,
+    percent: total ? Math.max(0, Math.min(100, current / total * 100)) : null,
+    speedBps: nonNegativeNumber(data.speedBps),
+    etaSeconds: nonNegativeNumber(data.etaSeconds),
+    fileIndex: nonNegativeNumber(data.fileIndex),
+    fileCount: nonNegativeNumber(data.fileCount),
+  }
+}
+
+function packProgress(
+  status: ModelPackProgress['status'],
+  values: Partial<Omit<ModelPackProgress, 'status'>> = {},
+): ModelPackProgress {
+  return {
+    status,
+    packId: null,
+    packName: null,
+    packIndex: null,
+    packCount: null,
+    message: null,
+    transfer: null,
+    ...values,
+  }
+}
+
+function parseTransferProgress(line: string): ModelPackProgress['transfer'] {
   const match = /^(.+?):\s*\[[^\]]*\]\s*([\d.]+)%\s*\(([\d.]+\s*[KMGT]?B)\/([\d.]+\s*[KMGT]?B)\)(?:\s*@\s*([\d.]+\s*[KMGT]?B)\/s)?/i.exec(line.trim())
     ?? /^(.+?):\s*([\d.]+)%\|[^|]*\|\s*([\d.]+\s*[KMGT]?B?)\/([\d.]+\s*[KMGT]?B?)(?:\s*\[[^,\]]*,\s*([\d.]+\s*[KMGT]?B?)\/s)?/i.exec(line.trim())
   if (!match) return null
   return {
-    file: path.basename(match[1]),
-    percent: Number(match[2]),
-    downloadedBytes: parseByteSize(match[3]),
-    totalBytes: parseByteSize(match[4]),
-    speed: match[5] ? parseByteSize(match[5]) : 0,
+    phase: 'downloading',
+    source: null,
+    repoId: null,
+    filename: path.basename(match[1]),
+    unit: 'bytes',
+    current: parseByteSize(match[3]),
+    total: parseByteSize(match[4]),
+    percent: Math.max(0, Math.min(100, Number(match[2]))),
+    speedBps: match[5] ? parseByteSize(match[5]) : null,
+    etaSeconds: null,
+    fileIndex: null,
+    fileCount: null,
   }
 }
 
@@ -402,15 +557,21 @@ export function downloadModelPacks(
 ): Promise<boolean> {
   if (!ids.length) return Promise.resolve(true)
   if (activeModelPackProcess || activeModelPackDeleteProcess || activeModelPackRefreshProcess) throw new Error('Another model-pack operation is already running.')
-  const pythonExe = path.join(getPythonDir(), 'python.exe')
+  const pythonExe = getWanGPPythonExecutable()
   const runner = path.join(isDev ? process.cwd() : process.resourcesPath, 'backend', 'wangp_model_packs.py')
   const wangpRoot = getWanGPRoot()
   const checkpointsDir = getCheckpointsLocation().path
 
   return new Promise((resolve, reject) => {
-    let activePack: Pick<ModelPackProgress, 'packId' | 'packName'> = {}
+    let activePack: Pick<ModelPackProgress, 'packId' | 'packName' | 'packIndex' | 'packCount'> = {
+      packId: null,
+      packName: null,
+      packIndex: null,
+      packCount: null,
+    }
     let cancelled = false
     let spawnFailed = false
+    let structuredProgressSeen = false
     const remainders = { stdout: '', stderr: '' }
     const diagnosticLines: string[] = []
     const emitProgress = (progress: ModelPackProgress): void => {
@@ -428,43 +589,46 @@ export function downloadModelPacks(
       { windowsHide: true, cwd: wangpRoot, env: getRuntimeEnvironment() },
     )
     activeModelPackProcess = child
-    emitProgress({ status: 'downloading' })
+    emitProgress(packProgress('preparing'))
     const consumeLine = (raw: string): void => {
       const line = raw.trim()
       if (!line) return
-        const event = /^AIVS_PACK:(.+)$/.exec(line)
-        if (event) {
-          try {
-            const data = JSON.parse(event[1]) as {
-              event: string
-              id?: string
-              name?: string
-              file?: string
-              downloadedBytes?: number
-              totalBytes?: number
-              speed?: number
+      const event = /^AIVS_PACK:(.+)$/.exec(line)
+      if (event) {
+        try {
+          const data = JSON.parse(event[1]) as Record<string, unknown>
+          const eventName = optionalText(data.event)
+          const context = {
+            packId: optionalText(data.id) ?? activePack.packId,
+            packName: optionalText(data.name) ?? activePack.packName,
+            packIndex: nonNegativeNumber(data.packIndex) ?? activePack.packIndex,
+            packCount: nonNegativeNumber(data.packCount) ?? activePack.packCount,
+          }
+          if (eventName === 'pack-start') {
+            activePack = context
+            emitProgress(packProgress('downloading', activePack))
+          } else if (eventName === 'pack-complete') {
+            activePack = context
+            emitProgress(packProgress('downloading', {
+              ...activePack,
+              message: `${activePack.packName ?? 'Model pack'} complete`,
+            }))
+          } else if (eventName === 'transfer') {
+            const transfer = normalizeTransfer(data.transfer)
+            if (transfer) {
+              structuredProgressSeen = true
+              activePack = context
+              emitProgress(packProgress('downloading', { ...activePack, transfer }))
             }
-            if (data.event === 'pack-start') {
-              activePack = { packId: data.id, packName: data.name }
-              emitProgress({ status: 'downloading', ...activePack })
-            } else if (data.event === 'pack-complete') {
-              emitProgress({ status: 'complete', packId: data.id, packName: data.name, percent: 100 })
-            } else if (data.event === 'transfer') {
-              emitProgress({
-                status: 'downloading',
-                ...activePack,
-                file: data.file,
-                downloadedBytes: data.downloadedBytes,
-                totalBytes: data.totalBytes,
-                speed: data.speed,
-              })
-            }
-          } catch { /* Ignore malformed third-party output. */ }
+          } else if (eventName === 'complete') {
+            emitProgress(packProgress('complete', { ...activePack, message: 'Download complete' }))
+          }
+        } catch { /* Ignore malformed third-party output. */ }
         return
       }
-      const transfer = parseTransferProgress(line)
-      if (transfer) {
-        emitProgress({ status: 'downloading', ...activePack, ...transfer })
+      const transfer = structuredProgressSeen ? null : parseTransferProgress(line)
+      if (transfer !== null) {
+        emitProgress(packProgress('downloading', { ...activePack, transfer }))
         return
       }
       recordDiagnostic(line)
@@ -479,9 +643,9 @@ export function downloadModelPacks(
     child.once('error', (error) => {
       spawnFailed = true
       activeModelPackProcess = null
-      emitProgress({ status: 'error', ...activePack })
-      activeModelPackProgress = null
+      emitProgress(packProgress('error', { ...activePack, message: error.message }))
       reject(new Error(`Model-pack download failed to start: ${error.message}`))
+      activeModelPackProgress = null
     })
     child.once('close', (code) => {
       if (spawnFailed) return
@@ -489,18 +653,22 @@ export function downloadModelPacks(
       consumeLine(remainders.stdout)
       consumeLine(remainders.stderr)
       if (cancelled) {
-        emitProgress({ status: 'cancelled', ...activePack })
-        activeModelPackProgress = null
+        emitProgress(packProgress('cancelled', activePack))
         resolve(false)
+        activeModelPackProgress = null
       } else if (code === 0) {
-        activeModelPackProgress = null
+        if (activeModelPackProgress?.status !== 'complete') {
+          emitProgress(packProgress('complete', { ...activePack, message: 'Download complete' }))
+        }
         resolve(true)
-      } else {
-        emitProgress({ status: 'error', ...activePack })
         activeModelPackProgress = null
+      } else {
         logger.error(`[model-pack] Downloader output:\n${diagnosticLines.join('\n')}`)
         const details = diagnosticLines.slice(-12).join(' ')
-        reject(new Error(`Model-pack download failed (exit code ${code ?? 'unknown'}): ${details || 'No diagnostic output.'}`))
+        const message = `Model-pack download failed (exit code ${code ?? 'unknown'}): ${details || 'No diagnostic output.'}`
+        emitProgress(packProgress('error', { ...activePack, message }))
+        reject(new Error(message))
+        activeModelPackProgress = null
       }
     })
     ;(child as ChildProcess & { aivsCancel?: () => void }).aivsCancel = () => { cancelled = true; child.kill() }
@@ -514,7 +682,7 @@ export function cancelModelPackDownload(): void {
 export function deleteModelPack(id: string): Promise<void> {
   if (!MODEL_PACKS.some((pack) => pack.id === id)) throw new Error(`Unknown model pack: ${id}`)
   if (activeModelPackProcess || activeModelPackDeleteProcess || activeModelPackRefreshProcess) throw new Error('Another model-pack operation is already running.')
-  const pythonExe = path.join(getPythonDir(), 'python.exe')
+  const pythonExe = getWanGPPythonExecutable()
   const runner = path.join(isDev ? process.cwd() : process.resourcesPath, 'backend', 'wangp_model_packs.py')
   const wangpRoot = getWanGPRoot()
   const checkpointsDir = getCheckpointsLocation().path

@@ -1,27 +1,6 @@
 import { Select } from './ui/select'
 import type { GenerationMode } from './ModeTabs'
-
-export interface GenerationSettings {
-  model: 'fast' | 'pro'
-  duration: number
-  videoResolution: string
-  fps: number
-  audio: boolean
-  cameraMotion: string
-  aspectRatio?: string
-  videoProfileId?: string
-  // Image-specific settings
-  imageResolution: string
-  imageAspectRatio: string
-  imageSteps: number
-  variations?: number  // Number of image variations to generate
-  imageInputRole?: string
-  // Phase 4 curated profile id. When set, the backend resolves the
-  // profile, validates tier/aspect, and overrides width/height with the
-  // curated exact WxH. Raw width/height still accepted for backwards
-  // compatibility.
-  imageProfileId?: string
-}
+import type { GenerationSettings } from '../types/generation'
 
 interface SettingsPanelProps {
   settings: GenerationSettings
@@ -169,7 +148,7 @@ export function SettingsPanel({
 
       {/* Audio and Camera Motion Row */}
       <div className="flex gap-3">
-        <div className="w-[140px] flex-shrink-0">
+        <div className="w-[140px] shrink-0">
           <Select
             label="Audio"
             badge="PREVIEW"

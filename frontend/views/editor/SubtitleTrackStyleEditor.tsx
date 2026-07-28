@@ -26,7 +26,7 @@ export function SubtitleTrackStyleEditor({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setSubtitleTrackStyleIdx(null)}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs" onClick={() => setSubtitleTrackStyleIdx(null)}>
       <div className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl w-[380px] max-h-[80vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-800">
@@ -49,7 +49,7 @@ export function SubtitleTrackStyleEditor({
           {/* Preview */}
           <div className="bg-zinc-950 rounded-lg p-4 flex items-center justify-center border border-zinc-800 min-h-[60px]">
             <span
-              className="inline-block text-center rounded px-3 py-1.5 leading-snug"
+              className="inline-block text-center rounded-sm px-3 py-1.5 leading-snug"
               style={{
                 fontSize: `${Math.min(ts.fontSize, 28)}px`,
                 fontFamily: ts.fontFamily,
@@ -83,7 +83,7 @@ export function SubtitleTrackStyleEditor({
             <select
               value={ts.fontFamily}
               onChange={e => updateTrackStyle({ fontFamily: e.target.value })}
-              className="bg-zinc-800 border border-zinc-700 rounded px-2 py-0.5 text-[10px] text-white focus:outline-none focus:border-amber-500/50"
+              className="bg-zinc-800 border border-zinc-700 rounded-sm px-2 py-0.5 text-[10px] text-white focus:outline-hidden focus:border-amber-500/50"
             >
               <option value="sans-serif">Sans-Serif</option>
               <option value="serif">Serif</option>
@@ -102,13 +102,13 @@ export function SubtitleTrackStyleEditor({
             <div className="flex items-center gap-2">
               <button
                 onClick={() => updateTrackStyle({ fontWeight: ts.fontWeight === 'bold' ? 'normal' : 'bold' })}
-                className={`px-2.5 py-1 rounded text-[10px] font-bold ${ts.fontWeight === 'bold' ? 'bg-amber-600/30 text-amber-300 border border-amber-500/40' : 'bg-zinc-800 text-zinc-400 border border-zinc-700'}`}
+                className={`px-2.5 py-1 rounded-sm text-[10px] font-bold ${ts.fontWeight === 'bold' ? 'bg-amber-600/30 text-amber-300 border border-amber-500/40' : 'bg-zinc-800 text-zinc-400 border border-zinc-700'}`}
               >
                 B
               </button>
               <button
                 onClick={() => updateTrackStyle({ italic: !ts.italic })}
-                className={`px-2.5 py-1 rounded text-[10px] italic ${ts.italic ? 'bg-amber-600/30 text-amber-300 border border-amber-500/40' : 'bg-zinc-800 text-zinc-400 border border-zinc-700'}`}
+                className={`px-2.5 py-1 rounded-sm text-[10px] italic ${ts.italic ? 'bg-amber-600/30 text-amber-300 border border-amber-500/40' : 'bg-zinc-800 text-zinc-400 border border-zinc-700'}`}
               >
                 I
               </button>
@@ -118,7 +118,7 @@ export function SubtitleTrackStyleEditor({
           {/* Text color */}
           <div className="flex items-center justify-between">
             <span className="text-[10px] text-zinc-400">Text Color</span>
-            <input type="color" value={ts.color} onChange={e => updateTrackStyle({ color: e.target.value })} className="w-7 h-6 rounded cursor-pointer border border-zinc-700" />
+            <input type="color" value={ts.color} onChange={e => updateTrackStyle({ color: e.target.value })} className="w-7 h-6 rounded-sm cursor-pointer border border-zinc-700" />
           </div>
 
           {/* Background toggle + color */}
@@ -127,12 +127,12 @@ export function SubtitleTrackStyleEditor({
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => updateTrackStyle({ backgroundColor: ts.backgroundColor === 'transparent' ? '#000000AA' : 'transparent' })}
-                className={`px-2 py-0.5 rounded text-[9px] border ${ts.backgroundColor !== 'transparent' ? 'bg-amber-600/20 text-amber-300 border-amber-500/40' : 'bg-zinc-800 text-zinc-500 border-zinc-700'}`}
+                className={`px-2 py-0.5 rounded-sm text-[9px] border ${ts.backgroundColor !== 'transparent' ? 'bg-amber-600/20 text-amber-300 border-amber-500/40' : 'bg-zinc-800 text-zinc-500 border-zinc-700'}`}
               >
                 {ts.backgroundColor !== 'transparent' ? 'On' : 'Off'}
               </button>
               {ts.backgroundColor !== 'transparent' && (
-                <input type="color" value={ts.backgroundColor.slice(0, 7)} onChange={e => updateTrackStyle({ backgroundColor: e.target.value + 'CC' })} className="w-7 h-6 rounded cursor-pointer border border-zinc-700" />
+                <input type="color" value={ts.backgroundColor.slice(0, 7)} onChange={e => updateTrackStyle({ backgroundColor: e.target.value + 'CC' })} className="w-7 h-6 rounded-sm cursor-pointer border border-zinc-700" />
               )}
             </div>
           </div>
@@ -143,7 +143,7 @@ export function SubtitleTrackStyleEditor({
             <select
               value={ts.position}
               onChange={e => updateTrackStyle({ position: e.target.value as SubtitleStyle['position'] })}
-              className="bg-zinc-800 border border-zinc-700 rounded px-2 py-0.5 text-[10px] text-white focus:outline-none focus:border-amber-500/50"
+              className="bg-zinc-800 border border-zinc-700 rounded-sm px-2 py-0.5 text-[10px] text-white focus:outline-hidden focus:border-amber-500/50"
             >
               <option value="bottom">Bottom</option>
               <option value="center">Center</option>

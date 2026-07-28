@@ -125,7 +125,7 @@ function AppContent() {
   const waitingForBackend = pythonReady === null || !firstRunResolved;
 
   const restartingOverlay = isBackendRestarting ? (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 backdrop-blur-xs">
       <div className="rounded-lg border border-zinc-700 bg-zinc-900/95 px-6 py-4 text-center shadow-xl">
         <div className="flex items-center justify-center gap-2 text-zinc-100">
           <Loader2 className="h-4 w-4 animate-spin" />

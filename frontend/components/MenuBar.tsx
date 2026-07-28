@@ -153,7 +153,7 @@ export function MenuBar({ menus, rightContent }: MenuBarProps) {
   }
 
   return (
-    <div ref={menuBarRef} className="flex items-center bg-zinc-900 border-b border-zinc-800 select-none relative z-[60]">
+    <div ref={menuBarRef} className="flex items-center bg-zinc-900 border-b border-zinc-800 select-none relative z-60">
       <div className="flex items-center flex-1">
       {menus.map(menu => {
         const isActive = activeMenuId === menu.id
@@ -188,12 +188,12 @@ export function MenuBar({ menus, rightContent }: MenuBarProps) {
 
             {/* Dropdown */}
             {isActive && (
-              <div className="absolute top-full left-0 min-w-[240px] bg-zinc-900 border border-zinc-700 rounded-b-lg shadow-xl shadow-black/50 py-1 z-[60]">
+              <div className="absolute top-full left-0 min-w-[240px] bg-zinc-900 border border-zinc-700 rounded-b-lg shadow-xl shadow-black/50 py-1 z-60">
                 {/* Help menu has search */}
                 {isHelpMenu && (
                   <div className="px-2 py-1.5 border-b border-zinc-700">
-                    <div className="flex items-center gap-2 bg-zinc-800 rounded px-2 py-1">
-                      <Search className="h-3.5 w-3.5 text-zinc-500 flex-shrink-0" />
+                    <div className="flex items-center gap-2 bg-zinc-800 rounded-sm px-2 py-1">
+                      <Search className="h-3.5 w-3.5 text-zinc-500 shrink-0" />
                       <input
                         ref={searchInputRef}
                         type="text"
@@ -201,7 +201,7 @@ export function MenuBar({ menus, rightContent }: MenuBarProps) {
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         onKeyDown={handleSearchKeyDown}
-                        className="flex-1 bg-transparent text-[13px] text-white placeholder-zinc-500 outline-none"
+                        className="flex-1 bg-transparent text-[13px] text-white placeholder-zinc-500 outline-hidden"
                         autoFocus
                       />
                     </div>
