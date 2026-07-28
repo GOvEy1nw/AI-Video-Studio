@@ -16,6 +16,9 @@ Product principles:
 Current integration baseline: `dev`.
 
 ## Recent issues
+- [DONE] #0334 PR #9 was already merged, so Windows-only CI commit d3d9fdc pushed only to stale feature branch and did not reach dev or trigger CI [chore/dependency-modernisation-2026 / PR #9] -> Windows-only CI cleanup now targets dev through draft PR #11 with passing hosted Windows validation [codex/windows-only-ci / PR #11] (fixed)
+  - Partial attempt: Fetched merged dev, created fresh codex/windows-only-ci from origin/dev, and cherry-picked CI cleanup plus audit records cleanly [codex/windows-only-ci]
+- [DONE] #0333 Recursive actionlint lookup under C:\tmp hits inaccessible wangp-hf-runtime paths and returns nonzero despite finding cached binary [Phase 11 CI workflow cleanup validation] -> Both GitHub Actions workflows pass actionlint using cached Phase 10 binary [Phase 11 CI workflow cleanup validation] (fixed)
 - [DONE] #0332 PowerShell expands multiline PR body into separate gh pr edit arguments instead of one --body value [Phase 11 draft PR evidence update] -> Draft PR #9 now records final SHA and successful hosted CI run using stdin-safe body update [Phase 11 draft PR evidence update] (fixed)
 - [DONE] #0331 Post-uninstall verification still finds LocalAppData Programs\AiVS\AiVS.exe despite user installer-pass confirmation [Phase 11 installer uninstall verification] -> Installed candidate fully uninstalled after explicit rerun; project media and user-data directory preserved [Phase 11 installer uninstall verification] (fixed)
   - Partial attempt: Compared Phase 1 project backup after user uninstall: 100/100 project files remain byte-identical, but default installed executable still exists [Phase 11 installer uninstall verification]
@@ -720,6 +723,7 @@ Current integration baseline: `dev`.
 - Override only concurrently 10.0.3's shell-quote edge from vulnerable exact 1.8.4 to compatible patched 1.9.0; remove when concurrently publishes a patched dependency [pnpm-workspace.yaml; concurrently 10.0.3]
 - Phase 10 selects Renovate as sole npm/GitHub Actions update bot; automerge stays off and generic managers exclude Python/WanGP runtime paths. [renovate.json; docs/DEPENDENCY_POLICY.md]
 - Phase 10 adds a dedicated read-only Windows frontend toolchain workflow targeting dev, while preserving existing backend CI unchanged. [.github/workflows/frontend-toolchain.yml; .github/workflows/ci.yml]
+- AiVS CI no longer runs macOS tests; Python test coverage is Windows-only, while existing Ubuntu typecheck and frontend build jobs remain unchanged. [.github/workflows/ci.yml]
 
 ## Notes
 - Supersedes prior push-approval note: user explicitly authorized and Phase 10 implementation SHA 5287b79d97005d5403b45d0ad2251c6101438886 was pushed to origin; workflow dispatch remains unavailable until workflow exists on default branch. [docs/dependency-modernisation/STATUS.md]
