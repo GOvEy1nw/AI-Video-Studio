@@ -721,8 +721,6 @@ Current integration baseline: `dev`.
 - Phase 10 adds a dedicated read-only Windows frontend toolchain workflow targeting dev, while preserving existing backend CI unchanged. [.github/workflows/frontend-toolchain.yml; .github/workflows/ci.yml]
 
 ## Notes
-- Phase 10 ownership map: renovate.json owns npm/GitHub Actions proposals; .github/workflows/frontend-toolchain.yml owns deterministic Windows frontend CI; scripts/check-dependency-boundaries.mjs owns runtime and package-manager guards; docs/DEPENDENCY_POLICY.md owns maintenance policy. [dependency automation and CI]
-- User confirmed Phase 10 unpacked Windows smoke passes: app launches, core project/media/preload workflows and visual behaviour remain healthy. [docs/dependency-modernisation/STATUS.md]
 - Phase 10 implementation committed at 5287b79d97005d5403b45d0ad2251c6101438886; remote push was not attempted because managed approval requires explicit user authorization to export commit to origin. [docs/dependency-modernisation/STATUS.md]
 - Supersedes prior push-approval note: user explicitly authorized and Phase 10 implementation SHA 5287b79d97005d5403b45d0ad2251c6101438886 was pushed to origin; workflow dispatch remains unavailable until workflow exists on default branch. [docs/dependency-modernisation/STATUS.md]
 - Phase 10 PASSED: Renovate-only automation, deterministic read-only Windows frontend CI, package/runtime guards, full local gates, and unpacked smoke passed; real CI awaits first PR because GitHub cannot dispatch a workflow absent from default branch. [docs/dependency-modernisation/STATUS.md]
@@ -731,6 +729,8 @@ Current integration baseline: `dev`.
 - User confirmed Phase 11 unpacked Windows production regression passes: existing project, settings/model manager, file picker/drop, generation/gallery, Director, Video Editor/export, file:// preload/backend paths, and clean shutdown. [docs/dependency-modernisation/STATUS.md]
 - User confirmed Phase 11 Windows installer-over-existing install, shortcuts, installed launch, existing projects/settings/media, runtime preservation, native import, generation, Settings, Director, Video Editor, close, uninstall, and project-data preservation all pass. [docs/dependency-modernisation/STATUS.md]
 - Phase 11 post-uninstall verification passed: install directory/executable removed, zero AiVS processes remain, Documents\AiVS persists, all 100 Phase 1 backup files remain byte-identical, and LocalAppData user state remains. [docs/dependency-modernisation/STATUS.md]
+- Phase 11 hosted PR run 30337359848 passed in 1m22s on Windows; GitHub annotated pnpm/action-setup v4 as Node-20-targeting but forced it onto Node 24 successfully—review v5 when mature. [.github/workflows/frontend-toolchain.yml]
+- Phase 11 PASSED at PR evidence checkpoint c2e8b31: draft PR #9 targets dev; hosted Windows Frontend Toolchain run 30337359848 passed all steps in 1m22s; all 11 mandatory phases complete. [docs/dependency-modernisation/STATUS.md]
 
 ## Key files
 - `LTX-2.3_Cinematic_hardcut.safetensors`

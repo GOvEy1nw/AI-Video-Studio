@@ -10,7 +10,7 @@
 - Branch created on: 2026-07-26
 - Executor: Codex
 - Baseline `dev` commit SHA: `a3b8cbdd750d167e3d88eb1c99df3ebd78b3a141`
-- Current implementation HEAD SHA: `7a0dcdaf6a9d56b138f6c45b37b7f88a90c4df86`
+- Current implementation HEAD SHA: `c2e8b31aa4cb65a17796d1f293dbb77391bed6bf`
 - Last sync from `dev`: 2026-07-26 (`origin/dev` merged before Phase 1)
 - Node version: 24.18.0
 - pnpm version: 10.30.3 through Corepack
@@ -74,7 +74,7 @@ Use exactly one status: `NOT STARTED`, `IN PROGRESS`, `BLOCKED`, or `PASSED`.
 | 8 — TypeScript 6 | PASSED | `1ee8ade9e09e8dcdd4439bb980e1ccf2a0053f63` | `bca68bf614bc34cb8e62dc1862a04caca58e8759` | 2026-07-27 | TypeScript 6.0.3 migration, strict renderer/node projects, Tier A/B, development and unpacked smoke/parity, and protected-runtime gates passed. Phase 9 not started. |
 | 9 — Low-risk package refresh | PASSED | `bca68bf614bc34cb8e62dc1862a04caca58e8759` | `c285bbbbc966b41f1931be1b40f42b0f34e3af4f` | 2026-07-27 | All direct packages decided; focused/full automated, development, unpacked, installed, uninstall, deterministic graph, audit, and protected-runtime gates passed. Phase 10 not started. |
 | 10 — Automation and CI | PASSED | `32688a5e702c894be8eac0399365dc1b00b83526` | `5287b79d97005d5403b45d0ad2251c6101438886` | 2026-07-27 | Renovate-only policy, deterministic Windows frontend CI, dependency guards, documentation, full local gates, packaging, and user-confirmed unpacked smoke passed. GitHub cannot dispatch a new workflow until it exists on the default branch; the pushed branch has no run and no PR was opened. Phase 11 not started. |
-| 11 — Final validation and PR | IN PROGRESS | `2e2a7b0d2e3bdc728d3b7c4a7521583c9e8d2f53` |  | 2026-07-28 | Candidate, clean-install, full automated, development, unpacked, installer-over-existing, uninstall, data-preservation, visual, and security gates passed. Draft PR and hosted CI pending. |
+| 11 — Final validation and PR | PASSED | `2e2a7b0d2e3bdc728d3b7c4a7521583c9e8d2f53` | `c2e8b31aa4cb65a17796d1f293dbb77391bed6bf` | 2026-07-28 | Clean-install, full automated, development, unpacked, installer-over-existing, uninstall, data-preservation, visual, security, draft PR, and hosted Windows CI gates passed. |
 
 ### Phase 1 command evidence
 
@@ -1047,10 +1047,19 @@ Other Phase 9 direct-package decisions remain recorded in the decision register 
 - Draft PR title: `chore(deps): modernise AiVS desktop and frontend toolchain`.
 - Target: `dev`.
 - Head: `chore/dependency-modernisation-2026`.
-- PR number/link: pending.
-- Hosted checks: pending draft PR.
+- PR number/link: [#9](https://github.com/GOvEy1nw/AI-Video-Studio/pull/9).
+- Hosted check: [Frontend Toolchain run 30337359848](https://github.com/GOvEy1nw/AI-Video-Studio/actions/runs/30337359848), Windows job `90205074893`, PASS in 1m22s.
+- Hosted steps passed: pinned action setup, Node `24.18.0`, pnpm `10.30.3`, package-manager guard, 5 dependency-boundary tests, frozen install, Electron `43.2.0`, TypeScript, 75 frontend tests, and production bundles. Renovate-only path guard was correctly skipped for a human-authored PR.
+- GitHub emitted one non-failing annotation: `pnpm/action-setup` v4 targets Node 20 and was forced onto Node 24. Current pinned action passed; review v5 when a mature release is available.
 
-Phase 11 remains `IN PROGRESS` until the draft PR exists and hosted CI passes.
+### Phase 11 commits
+
+| Purpose | Commit SHA | Message |
+|---|---|---|
+| Phase start marker | `7a0dcda` | `docs(deps): start final validation phase` |
+| Final local/manual validation evidence | `c2e8b31` | `docs(deps): record final validation evidence` |
+
+Exit gate: `PASSED`. All 11 mandatory phases are committed and passed; candidate is current with `dev`; clean and primary automated gates, development/unpacked/installed Windows matrices, data compatibility, visual parity, installer lifecycle, security review, runtime protection, draft PR, and hosted CI passed. PR #9 remains draft for maintainer review. TypeScript 7 follow-up remains separate and not started.
 
 ## Command evidence template
 
@@ -1157,14 +1166,14 @@ Complete one row for every direct JavaScript dependency and dev dependency.
 - Automerge policy: disabled globally and in every compatibility group.
 - Dependency Dashboard status: enabled in config; creation requires Renovate App activation after merge.
 - Windows CI workflow: `.github/workflows/frontend-toolchain.yml`, `windows-latest`, Node `24.18.0`, pnpm `10.30.3`, read-only.
-- Required workflow run URL/ID: unavailable; GitHub returned 404 because new workflow is absent from default branch, and branch run list is empty.
+- Required workflow run URL/ID: run `30337359848`, job `90205074893`; PASS in 1m22s on PR #9.
 - Required check/branch-protection owner action: require frontend toolchain plus existing backend checks on `dev` after first successful run.
 - Lockfile/package-manager guard result: PASS.
 - Dependency-boundary test result: PASS, 5/5.
 
 ## Final release candidate evidence
 
-- Candidate SHA: `7a0dcdaf6a9d56b138f6c45b37b7f88a90c4df86`.
+- Candidate SHA: executable candidate `7a0dcdaf6a9d56b138f6c45b37b7f88a90c4df86`; PR evidence checkpoint `c2e8b31aa4cb65a17796d1f293dbb77391bed6bf`.
 - Candidate created: 2026-07-28.
 - Clean worktree/clone path: `C:\tmp\aivs-dependency-validation`, removed after clean verification.
 - Clean frozen install: PASS; 430 reused, 0 downloaded.
@@ -1181,8 +1190,8 @@ Complete one row for every direct JavaScript dependency and dev dependency.
 - Existing user-data compatibility: PASS; 100/100 backup project files byte-identical after uninstall.
 - Auto-update transport status: not tested; requires signed/published release infrastructure.
 - Final PR target: `dev`.
-- Final PR number/link: pending.
-- Final CI run links: pending.
+- Final PR number/link: draft PR [#9](https://github.com/GOvEy1nw/AI-Video-Studio/pull/9).
+- Final CI run links: [Frontend Toolchain run 30337359848](https://github.com/GOvEy1nw/AI-Video-Studio/actions/runs/30337359848), PASS.
 
 ## Visual evidence index
 
@@ -1213,6 +1222,7 @@ Use a stable 1400×900 app window where practical.
 - TypeScript 7 evaluation status: intentionally deferred to a separate branch.
 - Performance evidence: build/startup sanity passed; comparable idle renderer memory was not captured, so no memory claim is made.
 - Vendored source whitespace: whole-branch `git diff --check` reports two upstream findings inside the exact approved WanGP pin; app-owned dependency-modernisation files are clean.
+- Hosted workflow annotation: pinned `pnpm/action-setup` v4 passed on Node 24 but GitHub reports that the action itself still targets Node 20; review its next mature major.
 
 ## Final owner review
 
