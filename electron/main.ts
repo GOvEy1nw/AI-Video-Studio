@@ -10,6 +10,7 @@ import { registerProjectStorageHandlers } from './ipc/project-storage-handlers'
 import { registerVideoProcessingHandlers } from './ipc/video-processing-handlers'
 import { initSessionLog } from './logging-management'
 import { stopPythonBackend } from './python-backend'
+import { stopWanGP } from './python-setup'
 import { initAutoUpdater } from './updater'
 import { createWindow, getMainWindow } from './window'
 
@@ -54,6 +55,7 @@ if (!gotLock) {
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
       stopPythonBackend()
+      stopWanGP()
       app.quit()
     }
   })
@@ -67,5 +69,6 @@ if (!gotLock) {
   app.on('before-quit', () => {
     stopExportProcess()
     stopPythonBackend()
+    stopWanGP()
   })
 }

@@ -23,6 +23,8 @@
       "vae_upsampler": [
         1
       ],
+      "vae_upsamplers": {},
+      "excluded_spatial_upsamplers": [],
       "batch_size_label": "Number of Layers",
       "set_video_prompt_type": "V",
       "guide_preprocessing": {

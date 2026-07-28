@@ -1,0 +1,5 @@
+# #0074 Recomposed Settings into a wide left-navigation modal, merged Output controls into General, and redesigned Model Manager cards to show missing/selected/downloading/ready/failed states inline. TypeScript and diff checks passed.
+
+- 2026-07-22T20:13:11Z `issue`: Recomposed Settings into a wide left-navigation modal, merged Output controls into General, and redesigned Model Manager cards to show missing/selected/downloading/ready/failed states inline. TypeScript and diff checks passed.
+- 2026-07-22T20:13:11Z `attempt`: Recomposed Settings into a wide left-navigation modal, merged Output controls into General, and redesigned Model Manager cards to show missing/selected/downloading/ready/failed states inline. TypeScript and diff checks passed. (worked)
+- 2026-07-22T20:14:34Z `fix`: Settings now uses a wide full-height modal with persistent left navigation. Output controls are part of General, Model Manager has its own tab, and model cards show grey missing, blue selected, yellow inline progress with transfer details, green ready, and red retryable failure states. TypeScript, diff validation, and production Vite build pass.

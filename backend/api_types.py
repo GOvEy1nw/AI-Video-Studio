@@ -50,6 +50,8 @@ class ModelDownloadState(TypedDict):
 
 
 JsonObject: TypeAlias = dict[str, object]
+MusicVocalMode = Literal["instrumental", "auto-lyrics", "custom-lyrics"]
+MusicTimeSignature = Literal["2/4", "3/4", "4/4", "6/8"]
 VideoCameraMotion = Literal[
     "none",
     "dolly_in",
@@ -99,6 +101,23 @@ class GpuInfoResponse(BaseModel):
     gpu_info: GpuTelemetry
 
 
+class ModelDownloadProgressResponse(BaseModel):
+    phase: str | None = None
+    modelType: str | None = None
+    modelName: str | None = None
+    source: str | None = None
+    repoId: str | None = None
+    filename: str | None = None
+    unit: Literal["bytes", "files"]
+    current: int = Field(ge=0)
+    total: int | None = Field(default=None, ge=0)
+    percent: float | None = Field(default=None, ge=0, le=100)
+    speedBps: float | None = Field(default=None, ge=0)
+    etaSeconds: float | None = Field(default=None, ge=0)
+    fileIndex: int | None = Field(default=None, ge=0)
+    fileCount: int | None = Field(default=None, ge=0)
+
+
 class GenerationProgressResponse(BaseModel):
     status: str
     phase: str
@@ -114,6 +133,8 @@ class GenerationProgressResponse(BaseModel):
     downloadCurrentFile: str | None = None
     downloadCurrentFileProgress: int | None = None
     downloadTotalProgress: int | None = None
+    progressUnit: Literal["bytes", "files"] | None = None
+    modelDownload: ModelDownloadProgressResponse | None = None
 
 
 class IcLoraModel(BaseModel):
@@ -141,6 +162,49 @@ class GenerateVideoResponse(BaseModel):
 class GenerateImageResponse(BaseModel):
     status: str
     image_paths: list[str] | None = None
+
+
+class MusicOutputResponse(BaseModel):
+    path: str
+    durationSeconds: float | None = None
+    sampleRate: int | None = None
+    channels: int | None = None
+    format: str | None = None
+    variationIndex: int
+    seed: int | None = None
+
+
+class MusicEffectiveSettings(BaseModel):
+    modelMode: int
+    durationMode: str
+    fallbackDurationSeconds: int
+    effectiveDurationSeconds: int
+    temperature: float
+    topP: float
+    topK: int
+    lmGuidanceScale: float
+    vocalLanguage: str
+    vocalGender: str
+    audioTask: Literal["", "A", "B", "AB"]
+    coverStrength: float | None = None
+    descriptionModifiers: list[str] = Field(default_factory=list)
+    requestedPerformanceProfile: float | None = None
+    effectiveAudioProfile: float | None = None
+
+
+class GenerateMusicResponse(BaseModel):
+    status: str
+    outputs: list[MusicOutputResponse]
+    resolvedLyrics: str | None = None
+    effectiveSettings: MusicEffectiveSettings | None = None
+    warnings: list[str] = Field(default_factory=list)
+
+
+class ComposeMusicLyricsResponse(BaseModel):
+    status: Literal["success"] = "success"
+    lyrics: str
+    usedThinking: bool
+    warnings: list[str] = Field(default_factory=list)
 
 
 class EnhancePromptRequest(BaseModel):
@@ -200,6 +264,8 @@ class ModelProfileCapabilities(BaseModel):
     videoToVideo: bool
     audioToVideo: bool
     audioOutput: bool
+    textToAudio: bool
+    audioToAudio: bool
     startImage: bool
     endImage: bool
     controlVideo: bool
@@ -248,6 +314,51 @@ class ModelProfileDirectorPolicy(BaseModel):
     allowGuideAudioWithGuidance: bool
 
 
+class ModelProfileMusicPolicy(BaseModel):
+    enabled: bool
+    supportsInstrumental: bool
+    supportsAutoLyrics: bool
+    supportsCustomLyrics: bool
+    autoLyricsRequiresPromptEnhancer: bool
+    autoFillMetadata: bool
+    durationMinSeconds: int
+    durationMaxSeconds: int
+    durationStepSeconds: int
+    defaultDurationSeconds: int
+    supportsBpm: bool
+    bpmMin: int
+    bpmMax: int
+    supportsKeyScale: bool
+    supportsTimeSignature: bool
+    timeSignatures: list[str]
+    defaultVocalMode: str
+    maxVariations: int
+    supportsAutoDuration: bool
+    autoDurationFallbackSeconds: int
+    supportsDescriptionEnhancement: bool
+    supportsVocalLanguage: bool
+    supportedLanguages: list[str]
+    defaultVocalLanguage: str
+    supportsVocalGenderConditioning: bool
+    supportsCover: bool
+    supportsReferenceTimbre: bool
+    supportsComposeLyrics: bool
+    supportsComposeThinking: bool
+    defaultCoverStrength: int
+    defaultWeirdness: int
+    defaultPromptInfluence: int
+
+
+class ModelProfileLicenseInfo(BaseModel):
+    projectLicense: str
+    weightsLicense: str
+    commercialUse: Literal["permitted", "restricted", "unknown"]
+    attributionRequired: bool
+    sourceProject: str
+    sourceRevision: str | None = None
+    notes: str = ""
+
+
 class ModelProfileWanGPMetadata(BaseModel):
     modelType: str
     family: str
@@ -274,6 +385,8 @@ class ModelProfileResponse(BaseModel):
     ui: ModelProfileUi
     inputMedia: ModelProfileInputMedia
     director: ModelProfileDirectorPolicy
+    music: ModelProfileMusicPolicy
+    license: ModelProfileLicenseInfo | None
     availability: str = "available"
 
 
@@ -284,6 +397,117 @@ class ModelProfileListResponse(BaseModel):
 # ============================================================
 # Request Models
 # ============================================================
+
+
+class MusicDurationMode(str, Enum):
+    AUTO = "auto"
+    MANUAL = "manual"
+
+
+class MusicVocalGender(str, Enum):
+    AUTO = "auto"
+    FEMALE = "female"
+    MALE = "male"
+    MIXED = "mixed"
+
+
+class MusicAudioRole(str, Enum):
+    COVER = "cover"
+    REFERENCE_TIMBRE = "reference-timbre"
+
+
+class MusicAudioInputRequest(BaseModel):
+    path: str
+    role: MusicAudioRole
+    strength: float | None = Field(default=None, ge=0.0, le=1.0)
+    durationSeconds: float | None = Field(default=None, gt=0)
+
+    @model_validator(mode="after")
+    def validate_strength(self) -> "MusicAudioInputRequest":
+        if self.role is MusicAudioRole.COVER and self.strength is None:
+            self.strength = 0.5
+        elif self.role is MusicAudioRole.REFERENCE_TIMBRE and self.strength is not None:
+            raise ValueError("Cover strength is only accepted for Cover audio")
+        return self
+
+
+class GenerateMusicRequest(BaseModel):
+    schemaVersion: Literal[1, 2] = 1
+    modelProfileId: str
+    description: Annotated[
+        str,
+        StringConstraints(strip_whitespace=True, min_length=1, max_length=512),
+    ]
+    vocalMode: MusicVocalMode
+    lyricsPrompt: str | None = Field(default=None, max_length=2048)
+    lyrics: str | None = None
+    lyricsThink: bool = False
+    lyricsSeed: int | None = Field(default=None, ge=0, le=999_999_999)
+    durationSeconds: int = Field(ge=1, le=3600)
+    durationMode: MusicDurationMode = MusicDurationMode.MANUAL
+    vocalLanguage: str = "en"
+    vocalGender: MusicVocalGender = MusicVocalGender.AUTO
+    enhanceDescription: bool = False
+    bpm: int | None = None
+    timeSignature: MusicTimeSignature | None = None
+    keyScale: str | None = None
+    audioInputs: list[MusicAudioInputRequest] = Field(
+        default_factory=lambda: list[MusicAudioInputRequest](), max_length=2
+    )
+    audioInput: MusicAudioInputRequest | None = None
+    weirdness: int = Field(default=50, ge=0, le=100)
+    promptInfluence: int = Field(default=75, ge=0, le=100)
+    autoFillMetadata: bool | None = None
+    variations: int = Field(default=1, ge=1, le=4)
+
+    @model_validator(mode="after")
+    def validate_vocal_mode(self) -> "GenerateMusicRequest":
+        lyrics = self.lyrics.strip() if self.lyrics is not None else ""
+        lyrics_prompt = self.lyricsPrompt.strip() if self.lyricsPrompt is not None else ""
+        key_scale = self.keyScale.strip() if self.keyScale is not None else ""
+        self.lyrics = lyrics or None
+        self.lyricsPrompt = lyrics_prompt or None
+        self.keyScale = key_scale or None
+        if self.audioInput is not None:
+            if self.audioInputs:
+                raise ValueError("Use audioInputs or legacy audioInput, not both")
+            self.audioInputs = [self.audioInput]
+        if len({item.role for item in self.audioInputs}) != len(self.audioInputs):
+            raise ValueError("Only one audio input per role is accepted")
+        if self.vocalMode == "custom-lyrics":
+            if self.lyrics is not None and len(self.lyrics) > 4096:
+                raise ValueError("Custom lyrics must be 4096 characters or fewer")
+        elif self.lyrics is not None:
+            raise ValueError("Lyrics are only accepted in Custom Lyrics mode")
+        if self.vocalMode == "instrumental" and self.lyricsPrompt is not None:
+            raise ValueError("Lyrics Idea is not accepted in Instrumental mode")
+        if self.vocalMode == "auto-lyrics" and self.lyricsPrompt is not None:
+            raise ValueError("Auto Lyrics uses the song description")
+        has_cover = any(
+            item.role is MusicAudioRole.COVER for item in self.audioInputs
+        )
+        if has_cover:
+            if self.vocalMode == "auto-lyrics":
+                raise ValueError("Cover vocals require Custom Lyrics")
+            if self.vocalMode == "custom-lyrics" and self.lyrics is None:
+                raise ValueError("Cover vocals require original Custom Lyrics")
+            if self.vocalMode not in {"custom-lyrics", "instrumental"}:
+                raise ValueError("Cover requires Custom Lyrics or Instrumental mode")
+        return self
+
+
+class ComposeMusicLyricsRequest(BaseModel):
+    modelProfileId: str
+    description: Annotated[
+        str,
+        StringConstraints(strip_whitespace=True, min_length=1, max_length=512),
+    ]
+    lyricsPrompt: str | None = Field(default=None, max_length=2048)
+    vocalLanguage: str = "en"
+    durationMode: MusicDurationMode = MusicDurationMode.AUTO
+    durationSeconds: int = Field(default=60, ge=5, le=360)
+    think: bool = False
+    seed: int | None = Field(default=None, ge=0, le=999_999_999)
 
 
 class GenerateVideoInputMedia(BaseModel):

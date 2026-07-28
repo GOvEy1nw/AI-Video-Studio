@@ -15,7 +15,9 @@ import { logger } from '../lib/logger'
  * after a model download completes). The hook exposes a `refresh`
  * callback for that.
  */
-function useProfilesByMediaType(mediaType: 'image' | 'video') {
+type CuratedMediaType = 'image' | 'video' | 'audio' | 'tts'
+
+function useProfilesByMediaType(mediaType: CuratedMediaType) {
   const [profiles, setProfiles] = useState<ModelProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -71,4 +73,8 @@ export function useImageProfiles() {
 
 export function useVideoProfiles() {
   return useProfilesByMediaType('video')
+}
+
+export function useMusicProfiles() {
+  return useProfilesByMediaType('audio')
 }

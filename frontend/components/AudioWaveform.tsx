@@ -17,6 +17,7 @@ interface AudioWaveformProps {
 
 // Global waveform cache: URL → Float32Array of peak amplitudes (one per pixel-bucket)
 export const waveformCache = new Map<string, Float32Array>()
+const MAX_WAVEFORM_CACHE_ENTRIES = 64
 const pendingDecodes = new Set<string>()
 
 // Convert a base64 string to an ArrayBuffer
@@ -71,6 +72,10 @@ export async function computeWaveform(url: string, buckets: number = 800): Promi
       peaks[i] = max
     }
 
+    if (waveformCache.size >= MAX_WAVEFORM_CACHE_ENTRIES) {
+      const oldest = waveformCache.keys().next().value
+      if (oldest) waveformCache.delete(oldest)
+    }
     waveformCache.set(url, peaks)
     return peaks
   } finally {

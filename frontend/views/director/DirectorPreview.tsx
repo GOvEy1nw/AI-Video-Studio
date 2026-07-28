@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef } from "react";
 import type { Asset } from "@/types/project";
 import type { DirectorSequenceV1 } from "@/types/director";
+import type { ModelDownloadProgress } from "@/types/progress";
 import { resolveDirectorGenerationTake } from "@/lib/director-timeline";
+import { DownloadProgressView } from "@/components/DownloadProgressView";
 
 interface Props {
   sequence: DirectorSequenceV1;
@@ -11,6 +13,8 @@ interface Props {
   liveVideoUrl: string | null;
   livePreviewUrl: string | null;
   progress: number;
+  phase: string;
+  modelDownload: ModelDownloadProgress | null;
   statusMessage: string;
   isGenerating: boolean;
 }
@@ -137,16 +141,40 @@ export function DirectorPreview(props: Props) {
         )}
         {props.isGenerating && (
           <div className="absolute inset-x-0 bottom-0 bg-zinc-950/90 p-2">
-            <div className="mb-1 flex justify-between text-[10px] text-zinc-300">
-              <span>{props.statusMessage}</span>
-              <span>{props.progress}%</span>
-            </div>
-            <div className="h-1 rounded bg-zinc-800">
-              <div
-                className="h-full rounded bg-blue-500"
-                style={{ width: `${props.progress}%` }}
+            {props.modelDownload ? (
+              <DownloadProgressView
+                compact
+                title={`Downloading ${props.modelDownload.modelName ?? "model files"}`}
+                transfer={props.modelDownload}
               />
-            </div>
+            ) : (
+              <>
+                <div className="mb-1 flex justify-between text-[10px] text-zinc-300">
+                  <span>{props.statusMessage}</span>
+                  {props.phase !== "checking_model_files" &&
+                    props.phase !== "loading_model" && <span>{props.progress}%</span>}
+                </div>
+                {props.phase !== "checking_model_files" &&
+                  props.phase !== "loading_model" && (
+                    <div className="h-1 rounded bg-zinc-800">
+                      <div
+                        className="h-full rounded bg-blue-500"
+                        style={{ width: `${props.progress}%` }}
+                      />
+                    </div>
+                  )}
+                {(props.phase === "checking_model_files" ||
+                  props.phase === "loading_model") && (
+                  <div
+                    className="h-1 overflow-hidden rounded bg-zinc-800"
+                    role="progressbar"
+                    aria-label="Preparing model"
+                  >
+                    <div className="h-full w-1/3 animate-pulse rounded bg-blue-500" />
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
       </div>

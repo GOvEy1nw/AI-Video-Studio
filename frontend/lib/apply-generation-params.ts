@@ -1,18 +1,14 @@
 import type { Asset, GenerationParams } from '../types/project'
+import type { MusicSettings, MusicTimeSignature, MusicVocalMode } from '../types/music'
+import {
+  AUDIO_MEDIA_ROLE_SET,
+  GUIDE_MEDIA_ROLE_SET,
+} from '../views/genspace/constants'
+import type { GenSpaceMediaInput } from '../views/genspace/types'
 import { fileUrlToPath } from './url-to-path'
 
-export type GenSpaceImageInput = {
-  id: string
-  url: string
-  role: string
-  type?: 'image' | 'video' | 'audio'
-  trimStartTime?: number
-  trimDuration?: number
-  mediaDuration?: number
-}
-
 export type GenSpaceSettingsPatch = {
-  model: string
+  model: 'fast' | 'pro'
   videoProfileId: string
   duration: number
   videoResolution: string
@@ -27,25 +23,6 @@ export type GenSpaceSettingsPatch = {
   imageInputRole: string | undefined
 }
 
-const VIDEO_GUIDE_ROLES = new Set([
-  'control_video',
-  'human_motion',
-  'human_motion_pose',
-  'depth',
-  'canny_edges',
-  'sdr_to_hdr',
-  'continue_video',
-  'audio_guide',
-  'audio_to_video',
-  'reference_voice',
-])
-
-const AUDIO_ROLES = new Set([
-  'audio_guide',
-  'audio_to_video',
-  'reference_voice',
-])
-
 function normalizePath(path: string): string {
   return path.replace(/\\/g, '/').toLowerCase()
 }
@@ -55,8 +32,8 @@ function isUsableMediaUrl(url: string | null | undefined): url is string {
 }
 
 function inferInputType(role: string): 'image' | 'video' | 'audio' {
-  if (AUDIO_ROLES.has(role)) return 'audio'
-  if (VIDEO_GUIDE_ROLES.has(role)) return 'video'
+  if (AUDIO_MEDIA_ROLE_SET.has(role)) return 'audio'
+  if (GUIDE_MEDIA_ROLE_SET.has(role)) return 'video'
   return 'image'
 }
 
@@ -200,8 +177,8 @@ export function recoverGenerationParamsMedia(
 export function buildImageInputsFromParams(
   params: GenerationParams,
   assets: Asset[] = [],
-): GenSpaceImageInput[] {
-  const items: GenSpaceImageInput[] = []
+): GenSpaceMediaInput[] {
+  const items: GenSpaceMediaInput[] = []
 
   if (params.imageInputMedia?.length) {
     for (const item of params.imageInputMedia) {
@@ -298,11 +275,13 @@ export function settingsPatchFromGenerationParams(
 
 export function resolveLegacyInputMedia(
   params: GenerationParams,
-  imageInputs: GenSpaceImageInput[],
+  imageInputs: GenSpaceMediaInput[],
   assets: Asset[] = [],
 ): { inputImage: string | null; inputAudio: string | null } {
   const startImage = imageInputs.find((item) => item.role === 'start_image')
-  const audioItem = imageInputs.find((item) => AUDIO_ROLES.has(item.role))
+  const audioItem = imageInputs.find((item) =>
+    AUDIO_MEDIA_ROLE_SET.has(item.role),
+  )
 
   const inputImage =
     startImage?.url ??
@@ -327,9 +306,122 @@ export function resolveLegacyInputMedia(
 
 export function genSpaceModeFromParams(
   params: GenerationParams,
-): 'image' | 'video' | 'retake' | 'reframe' {
+): 'image' | 'video' | 'music' | 'retake' | 'reframe' {
   if (params.mode === 'text-to-image') return 'image'
+  if (params.mode === 'text-to-music') return 'music'
   if (params.mode === 'retake') return 'retake'
   if (params.mode === 'reframe') return 'reframe'
   return 'video'
+}
+
+const MUSIC_VOCAL_MODES = new Set<MusicVocalMode>([
+  'instrumental',
+  'auto-lyrics',
+  'custom-lyrics',
+])
+const MUSIC_TIME_SIGNATURES = new Set<MusicTimeSignature>([
+  '2/4',
+  '3/4',
+  '4/4',
+  '6/8',
+])
+
+export function musicSettingsFromGenerationParams(
+  params: GenerationParams,
+  current: MusicSettings,
+): MusicSettings {
+  const music = params.music
+  const profileId = music?.profileId ?? params.model
+  if (music?.schemaVersion === 2) {
+    const audioInputs =
+      music.audioInputs ?? (music.audioInput ? [music.audioInput] : [])
+    const coverInput = audioInputs.find(({ role }) => role === 'cover')
+    const referenceTimbreInput = audioInputs.find(
+      ({ role }) => role === 'reference-timbre',
+    )
+    return {
+      ...current,
+      schemaVersion: 2,
+      profileId,
+      experienceMode: 'advanced',
+      instrumental: music.instrumental,
+      advancedLyricsMode: music.lyricsMode,
+      lyricsPrompt: music.lyricsPrompt ?? '',
+      customLyrics: music.requestedLyrics ?? music.resolvedLyrics ?? '',
+      enhanceDescription: music.enhanceDescription,
+      durationMode: music.durationMode,
+      manualDurationSeconds: Math.min(
+        360,
+        Math.max(5, Math.round(music.requestedDurationSeconds ?? music.fallbackDurationSeconds)),
+      ),
+      vocalLanguage: music.vocalLanguage,
+      vocalGender: music.vocalGender,
+      bpm: music.bpm ?? null,
+      timeSignature: music.timeSignature ?? null,
+      keyScale: music.keyScale?.trim() || null,
+      coverAudioInput: coverInput
+        ? {
+            url: coverInput.url,
+            path: coverInput.path,
+            role: coverInput.role,
+            mediaDuration: coverInput.mediaDuration,
+          }
+        : null,
+      referenceTimbreAudioInput: referenceTimbreInput
+        ? {
+            url: referenceTimbreInput.url,
+            path: referenceTimbreInput.path,
+            role: referenceTimbreInput.role,
+            mediaDuration: referenceTimbreInput.mediaDuration,
+          }
+        : null,
+      coverStrength: coverInput?.coverStrength ?? 50,
+      variations: Math.min(4, Math.max(1, music.variationCount)),
+      weirdness: music.weirdness,
+      promptInfluence: music.promptInfluence,
+      composeWithThinking: false,
+      lyricsSeedLocked: music.lyricsSeed !== undefined,
+      lyricsSeed: music.lyricsSeed ?? current.lyricsSeed,
+    }
+  }
+  const vocalMode = music?.vocalMode ?? 'instrumental'
+  const duration = music?.requestedDurationSeconds ?? params.duration
+  return {
+    ...current,
+    schemaVersion: 2,
+    profileId,
+    experienceMode: 'advanced',
+    instrumental: vocalMode === 'instrumental',
+    advancedLyricsMode:
+      MUSIC_VOCAL_MODES.has(vocalMode) && vocalMode === 'custom-lyrics'
+        ? 'custom'
+        : 'auto',
+    customLyrics: music?.requestedLyrics ?? '',
+    lyricsPrompt: '',
+    enhanceDescription: false,
+    durationMode: 'manual',
+    manualDurationSeconds: Number.isFinite(duration)
+      ? Math.min(360, Math.max(5, Math.round(duration)))
+      : current.manualDurationSeconds,
+    vocalLanguage: 'en',
+    vocalGender: 'auto',
+    bpm:
+      music?.bpm !== undefined && Number.isInteger(music.bpm)
+        ? Math.min(300, Math.max(30, music.bpm))
+        : null,
+    timeSignature:
+      music?.timeSignature && MUSIC_TIME_SIGNATURES.has(music.timeSignature)
+        ? music.timeSignature
+        : null,
+    keyScale: music?.keyScale?.trim() || null,
+    coverAudioInput: null,
+    referenceTimbreAudioInput: null,
+    coverStrength: 50,
+    variations: Math.min(4, Math.max(1, music?.variationCount ?? 1)),
+    weirdness: 50,
+    promptInfluence: 75,
+    composeWithThinking: false,
+    lyricsSeedLocked: false,
+    lyricsSeed: current.lyricsSeed,
+  }
 }

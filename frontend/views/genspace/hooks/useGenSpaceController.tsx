@@ -1,0 +1,625 @@
+import {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useMemo,
+} from "react";
+import {
+  Sparkles,
+  Scissors,
+  Expand,
+} from "lucide-react";
+import { useProjects } from "../../../contexts/ProjectContext";
+import type { GenSpaceRetakeSource } from "../../../contexts/ProjectContext";
+import { useGeneration } from "../../../hooks/use-generation";
+import { useRetake } from "../../../hooks/use-retake";
+import {
+  useImageProfiles,
+  useMusicProfiles,
+  useVideoProfiles,
+} from "../../../hooks/use-image-profiles";
+import type { Asset } from "../../../types/project";
+import {
+  compileMusicRequest,
+} from "../music/compile-music-request";
+import { useAppSettings } from "../../../contexts/AppSettingsContext";
+import {
+  clampGenSpaceSeed,
+  DEFAULT_GENSPACE_LOCKED_SEED,
+} from "../../../types/project";
+import type { GenSpaceGalleryProps } from "../GenSpaceGallery";
+import type { GenSpaceOverlaysProps } from "../GenSpaceOverlays";
+import { useGenSpaceModeState } from "./useGenSpaceModeState";
+import { useGenSpaceSettingsState } from "./useGenSpaceSettingsState";
+import { useGenSpaceGenerationActions } from "./useGenSpaceGenerationActions";
+import { useGenSpacePromptEnhancement } from "./useGenSpacePromptEnhancement";
+import { useGenSpaceResultPersistence } from "./useGenSpaceResultPersistence";
+import { useGenSpaceGallery } from "./useGenSpaceGallery";
+import { useGenSpaceMediaInputs } from "./useGenSpaceMediaInputs";
+import type { GenSpaceSidebarController } from "../types";
+import { useGenSpaceVideoTools } from "./useGenSpaceVideoTools";
+import { useGenSpaceSettingsRestore } from "./useGenSpaceSettingsRestore";
+import { useGenSpaceExternalHandoffs } from "./useGenSpaceExternalHandoffs";
+
+export function useGenSpaceController() {
+  const {
+    currentProject,
+    currentProjectId,
+    projects,
+    currentTab,
+    addAsset,
+    addTakeToAsset,
+    deleteTakeFromAsset,
+    setAssetActiveTake,
+    deleteAsset,
+    updateAsset,
+    toggleFavorite,
+    createAssetBin,
+    renameAssetBin,
+    deleteAssetBin,
+    setAssetBinColor,
+    genSpaceEditImageUrl,
+    setGenSpaceEditImageUrl,
+    setGenSpaceEditMode,
+    genSpaceAudioUrl,
+    setGenSpaceAudioUrl,
+    genSpaceRetakeSource,
+    setGenSpaceRetakeSource,
+    setPendingRetakeUpdate,
+    updateProjectGenSpaceSeed,
+  } = useProjects();
+  const { updateSettings, isLoaded: appSettingsLoaded } = useAppSettings();
+  const {
+    prompt,
+    setPrompt,
+    inputImage,
+    setInputImage,
+    imageInputs,
+    setImageInputs,
+    inputAudio,
+    setInputAudio,
+    useAudioTrack,
+    setUseAudioTrack,
+    resolveInputFileUrl,
+  } = useGenSpaceMediaInputs();
+  const {
+    mode,
+    setMode,
+    videoMode,
+    setVideoMode,
+    handleModeChange,
+    handleVideoModeChange,
+  } = useGenSpaceModeState({
+    imageInputs,
+    setImageInputs,
+    setInputImage,
+    setInputAudio,
+    setPrompt,
+  });
+  const [localError, setLocalError] = useState<string | null>(null);
+  const prevProjectIdRef = useRef<string | null>(null);
+  const { profiles: imageProfiles } = useImageProfiles();
+  const { profiles: videoProfiles } = useVideoProfiles();
+  const { profiles: musicProfiles } = useMusicProfiles();
+  const {
+    settings,
+    setSettings,
+    imageSettings,
+    patchImageSettings,
+    videoSettings,
+    patchVideoSettings,
+    musicSettings,
+    setMusicSettings,
+  } = useGenSpaceSettingsState(musicProfiles);
+  const {
+    generate,
+    generateImage,
+    generateMusic,
+    composeMusicLyrics,
+    isComposingLyrics,
+    isGenerating,
+    isCancelling,
+    progress,
+    phase,
+    progressUnit,
+    modelDownload,
+    statusMessage,
+    phaseIndex,
+    phaseCount,
+    currentStep,
+    totalSteps,
+    sectionIndex,
+    sectionCount,
+    previewUrl,
+    videoUrl,
+    videoPath,
+    imageUrls,
+    imagePaths,
+    musicResult,
+    error,
+    cancel,
+    reset,
+  } = useGeneration();
+
+  const {
+    submitRetake,
+    resetRetake,
+    isRetaking,
+    retakeStatus,
+    retakeError,
+    retakeResult,
+  } = useRetake();
+
+  const {
+    retakeInput,
+    reframeInput,
+    reframeSubmissionRef,
+    retakeSubmissionRef,
+    isRetakeMode,
+    isReframeMode,
+    panel: videoToolPanel,
+    setReframeSource,
+  } = useGenSpaceVideoTools({
+    mode,
+    videoMode,
+    isGenerating,
+    generationStatus: statusMessage,
+    isRetaking,
+    retakeStatus,
+  });
+  const [activeRetakeSource, setActiveRetakeSource] =
+    useState<GenSpaceRetakeSource | null>(null);
+
+  useGenSpaceExternalHandoffs({
+    editImageUrl: genSpaceEditImageUrl,
+    clearEditImage: () => setGenSpaceEditImageUrl(null),
+    clearEditMode: () => setGenSpaceEditMode(null),
+    audioUrl: genSpaceAudioUrl,
+    clearAudio: () => setGenSpaceAudioUrl(null),
+    retakeSource: genSpaceRetakeSource,
+    clearRetakeSource: () => setGenSpaceRetakeSource(null),
+    retakeError,
+    setMode,
+    setVideoMode,
+    setInputImage,
+    setInputAudio,
+    setPrompt,
+    setError: setLocalError,
+  });
+
+  const seedLocked = currentProject?.genSpaceSeedLocked ?? false;
+  const lockedSeed = clampGenSpaceSeed(
+    currentProject?.genSpaceLockedSeed ?? DEFAULT_GENSPACE_LOCKED_SEED,
+  );
+
+  const handleSeedChange = useCallback(
+    (seed: { seedLocked: boolean; lockedSeed: number }) => {
+      const nextSeed = {
+        seedLocked: seed.seedLocked,
+        lockedSeed: clampGenSpaceSeed(seed.lockedSeed),
+      };
+      if (currentProjectId) {
+        updateProjectGenSpaceSeed(currentProjectId, nextSeed);
+      }
+      updateSettings(nextSeed);
+    },
+    [currentProjectId, updateProjectGenSpaceSeed, updateSettings],
+  );
+
+  useEffect(() => {
+    if (!appSettingsLoaded) return;
+    if (!currentProjectId) {
+      prevProjectIdRef.current = null;
+      return;
+    }
+    if (prevProjectIdRef.current === currentProjectId) return;
+
+    prevProjectIdRef.current = currentProjectId;
+    const projectSeed = {
+      seedLocked: currentProject?.genSpaceSeedLocked ?? false,
+      lockedSeed: clampGenSpaceSeed(
+        currentProject?.genSpaceLockedSeed ?? DEFAULT_GENSPACE_LOCKED_SEED,
+      ),
+    };
+    updateSettings(projectSeed);
+  }, [
+    appSettingsLoaded,
+    currentProjectId,
+    currentProject?.genSpaceSeedLocked,
+    currentProject?.genSpaceLockedSeed,
+    updateSettings,
+  ]);
+
+  const {
+    submit: handleGenerate,
+    imageSubmissionRef,
+    videoSubmissionRef,
+    musicSubmissionRef,
+  } = useGenSpaceGenerationActions({
+    mode,
+    videoMode,
+    prompt,
+    currentProjectId,
+    projectAssets: currentProject?.assets ?? [],
+    settings,
+    setSettings,
+    musicSettings,
+    musicProfiles,
+    imageInputs,
+    inputImage,
+    inputAudio,
+    useAudioTrack,
+    reframeInput,
+    retakeInput,
+    setLocalError,
+    reframeSubmissionRef,
+    retakeSubmissionRef,
+    generate,
+    generateImage,
+    generateMusic,
+    submitRetake,
+  });
+  useGenSpaceResultPersistence({
+    videoUrl,
+    videoPath,
+    isGenerating,
+    addAsset,
+    reset,
+    videoSubmissionRef,
+    reframeSubmissionRef,
+    retakeResult,
+    isRetaking,
+    retakeSubmissionRef,
+    projects,
+    activeRetakeSource,
+    setActiveRetakeSource,
+    addTakeToAsset,
+    setPendingRetakeUpdate,
+    resetRetake,
+    imageUrls,
+    imagePaths,
+    imageSubmissionRef,
+    musicResult,
+    musicSubmissionRef,
+  });
+
+  const { enhancePrompt: handleEnhancePrompt, isEnhancingPrompt } =
+    useGenSpacePromptEnhancement({
+      mode,
+      videoMode,
+      prompt,
+      setPrompt,
+      settings,
+      imageInputs,
+      inputImage,
+      isBusy: isGenerating || isComposingLyrics || isRetaking,
+      setLocalError,
+    });
+
+  const handleCreateVideo = useCallback((imageAsset: Asset) => {
+    setMode("video");
+    setVideoMode("generate");
+    setInputImage(imageAsset.url);
+    setPrompt(`${imageAsset.prompt || "The scene comes to life..."}`);
+  }, [setMode, setVideoMode, setInputImage, setPrompt]);
+
+  const handleReframe = useCallback((videoAsset: Asset) => {
+    setMode("video");
+    setVideoMode("reframe");
+    setPrompt("");
+    setReframeSource({
+      videoUrl: videoAsset.url,
+      videoPath: videoAsset.path,
+      duration: videoAsset.duration,
+    });
+  }, [setMode, setVideoMode, setPrompt, setReframeSource]);
+  const clearLocalError = useCallback(() => setLocalError(null), []);
+
+  const handleCopySettings = useGenSpaceSettingsRestore({
+    assets: currentProject?.assets ?? [],
+    settings,
+    musicSettings,
+    imageProfiles,
+    videoProfiles,
+    setMode,
+    setVideoMode,
+    setPrompt,
+    setSettings,
+    setMusicSettings,
+    setInputs: setImageInputs,
+    setInputImage,
+    setInputAudio,
+    setReframeSource,
+    clearError: clearLocalError,
+  });
+  const gallery = useGenSpaceGallery({
+    currentProject,
+    currentProjectId,
+    currentTab,
+    addAsset,
+    deleteAsset,
+    updateAsset,
+    toggleFavorite,
+    createAssetBin,
+    renameAssetBin,
+    deleteAssetBin,
+    setAssetBinColor,
+    setAssetActiveTake,
+    onCreateVideo: handleCreateVideo,
+    onReframe: handleReframe,
+    onCopySettings: handleCopySettings,
+  });
+  const {
+    assets,
+    library: galleryLibrary,
+    fileInputRef: galleryFileInputRef,
+    importFiles: importFilesToGallery,
+    toast: galleryToast,
+    isDragOver: isGalleryDragOver,
+    isImporting: isGalleryImporting,
+    filterActive: galleryFilterActive,
+    syncInputFileToGallery,
+    rootDragHandlers,
+    overlays: galleryOverlays,
+  } = gallery;
+
+  const isPanelMode = isRetakeMode || isReframeMode;
+  const selectedMusicProfile =
+    musicProfiles.find(
+      (candidate) => candidate.id === musicSettings.profileId,
+    ) ?? musicProfiles[0];
+  const musicCanSubmit =
+    compileMusicRequest(prompt, musicSettings, selectedMusicProfile).ok &&
+    !isComposingLyrics;
+  const canSubmit = isReframeMode
+    ? reframeInput.ready && !!reframeInput.videoPath && !isGenerating
+    : isRetakeMode
+      ? retakeInput.ready && !!retakeInput.videoPath && !isRetaking
+      : mode === "music"
+        ? musicCanSubmit
+        : !!prompt.trim();
+  const promptButtonLabel = isReframeMode
+    ? "Reframe"
+    : isRetakeMode
+      ? "Retake"
+      : "Generate";
+  const promptButtonIcon = isReframeMode ? (
+    <Expand className="h-3.5 w-3.5" />
+  ) : isRetakeMode ? (
+    <Scissors className="h-3.5 w-3.5" />
+  ) : (
+    <Sparkles
+      className={`h-3.5 w-3.5 ${isGenerating ? "animate-pulse" : ""}`}
+    />
+  );
+  const promptGenerating = isRetakeMode
+    ? isRetaking
+    : isGenerating || isComposingLyrics;
+  const promptController = {
+    value: prompt,
+    setValue: setPrompt,
+    enhance: handleEnhancePrompt,
+    isEnhancing: isEnhancingPrompt,
+    seedLocked,
+    lockedSeed,
+    setSeed: handleSeedChange,
+  };
+  const generationController = {
+    submit: handleGenerate,
+    canSubmit,
+    isRunning: promptGenerating,
+    label: promptButtonLabel,
+    icon: promptButtonIcon,
+  };
+  const sidebarController: GenSpaceSidebarController = {
+    mode,
+    setMode: handleModeChange,
+    image: {
+      prompt: promptController,
+      generation: generationController,
+      settings: {
+        value: imageSettings,
+        patch: patchImageSettings,
+      },
+      media: {
+        inputs: imageInputs,
+        setInputs: setImageInputs,
+        resolveInputFileUrl,
+        syncInputFileToGallery,
+      },
+      profiles: {
+        options: imageProfiles,
+        modelDownload,
+      },
+    },
+    video: {
+      prompt: promptController,
+      generation: generationController,
+      settings: {
+        value: videoSettings,
+        patch: patchVideoSettings,
+      },
+      media: {
+        inputImage,
+        setInputImage,
+        inputAudio,
+        setInputAudio,
+        inputs: imageInputs,
+        setInputs: setImageInputs,
+        useAudioTrack,
+        setUseAudioTrack,
+        resolveInputFileUrl,
+        syncInputFileToGallery,
+      },
+      profiles: {
+        options: videoProfiles,
+        modelDownload,
+      },
+      videoTools: {
+        mode: videoMode,
+        setMode: handleVideoModeChange,
+        panel: videoToolPanel,
+        reframeDurationSeconds: reframeInput.duration,
+      },
+    },
+    music: {
+      prompt: promptController,
+      generation: generationController,
+      media: {
+        resolveInputFileUrl,
+        syncInputFileToGallery,
+      },
+      profiles: {
+        options: musicProfiles,
+        modelDownload,
+      },
+      music: {
+        settings: musicSettings,
+        setSettings: setMusicSettings,
+        composeLyrics: composeMusicLyrics,
+        isComposingLyrics,
+      },
+    },
+  };
+
+  const transferActive =
+    modelDownload !== null ||
+    progressUnit === "bytes" ||
+    progressUnit === "files";
+  const modelLifecycleActive =
+    phase === "checking_model_files" || phase === "loading_model";
+  const generationBadges = useMemo(
+    () =>
+      [
+        phaseIndex !== null && phaseCount !== null
+          ? `Phase ${phaseIndex}/${phaseCount}`
+          : null,
+        !transferActive && currentStep !== null && totalSteps !== null
+          ? `Step ${currentStep}/${totalSteps}`
+          : null,
+        sectionIndex !== null && sectionCount !== null
+          ? `Section ${sectionIndex}/${sectionCount}`
+          : null,
+      ].filter(Boolean) as string[],
+    [
+      currentStep,
+      phaseCount,
+      phaseIndex,
+      sectionCount,
+      sectionIndex,
+      totalSteps,
+      transferActive,
+    ],
+  );
+
+  const galleryGeneration = useMemo<GenSpaceGalleryProps["generation"]>(
+    () => ({
+      isRunning: isGenerating,
+      isCancelling,
+      previewUrl,
+      modelDownload,
+      modelLifecycleActive,
+      statusMessage,
+      progress,
+      badges: generationBadges,
+      cancel: () => void cancel(),
+    }),
+    [
+      cancel,
+      generationBadges,
+      isCancelling,
+      isGenerating,
+      modelDownload,
+      modelLifecycleActive,
+      previewUrl,
+      progress,
+      statusMessage,
+    ],
+  );
+  const handleImportFiles = useCallback(
+    (files: File[]) => void importFilesToGallery(files),
+    [importFilesToGallery],
+  );
+
+  return {
+    rootProps: {
+      className: "h-full relative bg-zinc-950",
+      onDragEnter: !isPanelMode ? rootDragHandlers.onDragEnter : undefined,
+      onDragOver: !isPanelMode ? rootDragHandlers.onDragOver : undefined,
+      onDragLeave: !isPanelMode ? rootDragHandlers.onDragLeave : undefined,
+      onDrop: !isPanelMode ? rootDragHandlers.onDrop : undefined,
+    },
+    gallery: {
+      library: galleryLibrary,
+      fileInputRef: galleryFileInputRef,
+      onImportFiles: handleImportFiles,
+      toast: galleryToast,
+      isDragOver: isGalleryDragOver,
+      isImporting: isGalleryImporting,
+      filterActive: galleryFilterActive,
+      isPanelMode,
+      generation: galleryGeneration,
+    } satisfies GenSpaceGalleryProps,
+    sidebar: sidebarController,
+    overlays: {
+      selectedAsset: galleryOverlays.selectedAsset,
+      selectedIndex: galleryOverlays.selectedIndex,
+      visibleAssetCount: galleryLibrary.visibleAssets.length,
+      copiedPrompt: galleryOverlays.copiedPrompt,
+      canGoPrev: galleryOverlays.canGoPrev,
+      canGoNext: galleryOverlays.canGoNext,
+      onClosePreview: () => galleryOverlays.setSelectedAsset(null),
+      onPrevious: galleryOverlays.goToPrev,
+      onNext: galleryOverlays.goToNext,
+      onCopyPrompt: (value: string) => {
+        void navigator.clipboard.writeText(value);
+        galleryOverlays.setCopiedPrompt(true);
+        window.setTimeout(() => galleryOverlays.setCopiedPrompt(false), 2000);
+      },
+      duplicateFilenameChoice: galleryOverlays.duplicateFilenameChoice,
+      onDuplicateFilenameChoice: galleryOverlays.chooseDuplicate,
+      takesAsset: galleryOverlays.takesAsset,
+      onCloseTakes: () => galleryOverlays.setTakesViewAssetId(null),
+      onSelectTake: (assetId: string, takeIndex: number) => {
+        if (currentProjectId) {
+          setAssetActiveTake(currentProjectId, assetId, takeIndex);
+        }
+      },
+      contextMenu: galleryOverlays.contextMenu,
+      contextAsset: galleryOverlays.contextAsset,
+      contextSelectedAssetIds: galleryOverlays.contextSelectedAssetIds,
+      contextMenuRef: galleryOverlays.contextMenuRef,
+      assets,
+      bins: galleryOverlays.bins,
+      binColors: currentProject?.assetBinColors,
+      currentProjectId,
+      onToggleFavorite: (asset: Asset) => {
+        if (currentProjectId) toggleFavorite(currentProjectId, asset.id);
+      },
+      onCreateVideo: handleCreateVideo,
+      onReframe: handleReframe,
+      onCopySettings: handleCopySettings,
+      setAssetActiveTake,
+      setTakesViewAssetId: galleryOverlays.setTakesViewAssetId,
+      setContextSelectedAssetIds: galleryOverlays.setContextSelectedAssetIds,
+      setAssetContextMenu: galleryOverlays.setAssetContextMenu,
+      updateAsset,
+      addAsset,
+      deleteAsset,
+      requestDeleteAssets: galleryOverlays.requestDeleteAssets,
+      deleteTakeFromAsset,
+      pendingDeleteCount: galleryOverlays.pendingAssetIds.length,
+      cancelDelete: galleryOverlays.cancelDeleteAssets,
+      confirmDelete: () => void galleryOverlays.confirmDeleteAssets(),
+      error: error || localError,
+      dismissError: () => {
+        if (error) reset();
+        if (localError) {
+          setLocalError(null);
+          resetRetake();
+        }
+      },
+    } satisfies GenSpaceOverlaysProps,
+  };
+}

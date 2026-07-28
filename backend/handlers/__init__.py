@@ -5,6 +5,7 @@ from handlers.director_generation_handler import DirectorGenerationHandler
 from handlers.health_handler import HealthHandler
 from handlers.image_generation_handler import ImageGenerationHandler
 from handlers.model_profiles_handler import ModelProfilesHandler
+from handlers.music_generation_handler import MusicGenerationHandler
 from handlers.prompt_enhancement_handler import PromptEnhancementHandler
 from handlers.retake_handler import RetakeHandler
 from handlers.settings_handler import SettingsHandler
@@ -20,4 +21,5 @@ __all__ = [
     "HealthHandler",
     "RetakeHandler",
     "ModelProfilesHandler",
+    "MusicGenerationHandler",
 ]

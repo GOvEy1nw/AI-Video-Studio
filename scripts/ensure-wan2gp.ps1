@@ -87,7 +87,7 @@ if (-not $Wan2GPDir) {
         throw "git not found. Install Git before running setup, or set WANGP_ROOT to an existing Wan2GP checkout."
     }
     Write-Host "Cloning Wan2GP into $LocalWan2GPDir..." -ForegroundColor Yellow
-    git clone --filter=blob:none --no-checkout $RepoUrl $LocalWan2GPDir
+    git clone --filter=blob:none --branch $Source.branch --single-branch $RepoUrl $LocalWan2GPDir
     if ($LASTEXITCODE -ne 0) {
         throw "git clone failed for Wan2GP."
     }
