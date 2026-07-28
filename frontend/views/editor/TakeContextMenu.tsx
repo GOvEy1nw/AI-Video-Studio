@@ -7,7 +7,7 @@ export interface TakeContextMenuProps {
   take: AssetTake
   takeIndex: number
   takeContextMenu: { assetId: string; takeIndex: number; x: number; y: number }
-  takeContextMenuRef: React.RefObject<HTMLDivElement>
+  takeContextMenuRef: React.RefObject<HTMLDivElement | null>
   currentProjectId: string | null
   pushAssetUndoRef: React.RefObject<() => void>
   addClipToTimeline: (asset: Asset, trackIndex?: number, startTime?: number) => void
@@ -38,7 +38,7 @@ export function TakeContextMenu({
   return (
     <div
       ref={takeContextMenuRef}
-      className="fixed bg-zinc-800 border border-zinc-700 rounded-xl shadow-2xl py-1.5 z-[60] min-w-[190px] text-xs"
+      className="fixed bg-zinc-800 border border-zinc-700 rounded-xl shadow-2xl py-1.5 z-60 min-w-[190px] text-xs"
       style={{ left: takeContextMenu.x, top: takeContextMenu.y }}
       onClick={(e) => e.stopPropagation()}
     >

@@ -615,7 +615,7 @@ export function DirectorTimeline({
 
   return (
     <TimelineViewport
-      className="flex h-full flex-col rounded-none border-x-0 border-b-0 outline-none"
+      className="flex h-full flex-col rounded-none border-x-0 border-b-0 outline-hidden"
       tabIndex={0}
       onKeyDown={(event) => {
         if (
@@ -636,7 +636,7 @@ export function DirectorTimeline({
       aria-label="Director Timeline"
     >
       <div className="flex">
-        <div className="flex h-6 w-40 flex-shrink-0 items-center justify-center border-b border-r border-zinc-800 bg-zinc-900 font-mono text-[10px] text-zinc-500">
+        <div className="flex h-6 w-40 shrink-0 items-center justify-center border-b border-r border-zinc-800 bg-zinc-900 font-mono text-[10px] text-zinc-500">
           24 FPS
         </div>
         <div ref={rulerScrollRef} className="min-w-0 flex-1 overflow-hidden">
@@ -661,7 +661,7 @@ export function DirectorTimeline({
       </div>
 
       <div className="flex min-h-0 flex-1">
-        <div className="w-40 flex-shrink-0 border-r border-zinc-800 bg-zinc-900">
+        <div className="w-40 shrink-0 border-r border-zinc-800 bg-zinc-900">
           <div
             className="flex items-center justify-end border-b border-zinc-800 px-2 text-[10px] font-medium uppercase tracking-wide text-zinc-400"
             style={{ height: GENERATED_HEIGHT }}
@@ -670,7 +670,7 @@ export function DirectorTimeline({
               type="button"
               onClick={onGenerate}
               disabled={generateDisabled}
-              className="rounded border border-zinc-700 bg-zinc-800 px-2.5 py-1 text-[10px] font-medium text-zinc-200 hover:bg-zinc-700 disabled:opacity-40"
+              className="rounded-sm border border-zinc-700 bg-zinc-800 px-2.5 py-1 text-[10px] font-medium text-zinc-200 hover:bg-zinc-700 disabled:opacity-40"
             >
               {generateLabel}
             </button>
@@ -678,7 +678,7 @@ export function DirectorTimeline({
               <button
                 type="button"
                 onClick={onCancel}
-                className="rounded bg-red-900/60 px-2.5 py-1 text-[10px] text-red-200"
+                className="rounded-sm bg-red-900/60 px-2.5 py-1 text-[10px] text-red-200"
               >
                 Cancel
               </button>
@@ -693,7 +693,7 @@ export function DirectorTimeline({
                   updatedAt: Date.now(),
                 })
               }
-              className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
+              className="rounded-sm p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
               aria-label={
                 sequence.latestGenerationVisible === false
                   ? "Show Generated track"
@@ -821,7 +821,7 @@ export function DirectorTimeline({
                   <Film className="h-3 w-3" />
                   {generatedTake ? (
                     <div
-                      className="flex items-center gap-0.5 rounded bg-black/70 px-1 py-0.5"
+                      className="flex items-center gap-0.5 rounded-sm bg-black/70 px-1 py-0.5"
                       aria-label={`Generated take ${generatedTake.index + 1} of ${generatedTake.count}`}
                     >
                       <button
@@ -836,7 +836,7 @@ export function DirectorTimeline({
                             updatedAt: Date.now(),
                           });
                         }}
-                        className="rounded p-0.5 text-zinc-300 hover:bg-zinc-700 disabled:text-zinc-600"
+                        className="rounded-sm p-0.5 text-zinc-300 hover:bg-zinc-700 disabled:text-zinc-600"
                       >
                         <ChevronLeft className="h-3 w-3" />
                       </button>
@@ -858,7 +858,7 @@ export function DirectorTimeline({
                             updatedAt: Date.now(),
                           });
                         }}
-                        className="rounded p-0.5 text-zinc-300 hover:bg-zinc-700 disabled:text-zinc-600"
+                        className="rounded-sm p-0.5 text-zinc-300 hover:bg-zinc-700 disabled:text-zinc-600"
                       >
                         <ChevronRight className="h-3 w-3" />
                       </button>
@@ -910,7 +910,7 @@ export function DirectorTimeline({
                   />
                 ) : null}
                 <div className="relative flex h-full items-center gap-2 px-3">
-                  <Lock className="h-3 w-3 flex-shrink-0 text-zinc-300" />
+                  <Lock className="h-3 w-3 shrink-0 text-zinc-300" />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-[10px] font-medium text-violet-100">
                       Continue Video
@@ -930,7 +930,7 @@ export function DirectorTimeline({
                   onMouseDown={(event) => startContinueTrimDrag(event, "in")}
                   className="absolute inset-y-0 left-0 w-3 cursor-ew-resize bg-violet-400/20 hover:bg-violet-400/50"
                 >
-                  <span className="mx-auto block h-6 w-0.5 rounded bg-violet-200" />
+                  <span className="mx-auto block h-6 w-0.5 rounded-sm bg-violet-200" />
                 </button>
                 <button
                   type="button"
@@ -939,7 +939,7 @@ export function DirectorTimeline({
                   onMouseDown={(event) => startContinueTrimDrag(event, "out")}
                   className="absolute inset-y-0 right-0 w-3 cursor-ew-resize bg-violet-400/20 hover:bg-violet-400/50"
                 >
-                  <span className="mx-auto block h-6 w-0.5 rounded bg-violet-200" />
+                  <span className="mx-auto block h-6 w-0.5 rounded-sm bg-violet-200" />
                 </button>
               </TimelineSegmentFrame>
             )}
@@ -963,7 +963,7 @@ export function DirectorTimeline({
                   onClick={() =>
                     addSegment(gap.startFrame, gap.endFrameExclusive, trailing)
                   }
-                  className="absolute z-10 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full border border-zinc-600 bg-zinc-800 text-zinc-300 shadow hover:border-blue-400 hover:bg-blue-500/20 hover:text-blue-200"
+                  className="absolute z-10 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full border border-zinc-600 bg-zinc-800 text-zinc-300 shadow-sm hover:border-blue-400 hover:bg-blue-500/20 hover:text-blue-200"
                   style={{ left, top: GENERATED_HEIGHT + 17 }}
                 >
                   <Plus className="h-3.5 w-3.5" />
@@ -1022,7 +1022,7 @@ export function DirectorTimeline({
                   }
                   className="absolute inset-y-0 left-0 z-20 flex w-2.5 cursor-ew-resize items-center justify-center bg-zinc-400/15 hover:bg-blue-400/50"
                 >
-                  <span className="block h-6 w-0.5 rounded bg-zinc-300" />
+                  <span className="block h-6 w-0.5 rounded-sm bg-zinc-300" />
                 </button>
                 <button
                   type="button"
@@ -1033,7 +1033,7 @@ export function DirectorTimeline({
                   }
                   className="absolute inset-y-0 right-0 z-20 flex w-2.5 cursor-ew-resize items-center justify-center bg-zinc-400/15 hover:bg-blue-400/50"
                 >
-                  <span className="block h-6 w-0.5 rounded bg-zinc-300" />
+                  <span className="block h-6 w-0.5 rounded-sm bg-zinc-300" />
                 </button>
               </div>
             ))}
@@ -1108,7 +1108,7 @@ export function DirectorTimeline({
           </div>
         </div>
       </div>
-      <div className="flex h-9 flex-shrink-0 items-center gap-2 border-t border-zinc-800 bg-zinc-900 px-2">
+      <div className="flex h-9 shrink-0 items-center gap-2 border-t border-zinc-800 bg-zinc-900 px-2">
         <TimelineZoomControls
           value={zoom}
           min={0.5}
@@ -1127,7 +1127,7 @@ export function DirectorTimeline({
               ? "Generated segment actions"
               : "Prompt segment actions"
           }
-          className="fixed z-[100] w-36 overflow-hidden rounded border border-zinc-700 bg-zinc-900 py-1 text-xs shadow-2xl"
+          className="fixed z-100 w-36 overflow-hidden rounded-sm border border-zinc-700 bg-zinc-900 py-1 text-xs shadow-2xl"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onMouseDown={(event) => event.stopPropagation()}
         >

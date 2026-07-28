@@ -329,7 +329,7 @@ export function KeyboardShortcutsModal() {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-100 flex items-center justify-center bg-black/60 backdrop-blur-xs"
       onClick={(e) => { if (e.target === e.currentTarget && !recordingAction) setEditorOpen(false) }}
     >
       <div className="w-[880px] max-h-[90vh] bg-zinc-900 rounded-xl border border-zinc-700/80 shadow-2xl flex flex-col overflow-hidden">
@@ -401,7 +401,7 @@ export function KeyboardShortcutsModal() {
                             }
                           }
                         }}
-                        className="p-1.5 mr-1.5 rounded text-zinc-600 hover:text-red-400 hover:bg-red-600/10 transition-colors"
+                        className="p-1.5 mr-1.5 rounded-sm text-zinc-600 hover:text-red-400 hover:bg-red-600/10 transition-colors"
                         title={`Delete "${p.name}"`}
                       >
                         <Trash2 className="h-3 w-3" />
@@ -421,7 +421,7 @@ export function KeyboardShortcutsModal() {
               placeholder="Search actions or keys..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 bg-zinc-800 rounded-md text-[11px] text-white placeholder-zinc-600 outline-none border border-zinc-700/40 focus:border-blue-500/50 transition-colors"
+              className="w-full pl-8 pr-3 py-1.5 bg-zinc-800 rounded-md text-[11px] text-white placeholder-zinc-600 outline-hidden border border-zinc-700/40 focus:border-blue-500/50 transition-colors"
             />
           </div>
 
@@ -460,7 +460,7 @@ export function KeyboardShortcutsModal() {
                       setShowSaveDialog(false)
                     }
                   }}
-                  className="w-full px-2 py-1.5 bg-zinc-900 rounded text-[11px] text-white placeholder-zinc-600 outline-none border border-zinc-700 focus:border-blue-500 mb-2"
+                  className="w-full px-2 py-1.5 bg-zinc-900 rounded-sm text-[11px] text-white placeholder-zinc-600 outline-hidden border border-zinc-700 focus:border-blue-500 mb-2"
                   autoFocus
                 />
                 <button
@@ -472,7 +472,7 @@ export function KeyboardShortcutsModal() {
                     }
                   }}
                   disabled={!savePresetName.trim()}
-                  className="w-full py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-700 disabled:text-zinc-500 text-white text-[11px] font-medium rounded transition-colors"
+                  className="w-full py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-700 disabled:text-zinc-500 text-white text-[11px] font-medium rounded-sm transition-colors"
                 >
                   Save Preset
                 </button>
@@ -484,7 +484,7 @@ export function KeyboardShortcutsModal() {
         {/* Conflict warning */}
         {conflicts.size > 0 && (
           <div className="flex items-center gap-2 px-4 py-2 bg-amber-950/30 border-b border-amber-800/30">
-            <AlertTriangle className="h-3.5 w-3.5 text-amber-400 flex-shrink-0" />
+            <AlertTriangle className="h-3.5 w-3.5 text-amber-400 shrink-0" />
             <span className="text-[11px] text-amber-400/90">
               {conflicts.size} shortcut conflict{conflicts.size > 1 ? 's' : ''} detected — some keys are assigned to multiple actions
             </span>
@@ -689,13 +689,13 @@ export function KeyboardShortcutsModal() {
                     >
                       {/* Drag handle */}
                       {!isRecording && (
-                        <GripVertical className={`h-3 w-3 flex-shrink-0 ${
+                        <GripVertical className={`h-3 w-3 shrink-0 ${
                           draggedActionId === action.id ? 'text-blue-400 cursor-grabbing' : 'text-zinc-700 cursor-grab'
                         }`} />
                       )}
 
                       {/* Category dot */}
-                      <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${catColor.dot}`} />
+                      <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${catColor.dot}`} />
 
                       {/* Action label */}
                       <div className="flex-1 min-w-0">
@@ -753,14 +753,14 @@ export function KeyboardShortcutsModal() {
                         <div className="flex items-center gap-1 ml-2">
                           <button
                             onClick={() => setRecordingAction(action.id)}
-                            className="px-2 py-0.5 text-[10px] text-zinc-500 hover:text-blue-400 hover:bg-blue-600/10 rounded transition-colors"
+                            className="px-2 py-0.5 text-[10px] text-zinc-500 hover:text-blue-400 hover:bg-blue-600/10 rounded-sm transition-colors"
                           >
                             Edit
                           </button>
                           {combos.length > 0 && (
                             <button
                               onClick={() => updateBinding(action.id, [])}
-                              className="px-2 py-0.5 text-[10px] text-zinc-600 hover:text-red-400 hover:bg-red-600/10 rounded transition-colors"
+                              className="px-2 py-0.5 text-[10px] text-zinc-600 hover:text-red-400 hover:bg-red-600/10 rounded-sm transition-colors"
                             >
                               Clear
                             </button>

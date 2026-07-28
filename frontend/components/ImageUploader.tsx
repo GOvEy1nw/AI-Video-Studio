@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { Upload, Image as ImageIcon, RefreshCw, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { getNativeFilePath } from '@/lib/native-file-path'
 
 interface ImageUploaderProps {
   onImageSelect: (path: string | null) => void
@@ -12,8 +13,7 @@ export function ImageUploader({ onImageSelect, selectedImage }: ImageUploaderPro
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0]
     if (file) {
-      // In Electron, File objects have a .path property with the full filesystem path
-      const filePath = (file as any).path as string | undefined
+      const filePath = getNativeFilePath(file)
       if (filePath) {
         await window.electronAPI?.approveLocalPath?.(filePath)
         const normalized = filePath.replace(/\\/g, '/')
@@ -81,7 +81,7 @@ export function ImageUploader({ onImageSelect, selectedImage }: ImageUploaderPro
         {selectedImage ? (
           <div className="flex items-center gap-3">
             {/* Thumbnail */}
-            <div className="w-14 h-14 flex-shrink-0 rounded-md overflow-hidden bg-zinc-800">
+            <div className="w-14 h-14 shrink-0 rounded-md overflow-hidden bg-zinc-800">
               <img
                 src={selectedImage}
                 alt="Selected"
@@ -97,7 +97,7 @@ export function ImageUploader({ onImageSelect, selectedImage }: ImageUploaderPro
             </div>
 
             {/* Action buttons */}
-            <div className="flex items-center gap-1 flex-shrink-0">
+            <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={clearImage}
                 className="p-2 hover:bg-zinc-700 rounded-lg transition-colors"

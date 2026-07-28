@@ -89,7 +89,7 @@ interface Props {
 }
 
 const inputClass =
-  "w-full rounded border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-xs text-zinc-100 outline-none";
+  "w-full rounded-sm border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-xs text-zinc-100 outline-hidden";
 
 const mediaFilters = {
   image: [
@@ -628,7 +628,7 @@ export function DirectorWorkspacePanel(props: Props) {
 
   return (
     <section
-      className="flex h-full min-w-0 flex-1 flex-col overflow-hidden border-r border-zinc-800 bg-background outline-none"
+      className="flex h-full min-w-0 flex-1 flex-col overflow-hidden border-r border-zinc-800 bg-background outline-hidden"
       tabIndex={0}
       onKeyDown={(event) => {
         if (
@@ -646,7 +646,7 @@ export function DirectorWorkspacePanel(props: Props) {
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="flex h-full items-stretch">
             <div
-              className="flex min-w-[10rem] flex-none flex-col"
+              className="flex min-w-40 flex-none flex-col"
               style={{ width: `${props.settingsPercent}%` }}
             >
               <header className="flex min-h-10 items-center gap-2 overflow-x-auto px-3">
@@ -678,7 +678,7 @@ export function DirectorWorkspacePanel(props: Props) {
                       <button
                         type="button"
                         onClick={() => setGlobalSettingsOpen((open) => !open)}
-                        className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
+                        className="rounded-sm p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
                         aria-label="More global settings"
                         aria-expanded={globalSettingsOpen}
                         aria-haspopup="dialog"
@@ -733,7 +733,7 @@ export function DirectorWorkspacePanel(props: Props) {
                                   },
                                 });
                               }}
-                              className="w-full rounded-md border border-zinc-600 bg-zinc-900 px-2.5 py-1.5 text-sm text-white focus:border-blue-500 focus:outline-none"
+                              className="w-full rounded-md border border-zinc-600 bg-zinc-900 px-2.5 py-1.5 text-sm text-white focus:border-blue-500 focus:outline-hidden"
                               aria-label="Prompt Relay epsilon"
                             />
                           </label>
@@ -803,7 +803,7 @@ export function DirectorWorkspacePanel(props: Props) {
                             },
                           });
                       }}
-                      className="max-w-44 rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-[11px] text-zinc-200"
+                      className="max-w-44 rounded-sm border border-zinc-700 bg-zinc-900 px-2 py-1 text-[11px] text-zinc-200"
                     >
                       {enabledProfiles.map((item) => (
                         <option key={item.id} value={item.id}>
@@ -822,7 +822,7 @@ export function DirectorWorkspacePanel(props: Props) {
                           },
                         })
                       }
-                      className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-[11px] text-zinc-200"
+                      className="rounded-sm border border-zinc-700 bg-zinc-900 px-2 py-1 text-[11px] text-zinc-200"
                     >
                       {profile?.ui.allowedResolutionTiers.map((value) => (
                         <option key={value}>{value}</option>
@@ -839,7 +839,7 @@ export function DirectorWorkspacePanel(props: Props) {
                           },
                         })
                       }
-                      className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-[11px] text-zinc-200"
+                      className="rounded-sm border border-zinc-700 bg-zinc-900 px-2 py-1 text-[11px] text-zinc-200"
                     >
                       {profile?.ui.allowedAspectRatios.map((value) => (
                         <option key={value}>{value}</option>
@@ -865,7 +865,7 @@ export function DirectorWorkspacePanel(props: Props) {
                   <textarea
                     disabled
                     value=""
-                    className="min-h-20 w-full resize-none rounded border border-zinc-700 bg-zinc-800 p-2 text-xs text-zinc-100 outline-none disabled:cursor-not-allowed"
+                    className="min-h-20 w-full resize-none rounded-sm border border-zinc-700 bg-zinc-800 p-2 text-xs text-zinc-100 outline-hidden disabled:cursor-not-allowed"
                     placeholder="Local Prompt is unavailable for Continue Video"
                     aria-label="Local Prompt disabled for Continue Video"
                   />
@@ -897,7 +897,7 @@ export function DirectorWorkspacePanel(props: Props) {
                   }}
                   onDrop={handleMediaDrop}
                 >
-                  <div className="flex h-5 flex-shrink-0 items-start justify-between text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+                  <div className="flex h-5 shrink-0 items-start justify-between text-[11px] font-medium uppercase tracking-wide text-zinc-500">
                     <span>
                       {continueSelected
                         ? "Media: Continue Video"
@@ -915,7 +915,7 @@ export function DirectorWorkspacePanel(props: Props) {
                               continueSelected,
                             )
                           }
-                          className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-100"
+                          className="rounded-sm p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-100"
                           aria-label={
                             continueSelected
                               ? "Replace Continue Video"
@@ -940,7 +940,7 @@ export function DirectorWorkspacePanel(props: Props) {
                                 ),
                               });
                           }}
-                          className="rounded p-1 text-zinc-500 hover:bg-red-950 hover:text-red-200"
+                          className="rounded-sm p-1 text-zinc-500 hover:bg-red-950 hover:text-red-200"
                           aria-label={
                             continueSelected
                               ? "Remove Continue Video"
@@ -959,11 +959,11 @@ export function DirectorWorkspacePanel(props: Props) {
                       <video
                         src={continueAsset.url}
                         muted
-                        className="mt-1 min-h-0 w-full flex-1 rounded border border-zinc-700 bg-zinc-800 p-2 object-contain"
+                        className="mt-1 min-h-0 w-full flex-1 rounded-sm border border-zinc-700 bg-zinc-800 p-2 object-contain"
                       />
                       <div className="flex mx-auto justify-center items-center gap-1 w-fit min-w-[50%]">
                         <span
-                          className="rounded flex gap-2 p-1 text-violet-300 text-[10px]"
+                          className="rounded-sm flex gap-2 p-1 text-violet-300 text-[10px]"
                           title="Anchored To Frame 0"
                           aria-label="Anchored To Frame 0"
                         >
@@ -984,7 +984,7 @@ export function DirectorWorkspacePanel(props: Props) {
                                 },
                               })
                             }
-                            className={`rounded p-1 transition-colors ${sequence.continueVideo?.useSourceAudio ? "text-emerald-400" : "text-zinc-500 hover:text-zinc-300"}`}
+                            className={`rounded-sm p-1 transition-colors ${sequence.continueVideo?.useSourceAudio ? "text-emerald-400" : "text-zinc-500 hover:text-zinc-300"}`}
                             title="Use source audio"
                             aria-label="Use source audio"
                             aria-pressed={
@@ -1001,11 +1001,11 @@ export function DirectorWorkspacePanel(props: Props) {
                       <img
                         src={keyframeAsset.thumbnail || keyframeAsset.url}
                         alt="Key Frame"
-                        className="mt-1 min-h-0 w-full h-auto rounded border border-zinc-700 bg-zinc-800 p-2 object-contain"
+                        className="mt-1 min-h-0 w-full h-auto rounded-sm border border-zinc-700 bg-zinc-800 p-2 object-contain"
                       />
-                      <div className="mt-2 flex-shrink-0 space-y-2 text-[11px]">
+                      <div className="mt-2 shrink-0 space-y-2 text-[11px]">
                         <div className="flex mx-auto justify-center items-center gap-1 w-fit min-w-[50%]">
-                          <span className="mr-1 flex-shrink-0 text-zinc-500">
+                          <span className="mr-1 shrink-0 text-zinc-500">
                             Pin Key Frame To Segment:
                           </span>
                           {(["start", "centre", "end"] as const).map(
@@ -1030,7 +1030,7 @@ export function DirectorWorkspacePanel(props: Props) {
                                     ),
                                   })
                                 }
-                                className={`flex-1 rounded px-1.5 py-1 transition-colors ${selectedSegment.keyframe?.point === point ? "bg-zinc-700 text-zinc-100" : "bg-zinc-950/70 text-zinc-500 hover:text-zinc-300"}`}
+                                className={`flex-1 rounded-sm px-1.5 py-1 transition-colors ${selectedSegment.keyframe?.point === point ? "bg-zinc-700 text-zinc-100" : "bg-zinc-950/70 text-zinc-500 hover:text-zinc-300"}`}
                                 aria-pressed={
                                   selectedSegment.keyframe?.point === point
                                 }
@@ -1051,10 +1051,10 @@ export function DirectorWorkspacePanel(props: Props) {
                           type="button"
                           onClick={() => void browseForMedia("image")}
                           disabled={!selectedSegment}
-                          className="group flex flex-col items-center gap-2 rounded p-1 text-[11px] text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 disabled:opacity-40"
+                          className="group flex flex-col items-center gap-2 rounded-sm p-1 text-[11px] text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 disabled:opacity-40"
                           title="Add Key Frame"
                         >
-                          <span className="flex h-28 w-40 items-center justify-center rounded border border-dashed border-zinc-600 bg-zinc-950/70">
+                          <span className="flex h-28 w-40 items-center justify-center rounded-sm border border-dashed border-zinc-600 bg-zinc-950/70">
                             <ImageIcon className="h-7 w-7" />
                           </span>
                           <span className="flex h-8 items-start justify-center text-center leading-4">
@@ -1066,14 +1066,14 @@ export function DirectorWorkspacePanel(props: Props) {
                             type="button"
                             onClick={() => void browseForMedia("video")}
                             disabled={Boolean(sequence.continueVideo)}
-                            className="group flex flex-col items-center gap-2 rounded p-1 text-[11px] text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 disabled:opacity-40"
+                            className="group flex flex-col items-center gap-2 rounded-sm p-1 text-[11px] text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 disabled:opacity-40"
                             title={
                               sequence.continueVideo
                                 ? "Continue Video already exists"
                                 : "Add Continue Video"
                             }
                           >
-                            <span className="flex h-28 w-40 items-center justify-center rounded border border-dashed border-zinc-600 bg-zinc-950/70">
+                            <span className="flex h-28 w-40 items-center justify-center rounded-sm border border-dashed border-zinc-600 bg-zinc-950/70">
                               <Video className="h-7 w-7" />
                             </span>
                             <span className="flex h-8 items-start justify-center text-center leading-4">
@@ -1082,19 +1082,19 @@ export function DirectorWorkspacePanel(props: Props) {
                           </button>
                         )}
                       </div>
-                      <div className="flex-shrink-0 text-center text-[11px] text-zinc-600">
+                      <div className="shrink-0 text-center text-[11px] text-zinc-600">
                         Browse, or drop an Asset Library item
                       </div>
                     </>
                   )}
                 </div>
                 {mediaImportError && (
-                  <div className="mt-2 rounded border border-red-800 bg-red-950/40 p-2 text-[11px] text-red-300">
+                  <div className="mt-2 rounded-sm border border-red-800 bg-red-950/40 p-2 text-[11px] text-red-300">
                     {mediaImportError}
                   </div>
                 )}
                 {(sequence.guideAudio || sequence.guidance) && (
-                  <div className="mt-2 space-y-1 rounded border border-zinc-700 bg-zinc-950/60 p-2 text-[11px] text-zinc-500">
+                  <div className="mt-2 space-y-1 rounded-sm border border-zinc-700 bg-zinc-950/60 p-2 text-[11px] text-zinc-500">
                     <div>
                       Deferred tracks are read-only in this release. Remove
                       stored media before generation.
@@ -1105,7 +1105,7 @@ export function DirectorWorkspacePanel(props: Props) {
                         onClick={() =>
                           commit({ ...sequence, guideAudio: undefined })
                         }
-                        className="mr-1 rounded bg-zinc-800 px-2 py-1 text-zinc-300"
+                        className="mr-1 rounded-sm bg-zinc-800 px-2 py-1 text-zinc-300"
                       >
                         Remove Guide Audio
                       </button>
@@ -1116,7 +1116,7 @@ export function DirectorWorkspacePanel(props: Props) {
                         onClick={() =>
                           commit({ ...sequence, guidance: undefined })
                         }
-                        className="rounded bg-zinc-800 px-2 py-1 text-zinc-300"
+                        className="rounded-sm bg-zinc-800 px-2 py-1 text-zinc-300"
                       >
                         Remove Control Media
                       </button>
@@ -1127,7 +1127,7 @@ export function DirectorWorkspacePanel(props: Props) {
             </div>
 
             <div
-              className="w-1.5 flex-shrink-0 cursor-col-resize rounded hover:bg-blue-500/40"
+              className="w-1.5 shrink-0 cursor-col-resize rounded-sm hover:bg-blue-500/40"
               onMouseDown={props.onSettingsResizeStart}
               role="separator"
               aria-label="Resize Director settings and output"
@@ -1165,12 +1165,12 @@ export function DirectorWorkspacePanel(props: Props) {
               />
               <div className="px-2 absolute bottom-0 mb-2 mt-2 max-h-24 space-y-1 overflow-y-auto w-full">
                 {generation.error && (
-                  <div className="rounded border border-red-800 bg-red-950/40 p-2 text-xs text-red-300">
+                  <div className="rounded-sm border border-red-800 bg-red-950/40 p-2 text-xs text-red-300">
                     {formatDirectorError(generation.error)}
                   </div>
                 )}
                 {assetPersistError && (
-                  <div className="rounded border border-red-800 bg-red-950/40 p-2 text-xs text-red-300">
+                  <div className="rounded-sm border border-red-800 bg-red-950/40 p-2 text-xs text-red-300">
                     Generation completed, but asset save failed:{" "}
                     {assetPersistError}
                   </div>
@@ -1178,13 +1178,13 @@ export function DirectorWorkspacePanel(props: Props) {
                 {generation.directorResult?.warnings.map((warning) => (
                   <div
                     key={warning}
-                    className="rounded border border-amber-800/60 bg-amber-950/20 p-2 text-[11px] text-amber-300"
+                    className="rounded-sm border border-amber-800/60 bg-amber-950/20 p-2 text-[11px] text-amber-300"
                   >
                     {warning}
                   </div>
                 ))}
                 {validation && validation.errors.length > 0 && (
-                  <div className="rounded border border-amber-800/60 bg-amber-950/20 p-2 text-[11px] text-amber-300">
+                  <div className="rounded-sm border border-amber-800/60 bg-amber-950/20 p-2 text-[11px] text-amber-300">
                     {validation.errors.map((issue) => (
                       <div key={`${issue.code}-${issue.segmentId || ""}`}>
                         {issue.message}
@@ -1193,7 +1193,7 @@ export function DirectorWorkspacePanel(props: Props) {
                   </div>
                 )}
                 {validation && validation.warnings.length > 0 && (
-                  <div className="rounded border border-zinc-700 bg-zinc-900/60 p-2 text-[11px] text-zinc-400">
+                  <div className="rounded-sm border border-zinc-700 bg-zinc-900/60 p-2 text-[11px] text-zinc-400">
                     {validation.warnings.map((issue) => (
                       <div key={`${issue.code}-${issue.segmentId || ""}`}>
                         {issue.message}
@@ -1206,7 +1206,7 @@ export function DirectorWorkspacePanel(props: Props) {
           </div>
         </div>
 
-        <div className="flex h-10 flex-shrink-0 items-center bg-zinc-950 px-3">
+        <div className="flex h-10 shrink-0 items-center bg-zinc-950 px-3">
           <span className="w-44 font-mono text-[12px] tabular-nums text-amber-400">
             {timecode(playheadFrame, sequence.output.fps)} (Frame{" "}
             {playheadFrame})
@@ -1218,7 +1218,7 @@ export function DirectorWorkspacePanel(props: Props) {
                 setIsPlaying(false);
                 setPlayheadFrame(0);
               }}
-              className="rounded p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-white"
+              className="rounded-sm p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-white"
               aria-label="Go to Director start"
             >
               <SkipBack className="h-3.5 w-3.5" />
@@ -1226,7 +1226,7 @@ export function DirectorWorkspacePanel(props: Props) {
             <button
               type="button"
               onClick={togglePlayback}
-              className="rounded p-1.5 text-zinc-300 hover:bg-zinc-800 hover:text-white"
+              className="rounded-sm p-1.5 text-zinc-300 hover:bg-zinc-800 hover:text-white"
               aria-label={
                 isPlaying ? "Pause Director preview" : "Play Director preview"
               }
@@ -1243,7 +1243,7 @@ export function DirectorWorkspacePanel(props: Props) {
                 setIsPlaying(false);
                 setPlayheadFrame(lastFrame);
               }}
-              className="rounded p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-white"
+              className="rounded-sm p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-white"
               aria-label="Go to Director end"
             >
               <SkipForward className="h-3.5 w-3.5" />
@@ -1251,7 +1251,7 @@ export function DirectorWorkspacePanel(props: Props) {
             <button
               type="button"
               onClick={() => setLoopEnabled(!loopEnabled)}
-              className={`rounded p-1.5 hover:bg-zinc-800 hover:text-white ${loopEnabled ? "text-blue-400" : "text-zinc-500"}`}
+              className={`rounded-sm p-1.5 hover:bg-zinc-800 hover:text-white ${loopEnabled ? "text-blue-400" : "text-zinc-500"}`}
               aria-label={
                 loopEnabled
                   ? "Disable Director preview loop"
@@ -1269,22 +1269,22 @@ export function DirectorWorkspacePanel(props: Props) {
         </div>
 
         <div
-          className="h-1 flex-shrink-0 cursor-col-resize bg-transparent hover:bg-blue-500/40 active:bg-blue-500/60 transition-colors relative group z-10"
+          className="h-1 shrink-0 cursor-col-resize bg-transparent hover:bg-blue-500/40 active:bg-blue-500/60 transition-colors relative group z-10"
           onMouseDown={props.onTimelineResizeStart}
           role="separator"
           aria-label="Resize Director timeline"
         />
         <div
-          className="flex min-h-0 flex-shrink-0 flex-col border-t border-zinc-800 bg-zinc-950"
+          className="flex min-h-0 shrink-0 flex-col border-t border-zinc-800 bg-zinc-950"
           style={{ height: props.timelineHeight }}
         >
-          <div className="flex h-8 flex-shrink-0 items-center gap-0.5 overflow-x-auto bg-zinc-900 px-1">
+          <div className="flex h-8 shrink-0 items-center gap-0.5 overflow-x-auto bg-zinc-900 px-1">
             {props.openTimelines.map((timeline) => (
               <button
                 key={timeline.id}
                 type="button"
                 onClick={() => props.onSelectTimeline(timeline.id)}
-                className={`group flex h-6 max-w-44 flex-shrink-0 cursor-pointer items-center gap-1 rounded-t pl-3 pr-1 text-xs font-medium transition-colors ${timeline.id === props.timeline?.id ? "border-l border-r border-t border-zinc-700 bg-zinc-950 text-white" : "text-zinc-500 hover:bg-zinc-800/50 hover:text-zinc-300"}`}
+                className={`group flex h-6 max-w-44 shrink-0 cursor-pointer items-center gap-1 rounded-t pl-3 pr-1 text-xs font-medium transition-colors ${timeline.id === props.timeline?.id ? "border-l border-r border-t border-zinc-700 bg-zinc-950 text-white" : "text-zinc-500 hover:bg-zinc-800/50 hover:text-zinc-300"}`}
               >
                 <span className="truncate">{timeline.name}</span>
                 <span
@@ -1298,7 +1298,7 @@ export function DirectorWorkspacePanel(props: Props) {
                     if (event.key === "Enter")
                       props.onCloseTimelineTab(timeline.id);
                   }}
-                  className="rounded p-0.5 text-zinc-600 hover:bg-zinc-700 hover:text-white"
+                  className="rounded-sm p-0.5 text-zinc-600 hover:bg-zinc-700 hover:text-white"
                   aria-label={`Close ${timeline.name} tab`}
                 >
                   <X className="h-3 w-3" />
@@ -1308,7 +1308,7 @@ export function DirectorWorkspacePanel(props: Props) {
             <button
               type="button"
               onClick={props.onAddTimeline}
-              className="ml-1 rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-white"
+              className="ml-1 rounded-sm p-1 text-zinc-500 hover:bg-zinc-800 hover:text-white"
               aria-label="New Director timeline"
             >
               <Plus className="h-3.5 w-3.5" />

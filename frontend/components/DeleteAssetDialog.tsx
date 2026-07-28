@@ -14,7 +14,7 @@ export function DeleteAssetDialog({
   const isMulti = assetCount > 1;
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-70 flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs">
       <div
         className="w-[min(420px,calc(100%-2rem))] overflow-hidden rounded-xl border border-zinc-700 bg-zinc-900 shadow-2xl"
         role="dialog"

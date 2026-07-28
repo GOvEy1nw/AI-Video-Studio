@@ -11,7 +11,7 @@ export function DuplicateFilenameDialog({
   onChoose,
 }: DuplicateFilenameDialogProps) {
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm">
+    <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/70 backdrop-blur-xs">
       <div
         className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl w-[min(440px,calc(100%-2rem))] overflow-hidden"
         role="dialog"
@@ -20,7 +20,7 @@ export function DuplicateFilenameDialog({
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
           <div className="flex items-center gap-3 min-w-0">
-            <FileWarning className="h-5 w-5 text-amber-400 flex-shrink-0" />
+            <FileWarning className="h-5 w-5 text-amber-400 shrink-0" />
             <h2
               id="duplicate-filename-title"
               className="text-base font-semibold text-zinc-100 truncate"

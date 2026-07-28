@@ -156,7 +156,7 @@ export function PythonSetup({ onReady }: PythonSetupProps) {
                 </div>
                 <div className="mt-4 h-2 overflow-hidden rounded-full bg-zinc-800">
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-violet-400 to-blue-500 transition-[width]"
+                    className="h-full rounded-full bg-linear-to-r from-violet-400 to-blue-500 transition-[width]"
                     style={{ width: `${progress?.percent ?? 0}%` }}
                   />
                 </div>

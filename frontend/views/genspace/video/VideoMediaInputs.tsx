@@ -220,7 +220,7 @@ export function VideoMediaInputs({
             type="checkbox"
             checked={useAudioTrack}
             onChange={(event) => onUseAudioTrackChange(event.target.checked)}
-            className="h-3.5 w-3.5 rounded border-zinc-700 bg-zinc-900 text-blue-500 focus:ring-blue-500"
+            className="h-3.5 w-3.5 rounded-sm border-zinc-700 bg-zinc-900 text-blue-500 focus:ring-blue-500"
           />
         </label>
         <div className="px-2 text-[9px] leading-tight text-zinc-500">

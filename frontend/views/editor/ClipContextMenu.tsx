@@ -13,7 +13,7 @@ import { COLOR_LABELS } from './video-editor-utils'
 export interface ClipContextMenuProps {
   clipContextMenu: { clipId: string; x: number; y: number }
   contextClip: TimelineClip | null
-  clipContextMenuRef: React.RefObject<HTMLDivElement>
+  clipContextMenuRef: React.RefObject<HTMLDivElement | null>
   clips: TimelineClip[]
   tracks: Track[]
   selectedClipIds: Set<string>
@@ -70,10 +70,10 @@ function MenuItem({ icon: Icon, iconClass, label, shortcut, badge, badgeClass, d
         disabled ? 'opacity-40 cursor-not-allowed' : 'hover:bg-zinc-700'
       } ${danger ? 'text-red-400' : 'text-zinc-300'}`}
     >
-      <Icon className={`h-3.5 w-3.5 flex-shrink-0 ${iconClass || (danger ? '' : 'text-zinc-500')}`} />
+      <Icon className={`h-3.5 w-3.5 shrink-0 ${iconClass || (danger ? '' : 'text-zinc-500')}`} />
       <span className="flex-1 truncate">{label}</span>
-      {badge && <span className={`text-[10px] font-medium flex-shrink-0 ${badgeClass || 'text-zinc-500'}`}>{badge}</span>}
-      {shortcut && <span className="text-zinc-600 text-[10px] flex-shrink-0">{shortcut}</span>}
+      {badge && <span className={`text-[10px] font-medium shrink-0 ${badgeClass || 'text-zinc-500'}`}>{badge}</span>}
+      {shortcut && <span className="text-zinc-600 text-[10px] shrink-0">{shortcut}</span>}
     </button>
   )
 }
@@ -163,7 +163,7 @@ export function ClipContextMenu({
   return (
     <div
       ref={clipContextMenuRef}
-      className="fixed bg-zinc-800 border border-zinc-700 rounded-xl shadow-2xl py-1.5 z-[60] min-w-[220px] max-w-[280px] text-xs"
+      className="fixed bg-zinc-800 border border-zinc-700 rounded-xl shadow-2xl py-1.5 z-60 min-w-[220px] max-w-[280px] text-xs"
       style={{ left: clipContextMenu.x, top: clipContextMenu.y }}
       onClick={(e) => e.stopPropagation()}
     >
@@ -183,7 +183,7 @@ export function ClipContextMenu({
               onClick={() => { addTextClip(preset.style, currentTime); close() }}
               className="w-full text-left px-3 py-1.5 text-zinc-400 hover:bg-zinc-700 flex items-center gap-3 pl-9"
             >
-              <span className="text-[10px] text-cyan-500/70 flex-shrink-0">T</span>
+              <span className="text-[10px] text-cyan-500/70 shrink-0">T</span>
               <span className="flex-1 truncate">{preset.name}</span>
             </button>
           ))}
@@ -483,16 +483,16 @@ function SingleClipMenu({
           {/* Take navigation */}
           {liveAsset!.takes && liveAsset!.takes.length > 1 && (
             <div className="px-3 py-1 flex items-center gap-2">
-              <span className="text-[10px] text-zinc-500 flex-shrink-0">Take:</span>
+              <span className="text-[10px] text-zinc-500 shrink-0">Take:</span>
               <button onClick={(e) => { e.stopPropagation(); handleClipTakeChange(contextClip.id, 'prev') }}
-                className="p-0.5 rounded hover:bg-zinc-600 text-zinc-400 hover:text-white">
+                className="p-0.5 rounded-sm hover:bg-zinc-600 text-zinc-400 hover:text-white">
                 <ChevronLeft className="h-3 w-3" />
               </button>
               <span className="text-[10px] text-zinc-300 min-w-[28px] text-center tabular-nums">
                 {(contextClip.takeIndex ?? (liveAsset!.activeTakeIndex ?? liveAsset!.takes!.length - 1)) + 1}/{liveAsset!.takes!.length}
               </span>
               <button onClick={(e) => { e.stopPropagation(); handleClipTakeChange(contextClip.id, 'next') }}
-                className="p-0.5 rounded hover:bg-zinc-600 text-zinc-400 hover:text-white">
+                className="p-0.5 rounded-sm hover:bg-zinc-600 text-zinc-400 hover:text-white">
                 <ChevronRight className="h-3 w-3" />
               </button>
               <button
@@ -502,7 +502,7 @@ function SingleClipMenu({
                     handleDeleteTake(contextClip.id)
                   }
                 }}
-                className="p-0.5 rounded hover:bg-red-900/50 text-zinc-500 hover:text-red-400 ml-auto"
+                className="p-0.5 rounded-sm hover:bg-red-900/50 text-zinc-500 hover:text-red-400 ml-auto"
                 title="Delete this take"
               >
                 <Trash2 className="h-3 w-3" />
@@ -542,11 +542,11 @@ function SingleClipMenu({
               <button
                 className="w-full text-left px-3 py-1.5 flex items-center gap-3 transition-colors hover:bg-zinc-700 text-zinc-300"
               >
-                <Camera className="h-3.5 w-3.5 flex-shrink-0 text-amber-400" />
+                <Camera className="h-3.5 w-3.5 shrink-0 text-amber-400" />
                 <span className="flex-1 truncate">Use Frame As...</span>
                 <ChevronRight className="h-3 w-3 text-zinc-500" />
               </button>
-              <div className="absolute left-full top-0 ml-0.5 min-w-[200px] bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl py-1 z-[70] hidden group-hover/capture:block">
+              <div className="absolute left-full top-0 ml-0.5 min-w-[200px] bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl py-1 z-70 hidden group-hover/capture:block">
                 <MenuItem icon={Video} iconClass="text-blue-400" label="Generate Video in Gen Space"
                   onClick={() => { onCaptureFrameForVideo(contextClip); close() }} />
                 {isImage && (
@@ -674,7 +674,7 @@ function MultiClipMenu({
               }))
               close()
             }}
-            className="px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors bg-zinc-700 text-zinc-400 hover:bg-zinc-600 hover:text-white"
+            className="px-1.5 py-0.5 rounded-sm text-[10px] font-medium transition-colors bg-zinc-700 text-zinc-400 hover:bg-zinc-600 hover:text-white"
           >
             {speed}x
           </button>

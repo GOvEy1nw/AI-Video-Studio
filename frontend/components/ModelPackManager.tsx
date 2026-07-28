@@ -293,7 +293,7 @@ export function ModelPackManager({
                   type="button"
                   onClick={() => void deletePack(pack)}
                   disabled={busy}
-                  className="absolute bottom-2 right-2 z-20 rounded p-1 text-emerald-300/60 transition-colors hover:bg-zinc-900/40 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="absolute bottom-2 right-2 z-20 rounded-sm p-1 text-emerald-300/60 transition-colors hover:bg-zinc-900/40 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-50"
                   aria-label={`Delete ${pack.name}`}
                   title={`Delete ${pack.name}`}
                 >

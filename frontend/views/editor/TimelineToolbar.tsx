@@ -13,7 +13,7 @@ interface TimelineToolbarProps {
   setIcLoraSourceClipId: (id: string | null) => void
   setShowICLoraPanel: (v: boolean) => void
   tracks: Track[]
-  subtitleFileInputRef: React.RefObject<HTMLInputElement>
+  subtitleFileInputRef: React.RefObject<HTMLInputElement | null>
   handleImportSrt: (e: React.ChangeEvent<HTMLInputElement>) => void
   handleExportSrt: () => void
   subtitles: SubtitleClip[]
@@ -32,7 +32,7 @@ export function TimelineToolbar({
   zoom, setZoom, getMinZoom, centerOnPlayheadRef, handleFitToView,
 }: TimelineToolbarProps) {
   return (
-    <div className="h-9 bg-zinc-900 border-t border-zinc-800 flex items-center px-3 gap-2 flex-shrink-0">
+    <div className="h-9 bg-zinc-900 border-t border-zinc-800 flex items-center px-3 gap-2 shrink-0">
       <Button variant="outline" size="sm" className="h-6 border-zinc-700 text-zinc-400 text-[10px] px-2">
         <Plus className="h-3 w-3 mr-1" />
         Add Clip
@@ -54,7 +54,7 @@ export function TimelineToolbar({
                 newDuration = Math.max(0.5, newDuration)
                 updateClip(selectedClip.id, { speed: newSpeed, duration: newDuration })
               }}
-              className="bg-zinc-800 border border-zinc-700 rounded px-1.5 py-0.5 text-[10px] text-white"
+              className="bg-zinc-800 border border-zinc-700 rounded-sm px-1.5 py-0.5 text-[10px] text-white"
             >
               <option value={0.25}>0.25x</option>
               <option value={0.5}>0.5x</option>
@@ -118,7 +118,7 @@ export function TimelineToolbar({
           <div className="flex items-center gap-1">
             <button
               onClick={() => subtitleFileInputRef.current?.click()}
-              className="h-6 px-2 rounded bg-amber-900/30 border border-amber-700/30 text-amber-400 hover:bg-amber-900/50 text-[10px] flex items-center gap-1 transition-colors"
+              className="h-6 px-2 rounded-sm bg-amber-900/30 border border-amber-700/30 text-amber-400 hover:bg-amber-900/50 text-[10px] flex items-center gap-1 transition-colors"
               title="Import SRT subtitles"
             >
               <FileUp className="h-3 w-3" />
@@ -127,7 +127,7 @@ export function TimelineToolbar({
             <button
               onClick={handleExportSrt}
               disabled={subtitles.length === 0}
-              className="h-6 px-2 rounded bg-amber-900/30 border border-amber-700/30 text-amber-400 hover:bg-amber-900/50 text-[10px] flex items-center gap-1 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="h-6 px-2 rounded-sm bg-amber-900/30 border border-amber-700/30 text-amber-400 hover:bg-amber-900/50 text-[10px] flex items-center gap-1 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               title="Export SRT subtitles"
             >
               <FileDown className="h-3 w-3" />
@@ -152,7 +152,7 @@ export function TimelineToolbar({
         <Tooltip content="Zoom out (-)">
           <button
             onClick={() => { centerOnPlayheadRef.current = true; setZoom(Math.max(getMinZoom(), +(zoom - 0.25).toFixed(2))) }}
-            className="p-0.5 rounded hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300 transition-colors"
+            className="p-0.5 rounded-sm hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300 transition-colors"
           >
             <ZoomOut className="h-3.5 w-3.5" />
           </button>
@@ -170,7 +170,7 @@ export function TimelineToolbar({
         <Tooltip content="Zoom in (+)">
           <button
             onClick={() => { centerOnPlayheadRef.current = true; setZoom(Math.min(4, +(zoom + 0.25).toFixed(2))) }}
-            className="p-0.5 rounded hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300 transition-colors"
+            className="p-0.5 rounded-sm hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300 transition-colors"
           >
             <ZoomIn className="h-3.5 w-3.5" />
           </button>
@@ -179,7 +179,7 @@ export function TimelineToolbar({
         <Tooltip content="Fit to view (Ctrl+0)">
           <button
             onClick={handleFitToView}
-            className="p-0.5 rounded hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300 transition-colors ml-0.5"
+            className="p-0.5 rounded-sm hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300 transition-colors ml-0.5"
           >
             <Maximize2 className="h-3.5 w-3.5" />
           </button>

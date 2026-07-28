@@ -100,7 +100,7 @@ export function GuideMediaTrimEditor({
             <button
               type="button"
               onClick={toggleMute}
-              className="rounded bg-black/60 p-1.5 text-white/80 transition-colors hover:bg-black/80 hover:text-white"
+              className="rounded-sm bg-black/60 p-1.5 text-white/80 transition-colors hover:bg-black/80 hover:text-white"
               title={isMuted ? "Unmute video" : "Mute video"}
             >
               {isMuted ? (
@@ -126,7 +126,7 @@ export function GuideMediaTrimEditor({
             }
             className="hidden"
           />
-          <div className="flex aspect-[3/1] max-h-24 items-center justify-center bg-zinc-950 text-emerald-400">
+          <div className="flex aspect-3/1 max-h-24 items-center justify-center bg-zinc-950 text-emerald-400">
             <Music className="h-8 w-8" />
           </div>
         </>
@@ -135,7 +135,7 @@ export function GuideMediaTrimEditor({
         <button
           type="button"
           onClick={togglePlay}
-          className="rounded p-1 text-white transition-colors hover:bg-zinc-800"
+          className="rounded-sm p-1 text-white transition-colors hover:bg-zinc-800"
           title={isPlaying ? "Pause" : "Play"}
         >
           {isPlaying ? (
@@ -168,7 +168,7 @@ export function GuideMediaTrimEditor({
         <button
           type="button"
           onClick={onConfirm}
-          className="inline-flex items-center gap-1 rounded bg-blue-600 px-2 py-1 text-[10px] font-medium text-white transition-colors hover:bg-blue-500 w-full justify-center"
+          className="inline-flex items-center gap-1 rounded-sm bg-blue-600 px-2 py-1 text-[10px] font-medium text-white transition-colors hover:bg-blue-500 w-full justify-center"
         >
           <Check className="h-3 w-3" />
           Confirm

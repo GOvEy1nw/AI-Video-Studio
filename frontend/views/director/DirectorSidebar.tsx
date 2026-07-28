@@ -377,7 +377,7 @@ export function DirectorSidebar(props: Props) {
                         className="aspect-video w-full object-cover"
                       />
                     )}
-                    <span className="absolute bottom-1 left-1 rounded bg-black/80 px-1.5 py-0.5 text-[9px] text-white">
+                    <span className="absolute bottom-1 left-1 rounded-sm bg-black/80 px-1.5 py-0.5 text-[9px] text-white">
                       Take {index + 1}
                       {active ? " · Active" : ""}
                     </span>
@@ -390,7 +390,7 @@ export function DirectorSidebar(props: Props) {
       </div>
 
       <div
-        className="group relative z-10 h-1 flex-shrink-0 cursor-row-resize bg-transparent transition-colors hover:bg-blue-500/40 active:bg-blue-500/60"
+        className="group relative z-10 h-1 shrink-0 cursor-row-resize bg-transparent transition-colors hover:bg-blue-500/40 active:bg-blue-500/60"
         onMouseDown={props.onAssetsResizeStart}
         role="separator"
         aria-label="Resize Asset Library"
@@ -406,7 +406,7 @@ export function DirectorSidebar(props: Props) {
             : { flex: "0 1 40%", minHeight: 330 }
         }
       >
-        <div className="p-3 pb-2 flex items-center justify-between flex-shrink-0">
+        <div className="p-3 pb-2 flex items-center justify-between shrink-0">
           <h3 className="text-sm font-semibold text-white">Timelines</h3>
           <div className="relative">
             <Tooltip content="Add timeline" side="right">
@@ -444,7 +444,7 @@ export function DirectorSidebar(props: Props) {
                 className={`group flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 transition-colors ${active ? "border-blue-500/40 bg-blue-600/20" : "border-transparent hover:bg-zinc-800"}`}
               >
                 <Film
-                  className={`h-4 w-4 flex-shrink-0 ${active ? "text-blue-400" : "text-zinc-500"}`}
+                  className={`h-4 w-4 shrink-0 ${active ? "text-blue-400" : "text-zinc-500"}`}
                 />
                 <div className="min-w-0 flex-1">
                   {renamingId === timeline.id ? (
@@ -460,7 +460,7 @@ export function DirectorSidebar(props: Props) {
                         if (event.key === "Enter") event.currentTarget.blur();
                         if (event.key === "Escape") setRenamingId(null);
                       }}
-                      className="w-full rounded border border-blue-500 bg-zinc-900 px-1 py-0.5 text-xs text-white outline-none"
+                      className="w-full rounded-sm border border-blue-500 bg-zinc-900 px-1 py-0.5 text-xs text-white outline-hidden"
                     />
                   ) : (
                     <p
@@ -482,7 +482,7 @@ export function DirectorSidebar(props: Props) {
                   </div>
                 </div>
                 {active ? (
-                  <span className="flex-shrink-0 text-[9px] font-medium uppercase tracking-wider text-blue-400">
+                  <span className="shrink-0 text-[9px] font-medium uppercase tracking-wider text-blue-400">
                     Active
                   </span>
                 ) : (
@@ -493,7 +493,7 @@ export function DirectorSidebar(props: Props) {
                         event.stopPropagation();
                         props.onDuplicateTimeline(timeline.id);
                       }}
-                      className="hidden rounded p-1 text-zinc-500 hover:bg-zinc-700 hover:text-white group-hover:block"
+                      className="hidden rounded-sm p-1 text-zinc-500 hover:bg-zinc-700 hover:text-white group-hover:block"
                       title="Duplicate"
                     >
                       <Layers className="h-3 w-3" />
@@ -505,7 +505,7 @@ export function DirectorSidebar(props: Props) {
                         event.stopPropagation();
                         props.onDeleteTimeline(timeline.id);
                       }}
-                      className="hidden rounded p-1 text-zinc-500 hover:bg-red-950 hover:text-red-300 disabled:opacity-30 group-hover:block"
+                      className="hidden rounded-sm p-1 text-zinc-500 hover:bg-red-950 hover:text-red-300 disabled:opacity-30 group-hover:block"
                       title="Delete"
                     >
                       <Trash2 className="h-3 w-3" />
@@ -521,7 +521,7 @@ export function DirectorSidebar(props: Props) {
       {timelineContextMenu && (
         <div
           ref={timelineContextMenuRef}
-          className="fixed z-[60] min-w-[140px] rounded-lg border border-zinc-700 bg-zinc-800 py-1 shadow-xl"
+          className="fixed z-60 min-w-[140px] rounded-lg border border-zinc-700 bg-zinc-800 py-1 shadow-xl"
           style={{ left: timelineContextMenu.x, top: timelineContextMenu.y }}
           onMouseDown={(event) => event.stopPropagation()}
         >

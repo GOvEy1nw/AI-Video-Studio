@@ -226,7 +226,7 @@ export function ImportTimelineModal({ isOpen, onClose, onImport }: ImportTimelin
   const allFound = foundCount === totalCount && totalCount > 0
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs">
       <div className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl w-[680px] max-h-[85vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
@@ -297,7 +297,7 @@ export function ImportTimelineModal({ isOpen, onClose, onImport }: ImportTimelin
             <div className="space-y-4">
               <div className="bg-red-900/20 border border-red-800/30 rounded-lg p-4">
                 <div className="flex items-start gap-3">
-                  <AlertTriangle className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
+                  <AlertTriangle className="h-5 w-5 text-red-400 shrink-0 mt-0.5" />
                   <div>
                     <p className="text-sm font-medium text-red-300 mb-1">Import Error</p>
                     <p className="text-xs text-red-400/80 whitespace-pre-wrap">{error}</p>
@@ -418,16 +418,16 @@ export function ImportTimelineModal({ isOpen, onClose, onImport }: ImportTimelin
                           key={ref.id}
                           className={`flex items-center gap-2 px-3 py-2 text-[11px] ${i % 2 === 0 ? 'bg-zinc-800/30' : 'bg-zinc-900/30'}`}
                         >
-                          <TypeIcon className={`h-3.5 w-3.5 flex-shrink-0 ${
+                          <TypeIcon className={`h-3.5 w-3.5 shrink-0 ${
                             ref.type === 'video' ? 'text-blue-400' : ref.type === 'audio' ? 'text-green-400' : 'text-blue-400'
                           }`} />
                           
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5">
                               {ref.found ? (
-                                <Check className="h-3 w-3 text-green-400 flex-shrink-0" />
+                                <Check className="h-3 w-3 text-green-400 shrink-0" />
                               ) : (
-                                <AlertTriangle className="h-3 w-3 text-red-400 flex-shrink-0" />
+                                <AlertTriangle className="h-3 w-3 text-red-400 shrink-0" />
                               )}
                               <span className={`truncate font-medium ${ref.found ? 'text-zinc-300' : 'text-red-300'}`}>
                                 {ref.name}
@@ -441,7 +441,7 @@ export function ImportTimelineModal({ isOpen, onClose, onImport }: ImportTimelin
                           {!ref.found && (
                             <button
                               onClick={() => handleRelinkFile(ref.id)}
-                              className="flex-shrink-0 px-2 py-1 rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-[10px] flex items-center gap-1 transition-colors"
+                              className="shrink-0 px-2 py-1 rounded-sm bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-[10px] flex items-center gap-1 transition-colors"
                               title="Relink this file"
                             >
                               <Link2 className="h-3 w-3" />

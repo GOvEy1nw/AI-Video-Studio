@@ -30,7 +30,7 @@ export function GenSpaceModeTabs({
             onClick={() => onChange(value)}
             className={`flex items-center justify-center gap-1.5 rounded-md px-2 py-2 text-sm font-medium transition-colors ${
               mode === value
-                ? "bg-zinc-800 text-white shadow-sm"
+                ? "bg-zinc-800 text-white shadow-xs"
                 : "text-zinc-500 hover:bg-zinc-800/60 hover:text-zinc-200"
             }`}
           >

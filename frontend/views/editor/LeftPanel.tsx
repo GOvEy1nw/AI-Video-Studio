@@ -206,7 +206,7 @@ export function LeftPanel(props: LeftPanelProps) {
 
   return (
     <div
-      className="flex-shrink-0 border-r border-zinc-800 flex flex-col bg-background"
+      className="shrink-0 border-r border-zinc-800 flex flex-col bg-background"
       style={{ width: leftPanelWidth }}
     >
       {/* Assets Section */}
@@ -332,7 +332,7 @@ export function LeftPanel(props: LeftPanelProps) {
               }
             />
             <input
-              ref={fileInputRef as React.RefObject<HTMLInputElement>}
+              ref={fileInputRef as React.RefObject<HTMLInputElement | null>}
               type="file"
               accept="video/*,audio/*,image/*"
               multiple
@@ -478,7 +478,7 @@ export function LeftPanel(props: LeftPanelProps) {
 
       {/* Resize handle between Assets and Timelines */}
       <div
-        className="h-1 flex-shrink-0 cursor-row-resize bg-transparent hover:bg-blue-500/40 active:bg-blue-500/60 transition-colors relative group z-10"
+        className="h-1 shrink-0 cursor-row-resize bg-transparent hover:bg-blue-500/40 active:bg-blue-500/60 transition-colors relative group z-10"
         onMouseDown={(e) => handleResizeDragStart("assets", e)}
       >
         <div className="absolute inset-x-0 -top-1 -bottom-1" />
@@ -493,7 +493,7 @@ export function LeftPanel(props: LeftPanelProps) {
             : { flex: "0 1 40%", minHeight: 330 }
         }
       >
-        <div className="p-3 pb-2 flex items-center justify-between flex-shrink-0">
+        <div className="p-3 pb-2 flex items-center justify-between shrink-0">
           <h3 className="text-sm font-semibold text-white">Timelines</h3>
           <div className="relative">
             <Tooltip content="Add timeline" side="right">
@@ -570,7 +570,7 @@ export function LeftPanel(props: LeftPanelProps) {
                 onContextMenu={(e) => handleTimelineTabContextMenu(e, tl.id)}
               >
                 <Film
-                  className={`h-4 w-4 flex-shrink-0 ${isActive ? "text-blue-400" : "text-zinc-500"}`}
+                  className={`h-4 w-4 shrink-0 ${isActive ? "text-blue-400" : "text-zinc-500"}`}
                 />
                 <div className="flex-1 min-w-0">
                   {renamingTimelineId === tl.id && renameSource === "panel" ? (
@@ -586,7 +586,7 @@ export function LeftPanel(props: LeftPanelProps) {
                           setRenameValue("");
                         }
                       }}
-                      className="bg-zinc-900 border border-blue-500 rounded px-1 py-0.5 outline-none text-white text-xs w-full"
+                      className="bg-zinc-900 border border-blue-500 rounded-sm px-1 py-0.5 outline-hidden text-white text-xs w-full"
                       autoFocus
                       onClick={(e) => e.stopPropagation()}
                       onDoubleClick={(e) => e.stopPropagation()}
@@ -611,12 +611,12 @@ export function LeftPanel(props: LeftPanelProps) {
                   </div>
                 </div>
                 {isActive ? (
-                  <span className="text-[9px] text-blue-400 font-medium uppercase tracking-wider flex-shrink-0">
+                  <span className="text-[9px] text-blue-400 font-medium uppercase tracking-wider shrink-0">
                     Active
                   </span>
                 ) : openTimelineIds.has(tl.id) ? (
                   <span
-                    className="w-1.5 h-1.5 rounded-full bg-zinc-500 flex-shrink-0"
+                    className="w-1.5 h-1.5 rounded-full bg-zinc-500 shrink-0"
                     title="Open in tabs"
                   />
                 ) : null}
@@ -628,7 +628,7 @@ export function LeftPanel(props: LeftPanelProps) {
                         e.stopPropagation();
                         handleDeleteTimeline(tl.id);
                       }}
-                      className="p-1 rounded hover:bg-red-500/20 text-zinc-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
+                      className="p-1 rounded-sm hover:bg-red-500/20 text-zinc-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all shrink-0"
                     >
                       <Trash2 className="h-3 w-3" />
                     </button>

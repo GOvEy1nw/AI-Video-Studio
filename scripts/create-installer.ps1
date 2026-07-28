@@ -18,6 +18,7 @@ $ReleaseDir = Join-Path $ProjectDir "release"
 $VcRedistPath = Join-Path $ProjectDir "resources\vc_redist.x64.exe"
 $VcRedistUrl = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
 $ElectronBuilder = Join-Path $ProjectDir "node_modules\.bin\electron-builder.cmd"
+$WindowsSecurityModule = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\Modules\Microsoft.PowerShell.Security\Microsoft.PowerShell.Security.psd1"
 
 Set-Location $ProjectDir
 
@@ -53,6 +54,7 @@ if (-not (Test-Path $VcRedistPath)) {
     Invoke-WebRequest -Uri $VcRedistUrl -OutFile $VcRedistPath
 }
 
+Import-Module $WindowsSecurityModule -Force
 $VcRedistSignature = Get-AuthenticodeSignature $VcRedistPath
 if (
     $VcRedistSignature.Status -ne "Valid" -or
@@ -62,6 +64,8 @@ if (
 }
 
 # Build with electron-builder
+# Let electron-builder's pnpm collector honor packageManager instead of inheriting the outer Corepack version.
+Remove-Item Env:COREPACK_ROOT -ErrorAction SilentlyContinue
 if ($Unpack) {
     Write-Host "Packaging unpacked app (fast mode)..." -ForegroundColor Yellow
     & $ElectronBuilder --win --dir

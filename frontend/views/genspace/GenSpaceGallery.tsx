@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import {
   memo,
+  type HTMLAttributes,
   type RefObject,
 } from "react";
 import { DownloadProgressView } from "../../components/DownloadProgressView";
@@ -20,11 +21,15 @@ import {
 import type { ModelDownloadProgress } from "../../types/progress";
 
 export interface GenSpaceGalleryProps {
+  dropZoneProps: Pick<
+    HTMLAttributes<HTMLDivElement>,
+    "onDragEnter" | "onDragOver" | "onDragLeave" | "onDrop"
+  >;
   library: Omit<
     GalleryAssetLibraryProps,
     "className" | "headerAction" | "leadingContent" | "listActions"
   >;
-  fileInputRef: RefObject<HTMLInputElement>;
+  fileInputRef: RefObject<HTMLInputElement | null>;
   onImportFiles: (files: File[]) => void;
   toast: string | null;
   isDragOver: boolean;
@@ -45,6 +50,7 @@ export interface GenSpaceGalleryProps {
 }
 
 function GenSpaceGalleryView({
+  dropZoneProps,
   library,
   fileInputRef,
   onImportFiles,
@@ -57,21 +63,25 @@ function GenSpaceGalleryView({
 }: GenSpaceGalleryProps) {
   const { assets, visibleAssets, showFavorites, selectedBin } = library;
   return (
-    <>
+    <div
+      {...dropZoneProps}
+      data-testid="genspace-gallery-dropzone"
+      className="absolute inset-y-0 left-[480px] right-0"
+    >
       {toast ? (
         <div className="absolute left-1/2 top-6 z-30 -translate-x-1/2 rounded-lg border border-zinc-700 bg-zinc-900/95 px-4 py-2 text-sm text-zinc-200 shadow-xl">
           {toast}
         </div>
       ) : null}
       {!isPanelMode && isDragOver ? (
-        <div className="pointer-events-none absolute bottom-4 left-[376px] right-4 top-4 z-20 flex items-center justify-center rounded-xl border-2 border-dashed border-violet-400/70 bg-violet-500/10">
+        <div className="pointer-events-none absolute inset-4 z-20 flex items-center justify-center rounded-xl border-2 border-dashed border-violet-400/70 bg-violet-500/10">
           <p className="text-sm font-medium text-violet-200">
             Drop image, video, or audio files to add to gallery
           </p>
         </div>
       ) : null}
       {assets.length === 0 && !generation.isRunning ? (
-        <div className="pointer-events-none absolute inset-y-0 left-[480px] right-0 flex flex-col items-center justify-center text-center">
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
           <div className="mb-4 flex h-24 w-24 items-center justify-center rounded-2xl border-2 border-dashed border-zinc-700">
             <Sparkles className="h-10 w-10 text-zinc-600" />
           </div>
@@ -85,7 +95,7 @@ function GenSpaceGalleryView({
         </div>
       ) : null}
       {showFavorites && visibleAssets.length === 0 && assets.length > 0 ? (
-        <div className="pointer-events-none absolute inset-y-0 left-[480px] right-0 flex flex-col items-center justify-center text-center">
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
           <Heart className="mb-4 h-12 w-12 text-zinc-700" />
           <h3 className="mb-2 text-lg font-semibold text-white">
             No favorites yet
@@ -100,7 +110,7 @@ function GenSpaceGalleryView({
       visibleAssets.length === 0 &&
       assets.length > 0 &&
       !generation.isRunning ? (
-        <div className="pointer-events-none absolute inset-y-0 left-[480px] right-0 flex flex-col items-center justify-center text-center">
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
           <Folder className="mb-4 h-12 w-12 text-zinc-700" />
           <h3 className="mb-2 text-lg font-semibold text-white">
             No assets in &ldquo;{selectedBin}&rdquo;
@@ -116,7 +126,7 @@ function GenSpaceGalleryView({
       visibleAssets.length === 0 &&
       assets.length > 0 &&
       !generation.isRunning ? (
-        <div className="pointer-events-none absolute inset-y-0 left-[480px] right-0 flex flex-col items-center justify-center text-center">
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
           <ListFilter className="mb-4 h-12 w-12 text-zinc-700" />
           <h3 className="mb-2 text-lg font-semibold text-white">
             No matching assets
@@ -129,7 +139,7 @@ function GenSpaceGalleryView({
       {assets.length > 0 || generation.isRunning ? (
         <GalleryAssetLibrary
           {...library}
-          className="absolute bottom-0 left-[480px] right-0 top-0 px-4 pt-4"
+          className="absolute inset-0 px-4 pt-4"
           headerAction={
             <>
               <AssetLibraryImportButton
@@ -228,7 +238,7 @@ function GenSpaceGalleryView({
                             {generation.badges.map((badge) => (
                               <span
                                 key={badge}
-                                className="rounded bg-black/50 px-1.5 py-0.5 text-[10px] text-zinc-300"
+                                className="rounded-sm bg-black/50 px-1.5 py-0.5 text-[10px] text-zinc-300"
                               >
                                 {badge}
                               </span>
@@ -269,7 +279,7 @@ function GenSpaceGalleryView({
           }
         />
       ) : null}
-    </>
+    </div>
   );
 }
 

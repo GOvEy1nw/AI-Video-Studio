@@ -179,13 +179,13 @@ export function ProgramMonitor({
       >
         {/* Header (only when split view) */}
         {showSourceMonitor && (
-          <div className="h-7 bg-zinc-900 border-b border-zinc-800 flex items-center px-3 flex-shrink-0">
+          <div className="h-7 bg-zinc-900 border-b border-zinc-800 flex items-center px-3 shrink-0">
             <span className="text-[11px] font-semibold text-zinc-400 tracking-wide">Timeline Viewer</span>
           </div>
         )}
         {/* Preview (existing) */}
         <div
-          ref={previewContainerRef as React.RefObject<HTMLDivElement>}
+          ref={previewContainerRef as React.RefObject<HTMLDivElement | null>}
           className={`flex-1 relative overflow-hidden min-h-0 min-w-0 ${isFullscreen ? 'bg-black' : ''}`}
           style={{ backgroundColor: isFullscreen ? '#000' : '#333', ...(previewZoom !== 'fit' ? { cursor: 'grab' } : {}) }}
           onMouseDown={(e) => {
@@ -251,7 +251,7 @@ export function ProgramMonitor({
                           key={`comp-${lowerClip.id}`}
                           src={lowerSrc}
                           alt=""
-                          className="absolute inset-0 w-full h-full object-contain pointer-events-none z-[1]"
+                          className="absolute inset-0 w-full h-full object-contain pointer-events-none z-1"
                           style={lowerStyles}
                         />
                       )
@@ -263,7 +263,7 @@ export function ProgramMonitor({
                         key={`comp-${lowerClip.id}`}
                         id={`comp-video-${lowerClip.id}`}
                         src={lowerSrc}
-                        className="absolute inset-0 w-full h-full object-contain pointer-events-none z-[1]"
+                        className="absolute inset-0 w-full h-full object-contain pointer-events-none z-1"
                         style={lowerStyles}
                         muted
                         playsInline
@@ -309,7 +309,7 @@ export function ProgramMonitor({
                   {/* Video pool container — during dissolve, fade out with progress */}
                   <div
                     id="video-pool-container"
-                    className={`absolute inset-0 w-full h-full pointer-events-none z-[2] ${!isPlaying && monitorClip?.asset?.type !== 'video' ? 'hidden' : ''}`}
+                    className={`absolute inset-0 w-full h-full pointer-events-none z-2 ${!isPlaying && monitorClip?.asset?.type !== 'video' ? 'hidden' : ''}`}
                     style={monitorClip?.asset?.type === 'video' ? {
                       ...getClipEffectStyles(monitorClip, clipPlaybackOffset),
                       ...(dissolveOutOpacity !== undefined ? { opacity: dissolveOutOpacity } : {}),
@@ -318,10 +318,10 @@ export function ProgramMonitor({
 
                   {activeClip?.asset?.type === 'image' && (
                     <img
-                      ref={previewImageRef as React.RefObject<HTMLImageElement>}
+                      ref={previewImageRef as React.RefObject<HTMLImageElement | null>}
                       src={getClipUrl(activeClip) || activeClip.asset.url}
                       alt=""
-                      className="absolute inset-0 w-full h-full object-contain z-[2]"
+                      className="absolute inset-0 w-full h-full object-contain z-2"
                       style={{
                         ...getClipEffectStyles(activeClip, clipPlaybackOffset),
                         ...(dissolveOutOpacity !== undefined ? { opacity: dissolveOutOpacity } : {}),
@@ -339,7 +339,7 @@ export function ProgramMonitor({
                     if (incoming.asset?.type === 'video') {
                       return (
                         <video
-                          ref={previewVideoRef as React.RefObject<HTMLVideoElement>}
+                          ref={previewVideoRef as React.RefObject<HTMLVideoElement | null>}
                           key={`dissolve-in-${incoming.id}`}
                           src={inSrc}
                           className="absolute inset-0 w-full h-full object-contain pointer-events-none"
@@ -407,13 +407,13 @@ export function ProgramMonitor({
                   <React.Fragment key={`adj-fx-${adjClip.id}`}>
                     {backdropFilter && (
                       <div
-                        className="absolute inset-0 z-[22] pointer-events-none"
+                        className="absolute inset-0 z-22 pointer-events-none"
                         style={{ backdropFilter, WebkitBackdropFilter: backdropFilter }}
                       />
                     )}
                     {hasVignette && (
                       <div
-                        className="absolute inset-0 z-[22] pointer-events-none"
+                        className="absolute inset-0 z-22 pointer-events-none"
                         style={{
                           background: `radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,${vignetteAmount}) 100%)`,
                         }}
@@ -437,7 +437,7 @@ export function ProgramMonitor({
                           }
                           ctx.putImageData(imageData, 0, 0)
                         }}
-                        className="absolute inset-0 z-[22] pointer-events-none w-full h-full"
+                        className="absolute inset-0 z-22 pointer-events-none w-full h-full"
                         style={{ mixBlendMode: 'overlay', imageRendering: 'pixelated' }}
                       />
                     )}
@@ -452,7 +452,7 @@ export function ProgramMonitor({
                 return (
                   <div
                     key={`text-${tc.id}`}
-                    className={`absolute z-[24] ${isSelected ? 'ring-2 ring-cyan-400/60 ring-offset-1 ring-offset-transparent' : ''}`}
+                    className={`absolute z-24 ${isSelected ? 'ring-2 ring-cyan-400/60 ring-offset-1 ring-offset-transparent' : ''}`}
                     style={{
                       left: `${ts.positionX}%`,
                       top: `${ts.positionY}%`,
@@ -534,7 +534,7 @@ export function ProgramMonitor({
 
               {/* Subtitle overlay */}
               {activeSubtitles.length > 0 && (
-                <div className="absolute inset-0 z-[25] pointer-events-none flex flex-col justify-end">
+                <div className="absolute inset-0 z-25 pointer-events-none flex flex-col justify-end">
                   {activeSubtitles.map(sub => {
                     const track = tracks[sub.trackIndex]
                     const style = { ...DEFAULT_SUBTITLE_STYLE, ...(track?.subtitleStyle || {}), ...sub.style }
@@ -547,7 +547,7 @@ export function ProgramMonitor({
                         style={style.position !== 'center' ? { padding: style.position === 'top' ? '12px 16px 0' : '0 16px 12px' } : undefined}
                       >
                         <span
-                          className="inline-block max-w-[90%] text-center mx-auto rounded px-3 py-1.5 leading-snug whitespace-pre-wrap"
+                          className="inline-block max-w-[90%] text-center mx-auto rounded-sm px-3 py-1.5 leading-snug whitespace-pre-wrap"
                           style={{
                             fontSize: `${style.fontSize}px`,
                             fontFamily: style.fontFamily,
@@ -575,11 +575,11 @@ export function ProgramMonitor({
                   return barPct > 0 ? (
                     <>
                       <div
-                        className="absolute left-0 right-0 top-0 z-[18] pointer-events-none"
+                        className="absolute left-0 right-0 top-0 z-18 pointer-events-none"
                         style={{ height: `${barPct}%`, backgroundColor: activeLetterbox.color, opacity: activeLetterbox.opacity }}
                       />
                       <div
-                        className="absolute left-0 right-0 bottom-0 z-[18] pointer-events-none"
+                        className="absolute left-0 right-0 bottom-0 z-18 pointer-events-none"
                         style={{ height: `${barPct}%`, backgroundColor: activeLetterbox.color, opacity: activeLetterbox.opacity }}
                       />
                     </>
@@ -589,11 +589,11 @@ export function ProgramMonitor({
                   return barPct > 0 ? (
                     <>
                       <div
-                        className="absolute top-0 bottom-0 left-0 z-[18] pointer-events-none"
+                        className="absolute top-0 bottom-0 left-0 z-18 pointer-events-none"
                         style={{ width: `${barPct}%`, backgroundColor: activeLetterbox.color, opacity: activeLetterbox.opacity }}
                       />
                       <div
-                        className="absolute top-0 bottom-0 right-0 z-[18] pointer-events-none"
+                        className="absolute top-0 bottom-0 right-0 z-18 pointer-events-none"
                         style={{ width: `${barPct}%`, backgroundColor: activeLetterbox.color, opacity: activeLetterbox.opacity }}
                       />
                     </>
@@ -615,7 +615,7 @@ export function ProgramMonitor({
 
         {/* Program monitor mini scrub bar with IN/OUT markers */}
         {clips.length > 0 && (
-          <div className="bg-zinc-900 border-t border-zinc-800 flex-shrink-0 relative px-2 py-1">
+          <div className="bg-zinc-900 border-t border-zinc-800 shrink-0 relative px-2 py-1">
             <div
               id="program-scrub-bar"
               className="relative h-5 cursor-pointer group"
@@ -724,14 +724,14 @@ export function ProgramMonitor({
         )}
 
         {/* Status bar: timecode | Fit | transport controls | resolution | duration */}
-        <div className="h-8 bg-zinc-950 border-t border-zinc-800 flex items-center px-3 flex-shrink-0 gap-2">
+        <div className="h-8 bg-zinc-950 border-t border-zinc-800 flex items-center px-3 shrink-0 gap-2">
           {/* Left: current timecode */}
-          <span className="text-[12px] font-mono font-medium text-amber-400 tabular-nums tracking-tight select-none flex-shrink-0">
+          <span className="text-[12px] font-mono font-medium text-amber-400 tabular-nums tracking-tight select-none shrink-0">
             {formatTime(currentTime)}
           </span>
 
           {/* Fit / Zoom dropdown */}
-          <div className="relative flex-shrink-0">
+          <div className="relative shrink-0">
             <button
               onClick={(e) => { e.stopPropagation(); setPreviewZoomOpen(prev => !prev) }}
               className={`h-6 px-2 rounded text-[11px] font-medium tabular-nums flex items-center gap-1 transition-colors border ${
@@ -887,7 +887,7 @@ export function ProgramMonitor({
           </div>
 
           {/* Resolution dropdown */}
-          <div className="relative flex-shrink-0">
+          <div className="relative shrink-0">
             <button
               onClick={(e) => { e.stopPropagation(); setPlaybackResOpen(prev => !prev) }}
               className={`h-6 px-2 rounded text-[11px] font-medium flex items-center gap-1 transition-colors border ${
@@ -933,7 +933,7 @@ export function ProgramMonitor({
           <Tooltip content={isFullscreen ? tooltipLabel('Exit fullscreen', getShortcutLabel(kbLayout, 'view.fullscreen')) : tooltipLabel('Fullscreen', getShortcutLabel(kbLayout, 'view.fullscreen'))} side="top">
             <button
               onClick={toggleFullscreen}
-              className="p-1 rounded hover:bg-zinc-800 transition-colors text-zinc-500 hover:text-zinc-300"
+              className="p-1 rounded-sm hover:bg-zinc-800 transition-colors text-zinc-500 hover:text-zinc-300"
             >
               {isFullscreen
                 ? <Shrink className="h-3.5 w-3.5" />
@@ -943,7 +943,7 @@ export function ProgramMonitor({
           </Tooltip>
 
           {/* Right: total duration */}
-          <span className="text-[12px] font-mono font-medium text-zinc-400 tabular-nums tracking-tight select-none flex-shrink-0 text-right">
+          <span className="text-[12px] font-mono font-medium text-zinc-400 tabular-nums tracking-tight select-none shrink-0 text-right">
             {formatTime(totalDuration)}
           </span>
         </div>

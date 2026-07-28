@@ -104,7 +104,7 @@ if (Test-Path $GitBootstrapDir) {
 # Step 2: Install pnpm dependencies
 # ============================================================
 Write-Host "`n[2/3] Installing pnpm dependencies..." -ForegroundColor Yellow
-pnpm install
+corepack pnpm install
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Failed to install pnpm dependencies!" -ForegroundColor Red
     exit 1
@@ -115,7 +115,7 @@ if ($LASTEXITCODE -ne 0) {
 # ============================================================
 Write-Host "`n[3/3] Building frontend and Electron app..." -ForegroundColor Yellow
 
-pnpm run build:frontend
+corepack pnpm run build:frontend
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Failed to build frontend!" -ForegroundColor Red
     exit 1

@@ -1,5 +1,5 @@
 // Using require for Electron preload compatibility
-const { contextBridge, ipcRenderer } = require('electron')
+const { contextBridge, ipcRenderer, webUtils } = require('electron')
 type ModelPackProgress = import('./python-setup').ModelPackProgress
 
 // Expose protected methods to the renderer process
@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('read-local-file', filePath),
   approveLocalPath: (filePath: string): Promise<boolean> =>
     ipcRenderer.invoke('approve-local-path', filePath),
+  getPathForFile: (file: File): string => webUtils.getPathForFile(file),
   
   // Check GPU availability
   checkGpu: (): Promise<{ available: boolean; name?: string; vram?: number }> =>
@@ -91,7 +92,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('save-file', filePath, data, encoding),
   saveBinaryFile: (filePath: string, data: ArrayBuffer): Promise<{ success: boolean; path?: string; error?: string }> =>
     ipcRenderer.invoke('save-binary-file', filePath, data),
-  showOpenDirectoryDialog: (options: { title?: string }): Promise<string | null> =>
+  showOpenDirectoryDialog: (options: { title?: string; defaultPath?: string }): Promise<string | null> =>
     ipcRenderer.invoke('show-open-directory-dialog', options),
   searchDirectoryForFiles: (dir: string, filenames: string[]): Promise<Record<string, string>> =>
     ipcRenderer.invoke('search-directory-for-files', dir, filenames),
@@ -100,7 +101,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('check-files-exist', filePaths),
   
   // Show open file dialog
-  showOpenFileDialog: (options: { title?: string; filters?: { name: string; extensions: string[] }[]; properties?: string[] }): Promise<string[] | null> =>
+  showOpenFileDialog: (options: { title?: string; defaultPath?: string; filters?: { name: string; extensions: string[] }[]; properties?: string[] }): Promise<string[] | null> =>
     ipcRenderer.invoke('show-open-file-dialog', options),
   
   // Video export via ffmpeg (native compositing — no canvas, no frame-by-frame)
@@ -182,6 +183,7 @@ declare global {
       getModelsPath: () => Promise<string>
       readLocalFile: (filePath: string) => Promise<{ data: string; mimeType: string }>
       approveLocalPath: (filePath: string) => Promise<boolean>
+      getPathForFile: (file: File) => string
       checkGpu: () => Promise<{ available: boolean; name?: string; vram?: number }>
       getAppInfo: () => Promise<{ version: string; isPackaged: boolean; modelsPath: string; userDataPath: string }>
       checkFirstRun: () => Promise<{ needsSetup: boolean; needsLicense: boolean }>
@@ -229,10 +231,10 @@ declare global {
       showSaveDialog: (options: { title?: string; defaultPath?: string; filters?: { name: string; extensions: string[] }[] }) => Promise<string | null>
       saveFile: (filePath: string, data: string, encoding?: string) => Promise<{ success: boolean; path?: string; error?: string }>
       saveBinaryFile: (filePath: string, data: ArrayBuffer) => Promise<{ success: boolean; path?: string; error?: string }>
-      showOpenDirectoryDialog: (options: { title?: string }) => Promise<string | null>
+      showOpenDirectoryDialog: (options: { title?: string; defaultPath?: string }) => Promise<string | null>
       searchDirectoryForFiles: (dir: string, filenames: string[]) => Promise<Record<string, string>>
       checkFilesExist: (filePaths: string[]) => Promise<Record<string, boolean>>
-      showOpenFileDialog: (options: { title?: string; filters?: { name: string; extensions: string[] }[]; properties?: string[] }) => Promise<string[] | null>
+      showOpenFileDialog: (options: { title?: string; defaultPath?: string; filters?: { name: string; extensions: string[] }[]; properties?: string[] }) => Promise<string[] | null>
       exportNative: (data: {
         clips: { url: string; type: string; startTime: number; duration: number; trimStart: number; speed: number; reversed: boolean; flipH: boolean; flipV: boolean; opacity: number; trackIndex: number; muted: boolean; volume: number }[];
         outputPath: string; codec: string; width: number; height: number; fps: number; quality: number;
