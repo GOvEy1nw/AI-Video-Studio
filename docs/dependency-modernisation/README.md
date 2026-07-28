@@ -85,7 +85,7 @@ Give the agent:
 
 1. The repository with a clean `dev` worktree.
 2. This entire folder, preferably placed at `docs/dependency-modernisation/`.
-3. The instruction:  
+3. The instruction:
    **“Read `00_MASTER_RUNBOOK.md` and `STATUS.md`, then execute only the first incomplete numbered phase. Stop at every exit gate.”**
 
 The agent must update `STATUS.md` throughout the work rather than reconstructing progress from memory.

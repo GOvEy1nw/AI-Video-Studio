@@ -1,6 +1,6 @@
 # projectmem - AI-Video-Studio
 
-_Last updated: 2026-07-27_
+_Last updated: 2026-07-28_
 
 ## Project purpose
 AI Video Studio (AiVS) is a local-first, community-focused desktop app for AI image, video, and music generation. It is built on `deepbeepmeep/LTX-Desktop-WanGP`, uses a bundled WanGP / Wan2GP runtime, and does not expose cloud generation providers or require API keys.
@@ -16,6 +16,18 @@ Product principles:
 Current integration baseline: `dev`.
 
 ## Recent issues
+- [DONE] #0331 Post-uninstall verification still finds LocalAppData Programs\AiVS\AiVS.exe despite user installer-pass confirmation [Phase 11 installer uninstall verification] -> Installed candidate fully uninstalled after explicit rerun; project media and user-data directory preserved [Phase 11 installer uninstall verification] (fixed)
+  - Partial attempt: Compared Phase 1 project backup after user uninstall: 100/100 project files remain byte-identical, but default installed executable still exists [Phase 11 installer uninstall verification]
+- [DONE] #0330 git worktree remove left ignored node_modules directory under temporary C:\tmp validation path [Phase 11 clean validation worktree cleanup] -> Temporary validation worktree and leftover ignored node_modules fully removed; target path no longer exists [Phase 11 clean validation worktree cleanup] (fixed)
+- [DONE] #0329 Managed approval rejects pnpm outdated/audit because npm would receive private repository dependency graph without explicit consent [Phase 11 dependency security review] -> Required npm outdated and audit evidence completed with explicit consent; no production vulnerabilities and only previously accepted dev-only findings remain [Phase 11 dependency security review] (fixed)
+  - Failed attempt: Requested required outdated and production/full audit queries; approval rejected pending explicit user consent to disclose dependency graph to npm [Phase 11 dependency security review]
+  - Partial attempt: User explicitly authorized pnpm outdated, pnpm audit --prod, and pnpm audit dependency-graph disclosure to npm [Phase 11 dependency security review]
+- [DONE] #0328 Managed exec backend cannot interrupt stalled Phase 11 pnpm install session [Phase 11 frozen install process recovery] -> Exact stalled install process tree terminated without affecting unrelated processes [Phase 11 frozen install process recovery] (fixed)
+  - Failed attempt: Sent Ctrl+C to exact unified exec session; backend returned process interrupt is not supported [Phase 11 frozen install process recovery]
+- [DONE] #0327 Primary Phase 11 frozen install recreates node_modules then stalls under restricted pnpm store access [Phase 11 frozen install] -> Phase 11 primary frozen install completed deterministically from existing pnpm 10 store with no downloads [Phase 11 frozen install] (fixed)
+  - Failed attempt: Ran CI-mode Corepack frozen install in managed sandbox; pnpm removed node_modules and produced no package progress for 60 seconds [Phase 11 frozen install]
+- [DONE] #0326 Final origin/dev diff check reports trailing whitespace in branch-owned docs and two approved vendored WanGP pin files [Phase 11 final diff audit] -> Branch-owned whitespace fixed; reproducible WanGP source-pin findings isolated and documented without modifying protected runtime [Phase 11 final diff audit] (fixed)
+  - Partial attempt: Removed trailing whitespace mechanically from three branch-owned dependency-modernisation docs; protected WanGP pin files intentionally untouched [docs/dependency-modernisation]
 - [DONE] #0325 Expected Phase 11 filename 11_FINAL_VALIDATION_AND_PR.md does not exist [docs/dependency-modernisation] -> Correct Phase 11 path identified from repository file list [docs/dependency-modernisation/11_FINAL_VALIDATION_AND_PULL_REQUEST.md] (fixed)
   - Failed attempt: Tried reading expected Phase 11 filename from dashboard label; Get-Content returned path-not-found [docs/dependency-modernisation]
 - [DONE] #0324 GitHub CLI inferred upstream repository instead of origin fork for frontend workflow dispatch [Phase 10 GitHub workflow dispatch] -> Explicit --repo targets origin correctly; remaining 404 is expected because GitHub only dispatches workflows present on default branch [Phase 10 GitHub workflow dispatch] (fixed)
@@ -709,16 +721,16 @@ Current integration baseline: `dev`.
 - Phase 10 adds a dedicated read-only Windows frontend toolchain workflow targeting dev, while preserving existing backend CI unchanged. [.github/workflows/frontend-toolchain.yml; .github/workflows/ci.yml]
 
 ## Notes
-- warning: Phase 9 pnpm audit requires explicit maintainer approval because npm receives the project dependency graph; sandbox route fails EACCES and escalated route is policy-rejected without consent [docs/dependency-modernisation/STATUS.md; pnpm audit]
-- gotcha: dev:debug expects an IDE/debugpy listener on 127.0.0.1:5678; without one, backend debug connection is refused after Electron/Node debug launch, which confirms BACKEND_DEBUG propagation rather than normal backend readiness [package.json; pnpm dev:debug]
-- Final Phase 9 installer built successfully after all package changes: 358,840,946 bytes, SHA-256 A1ECA9B98CF80DEE6FA2AB984CB698930F5184A4E682EE24F1183D6E19FD3929 [release/AiVS-Setup.exe; Phase 9]
-- User confirmed final Phase 9 installer, installed launch, project-data preservation, native import, uninstall, and post-uninstall project-data preservation all pass [release/AiVS-Setup.exe; Phase 9]
-- Phase 9 PASSED at c285bbbbc966b41f1931be1b40f42b0f34e3af4f: all 29 starting direct packages decided, production audit clean, two documented dev-only findings, full automated/dev/unpacked/installed/uninstall gates passed, runtime protected; Phase 10 not started [docs/dependency-modernisation/STATUS.md]
 - Phase 10 ownership map: renovate.json owns npm/GitHub Actions proposals; .github/workflows/frontend-toolchain.yml owns deterministic Windows frontend CI; scripts/check-dependency-boundaries.mjs owns runtime and package-manager guards; docs/DEPENDENCY_POLICY.md owns maintenance policy. [dependency automation and CI]
 - User confirmed Phase 10 unpacked Windows smoke passes: app launches, core project/media/preload workflows and visual behaviour remain healthy. [docs/dependency-modernisation/STATUS.md]
 - Phase 10 implementation committed at 5287b79d97005d5403b45d0ad2251c6101438886; remote push was not attempted because managed approval requires explicit user authorization to export commit to origin. [docs/dependency-modernisation/STATUS.md]
 - Supersedes prior push-approval note: user explicitly authorized and Phase 10 implementation SHA 5287b79d97005d5403b45d0ad2251c6101438886 was pushed to origin; workflow dispatch remains unavailable until workflow exists on default branch. [docs/dependency-modernisation/STATUS.md]
 - Phase 10 PASSED: Renovate-only automation, deterministic read-only Windows frontend CI, package/runtime guards, full local gates, and unpacked smoke passed; real CI awaits first PR because GitHub cannot dispatch a workflow absent from default branch. [docs/dependency-modernisation/STATUS.md]
+- User confirmed Phase 11 complete development Electron regression matrix passes, including projects, file workflows, GenSpace, Settings/Model Manager, Director, Video Editor, visual/focus behaviour, and clean shutdown. [docs/dependency-modernisation/STATUS.md]
+- Phase 11 npm review completed with explicit user consent: outdated lists only @types/node 26, react-dropzone 19, and TypeScript 7 deferrals; production audit clean; full audit retains two known dev-only Electron Builder brace-expansion paths. [docs/dependency-modernisation/STATUS.md]
+- User confirmed Phase 11 unpacked Windows production regression passes: existing project, settings/model manager, file picker/drop, generation/gallery, Director, Video Editor/export, file:// preload/backend paths, and clean shutdown. [docs/dependency-modernisation/STATUS.md]
+- User confirmed Phase 11 Windows installer-over-existing install, shortcuts, installed launch, existing projects/settings/media, runtime preservation, native import, generation, Settings, Director, Video Editor, close, uninstall, and project-data preservation all pass. [docs/dependency-modernisation/STATUS.md]
+- Phase 11 post-uninstall verification passed: install directory/executable removed, zero AiVS processes remain, Documents\AiVS persists, all 100 Phase 1 backup files remain byte-identical, and LocalAppData user state remains. [docs/dependency-modernisation/STATUS.md]
 
 ## Key files
 - `LTX-2.3_Cinematic_hardcut.safetensors`

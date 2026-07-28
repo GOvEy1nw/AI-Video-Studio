@@ -10,7 +10,7 @@
 - Branch created on: 2026-07-26
 - Executor: Codex
 - Baseline `dev` commit SHA: `a3b8cbdd750d167e3d88eb1c99df3ebd78b3a141`
-- Current implementation HEAD SHA: `2e2a7b0d2e3bdc728d3b7c4a7521583c9e8d2f53`
+- Current implementation HEAD SHA: `7a0dcdaf6a9d56b138f6c45b37b7f88a90c4df86`
 - Last sync from `dev`: 2026-07-26 (`origin/dev` merged before Phase 1)
 - Node version: 24.18.0
 - pnpm version: 10.30.3 through Corepack
@@ -74,7 +74,7 @@ Use exactly one status: `NOT STARTED`, `IN PROGRESS`, `BLOCKED`, or `PASSED`.
 | 8 — TypeScript 6 | PASSED | `1ee8ade9e09e8dcdd4439bb980e1ccf2a0053f63` | `bca68bf614bc34cb8e62dc1862a04caca58e8759` | 2026-07-27 | TypeScript 6.0.3 migration, strict renderer/node projects, Tier A/B, development and unpacked smoke/parity, and protected-runtime gates passed. Phase 9 not started. |
 | 9 — Low-risk package refresh | PASSED | `bca68bf614bc34cb8e62dc1862a04caca58e8759` | `c285bbbbc966b41f1931be1b40f42b0f34e3af4f` | 2026-07-27 | All direct packages decided; focused/full automated, development, unpacked, installed, uninstall, deterministic graph, audit, and protected-runtime gates passed. Phase 10 not started. |
 | 10 — Automation and CI | PASSED | `32688a5e702c894be8eac0399365dc1b00b83526` | `5287b79d97005d5403b45d0ad2251c6101438886` | 2026-07-27 | Renovate-only policy, deterministic Windows frontend CI, dependency guards, documentation, full local gates, packaging, and user-confirmed unpacked smoke passed. GitHub cannot dispatch a new workflow until it exists on the default branch; the pushed branch has no run and no PR was opened. Phase 11 not started. |
-| 11 — Final validation and PR | IN PROGRESS | `2e2a7b0d2e3bdc728d3b7c4a7521583c9e8d2f53` |  | 2026-07-27 | Candidate freeze and current-`dev` divergence check in progress. |
+| 11 — Final validation and PR | IN PROGRESS | `2e2a7b0d2e3bdc728d3b7c4a7521583c9e8d2f53` |  | 2026-07-28 | Candidate, clean-install, full automated, development, unpacked, installer-over-existing, uninstall, data-preservation, visual, and security gates passed. Draft PR and hosted CI pending. |
 
 ### Phase 1 command evidence
 
@@ -960,6 +960,98 @@ Exit gate: `PASSED`. TypeScript `6.0.3`, both strict projects, Tier A/B, develop
 
 Exit gate: `PASSED`. Repository configuration, full local validation, unpacked smoke, protected-runtime proof, implementation commit, and status evidence are complete. Real GitHub execution is deferred only by GitHub's default-branch workflow requirement and must run on the first pull request to `dev`. Phase 11 remains `NOT STARTED`.
 
+### Phase 11 candidate and divergence review
+
+- Phase starting SHA: `2e2a7b0d2e3bdc728d3b7c4a7521583c9e8d2f53`.
+- Executable candidate SHA: `7a0dcdaf6a9d56b138f6c45b37b7f88a90c4df86`.
+- Branch: `chore/dependency-modernisation-2026`; target: `dev`.
+- `git fetch origin` on 2026-07-27 followed by `git rev-list --left-right --count origin/dev...HEAD` returned `0 39`: candidate is not behind current `origin/dev`.
+- No merge or rebase was required. Historical phase commits remain intact.
+
+### Phase 11 final version matrix
+
+| Component | Baseline | Final | Approved family | Evidence |
+|---|---:|---:|---|---|
+| Node | 24.18.0 | 24.18.0 | 24 LTS | `node --version` |
+| pnpm | 10.30.3 | 10.30.3 | exact | `corepack pnpm --version` |
+| Electron | 31.7.7 | 43.2.0 | 43.x | generated `electron.CMD --version` |
+| Vite | 5.4.21 | 8.1.5 | 8.1.x | generated `vite.CMD --version` |
+| Vitest | 2.1.9 | 4.1.10 | 4.1.x | generated `vitest.CMD --version` |
+| Tailwind CSS | 3.4.19 | 4.3.3 | 4.3.x | installed package manifest |
+| React / React DOM | 18.3.1 | 19.2.8 | 19.2.x | `pnpm list --depth 0` |
+| TypeScript | 5.9.3 | 6.0.3 | 6.0.x | generated `tsc.CMD --version` |
+
+Other Phase 9 direct-package decisions remain recorded in the decision register below. Final direct graph contains 25 packages and no unexplained peer warning.
+
+### Phase 11 repository and protected-runtime audit
+
+- `origin/dev...HEAD` contains 39 audited phase commits. Changed files classify as dependency manifests/lockfile, Electron compatibility, Vite/Vitest/Tailwind/React/TypeScript compatibility, routine package refresh, CI/automation, documentation/evidence, and the explicitly approved Phase 1 WanGP pin.
+- Protected diff against `origin/dev` contains only the Phase 1 approved WanGP source update at commit `8db8625`; no later dependency phase altered the curated runtime. `pnpm wangp:check` confirms revision `4f441a12f3a33f4466ed422428bf667d9651bc55`, version `12.345`, with checkout and manifest unchanged.
+- Branch-owned `git diff --check` findings were removed. The whole `origin/dev` comparison retains two upstream whitespace findings inside the immutable approved WanGP pin (`Wan2GP/README.md` and `Wan2GP/shared/utils/gguf_mapping.py`); changing them would make the bundled checkout diverge from its reproducible source revision.
+- Artifact audit found no tracked root `node_modules`, release, dist, coverage, log, or foreign package-manager lockfile. The only tracked `package-lock.json` is upstream vendored content under the approved `Wan2GP/` snapshot.
+
+### Phase 11 command evidence
+
+| Command/check | Result | Evidence |
+|---|---|---|
+| Clean worktree frozen install at `7a0dcda` | PASS | `C:\tmp\aivs-dependency-validation`; 430 packages reused, 0 downloaded, lockfile unchanged; temporary worktree removed. |
+| Clean `pnpm typecheck:ts` | PASS | TypeScript 6.0.3, 0 errors. |
+| Clean `pnpm test:frontend` | PASS | Vitest 4.1.10: 22 files, 75 tests passed. |
+| Clean `pnpm build:frontend` | PASS | Renderer, Electron main, and CommonJS preload built. Clean fast packaging was not attempted because the isolated worktree intentionally lacked untracked `python-embed` and nested WanGP Git metadata; primary packaging covered the exact candidate. |
+| Primary `pnpm typecheck` | PASS | TypeScript and Pyright: 0 errors, 0 warnings; Pyright update notice only. |
+| Primary `pnpm test:frontend` | PASS | 22 files, 75 tests passed. |
+| Primary `pnpm backend:test` | PASS | 278 passed, 1 skipped runtime-integration test, 1 existing `pynvml` warning. |
+| Primary `pnpm build:frontend` | PASS | Renderer 987.88 kB / 258.22 kB gzip; CSS 121.88 kB / 17.61 kB gzip; main 379.19 kB; preload 3.49 kB. Existing chunk/dynamic-import warnings only. |
+| `pnpm build:fast:win` | PASS | Current `release\win-unpacked` built with Electron 43.2.0 and WanGP `4f441a12`. |
+| `pnpm validate:frontend` | PASS | TypeScript, 75 frontend tests, and all frontend/Electron production bundles passed. |
+| `pnpm check:package-manager` | PASS | Node 24, pnpm 10.30.3, pnpm-only root lockfile. |
+| `pnpm test:dependency-boundaries` | PASS | 5/5 tests. |
+| `pnpm wangp:check` | PASS | Candidate equals current pinned source; no checkout or manifest mutation. |
+| `pnpm outdated` | PASS WITH DOCUMENTED DEFERRALS | Only `@types/node` 26, `react-dropzone` 19, and TypeScript 7 remain. |
+| `pnpm audit --prod` | PASS | No known production vulnerabilities. |
+| `pnpm audit` | PASS WITH DOCUMENTED DEV-ONLY FINDINGS | Two high `brace-expansion` paths under Electron Builder remain; no compatible old-`minimatch` remediation exists. |
+| `pnpm build:win` | PASS | `release\AiVS-Setup.exe`, 358,840,940 bytes, SHA-256 `EC3668FF5054D36439B72B4A8B44BFA9B9E0CCE3352777794C0ACF22DD72DFFA`. |
+
+### Phase 11 manual and data checks
+
+- [x] Development matrix passed: startup/shell, setup/runtime recognition, temporary and existing projects, native picker/drop/duplicate/dialog routes, Settings/Model Manager, Director, Video Editor/export, keyboard/focus/overlay/scroll behaviour, and clean shutdown.
+- [x] Development image and music generation completed through real WanGP models with progress and persisted outputs. Video controls and prior video-generation coverage remained healthy; a new Phase 11 video render was not required.
+- [x] Unpacked production matrix passed: `file://` renderer, CommonJS preload, backend/resources, existing project, Settings/Model Manager, native picker/drop, generation/gallery, Director, Video Editor/export, and clean shutdown.
+- [x] User approved final visual parity across the representative product surfaces and interaction states.
+- [x] Final installer was installed over the existing test installation, launched, preserved settings/projects/media and runtime state, passed native import, generation, Settings, Director, and Video Editor checks, then uninstalled.
+- [x] Post-uninstall verification: install directory and executable absent; zero AiVS processes; `Documents\AiVS` and LocalAppData user state remain.
+- [x] Phase 1 project backup comparison: 100 files present, 0 missing, 0 changed by SHA-256.
+- [x] `app_state.json` remains parseable. Remembered native-dialog keys are additive; project index/data schemas retain their existing top-level keys.
+- [x] Installer-over-existing was tested. Signed/release-hosted auto-update transport was not tested.
+
+### Phase 11 performance sanity
+
+- Frozen clean install reused 430 packages in 3.7 seconds after store access was available.
+- Current renderer bundle is 987.88 kB raw / 258.22 kB gzip versus the Phase 1 957.84 kB raw baseline; current CSS is 121.88 kB raw / 17.61 kB gzip versus the Phase 5 pre-migration 68.99 kB raw / 12.48 kB gzip. The CSS increase is the reviewed Tailwind 4 output and adds about 5.1 kB gzip.
+- Electron main bundle decreased from the Phase 1 409.93 kB baseline to 379.19 kB. CommonJS preload remains 3.49 kB.
+- Vite development server became ready in 277 ms. Unpacked packaged backend reached application startup complete in about 6 seconds before WanGP model preload.
+- User reported no material startup, navigation, generation, playback, or editing responsiveness regression. Comparable idle renderer memory was not captured, so no memory improvement claim is made.
+
+### Phase 11 issues and attempted fixes
+
+1. Dashboard label was mistaken for the exact Phase 11 filename; `rg --files` found `11_FINAL_VALIDATION_AND_PULL_REQUEST.md`.
+2. Final diff check found branch-owned Markdown trailing whitespace plus two upstream WanGP pin findings. Branch-owned whitespace was removed; immutable pinned-source findings are documented.
+3. Primary frozen install stalled after recreating `node_modules` under restricted store access. The exact process tree was stopped and the unchanged install passed with 430 reused packages and zero downloads through approved store access.
+4. Unified exec could not interrupt the stalled install directly; exact process inspection and scoped PID termination recovered safely.
+5. npm outdated/audit disclosure was initially rejected. User explicitly authorized all three required queries; they completed with expected results.
+6. `git worktree remove` left only ignored `node_modules`; the resolved target was verified under `C:\tmp` and the exact residual directory was removed.
+7. First post-uninstall check found the app still installed. The verified uninstaller was relaunched; final check confirmed complete app removal with project/user data preserved.
+
+### Phase 11 pull request preparation
+
+- Draft PR title: `chore(deps): modernise AiVS desktop and frontend toolchain`.
+- Target: `dev`.
+- Head: `chore/dependency-modernisation-2026`.
+- PR number/link: pending.
+- Hosted checks: pending draft PR.
+
+Phase 11 remains `IN PROGRESS` until the draft PR exists and hosted CI passes.
+
 ## Command evidence template
 
 Duplicate this section beneath each phase heading.
@@ -1072,25 +1164,25 @@ Complete one row for every direct JavaScript dependency and dev dependency.
 
 ## Final release candidate evidence
 
-- Candidate SHA:
-- Candidate created:
-- Clean worktree/clone path:
-- Clean frozen install:
-- Full TypeScript result:
-- Frontend test count/result:
-- Backend test count/result:
-- Frontend build result:
-- Fast Windows build artifact:
-- Full Windows installer artifact:
-- Installer SHA-256:
-- Unpacked smoke:
-- Installed smoke:
-- Existing-install upgrade simulation:
-- Existing user-data compatibility:
-- Auto-update transport status:
-- Final PR target:
-- Final PR number/link:
-- Final CI run links:
+- Candidate SHA: `7a0dcdaf6a9d56b138f6c45b37b7f88a90c4df86`.
+- Candidate created: 2026-07-28.
+- Clean worktree/clone path: `C:\tmp\aivs-dependency-validation`, removed after clean verification.
+- Clean frozen install: PASS; 430 reused, 0 downloaded.
+- Full TypeScript result: PASS; TypeScript and Pyright 0 errors/0 warnings.
+- Frontend test count/result: PASS; 22 files/75 tests.
+- Backend test count/result: PASS; 278 passed, 1 skipped runtime-only integration, 1 existing warning.
+- Frontend build result: PASS; renderer, Electron main, CommonJS preload.
+- Fast Windows build artifact: `release\win-unpacked`; PASS.
+- Full Windows installer artifact: `release\AiVS-Setup.exe`; 358,840,940 bytes.
+- Installer SHA-256: `EC3668FF5054D36439B72B4A8B44BFA9B9E0CCE3352777794C0ACF22DD72DFFA`.
+- Unpacked smoke: PASS by user confirmation.
+- Installed smoke: PASS by user confirmation.
+- Existing-install upgrade simulation: PASS; installer-over-existing preserved settings, projects, media, and runtime state.
+- Existing user-data compatibility: PASS; 100/100 backup project files byte-identical after uninstall.
+- Auto-update transport status: not tested; requires signed/published release infrastructure.
+- Final PR target: `dev`.
+- Final PR number/link: pending.
+- Final CI run links: pending.
 
 ## Visual evidence index
 
@@ -1114,11 +1206,13 @@ Use a stable 1400×900 app window where practical.
 
 - macOS validation status: not run; Phase 1 executed on Windows.
 - Linux source/dev validation status: not run; Phase 1 executed on Windows.
-- Generation modes not smoke-tested and why: video and music generation were not run because image generation plus shared progress/persistence covered the Phase 1 baseline runtime smoke; their UI, model readiness, and native media pickers were checked.
-- Installer/update behaviour: final NSIS install, installed launch, native import, uninstall, and project-data preservation passed on Windows. Release-hosted auto-update transport remains release-environment-only.
+- Generation modes not smoke-tested and why: Phase 11 reran real Image and Music generation with progress and persisted outputs. Video UI/media paths and earlier generation coverage passed, but a new Phase 11 video render was not run.
+- Installer/update behaviour: final NSIS installer-over-existing, installed launch, native import, generation, uninstall, and project-data preservation passed on Windows. Release-hosted auto-update transport remains release-environment-only.
 - Deferred packages: `react-dropzone` 19 requires a separate soak/migration review; `@types/node` 26 and TypeScript 7 are out-of-scope majors; pnpm 11 requires a separate package-manager/CI phase.
 - Follow-up issues: remove temporary package overrides when Electron Builder/Concurrently parent graphs resolve patched compatible versions; two dev-only Electron Builder `brace-expansion` audit paths remain documented.
 - TypeScript 7 evaluation status: intentionally deferred to a separate branch.
+- Performance evidence: build/startup sanity passed; comparable idle renderer memory was not captured, so no memory claim is made.
+- Vendored source whitespace: whole-branch `git diff --check` reports two upstream findings inside the exact approved WanGP pin; app-owned dependency-modernisation files are clean.
 
 ## Final owner review
 

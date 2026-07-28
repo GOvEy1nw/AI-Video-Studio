@@ -10,9 +10,9 @@ docs/dependency-modernisation/
 
 You are implementing the AiVS dependency-modernisation runbook in `GOvEy1nw/AI-Video-Studio`.
 
-Repository baseline: `dev`  
-Required work branch: `chore/dependency-modernisation-2026`  
-Primary platform: Windows  
+Repository baseline: `dev`
+Required work branch: `chore/dependency-modernisation-2026`
+Primary platform: Windows
 Package manager: exactly `pnpm@10.30.3`
 
 ## Mandatory operating rules
