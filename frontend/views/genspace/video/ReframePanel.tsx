@@ -9,6 +9,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { fileUrlToPath } from "../../../lib/url-to-path";
+import { getNativeFilePath } from "../../../lib/native-file-path";
 import { OutpaintFrameOverlay } from "./OutpaintFrameOverlay";
 import {
   MIN_TRIM_DURATION,
@@ -395,7 +396,7 @@ export function ReframePanel({
 
     const file = e.dataTransfer.files?.[0];
     if (file) {
-      const filePath = (file as File & { path?: string }).path;
+      const filePath = getNativeFilePath(file);
       if (filePath) {
         void window.electronAPI?.approveLocalPath?.(filePath).finally(() => {
           setVideoPath(filePath);
@@ -550,7 +551,7 @@ export function ReframePanel({
             <div className="absolute bottom-2 left-2 flex items-center gap-1.5 z-30">
               <button
                 onClick={toggleMute}
-                className="p-1.5 rounded bg-black/60 hover:bg-black/80 text-white/80 hover:text-white transition-colors pointer-events-auto"
+                className="p-1.5 rounded-sm bg-black/60 hover:bg-black/80 text-white/80 hover:text-white transition-colors pointer-events-auto"
               >
                 {isMuted ? (
                   <VolumeX className="h-3.5 w-3.5" />
@@ -561,11 +562,11 @@ export function ReframePanel({
             </div>
           </div>
 
-          <div className="flex-shrink-0">
+          <div className="shrink-0">
             <div className="flex items-center justify-center gap-3 px-4 py-2 bg-zinc-900 border-b border-zinc-800">
               <button
                 onClick={togglePlay}
-                className="p-1 rounded hover:bg-zinc-800 text-white transition-colors"
+                className="p-1 rounded-sm hover:bg-zinc-800 text-white transition-colors"
               >
                 {isPlaying ? (
                   <Pause className="h-4 w-4" />

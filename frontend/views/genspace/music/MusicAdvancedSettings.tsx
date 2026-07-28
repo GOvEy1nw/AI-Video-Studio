@@ -35,7 +35,7 @@ const KEY_OPTIONS = [
 ];
 
 const inputClass =
-  "w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-xs text-zinc-200 focus:border-violet-500 focus:outline-none disabled:opacity-40";
+  "w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-xs text-zinc-200 focus:border-violet-500 focus:outline-hidden disabled:opacity-40";
 
 export function MusicAdvancedSettings({
   settings,

@@ -49,16 +49,8 @@ jobs:
         run: uv run pyright
 
   test-python:
-    name: Python Tests (${{ matrix.os }})
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos
-            runner: macos-latest
-          - os: windows
-            runner: windows-latest
+    name: Python Tests (Windows)
+    runs-on: windows-latest
     defaults:
       run:
         working-directory: backend

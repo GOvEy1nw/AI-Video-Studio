@@ -128,7 +128,7 @@ export function ImageMediaInputs({
                   selectedRole={input.role}
                   options={policy.roles.map((option) => ({
                     ...option,
-                    icon: <Image className="h-3.5 w-3.5 flex-shrink-0" />,
+                    icon: <Image className="h-3.5 w-3.5 shrink-0" />,
                   }))}
                   onSelect={(nextRole) => {
                     onChange(

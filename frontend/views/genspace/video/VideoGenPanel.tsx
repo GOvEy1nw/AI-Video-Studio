@@ -90,7 +90,7 @@ function LegacyPromptMedia({
   return (
     <>
       <div
-        className={`relative mx-2 mt-2 flex h-10 w-10 flex-shrink-0 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed transition-colors ${
+        className={`relative mx-2 mt-2 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed transition-colors ${
           imageDrag
             ? "border-blue-500 bg-blue-500/10"
             : "border-zinc-700 hover:border-zinc-500"
@@ -137,7 +137,7 @@ function LegacyPromptMedia({
         />
       </div>
       <div
-        className={`relative mt-2 flex h-10 w-10 flex-shrink-0 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed transition-colors ${
+        className={`relative mt-2 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed transition-colors ${
           audioDrag
             ? "border-emerald-500 bg-emerald-500/10"
             : media.inputAudio

@@ -12,10 +12,10 @@ export function EffectsBrowser({ onClose, selectedClip, addEffectToClip }: Effec
   const [effectsSearchQuery, setEffectsSearchQuery] = useState('')
 
   return (
-    <div className="w-56 flex-shrink-0 bg-zinc-950 border-r border-zinc-800/80 flex flex-col overflow-hidden">
+    <div className="w-56 shrink-0 bg-zinc-950 border-r border-zinc-800/80 flex flex-col overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-2 px-3 py-2.5 border-b border-zinc-800/80 bg-zinc-900/50">
-        <div className="w-5 h-5 rounded bg-blue-600/20 flex items-center justify-center">
+        <div className="w-5 h-5 rounded-sm bg-blue-600/20 flex items-center justify-center">
           <Sparkles className="h-3 w-3 text-blue-400" />
         </div>
         <span className="text-[11px] font-semibold text-zinc-200 flex-1">Effects</span>
@@ -32,7 +32,7 @@ export function EffectsBrowser({ onClose, selectedClip, addEffectToClip }: Effec
             placeholder="Search effects..."
             value={effectsSearchQuery}
             onChange={(e) => setEffectsSearchQuery(e.target.value)}
-            className="w-full pl-7 pr-2 py-1.5 bg-zinc-800/70 rounded-md text-[11px] text-white placeholder-zinc-600 outline-none border border-zinc-700/40 focus:border-blue-500/50 focus:bg-zinc-800 transition-colors"
+            className="w-full pl-7 pr-2 py-1.5 bg-zinc-800/70 rounded-md text-[11px] text-white placeholder-zinc-600 outline-hidden border border-zinc-700/40 focus:border-blue-500/50 focus:bg-zinc-800 transition-colors"
           />
         </div>
       </div>
@@ -90,11 +90,11 @@ export function EffectsBrowser({ onClose, selectedClip, addEffectToClip }: Effec
                       {/* Icon/swatch */}
                       {category === 'color-preset' ? (
                         <div
-                          className="w-7 h-7 rounded-md flex-shrink-0 ring-1 ring-white/10 group-hover:ring-white/20 transition-all"
+                          className="w-7 h-7 rounded-md shrink-0 ring-1 ring-white/10 group-hover:ring-white/20 transition-all"
                           style={{ background: lutGradient[type] || 'linear-gradient(135deg, #333, #555)' }}
                         />
                       ) : (
-                        <div className={`w-7 h-7 rounded-md flex-shrink-0 bg-gradient-to-br ${filterColor[type] || 'from-zinc-700 to-zinc-800 text-zinc-400'} flex items-center justify-center ring-1 ring-white/5 group-hover:ring-white/15 transition-all`}>
+                        <div className={`w-7 h-7 rounded-md shrink-0 bg-linear-to-br ${filterColor[type] || 'from-zinc-700 to-zinc-800 text-zinc-400'} flex items-center justify-center ring-1 ring-white/5 group-hover:ring-white/15 transition-all`}>
                           <span className="text-[11px] font-black">{filterIcon[type] || 'F'}</span>
                         </div>
                       )}

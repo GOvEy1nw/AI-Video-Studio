@@ -78,7 +78,7 @@ export function ClipPropertiesPanel(props: ClipPropertiesPanelProps) {
   } = props
 
   return (
-    <div className="flex-shrink-0 border-l border-zinc-800 bg-zinc-900 p-4 overflow-auto" style={{ width: rightPanelWidth }}>
+    <div className="shrink-0 border-l border-zinc-800 bg-zinc-900 p-4 overflow-auto" style={{ width: rightPanelWidth }}>
       {/* Tab header */}
       <div className="flex items-center gap-0 mb-4 border-b border-zinc-700">
         <button
@@ -145,7 +145,7 @@ export function ClipPropertiesPanel(props: ClipPropertiesPanelProps) {
                               handleDeleteTake(selectedClip.id)
                             }
                           }}
-                          className="p-0.5 rounded hover:bg-red-900/50 text-zinc-500 hover:text-red-400 transition-colors"
+                          className="p-0.5 rounded-sm hover:bg-red-900/50 text-zinc-500 hover:text-red-400 transition-colors"
                         >
                           <Trash2 className="h-3 w-3" />
                         </button>
@@ -295,7 +295,7 @@ export function ClipPropertiesPanel(props: ClipPropertiesPanelProps) {
                   {genParams.prompt && (
                     <div className="mt-2">
                       <span className="text-xs text-zinc-400 block mb-1">Prompt</span>
-                      <p className="text-xs text-zinc-300 bg-zinc-900/50 rounded p-2 break-words leading-relaxed">{genParams.prompt}</p>
+                      <p className="text-xs text-zinc-300 bg-zinc-900/50 rounded-sm p-2 wrap-break-word leading-relaxed">{genParams.prompt}</p>
                     </div>
                   )}
                 </div>
@@ -363,7 +363,7 @@ export function ClipPropertiesPanel(props: ClipPropertiesPanelProps) {
                     <select
                       value={lb.aspectRatio}
                       onChange={e => updateLetterbox({ aspectRatio: e.target.value as LetterboxSettings['aspectRatio'] })}
-                      className="bg-zinc-800 border border-zinc-700 rounded px-2 py-0.5 text-[10px] text-white focus:outline-none focus:border-blue-500/50"
+                      className="bg-zinc-800 border border-zinc-700 rounded-sm px-2 py-0.5 text-[10px] text-white focus:outline-hidden focus:border-blue-500/50"
                     >
                       <option value="2.39:1">2.39:1 (Anamorphic)</option>
                       <option value="2.35:1">2.35:1 (Cinemascope)</option>
@@ -386,7 +386,7 @@ export function ClipPropertiesPanel(props: ClipPropertiesPanelProps) {
                         value={lb.customRatio || 2.35}
                         onChange={e => updateLetterbox({ customRatio: parseFloat(e.target.value) || 2.35 })}
                         onKeyDown={e => e.stopPropagation()}
-                        className="w-20 bg-zinc-800 border border-zinc-700 rounded px-2 py-0.5 text-[10px] text-white text-center focus:outline-none focus:border-blue-500/50"
+                        className="w-20 bg-zinc-800 border border-zinc-700 rounded-sm px-2 py-0.5 text-[10px] text-white text-center focus:outline-hidden focus:border-blue-500/50"
                       />
                     </div>
                   )}
@@ -398,7 +398,7 @@ export function ClipPropertiesPanel(props: ClipPropertiesPanelProps) {
                       type="color"
                       value={lb.color}
                       onChange={e => updateLetterbox({ color: e.target.value })}
-                      className="w-7 h-6 rounded cursor-pointer border border-zinc-700"
+                      className="w-7 h-6 rounded-sm cursor-pointer border border-zinc-700"
                     />
                   </div>
 
@@ -445,7 +445,7 @@ export function ClipPropertiesPanel(props: ClipPropertiesPanelProps) {
                   value={ts.text}
                   onChange={e => updateText({ text: e.target.value })}
                   rows={3}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1.5 text-xs text-white resize-none focus:outline-none focus:border-cyan-500/50"
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-sm px-2 py-1.5 text-xs text-white resize-none focus:outline-hidden focus:border-cyan-500/50"
                   placeholder="Enter text..."
                 />
               </div>
@@ -456,7 +456,7 @@ export function ClipPropertiesPanel(props: ClipPropertiesPanelProps) {
                 <select
                   value={ts.fontFamily.split(',')[0].trim()}
                   onChange={e => updateText({ fontFamily: `${e.target.value}, sans-serif` })}
-                  className="bg-zinc-800 border border-zinc-700 rounded px-2 py-0.5 text-[10px] text-white focus:outline-none focus:border-cyan-500/50 max-w-[120px]"
+                  className="bg-zinc-800 border border-zinc-700 rounded-sm px-2 py-0.5 text-[10px] text-white focus:outline-hidden focus:border-cyan-500/50 max-w-[120px]"
                 >
                   <option value="Inter">Inter</option>
                   <option value="Arial">Arial</option>
@@ -485,7 +485,7 @@ export function ClipPropertiesPanel(props: ClipPropertiesPanelProps) {
                 <select
                   value={ts.fontWeight}
                   onChange={e => updateText({ fontWeight: e.target.value as TextOverlayStyle['fontWeight'] })}
-                  className="bg-zinc-800 border border-zinc-700 rounded px-2 py-0.5 text-[10px] text-white focus:outline-none focus:border-cyan-500/50"
+                  className="bg-zinc-800 border border-zinc-700 rounded-sm px-2 py-0.5 text-[10px] text-white focus:outline-hidden focus:border-cyan-500/50"
                 >
                   <option value="100">Thin</option>
                   <option value="300">Light</option>
@@ -501,7 +501,7 @@ export function ClipPropertiesPanel(props: ClipPropertiesPanelProps) {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => updateText({ fontStyle: ts.fontStyle === 'italic' ? 'normal' : 'italic' })}
-                  className={`px-2 py-1 rounded text-[10px] border ${ts.fontStyle === 'italic' ? 'bg-cyan-600/30 text-cyan-300 border-cyan-500/40' : 'bg-zinc-800 text-zinc-500 border-zinc-700'}`}
+                  className={`px-2 py-1 rounded-sm text-[10px] border ${ts.fontStyle === 'italic' ? 'bg-cyan-600/30 text-cyan-300 border-cyan-500/40' : 'bg-zinc-800 text-zinc-500 border-zinc-700'}`}
                 >
                   <em>Italic</em>
                 </button>
@@ -510,17 +510,17 @@ export function ClipPropertiesPanel(props: ClipPropertiesPanelProps) {
               {/* Text color */}
               <div className="flex items-center justify-between">
                 <span className="text-[10px] text-zinc-400">Color</span>
-                <input type="color" value={ts.color} onChange={e => updateText({ color: e.target.value })} className="w-7 h-6 rounded cursor-pointer border border-zinc-700" />
+                <input type="color" value={ts.color} onChange={e => updateText({ color: e.target.value })} className="w-7 h-6 rounded-sm cursor-pointer border border-zinc-700" />
               </div>
 
               {/* Background color */}
               <div className="flex items-center justify-between">
                 <span className="text-[10px] text-zinc-400">Background</span>
                 <div className="flex items-center gap-1.5">
-                  <input type="color" value={ts.backgroundColor === 'transparent' ? '#000000' : ts.backgroundColor.slice(0, 7)} onChange={e => updateText({ backgroundColor: e.target.value + 'cc' })} className="w-7 h-6 rounded cursor-pointer border border-zinc-700" />
+                  <input type="color" value={ts.backgroundColor === 'transparent' ? '#000000' : ts.backgroundColor.slice(0, 7)} onChange={e => updateText({ backgroundColor: e.target.value + 'cc' })} className="w-7 h-6 rounded-sm cursor-pointer border border-zinc-700" />
                   <button
                     onClick={() => updateText({ backgroundColor: ts.backgroundColor === 'transparent' ? 'rgba(0,0,0,0.7)' : 'transparent' })}
-                    className={`px-1.5 py-0.5 rounded text-[9px] border ${ts.backgroundColor !== 'transparent' ? 'bg-cyan-600/20 text-cyan-300 border-cyan-500/30' : 'bg-zinc-800 text-zinc-500 border-zinc-700'}`}
+                    className={`px-1.5 py-0.5 rounded-sm text-[9px] border ${ts.backgroundColor !== 'transparent' ? 'bg-cyan-600/20 text-cyan-300 border-cyan-500/30' : 'bg-zinc-800 text-zinc-500 border-zinc-700'}`}
                   >
                     {ts.backgroundColor !== 'transparent' ? 'On' : 'Off'}
                   </button>
@@ -535,7 +535,7 @@ export function ClipPropertiesPanel(props: ClipPropertiesPanelProps) {
                     <button
                       key={align}
                       onClick={() => updateText({ textAlign: align })}
-                      className={`p-1.5 rounded ${ts.textAlign === align ? 'bg-cyan-600/30 text-cyan-300' : 'bg-zinc-800 text-zinc-500 hover:text-zinc-300'}`}
+                      className={`p-1.5 rounded-sm ${ts.textAlign === align ? 'bg-cyan-600/30 text-cyan-300' : 'bg-zinc-800 text-zinc-500 hover:text-zinc-300'}`}
                     >
                       {align === 'left' ? <AlignLeft className="h-3 w-3" /> : align === 'center' ? <AlignCenter className="h-3 w-3" /> : <AlignRight className="h-3 w-3" />}
                     </button>
@@ -572,7 +572,7 @@ export function ClipPropertiesPanel(props: ClipPropertiesPanelProps) {
                 <span className="text-[10px] text-zinc-400">Outline</span>
                 <div className="flex items-center gap-1.5">
                   <input type="range" min={0} max={10} step={0.5} value={ts.strokeWidth} onChange={e => updateText({ strokeWidth: parseFloat(e.target.value) })} className="w-16 accent-cyan-500" />
-                  <input type="color" value={ts.strokeColor === 'transparent' ? '#000000' : ts.strokeColor} onChange={e => updateText({ strokeColor: e.target.value, strokeWidth: Math.max(ts.strokeWidth, 1) })} className="w-5 h-5 rounded cursor-pointer border border-zinc-700" />
+                  <input type="color" value={ts.strokeColor === 'transparent' ? '#000000' : ts.strokeColor} onChange={e => updateText({ strokeColor: e.target.value, strokeWidth: Math.max(ts.strokeWidth, 1) })} className="w-5 h-5 rounded-sm cursor-pointer border border-zinc-700" />
                 </div>
               </div>
 
@@ -593,7 +593,7 @@ export function ClipPropertiesPanel(props: ClipPropertiesPanelProps) {
                     <button
                       key={preset.id}
                       onClick={() => updateText({ ...preset.style })}
-                      className="px-2 py-1.5 rounded bg-zinc-800 border border-zinc-700 text-[9px] text-zinc-300 hover:border-cyan-500/40 hover:bg-cyan-900/20 transition-colors truncate"
+                      className="px-2 py-1.5 rounded-sm bg-zinc-800 border border-zinc-700 text-[9px] text-zinc-300 hover:border-cyan-500/40 hover:bg-cyan-900/20 transition-colors truncate"
                       title={preset.name}
                     >
                       {preset.name}
@@ -628,7 +628,7 @@ export function ClipPropertiesPanel(props: ClipPropertiesPanelProps) {
               onChange={(e) => updateClip(selectedClip.id, { startTime: Math.max(0, parseFloat(e.target.value) || 0) })}
               min={0}
               step={0.1}
-              className="flex-1 px-2 py-1 rounded bg-zinc-800 border border-zinc-700 text-white text-sm"
+              className="flex-1 px-2 py-1 rounded-sm bg-zinc-800 border border-zinc-700 text-white text-sm"
             />
             <span className="text-xs text-zinc-500">sec</span>
           </div>
@@ -649,7 +649,7 @@ export function ClipPropertiesPanel(props: ClipPropertiesPanelProps) {
               min={0.1}
               max={getMaxClipDuration(selectedClip)}
               step={0.1}
-              className="flex-1 px-2 py-1 rounded bg-zinc-800 border border-zinc-700 text-white text-sm"
+              className="flex-1 px-2 py-1 rounded-sm bg-zinc-800 border border-zinc-700 text-white text-sm"
             />
             <span className="text-xs text-zinc-500">sec</span>
             {selectedClip.type === 'video' && selectedClip.asset?.duration && (
@@ -708,7 +708,7 @@ export function ClipPropertiesPanel(props: ClipPropertiesPanelProps) {
               type="checkbox"
               checked={selectedClip.reversed}
               onChange={(e) => updateClip(selectedClip.id, { reversed: e.target.checked })}
-              className="rounded bg-zinc-800 border-zinc-600"
+              className="rounded-sm bg-zinc-800 border-zinc-600"
             />
             <span className="text-sm text-zinc-300">Reverse playback</span>
           </label>
@@ -717,7 +717,7 @@ export function ClipPropertiesPanel(props: ClipPropertiesPanelProps) {
               type="checkbox"
               checked={selectedClip.muted}
               onChange={(e) => updateClip(selectedClip.id, { muted: e.target.checked })}
-              className="rounded bg-zinc-800 border-zinc-600"
+              className="rounded-sm bg-zinc-800 border-zinc-600"
             />
             <span className="text-sm text-zinc-300">Mute audio</span>
           </label>
@@ -761,7 +761,7 @@ export function ClipPropertiesPanel(props: ClipPropertiesPanelProps) {
                   type="checkbox"
                   checked={selectedClip.flipH}
                   onChange={(e) => updateClip(selectedClip.id, { flipH: e.target.checked })}
-                  className="rounded bg-zinc-800 border-zinc-600"
+                  className="rounded-sm bg-zinc-800 border-zinc-600"
                 />
                 <FlipHorizontal2 className="h-3.5 w-3.5 text-zinc-400" />
                 <span className="text-sm text-zinc-300">Horizontal</span>
@@ -771,7 +771,7 @@ export function ClipPropertiesPanel(props: ClipPropertiesPanelProps) {
                   type="checkbox"
                   checked={selectedClip.flipV}
                   onChange={(e) => updateClip(selectedClip.id, { flipV: e.target.checked })}
-                  className="rounded bg-zinc-800 border-zinc-600"
+                  className="rounded-sm bg-zinc-800 border-zinc-600"
                 />
                 <FlipVertical2 className="h-3.5 w-3.5 text-zinc-400" />
                 <span className="text-sm text-zinc-300">Vertical</span>
@@ -800,7 +800,7 @@ export function ClipPropertiesPanel(props: ClipPropertiesPanelProps) {
                   onChange={(e) => updateClip(selectedClip.id, {
                     transitionIn: { ...selectedClip.transitionIn, type: e.target.value as TransitionType }
                   })}
-                  className="w-full px-2 py-1 rounded bg-zinc-800 border border-zinc-700 text-white text-xs"
+                  className="w-full px-2 py-1 rounded-sm bg-zinc-800 border border-zinc-700 text-white text-xs"
                 >
                   <option value="none">None</option>
                   <option value="dissolve">Dissolve</option>
@@ -839,7 +839,7 @@ export function ClipPropertiesPanel(props: ClipPropertiesPanelProps) {
                   onChange={(e) => updateClip(selectedClip.id, {
                     transitionOut: { ...selectedClip.transitionOut, type: e.target.value as TransitionType }
                   })}
-                  className="w-full px-2 py-1 rounded bg-zinc-800 border border-zinc-700 text-white text-xs"
+                  className="w-full px-2 py-1 rounded-sm bg-zinc-800 border border-zinc-700 text-white text-xs"
                 >
                   <option value="none">None</option>
                   <option value="dissolve">Dissolve</option>
@@ -886,7 +886,7 @@ export function ClipPropertiesPanel(props: ClipPropertiesPanelProps) {
             <Palette className="h-3.5 w-3.5" />
             Color Correction
             {selectedClip.colorCorrection && Object.values(selectedClip.colorCorrection).some(v => v !== 0) && (
-              <span className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />
+              <span className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
             )}
           </button>
           {showColorCorrection && (

@@ -10,6 +10,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { fileUrlToPath } from "../../../lib/url-to-path";
+import { getNativeFilePath } from "../../../lib/native-file-path";
 import {
   MIN_TRIM_DURATION,
   VideoTrimPanel,
@@ -255,7 +256,7 @@ export function RetakePanel({
 
     const file = e.dataTransfer.files?.[0];
     if (file) {
-      const filePath = (file as any).path as string | undefined;
+      const filePath = getNativeFilePath(file);
       if (filePath) {
         void window.electronAPI?.approveLocalPath?.(filePath).finally(() => {
           setVideoPath(filePath);
@@ -269,7 +270,7 @@ export function RetakePanel({
     <div
       className={`bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden flex flex-col ${fillHeight ? "h-full min-h-0" : ""}`}
     >
-      <div className="flex items-center justify-between px-4 py-2 border-b border-zinc-800 flex-shrink-0">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-zinc-800 shrink-0">
         <div className="flex items-center gap-2">
           <Film className="h-4 w-4 text-blue-400" />
           <span className="text-sm font-semibold text-white">Retake</span>
@@ -342,7 +343,7 @@ export function RetakePanel({
             <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
               <button
                 onClick={toggleMute}
-                className="p-1.5 rounded bg-black/60 hover:bg-black/80 text-white/80 hover:text-white transition-colors"
+                className="p-1.5 rounded-sm bg-black/60 hover:bg-black/80 text-white/80 hover:text-white transition-colors"
               >
                 {isMuted ? (
                   <VolumeX className="h-3.5 w-3.5" />
@@ -353,11 +354,11 @@ export function RetakePanel({
             </div>
           </div>
 
-          <div className="flex-shrink-0">
+          <div className="shrink-0">
             <div className="flex items-center justify-center gap-3 px-4 py-2 bg-zinc-900 border-b border-zinc-800">
               <button
                 onClick={togglePlay}
-                className="p-1 rounded hover:bg-zinc-800 text-white transition-colors"
+                className="p-1 rounded-sm hover:bg-zinc-800 text-white transition-colors"
               >
                 {isPlaying ? (
                   <Pause className="h-4 w-4" />

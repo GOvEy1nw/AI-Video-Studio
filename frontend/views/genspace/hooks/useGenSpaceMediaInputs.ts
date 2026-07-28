@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { filePathToFileUrl } from "../../../lib/media-import";
+import { getNativeFilePath } from "../../../lib/native-file-path";
 import type { GenSpaceMediaInput } from "../types";
 
 export function useGenSpaceMediaInputs() {
@@ -17,7 +18,7 @@ export function useGenSpaceMediaInputs() {
     ): Promise<string | null> => {
       const synced = await syncInputFileToGallery?.(file);
       if (synced) return synced;
-      const filePath = (file as File & { path?: string }).path;
+      const filePath = getNativeFilePath(file);
       if (filePath) return filePathToFileUrl(filePath);
       const url = URL.createObjectURL(file);
       ownedObjectUrls.current.add(url);

@@ -148,7 +148,7 @@ export function SettingsPanel({
 
       {/* Audio and Camera Motion Row */}
       <div className="flex gap-3">
-        <div className="w-[140px] flex-shrink-0">
+        <div className="w-[140px] shrink-0">
           <Select
             label="Audio"
             badge="PREVIEW"

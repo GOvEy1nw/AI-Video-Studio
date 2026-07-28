@@ -75,13 +75,13 @@ export function MusicMediaInputs({
     label: string,
     role: MusicAudioRole,
     input: MusicAudioInputDraft | null,
-    inputRef: RefObject<HTMLInputElement>,
+    inputRef: RefObject<HTMLInputElement | null>,
   ) => (
     <div className="min-w-0 space-y-1.5">
       <div className="text-xs text-zinc-500">{label}</div>
       {input ? (
         <div className="flex h-14 items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-950/60 p-2.5 text-xs text-zinc-300">
-          <FileAudio className="h-4 w-4 flex-shrink-0 text-violet-400" />
+          <FileAudio className="h-4 w-4 shrink-0 text-violet-400" />
           <span className="min-w-0 flex-1 truncate">
             {decodeURIComponent(input.url.split("/").pop() ?? "Audio")}
           </span>

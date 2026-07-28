@@ -36,7 +36,7 @@ export function VideoModeTabs({
             onClick={() => onChange(value)}
             className={`flex items-center justify-center gap-1 rounded-md px-1.5 py-2 text-sm font-medium transition-colors ${
               mode === value
-                ? "bg-zinc-800 text-white shadow-sm"
+                ? "bg-zinc-800 text-white shadow-xs"
                 : disabled
                   ? "cursor-not-allowed text-zinc-700"
                   : "text-zinc-500 hover:bg-zinc-800/60 hover:text-zinc-200"

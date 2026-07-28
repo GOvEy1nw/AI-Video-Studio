@@ -15,9 +15,8 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["frontend/*"]
+      "@/*": ["./frontend/*"]
     }
   },
   "include": ["frontend"],

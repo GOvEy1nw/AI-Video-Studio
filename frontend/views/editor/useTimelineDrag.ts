@@ -69,8 +69,8 @@ interface UseTimelineDragParams {
   timelines: any[]
   activeTimeline: any
   currentProjectId: string | null
-  timelineRef: React.RefObject<HTMLDivElement>
-  trackContainerRef: React.RefObject<HTMLDivElement>
+  timelineRef: React.RefObject<HTMLDivElement | null>
+  trackContainerRef: React.RefObject<HTMLDivElement | null>
   orderedTracks: { track: Track; realIndex: number; displayRow: number }[]
   trackDisplayRow: Map<number, number>
   getTrackHeight: (trackIndex: number) => number

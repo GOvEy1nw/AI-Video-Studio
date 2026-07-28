@@ -1,28 +1,9 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss' source(none);
 
-.asset-library-card {
-  container-type: inline-size;
-  container-name: asset-library-card;
-}
+@source "../index.html";
+@source "./";
 
-/* 374px wide is ~210px high for the fixed 16:9 card surface. */
-@container asset-library-card (max-width: 374px) {
-  .asset-card-hover-actions {
-    display: none;
-  }
-}
-
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* ─────────────────────────────────────────
-   THEME — edit this block to retheme the app
-   Values are RGB channels: R G B
-   ───────────────────────────────────────── */
+/* Product-editable runtime tokens. Values are RGB channels: R G B. */
 :root {
   /* Accent color (used for buttons, progress, highlights) */
   --accent: 43 97 255;        /* #2B61FF */
@@ -39,10 +20,96 @@
   --text-muted: 161 161 170;  /* zinc-400 */
 }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+/*
+  Tailwind utility mappings. Add new semantic utility tokens here and keep
+  product-editable values in :root. `inline` preserves runtime retheming.
+*/
+@theme {
+  --font-sans: Inter, system-ui, sans-serif;
+
+  --color-blue-50: #eef3ff;
+  --color-blue-100: #e0e9ff;
+  --color-blue-200: #c7d7fe;
+  --color-blue-300: #a5bafd;
+  --color-blue-400: #7394fb;
+  --color-blue-700: #1540b8;
+  --color-blue-800: #163090;
+  --color-blue-900: #162970;
+  --color-blue-950: #0f1a45;
+
+  --radius-lg: 0.75rem;
+  --radius-md: 0.5rem;
+  --radius-sm: 0.25rem;
+}
+
+@theme inline {
+  --color-blue-500: rgb(var(--accent));
+  --color-blue-600: rgb(var(--accent-dark));
+
+  --color-accent: rgb(var(--accent));
+  --color-accent-dark: rgb(var(--accent-dark));
+  --color-app-bg: rgb(var(--bg));
+  --color-surface: rgb(var(--surface));
+  --color-surface-raised: rgb(var(--surface-raised));
+
+  --color-background: #1a1a1a;
+  --color-foreground: rgb(var(--text));
+  --color-card: #242424;
+  --color-card-foreground: rgb(var(--text));
+  --color-border: #333333;
+  --color-input: #2a2a2a;
+  --color-primary: rgb(var(--accent));
+  --color-primary-foreground: rgb(var(--text));
+  --color-secondary: #3f3f46;
+  --color-secondary-foreground: rgb(var(--text));
+  --color-muted: #27272a;
+  --color-muted-foreground: rgb(var(--text-muted));
+}
+
+/*
+  Tailwind CSS v4 changed the default border color to `currentcolor`.
+  This app-wide base rule intentionally preserves AiVS's established v3
+  border contract without repeating a color utility on every bare border.
+
+  Removing it requires adding an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-gray-400);
+    opacity: 1;
+  }
+}
+
+.asset-library-card {
+  container-type: inline-size;
+  container-name: asset-library-card;
+}
+
+/* 374px wide is ~210px high for the fixed 16:9 card surface. */
+@container asset-library-card (max-width: 374px) {
+  .asset-card-hover-actions {
+    display: none;
+  }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 body {

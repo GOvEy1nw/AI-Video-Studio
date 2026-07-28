@@ -289,14 +289,14 @@ export function AudioWaveform({ audioClips, currentTime, isPlaying }: AudioWavef
           className="absolute inset-0 w-full h-full"
         />
         {/* Small music icon badge */}
-        <div className="absolute top-3 left-3 flex items-center gap-2 px-2 py-1 rounded bg-black/60">
+        <div className="absolute top-3 left-3 flex items-center gap-2 px-2 py-1 rounded-sm bg-black/60">
           <Music className="h-3 w-3 text-emerald-400" />
           <span className="text-[10px] text-emerald-400 font-medium">Audio</span>
         </div>
       </div>
       {/* Clip names */}
       {audioClips.length > 0 && (
-        <div className="flex-shrink-0 px-3 py-1.5 bg-zinc-950 border-t border-zinc-800">
+        <div className="shrink-0 px-3 py-1.5 bg-zinc-950 border-t border-zinc-800">
           {audioClips.map((clip, i) => (
             <p key={i} className="text-[10px] text-zinc-500 truncate">
               {clip.name}

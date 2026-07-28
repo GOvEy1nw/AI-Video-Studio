@@ -158,7 +158,7 @@ Development setup and backend test commands use `uv sync --inexact` so normal de
 Install dependencies:
 
 ```bash
-pnpm install
+pnpm install --frozen-lockfile
 ```
 
 Run the app:
@@ -191,6 +191,12 @@ Frontend build:
 pnpm build:frontend
 ```
 
+Frontend validation:
+
+```bash
+pnpm validate:frontend
+```
+
 If pnpm tries to recreate `node_modules` in a non-interactive terminal, set CI mode:
 
 ```powershell
@@ -217,7 +223,7 @@ graph TD
 ### Frontend
 
 - Path: `frontend/`
-- React 18, TypeScript, Vite, Tailwind
+- React 19, TypeScript 6, Vite 8, Tailwind CSS 4
 - Main GenSpace surface: `frontend/views/GenSpace.tsx`
 - Model profile hook: `frontend/hooks/use-image-profiles.ts`
 - Model profile types: `frontend/types/model-profiles.ts`
@@ -247,6 +253,8 @@ graph TD
 | `pnpm typecheck`                  | Run TypeScript and Python type checks            |
 | `pnpm typecheck:ts`               | TypeScript only                                  |
 | `pnpm typecheck:py`               | Pyright only                                     |
+| `pnpm test:frontend`              | Full frontend Vitest suite                       |
+| `pnpm validate:frontend`          | TypeScript, frontend tests, and frontend build   |
 | `pnpm backend:test`               | Backend pytest suite                             |
 | `pnpm build:frontend`             | Build renderer and Electron bundles              |
 | `pnpm setup:dev:win`              | Windows development setup                        |

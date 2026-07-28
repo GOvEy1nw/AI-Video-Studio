@@ -18,7 +18,7 @@ export function GenerateButton({
       type="button"
       onClick={onClick}
       disabled={disabled || loading}
-      className={`mt-2 flex w-full flex-shrink-0 items-center justify-center gap-1.5 rounded-md px-3 py-2.5 text-sm font-medium transition-all ${
+      className={`mt-2 flex w-full shrink-0 items-center justify-center gap-1.5 rounded-md px-3 py-2.5 text-sm font-medium transition-all ${
         disabled || loading
           ? "cursor-not-allowed bg-zinc-700 text-zinc-500"
           : "bg-white text-black hover:bg-zinc-200"

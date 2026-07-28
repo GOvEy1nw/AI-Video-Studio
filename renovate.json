@@ -1,0 +1,149 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "baseBranchPatterns": ["dev"],
+  "enabledManagers": ["npm", "github-actions"],
+  "includePaths": [
+    ".github/workflows/**",
+    ".node-version",
+    ".nvmrc",
+    "package.json",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml"
+  ],
+  "ignorePaths": [
+    "**/backend/**",
+    "**/Wan2GP/**",
+    "**/scripts/ensure-wan2gp.ps1",
+    "**/scripts/ensure-wan2gp.sh",
+    "**/scripts/install-wangp-stack.ps1",
+    "**/scripts/update-wangp.ps1",
+    "**/scripts/wangp-source.json",
+    "**/scripts/wangp-stacks.json"
+  ],
+  "dependencyDashboard": true,
+  "timezone": "Europe/London",
+  "schedule": ["before 6am on Monday"],
+  "minimumReleaseAge": "7 days",
+  "prConcurrentLimit": 5,
+  "branchConcurrentLimit": 5,
+  "rebaseWhen": "behind-base-branch",
+  "semanticCommits": "enabled",
+  "rangeStrategy": "replace",
+  "automerge": false,
+  "labels": ["dependencies"],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on the first day of the month"]
+  },
+  "packageRules": [
+    {
+      "description": "Electron runtime",
+      "matchPackageNames": ["electron"],
+      "groupName": "Electron runtime",
+      "prPriority": 10,
+      "automerge": false
+    },
+    {
+      "description": "Electron packaging and update support",
+      "matchPackageNames": ["electron-builder", "electron-updater"],
+      "groupName": "Electron packaging",
+      "automerge": false
+    },
+    {
+      "description": "Vite build cluster",
+      "matchPackageNames": [
+        "vite",
+        "@vitejs/plugin-react",
+        "vite-plugin-electron",
+        "vite-plugin-electron-renderer"
+      ],
+      "groupName": "Vite build cluster",
+      "automerge": false
+    },
+    {
+      "description": "React runtime and types",
+      "matchPackageNames": [
+        "react",
+        "react-dom",
+        "@types/react",
+        "@types/react-dom"
+      ],
+      "groupName": "React cluster",
+      "automerge": false
+    },
+    {
+      "description": "Tailwind build and class utilities",
+      "matchPackageNames": [
+        "tailwindcss",
+        "@tailwindcss/vite",
+        "tailwind-merge"
+      ],
+      "groupName": "Tailwind cluster",
+      "automerge": false
+    },
+    {
+      "description": "Frontend test stack",
+      "matchPackageNames": [
+        "vitest",
+        "jsdom",
+        "@testing-library/react",
+        "@testing-library/user-event"
+      ],
+      "groupName": "Frontend test cluster",
+      "automerge": false
+    },
+    {
+      "description": "TypeScript stays on major 6 pending the separate TypeScript 7 evaluation",
+      "matchPackageNames": ["typescript"],
+      "groupName": "TypeScript",
+      "allowedVersions": "<7",
+      "automerge": false
+    },
+    {
+      "description": "Node and its types stay on the tested major 24 line",
+      "matchPackageNames": ["node", "actions/node-versions", "@types/node"],
+      "groupName": "Node 24 toolchain",
+      "allowedVersions": "<25",
+      "automerge": false
+    },
+    {
+      "description": "pnpm stays on the tested major 10 line",
+      "matchPackageNames": ["pnpm"],
+      "groupName": "pnpm 10",
+      "allowedVersions": "<11",
+      "automerge": false
+    },
+    {
+      "description": "Python runner versions follow the curated runtime process",
+      "matchManagers": ["github-actions"],
+      "matchDatasources": ["github-releases"],
+      "matchPackageNames": ["python"],
+      "enabled": false
+    },
+    {
+      "description": "Routine application utilities",
+      "matchPackageNames": [
+        "class-variance-authority",
+        "clsx",
+        "react-dropzone"
+      ],
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "groupName": "Routine application utilities",
+      "automerge": false
+    },
+    {
+      "description": "Lucide icon updates require focused export and visual review",
+      "matchPackageNames": ["lucide-react"],
+      "groupName": "Lucide icons",
+      "automerge": false
+    },
+    {
+      "description": "Development process helpers",
+      "matchPackageNames": ["concurrently", "cross-env"],
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "groupName": "Development helpers",
+      "automerge": false
+    }
+  ]
+}

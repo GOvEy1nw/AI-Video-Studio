@@ -5,6 +5,7 @@ import type { GenerationSettings } from '../../types/generation'
 import { copyToAssetFolder } from '../../lib/asset-copy'
 import { backendFetch } from '../../lib/backend'
 import { fileUrlToPath } from '../../lib/url-to-path'
+import { getNativeFilePath } from '../../lib/native-file-path'
 
 export interface UseGapGenerationParams {
   clips: TimelineClip[]
@@ -184,7 +185,7 @@ export function useGapGeneration({
         // Convert File to filesystem path for the JSON-based generate API
         let imagePath: string | null = null
         if (gapImageFile) {
-          const electronPath = (gapImageFile as any).path as string | undefined
+          const electronPath = getNativeFilePath(gapImageFile)
           if (electronPath) {
             imagePath = electronPath
           } else {
@@ -453,7 +454,7 @@ export function useGapGeneration({
       let inputImagePath = ''
       const imageFile = gapImageFileRef.current
       if (imageFile && mode === 'image-to-video') {
-        const electronPath = (imageFile as any).path as string | undefined
+        const electronPath = getNativeFilePath(imageFile)
         if (electronPath) {
           inputImagePath = electronPath
         }

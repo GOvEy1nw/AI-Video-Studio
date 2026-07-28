@@ -57,7 +57,7 @@ export function DirectorPromptSegment({
         {asset && point !== "centre" && (
           <img
             src={asset.url}
-            className="h-8 w-12 rounded object-cover"
+            className="h-8 w-12 rounded-sm object-cover"
             alt="Keyframe"
           />
         )}
@@ -71,7 +71,7 @@ export function DirectorPromptSegment({
             {keyframeLabel && (
               <span className="truncate">Key Frame ({keyframeLabel})</span>
             )}
-            <span className="ml-auto flex-shrink-0 tabular-nums text-zinc-400">
+            <span className="ml-auto shrink-0 tabular-nums text-zinc-400">
               {frameCount}f
             </span>
           </div>

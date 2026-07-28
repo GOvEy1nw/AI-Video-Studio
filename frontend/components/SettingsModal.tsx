@@ -233,7 +233,7 @@ export function SettingsModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/60 backdrop-blur-xs"
         onClick={onClose}
       />
 
@@ -300,7 +300,7 @@ export function SettingsModal({
                   </div>
                   <Button
                     variant="outline"
-                    className="border-zinc-700 flex-shrink-0"
+                    className="border-zinc-700 shrink-0"
                     onClick={async () => {
                       const dir =
                         await window.electronAPI.showOpenDirectoryDialog({
@@ -426,7 +426,7 @@ export function SettingsModal({
                       }));
                       setAdvancedReloaded(false);
                     }}
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${
+                    className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors ${
                       advancedSettings.useTorchCompile
                         ? "bg-blue-600"
                         : "bg-zinc-700"

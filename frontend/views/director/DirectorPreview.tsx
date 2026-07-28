@@ -156,9 +156,9 @@ export function DirectorPreview(props: Props) {
                 </div>
                 {props.phase !== "checking_model_files" &&
                   props.phase !== "loading_model" && (
-                    <div className="h-1 rounded bg-zinc-800">
+                    <div className="h-1 rounded-sm bg-zinc-800">
                       <div
-                        className="h-full rounded bg-blue-500"
+                        className="h-full rounded-sm bg-blue-500"
                         style={{ width: `${props.progress}%` }}
                       />
                     </div>
@@ -166,11 +166,11 @@ export function DirectorPreview(props: Props) {
                 {(props.phase === "checking_model_files" ||
                   props.phase === "loading_model") && (
                   <div
-                    className="h-1 overflow-hidden rounded bg-zinc-800"
+                    className="h-1 overflow-hidden rounded-sm bg-zinc-800"
                     role="progressbar"
                     aria-label="Preparing model"
                   >
-                    <div className="h-full w-1/3 animate-pulse rounded bg-blue-500" />
+                    <div className="h-full w-1/3 animate-pulse rounded-sm bg-blue-500" />
                   </div>
                 )}
               </>
