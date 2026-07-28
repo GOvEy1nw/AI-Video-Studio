@@ -16,7 +16,7 @@ Product principles:
 Current integration baseline: `dev`.
 
 ## Recent issues
-- [OPEN] #0334 PR #9 was already merged, so Windows-only CI commit d3d9fdc pushed only to stale feature branch and did not reach dev or trigger CI [chore/dependency-modernisation-2026 / PR #9] (open)
+- [DONE] #0334 PR #9 was already merged, so Windows-only CI commit d3d9fdc pushed only to stale feature branch and did not reach dev or trigger CI [chore/dependency-modernisation-2026 / PR #9] -> Windows-only CI cleanup now targets dev through draft PR #11 with passing hosted Windows validation [codex/windows-only-ci / PR #11] (fixed)
   - Partial attempt: Fetched merged dev, created fresh codex/windows-only-ci from origin/dev, and cherry-picked CI cleanup plus audit records cleanly [codex/windows-only-ci]
 - [DONE] #0333 Recursive actionlint lookup under C:\tmp hits inaccessible wangp-hf-runtime paths and returns nonzero despite finding cached binary [Phase 11 CI workflow cleanup validation] -> Both GitHub Actions workflows pass actionlint using cached Phase 10 binary [Phase 11 CI workflow cleanup validation] (fixed)
 - [DONE] #0332 PowerShell expands multiline PR body into separate gh pr edit arguments instead of one --body value [Phase 11 draft PR evidence update] -> Draft PR #9 now records final SHA and successful hosted CI run using stdin-safe body update [Phase 11 draft PR evidence update] (fixed)
