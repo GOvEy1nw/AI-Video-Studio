@@ -118,6 +118,11 @@ export function ImageMediaInputs({
               kind="image"
               title={role?.label ?? policy.tooltipLabel}
               active={activeId === input.id}
+              removeLabel={role?.label ?? "image input"}
+              onRemove={() => {
+                onChange(removeMediaInput(inputs, input.id));
+                setActiveId(null);
+              }}
               onToggle={() =>
                 setActiveId((current) => (current === input.id ? null : input.id))
               }
@@ -138,10 +143,6 @@ export function ImageMediaInputs({
                           : item,
                       ),
                     );
-                    setActiveId(null);
-                  }}
-                  onRemove={() => {
-                    onChange(removeMediaInput(inputs, input.id));
                     setActiveId(null);
                   }}
                 />

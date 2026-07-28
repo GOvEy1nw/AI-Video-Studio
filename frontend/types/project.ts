@@ -141,6 +141,7 @@ export interface Asset {
   prompt: string
   resolution: string
   duration?: number // For audio and video
+  generationTimeSeconds?: number
   createdAt: number
   thumbnail?: string
   favorite?: boolean

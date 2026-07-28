@@ -42,6 +42,7 @@ export function useGenSpaceGallery({
   onCreateVideo,
   onReframe,
   onCopySettings,
+  getAssetModelName,
 }: {
   currentProject: Projects["currentProject"];
   currentProjectId: string | null;
@@ -58,6 +59,7 @@ export function useGenSpaceGallery({
   onCreateVideo: (asset: Asset) => void;
   onReframe: (asset: Asset) => void;
   onCopySettings: (asset: Asset) => void;
+  getAssetModelName: (asset: Asset) => string | undefined;
 }) {
   const assets = useMemo(
     () =>
@@ -134,6 +136,14 @@ export function useGenSpaceGallery({
     const timer = window.setTimeout(() => setToast(null), 4000);
     return () => window.clearTimeout(timer);
   }, [toast]);
+
+  useEffect(() => {
+    setSelectedAsset((current) =>
+      current
+        ? assets.find(({ id }) => id === current.id) ?? null
+        : current,
+    );
+  }, [assets]);
 
   const requestDuplicateChoice = useCallback(
     (fileName: string): Promise<DuplicateFilenameChoice> =>
@@ -330,7 +340,11 @@ export function useGenSpaceGallery({
       showFavorites,
       onShowFavoritesChange: setShowFavorites,
       getThumbnailUrl: ({ thumbnail }) => thumbnail,
+      getAssetModelName,
       previewEnabled: currentTab === "gen-space" && isDocumentVisible,
+      selectedAssetIds: selectedAsset
+        ? new Set([selectedAsset.id])
+        : new Set<string>(),
       onAssetClick: (event, asset) => {
         event.stopPropagation();
         setSelectedAsset(asset);
@@ -374,6 +388,7 @@ export function useGenSpaceGallery({
       currentTab,
       deleteAssetBin,
       filter,
+      getAssetModelName,
       isDocumentVisible,
       newBinName,
       onCopySettings,
@@ -381,6 +396,7 @@ export function useGenSpaceGallery({
       onReframe,
       renameAssetBin,
       requestDeleteAssets,
+      selectedAsset,
       selectedBin,
       setAssetActiveTake,
       setAssetBinColor,

@@ -164,7 +164,7 @@ export function GuideMediaTrimEditor({
           })
         }
       />
-      <div className="mb-1 flex items-center justify-between px-4 py-3 text-[10px] text-zinc-500">
+      <div className="mb-1 flex items-center justify-between px-4 py-3 text-2xs text-zinc-500">
         <button
           type="button"
           onClick={onConfirm}

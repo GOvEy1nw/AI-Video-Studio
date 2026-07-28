@@ -2601,7 +2601,7 @@ export function VideoEditor() {
                           {layoutPresets.length > 0 && (
                             <>
                               <div className="h-px bg-zinc-700 my-1 mx-2" />
-                              <div className="px-3 py-1 text-[10px] text-zinc-500 uppercase tracking-wider">
+                              <div className="px-3 py-1 text-2xs text-zinc-500 uppercase tracking-wider">
                                 Saved Layouts
                               </div>
                               {layoutPresets.map((preset) => (
@@ -3399,7 +3399,7 @@ export function VideoEditor() {
                     <div className="shrink-0 h-7 flex items-center px-2 gap-1.5 border-b border-zinc-700/50">
                       <button
                         onClick={() => addTrack("video")}
-                        className="text-[10px] text-zinc-500 hover:text-zinc-300 flex items-center gap-0.5"
+                        className="text-2xs text-zinc-500 hover:text-zinc-300 flex items-center gap-0.5"
                         title="Add video track"
                       >
                         <Plus className="h-3 w-3" />V

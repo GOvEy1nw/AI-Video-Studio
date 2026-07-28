@@ -127,7 +127,7 @@ export function GalleryBinBar({
               style={{ color: getColorLabel(binColors[bin])?.color }}
             />
             <span className="truncate">{bin}</span>
-            <span className="text-[10px] text-zinc-500">{countInBin(bin)}</span>
+            <span className="text-2xs text-zinc-500">{countInBin(bin)}</span>
           </button>
         ))}
 

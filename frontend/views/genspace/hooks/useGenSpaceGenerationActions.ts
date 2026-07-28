@@ -99,6 +99,7 @@ export function useGenSpaceGenerationActions({
       setSettings(command.normalizedSettings);
       reframeSubmissionRef.current = {
         projectId: currentProjectId,
+        submittedAt: Date.now(),
         prompt: command.prompt,
         input: { ...reframeInput, padding: { ...reframeInput.padding } },
         settings: { ...command.normalizedSettings },
@@ -122,6 +123,7 @@ export function useGenSpaceGenerationActions({
       if (!command) return;
       retakeSubmissionRef.current = {
         projectId: currentProjectId,
+        submittedAt: Date.now(),
         prompt: command.snapshot.prompt,
         input: { ...retakeInput, ...command.snapshot.input },
       };
@@ -148,6 +150,7 @@ export function useGenSpaceGenerationActions({
       }
       musicSubmissionRef.current = {
         projectId: currentProjectId,
+        submittedAt: Date.now(),
         prompt: command.prompt,
         recipe: command.snapshot,
       };
@@ -164,6 +167,7 @@ export function useGenSpaceGenerationActions({
       if (!currentProjectId) return;
       imageSubmissionRef.current = {
         projectId: currentProjectId,
+        submittedAt: Date.now(),
         prompt,
         settings: { ...settings },
         inputs: imageInputs.map((input) => ({ ...input })),
@@ -191,6 +195,7 @@ export function useGenSpaceGenerationActions({
     if (!currentProjectId) return;
     videoSubmissionRef.current = {
       projectId: currentProjectId,
+      submittedAt: Date.now(),
       prompt,
       settings: { ...command.normalizedSettings },
       inputs: imageInputs.map((input) => ({ ...input })),

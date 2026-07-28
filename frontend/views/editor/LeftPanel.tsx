@@ -345,7 +345,7 @@ export function LeftPanel(props: LeftPanelProps) {
             <div className="mb-2 flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-semibold text-white">Takes</h3>
-                <p className="text-[10px] text-zinc-500">
+                <p className="text-2xs text-zinc-500">
                   {takesAsset.takes.length} takes
                 </p>
               </div>
@@ -598,7 +598,7 @@ export function LeftPanel(props: LeftPanelProps) {
                       {tl.name}
                     </p>
                   )}
-                  <div className="flex items-center gap-2 text-[10px] text-zinc-500">
+                  <div className="flex items-center gap-2 text-2xs text-zinc-500">
                     <span>
                       {clipCount} clip{clipCount !== 1 ? "s" : ""}
                     </span>

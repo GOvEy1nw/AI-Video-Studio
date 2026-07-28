@@ -155,6 +155,7 @@ export interface GenSpaceSidebarController {
 
 export interface ImageSubmissionSnapshot {
   projectId: string;
+  submittedAt?: number;
   prompt: string;
   settings: GenSpaceSettings;
   inputs: GenSpaceMediaInput[];
@@ -168,12 +169,14 @@ export interface VideoSubmissionSnapshot extends ImageSubmissionSnapshot {
 
 export interface MusicSubmissionSnapshot {
   projectId: string;
+  submittedAt?: number;
   prompt: string;
   recipe: SubmittedMusicRecipe;
 }
 
 export interface ReframeSubmissionSnapshot {
   projectId: string;
+  submittedAt?: number;
   prompt: string;
   input: ReframePanelState;
   settings: GenSpaceSettings;
@@ -181,6 +184,7 @@ export interface ReframeSubmissionSnapshot {
 
 export interface RetakeSubmissionSnapshot {
   projectId: string;
+  submittedAt?: number;
   prompt: string;
   input: {
     videoPath: string | null;

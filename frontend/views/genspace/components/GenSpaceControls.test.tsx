@@ -142,4 +142,38 @@ describe("GenSpace shared controls", () => {
       role: "reference-timbre",
     });
   });
+
+  it("opens media menus below the header and removes from the slot control", async () => {
+    const onInputChange = vi.fn();
+    render(
+      <MusicMediaInputs
+        coverInput={{
+          url: "file:///C:/reference.wav",
+          role: "cover",
+        }}
+        referenceTimbreInput={null}
+        coverStrength={100}
+        onInputChange={onInputChange}
+        onCoverStrengthChange={vi.fn()}
+        resolveInputFileUrl={vi.fn(async () => null)}
+      />,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Cover Song actions" }),
+    );
+    expect(
+      screen
+        .getByText("Audio input")
+        .closest("[data-media-menu]")
+        ?.classList.contains("top-full"),
+    ).toBe(true);
+    expect(screen.queryByRole("button", { name: "Remove" })).toBeNull();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Remove Cover Song" }),
+    );
+
+    expect(onInputChange).toHaveBeenCalledWith("cover", null);
+  });
 });

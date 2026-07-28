@@ -1,43 +1,68 @@
-import React from 'react'
-import { Plus, Gauge, Download, Maximize2, FileUp, FileDown, ZoomOut, ZoomIn } from 'lucide-react' // IC-LORA HIDDEN: removed Sparkles
-import { Button } from '../../components/ui/button'
-import { Tooltip } from '../../components/ui/tooltip'
-import type { TimelineClip, Track, SubtitleClip } from '../../types/project'
+import React from "react";
+import {
+  Plus,
+  Gauge,
+  Download,
+  Maximize2,
+  FileUp,
+  FileDown,
+  ZoomOut,
+  ZoomIn,
+} from "lucide-react"; // IC-LORA HIDDEN: removed Sparkles
+import { Button } from "../../components/ui/button";
+import { Tooltip } from "../../components/ui/tooltip";
+import type { TimelineClip, Track, SubtitleClip } from "../../types/project";
 
 interface TimelineToolbarProps {
-  selectedClip: TimelineClip | null
-  updateClip: (id: string, updates: Partial<TimelineClip>) => void
-  getMaxClipDuration: (clip: TimelineClip) => number
-  setShowExportModal: (v: boolean) => void
-  handleResetLayout: () => void
-  setIcLoraSourceClipId: (id: string | null) => void
-  setShowICLoraPanel: (v: boolean) => void
-  tracks: Track[]
-  subtitleFileInputRef: React.RefObject<HTMLInputElement | null>
-  handleImportSrt: (e: React.ChangeEvent<HTMLInputElement>) => void
-  handleExportSrt: () => void
-  subtitles: SubtitleClip[]
-  zoom: number
-  setZoom: (z: number) => void
-  getMinZoom: () => number
-  centerOnPlayheadRef: React.MutableRefObject<boolean>
-  handleFitToView: () => void
+  selectedClip: TimelineClip | null;
+  updateClip: (id: string, updates: Partial<TimelineClip>) => void;
+  getMaxClipDuration: (clip: TimelineClip) => number;
+  setShowExportModal: (v: boolean) => void;
+  handleResetLayout: () => void;
+  setIcLoraSourceClipId: (id: string | null) => void;
+  setShowICLoraPanel: (v: boolean) => void;
+  tracks: Track[];
+  subtitleFileInputRef: React.RefObject<HTMLInputElement | null>;
+  handleImportSrt: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleExportSrt: () => void;
+  subtitles: SubtitleClip[];
+  zoom: number;
+  setZoom: (z: number) => void;
+  getMinZoom: () => number;
+  centerOnPlayheadRef: React.MutableRefObject<boolean>;
+  handleFitToView: () => void;
 }
 
 export function TimelineToolbar({
-  selectedClip, updateClip, getMaxClipDuration,
-  setShowExportModal, handleResetLayout,
-  setIcLoraSourceClipId: _setIcLoraSourceClipId, setShowICLoraPanel: _setShowICLoraPanel, // IC-LORA HIDDEN
-  tracks, subtitleFileInputRef, handleImportSrt, handleExportSrt, subtitles,
-  zoom, setZoom, getMinZoom, centerOnPlayheadRef, handleFitToView,
+  selectedClip,
+  updateClip,
+  getMaxClipDuration,
+  setShowExportModal,
+  handleResetLayout,
+  setIcLoraSourceClipId: _setIcLoraSourceClipId,
+  setShowICLoraPanel: _setShowICLoraPanel, // IC-LORA HIDDEN
+  tracks,
+  subtitleFileInputRef,
+  handleImportSrt,
+  handleExportSrt,
+  subtitles,
+  zoom,
+  setZoom,
+  getMinZoom,
+  centerOnPlayheadRef,
+  handleFitToView,
 }: TimelineToolbarProps) {
   return (
     <div className="h-9 bg-zinc-900 border-t border-zinc-800 flex items-center px-3 gap-2 shrink-0">
-      <Button variant="outline" size="sm" className="h-6 border-zinc-700 text-zinc-400 text-[10px] px-2">
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-6 border-zinc-700 text-zinc-400 text-[10px] px-2"
+      >
         <Plus className="h-3 w-3 mr-1" />
         Add Clip
       </Button>
-      
+
       {selectedClip && (
         <>
           <div className="w-px h-4 bg-zinc-700" />
@@ -46,13 +71,19 @@ export function TimelineToolbar({
             <select
               value={selectedClip.speed}
               onChange={(e) => {
-                const newSpeed = parseFloat(e.target.value)
-                const oldSpeed = selectedClip.speed
-                let newDuration = selectedClip.duration * (oldSpeed / newSpeed)
-                const maxDur = getMaxClipDuration({ ...selectedClip, speed: newSpeed })
-                newDuration = Math.min(newDuration, maxDur)
-                newDuration = Math.max(0.5, newDuration)
-                updateClip(selectedClip.id, { speed: newSpeed, duration: newDuration })
+                const newSpeed = parseFloat(e.target.value);
+                const oldSpeed = selectedClip.speed;
+                let newDuration = selectedClip.duration * (oldSpeed / newSpeed);
+                const maxDur = getMaxClipDuration({
+                  ...selectedClip,
+                  speed: newSpeed,
+                });
+                newDuration = Math.min(newDuration, maxDur);
+                newDuration = Math.max(0.5, newDuration);
+                updateClip(selectedClip.id, {
+                  speed: newSpeed,
+                  duration: newDuration,
+                });
               }}
               className="bg-zinc-800 border border-zinc-700 rounded-sm px-1.5 py-0.5 text-[10px] text-white"
             >
@@ -68,9 +99,9 @@ export function TimelineToolbar({
           </div>
         </>
       )}
-      
+
       <div className="w-px h-4 bg-zinc-700" />
-      
+
       <Button
         variant="outline"
         size="sm"
@@ -80,7 +111,7 @@ export function TimelineToolbar({
         <Download className="h-3 w-3 mr-1" />
         Export
       </Button>
-      
+
       <Button
         variant="outline"
         size="sm"
@@ -91,7 +122,7 @@ export function TimelineToolbar({
         <Maximize2 className="h-3 w-3 mr-1" />
         Layout
       </Button>
-      
+
       {/* IC-LORA HIDDEN - IC-LoRA toolbar button hidden because IC-LoRA is broken on server
       <div className="w-px h-4 bg-zinc-700" />
 
@@ -109,10 +140,9 @@ export function TimelineToolbar({
         IC-LoRA
       </Button>
       */}
-      
-      
+
       {/* Subtitle import/export */}
-      {tracks.some(t => t.type === 'subtitle') && (
+      {tracks.some((t) => t.type === "subtitle") && (
         <>
           <div className="w-px h-4 bg-zinc-700" />
           <div className="flex items-center gap-1">
@@ -143,15 +173,18 @@ export function TimelineToolbar({
           />
         </>
       )}
-      
+
       {/* Spacer */}
       <div className="flex-1" />
-      
+
       {/* Zoom slider bar */}
       <div className="flex items-center gap-2">
         <Tooltip content="Zoom out (-)">
           <button
-            onClick={() => { centerOnPlayheadRef.current = true; setZoom(Math.max(getMinZoom(), +(zoom - 0.25).toFixed(2))) }}
+            onClick={() => {
+              centerOnPlayheadRef.current = true;
+              setZoom(Math.max(getMinZoom(), +(zoom - 0.25).toFixed(2)));
+            }}
             className="p-0.5 rounded-sm hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300 transition-colors"
           >
             <ZoomOut className="h-3.5 w-3.5" />
@@ -163,19 +196,32 @@ export function TimelineToolbar({
           max={400}
           step={5}
           value={Math.round(zoom * 100)}
-          onChange={(e) => { centerOnPlayheadRef.current = true; setZoom(Math.max(getMinZoom(), +(parseInt(e.target.value) / 100).toFixed(2))) }}
+          onChange={(e) => {
+            centerOnPlayheadRef.current = true;
+            setZoom(
+              Math.max(
+                getMinZoom(),
+                +(parseInt(e.target.value) / 100).toFixed(2),
+              ),
+            );
+          }}
           className="w-28 h-1 accent-blue-500 cursor-pointer"
           title={`Zoom: ${Math.round(zoom * 100)}%`}
         />
         <Tooltip content="Zoom in (+)">
           <button
-            onClick={() => { centerOnPlayheadRef.current = true; setZoom(Math.min(4, +(zoom + 0.25).toFixed(2))) }}
+            onClick={() => {
+              centerOnPlayheadRef.current = true;
+              setZoom(Math.min(4, +(zoom + 0.25).toFixed(2)));
+            }}
             className="p-0.5 rounded-sm hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300 transition-colors"
           >
             <ZoomIn className="h-3.5 w-3.5" />
           </button>
         </Tooltip>
-        <span className="text-[10px] text-zinc-500 tabular-nums w-8 text-right">{Math.round(zoom * 100)}%</span>
+        <span className="text-2xs text-zinc-500 tabular-nums w-8 text-right">
+          {Math.round(zoom * 100)}%
+        </span>
         <Tooltip content="Fit to view (Ctrl+0)">
           <button
             onClick={handleFitToView}
@@ -186,5 +232,5 @@ export function TimelineToolbar({
         </Tooltip>
       </div>
     </div>
-  )
+  );
 }

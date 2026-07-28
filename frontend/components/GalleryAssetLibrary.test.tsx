@@ -15,13 +15,38 @@ afterEach(() => {
 });
 
 describe("GalleryAssetCard", () => {
-  it("stacks music variations and previews each row independently", () => {
+  it("shows model and generation time in the top-left metadata badge", () => {
+    const { container } = render(
+      <GalleryAssetCard
+        asset={{
+          id: "image-1",
+          type: "image",
+          path: "image.png",
+          url: "file:///image.png",
+          prompt: "A cat in a hat",
+          resolution: "864 x 864",
+          generationTimeSeconds: 14,
+          createdAt: 1,
+        }}
+        modelName="Krea 2 Turbo"
+        previewEnabled={false}
+        onClick={vi.fn()}
+        onDragStart={vi.fn()}
+        onContextMenu={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Krea 2 Turbo")).toBeTruthy();
+    expect(screen.getByText("14s")).toBeTruthy();
+    expect(container.querySelector(".aspect-square")).toBeTruthy();
+    expect(container.querySelectorAll("img")).toHaveLength(1);
+    expect(container.querySelector("img")?.className).toContain("object-cover");
+  });
+
+  it("stacks music variations without playing them on hover", () => {
     const play = vi
       .spyOn(HTMLMediaElement.prototype, "play")
       .mockResolvedValue(undefined);
-    const pause = vi
-      .spyOn(HTMLMediaElement.prototype, "pause")
-      .mockImplementation(() => undefined);
     const onSelectTake = vi.fn();
     const asset: Asset = {
       id: "music-1",
@@ -56,14 +81,41 @@ describe("GalleryAssetCard", () => {
     });
     expect(rows).toHaveLength(4);
     expect(screen.getAllByTestId("waveform")).toHaveLength(4);
-    expect(container.querySelectorAll("audio")).toHaveLength(4);
+    expect(container.querySelectorAll("audio")).toHaveLength(0);
     expect(screen.queryByLabelText("Previous take")).toBeNull();
 
     fireEvent.mouseEnter(rows[1]);
-    expect(play).toHaveBeenCalledTimes(1);
-    fireEvent.mouseLeave(rows[1]);
-    expect(pause).toHaveBeenCalled();
+    expect(play).not.toHaveBeenCalled();
     fireEvent.click(rows[2]);
     expect(onSelectTake).toHaveBeenCalledWith(2);
+  });
+
+  it("does not play video on hover", () => {
+    const play = vi
+      .spyOn(HTMLMediaElement.prototype, "play")
+      .mockResolvedValue(undefined);
+    const { container } = render(
+      <GalleryAssetCard
+        asset={{
+          id: "video-1",
+          type: "video",
+          path: "video.mp4",
+          url: "file:///video.mp4",
+          prompt: "A city at night",
+          resolution: "1920 x 1080",
+          createdAt: 1,
+        }}
+        previewEnabled
+        onClick={vi.fn()}
+        onDragStart={vi.fn()}
+        onContextMenu={vi.fn()}
+      />,
+    );
+
+    const card = container.querySelector("[data-asset-card]");
+    expect(card).toBeTruthy();
+    fireEvent.mouseEnter(card!);
+    expect(play).not.toHaveBeenCalled();
+    expect(container.querySelector("video")?.className).toContain("object-cover");
   });
 });

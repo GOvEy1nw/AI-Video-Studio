@@ -19,6 +19,7 @@ GenSpace
    │  ├─ image/ImageGenPanel
    │  ├─ video/VideoGenPanel
    │  └─ music/MusicGenPanel
+   ├─ GenSpaceSelectedGeneration
    ├─ GenSpaceGallery
    └─ GenSpaceOverlays
 ```
@@ -26,6 +27,10 @@ GenSpace
 Only the active panel is rendered. Generation-critical state lives in hooks
 above the panels, so tab switches do not reset settings or create hidden media
 elements.
+
+The center detail header uses the selected asset prompt and keeps Copy Settings
+beside it. Asset Library grid cards are square, crop image/video media with
+`object-cover`, and never autoplay audio or video on hover.
 
 Mode-owned UI and helpers live under `image/`, `video/`, or `music/`.
 Cross-mode controls remain in `components/`; cross-mode state, effects, and
@@ -49,8 +54,9 @@ and shallow rather than adding one-file `views/components/lib` subfolders.
 | Completion persistence/idempotency | `hooks/useGenSpaceResultPersistence.ts` |
 | Copy Settings | `logic/settings-restore.ts` and `hooks/useGenSpaceSettingsRestore.ts` |
 | Editor/context hand-offs | `hooks/useGenSpaceExternalHandoffs.ts` |
-| Gallery state/actions | `hooks/useGenSpaceGallery.ts` |
-| Gallery and dialog presentation | `GenSpaceGallery.tsx` and `GenSpaceOverlays.tsx` |
+| Gallery selection/state/actions | `hooks/useGenSpaceGallery.ts` |
+| Selected asset/current generation detail | `GenSpaceSelectedGeneration.tsx` |
+| Narrow gallery and dialog presentation | `GenSpaceGallery.tsx` and `GenSpaceOverlays.tsx` |
 
 Panels receive mode-specific controller contracts. They do not import project
 context, call backend endpoints, persist assets, or instantiate

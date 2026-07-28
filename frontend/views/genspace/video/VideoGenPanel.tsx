@@ -1,19 +1,9 @@
-import {
-  AlertCircle,
-  Clock,
-  Image,
-  Monitor,
-  Music,
-  X,
-} from "lucide-react";
+import { AlertCircle, Clock, Image, Monitor, Music, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ModelDropdownTrigger } from "../../../components/ModelDropdownTrigger";
 import { SettingsDropdown } from "../../../components/SettingsDropdown";
 import { detectMediaType } from "../../../lib/media-import";
-import {
-  AUDIO_MEDIA_ROLE_SET,
-  GUIDE_MEDIA_ROLE_SET,
-} from "../constants";
+import { AUDIO_MEDIA_ROLE_SET, GUIDE_MEDIA_ROLE_SET } from "../constants";
 import { AspectIcon } from "../components/AspectIcon";
 import { GenerateButton } from "../components/GenerateButton";
 import { GenPanelSection } from "../components/GenPanelSection";
@@ -65,7 +55,8 @@ function LegacyPromptMedia({
     else media.setInputAudio(url);
   };
 
-  const drop = (kind: "image" | "audio") =>
+  const drop =
+    (kind: "image" | "audio") =>
     async (event: React.DragEvent<HTMLDivElement>) => {
       event.preventDefault();
       setImageDrag(false);
@@ -203,31 +194,32 @@ export function VideoGenPanel({
   const isPanelMode = isRetake || isReframe;
   const guide = media.inputs.find(({ role }) => GUIDE_MEDIA_ROLE_SET.has(role));
   const isContinueVideo = guide?.role === "continue_video";
-  const autoDuration =
-    guide?.trimDuration ?? guide?.mediaDuration ?? 0;
+  const autoDuration = guide?.trimDuration ?? guide?.mediaDuration ?? 0;
   const durationFollowsGuide = !!guide && !isContinueVideo;
   const hasAudioInput =
     !!media.inputAudio ||
     media.inputs.some(({ role }) => AUDIO_MEDIA_ROLE_SET.has(role));
-  const resolutionOptions =
-    selectedProfile?.ui.allowedResolutionTiers ?? ["540p", "720p", "1080p"];
+  const resolutionOptions = selectedProfile?.ui.allowedResolutionTiers ?? [
+    "540p",
+    "720p",
+    "1080p",
+  ];
   const durationOptions = [5, 6, 8, 10, 20].filter(
-    (duration) =>
-      duration <= (MAX_DURATION[videoSettings.resolution] ?? 20),
+    (duration) => duration <= (MAX_DURATION[videoSettings.resolution] ?? 20),
   );
 
   useEffect(() => {
     if (!selectedProfile) return;
     const aspect = selectedProfile.ui.allowedAspectRatios.includes(
-        videoSettings.aspectRatio,
-      )
-        ? videoSettings.aspectRatio
-        : selectedProfile.ui.defaultAspectRatio;
+      videoSettings.aspectRatio,
+    )
+      ? videoSettings.aspectRatio
+      : selectedProfile.ui.defaultAspectRatio;
     const resolution = selectedProfile.ui.allowedResolutionTiers.includes(
-        videoSettings.resolution,
-      )
-        ? videoSettings.resolution
-        : selectedProfile.ui.defaultResolutionTier;
+      videoSettings.resolution,
+    )
+      ? videoSettings.resolution
+      : selectedProfile.ui.defaultResolutionTier;
     if (
       videoSettings.profileId !== selectedProfile.id ||
       videoSettings.aspectRatio !== aspect ||
@@ -253,7 +245,11 @@ export function VideoGenPanel({
 
   return (
     <>
-      <GenPanelSection title="Model" className="text-xs text-zinc-400">
+      <GenPanelSection
+        title="Model"
+        className="text-xs text-zinc-400"
+        collapsible={false}
+      >
         {selectedProfile ? (
           <SettingsDropdown
             title="VIDEO MODEL"
@@ -308,8 +304,7 @@ export function VideoGenPanel({
               : "The woman sips from a cup of coffee..."
         }
         leading={
-          !isPanelMode &&
-          !selectedProfile?.inputMedia.supportsImageInputs ? (
+          !isPanelMode && !selectedProfile?.inputMedia.supportsImageInputs ? (
             <LegacyPromptMedia controller={controller} />
           ) : undefined
         }
@@ -329,7 +324,7 @@ export function VideoGenPanel({
       />
       <div className="flex flex-wrap items-center gap-1.5 border-t border-zinc-800/60 px-4 py-3 text-xs text-zinc-400">
         {isRetake ? (
-          <div className="pr-2 text-[10px] text-zinc-500">
+          <div className="pr-2 text-2xs text-zinc-500">
             Trim in the panel above, then retake
           </div>
         ) : isReframe ? (

@@ -52,12 +52,12 @@ export function MusicAdvancedSettings({
     onChange({ ...settings, ...patch });
 
   return (
-    <GenPanelSection title="Advanced Settings" collapsible>
+    <GenPanelSection title="Advanced Settings" collapsed={true}>
       <div className="space-y-3">
         <div>
-          <div className="mb-2 text-sm font-medium text-zinc-300">Vocals</div>
+          <div className="mb-2 text-xs font-medium text-zinc-300">Vocals</div>
           <div className="grid grid-cols-2 gap-2">
-            <label className="text-[10px] text-zinc-500">
+            <label className="text-2xs text-zinc-500">
               Language
               <select
                 disabled={vocalMode === "instrumental"}
@@ -77,7 +77,7 @@ export function MusicAdvancedSettings({
                   ))}
               </select>
             </label>
-            <label className="text-[10px] text-zinc-500">
+            <label className="text-2xs text-zinc-500">
               Vocal character
               <select
                 disabled={vocalMode === "instrumental"}
@@ -99,11 +99,11 @@ export function MusicAdvancedSettings({
         </div>
 
         <div>
-          <div className="mb-2 text-sm font-medium text-zinc-300">
+          <div className="mb-2 text-xs font-medium text-zinc-300">
             Music Parameters
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <label className="text-[10px] text-zinc-500">
+            <label className="text-2xs text-zinc-500">
               <span className="flex justify-between">
                 <span>Duration</span>
                 <span>
@@ -136,7 +136,7 @@ export function MusicAdvancedSettings({
                 className="mt-1 w-full accent-violet-500 disabled:opacity-40"
               />
             </label>
-            <label className="text-[10px] text-zinc-500">
+            <label className="text-2xs text-zinc-500">
               <span className="flex justify-between">
                 <span>BPM</span>
                 <span>{settings.bpm ?? "Auto"}</span>
@@ -159,7 +159,7 @@ export function MusicAdvancedSettings({
                 className="mt-1 w-full accent-violet-500"
               />
             </label>
-            <label className="text-[10px] text-zinc-500">
+            <label className="text-2xs text-zinc-500">
               Key & scale
               <select
                 value={settings.keyScale ?? ""}
@@ -174,7 +174,7 @@ export function MusicAdvancedSettings({
                 ))}
               </select>
             </label>
-            <label className="text-[10px] text-zinc-500">
+            <label className="text-2xs text-zinc-500">
               Time signature
               <select
                 value={settings.timeSignature ?? ""}
@@ -199,7 +199,7 @@ export function MusicAdvancedSettings({
 
         <div className="space-y-3">
           <div className="text-sm font-medium text-zinc-300">Variability</div>
-          <label className="block text-[10px] text-zinc-500">
+          <label className="block text-2xs text-zinc-500">
             <span className="flex justify-between">
               <span>Variations</span>
               <span>{settings.variations}</span>
@@ -241,7 +241,7 @@ function RangeControl({
   onChange: (value: number) => void;
 }) {
   return (
-    <label className="block text-[10px] text-zinc-500">
+    <label className="block text-2xs text-zinc-500">
       <span className="flex justify-between">
         <span>{label}</span>
         <span>{value}</span>

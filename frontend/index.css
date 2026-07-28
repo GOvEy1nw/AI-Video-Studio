@@ -1,4 +1,4 @@
-@import 'tailwindcss' source(none);
+@import "tailwindcss" source(none);
 
 @source "../index.html";
 @source "./";
@@ -6,18 +6,18 @@
 /* Product-editable runtime tokens. Values are RGB channels: R G B. */
 :root {
   /* Accent color (used for buttons, progress, highlights) */
-  --accent: 43 97 255;        /* #2B61FF */
-  --accent-dark: 26 80 224;   /* #1A50E0 — darker shade for hover states */
+  --accent: 43 97 255; /* #2B61FF */
+  --accent-dark: 26 80 224; /* #1A50E0 — darker shade for hover states */
 
   /* Surface colors */
-  --bg: 9 9 11;               /* zinc-950 — main app background */
-  --surface: 24 24 27;        /* zinc-900 — panels, cards */
+  --bg: 9 9 11; /* zinc-950 — main app background */
+  --surface: 24 24 27; /* zinc-900 — panels, cards */
   --surface-raised: 39 39 42; /* zinc-800 — inputs, hover states */
-  --border-color: 63 63 70;   /* zinc-700 — dividers, borders */
+  --border-color: 63 63 70; /* zinc-700 — dividers, borders */
 
   /* Text */
   --text: 255 255 255;
-  --text-muted: 161 161 170;  /* zinc-400 */
+  --text-muted: 161 161 170; /* zinc-400 */
 }
 
 /*
@@ -40,6 +40,16 @@
   --radius-lg: 0.75rem;
   --radius-md: 0.5rem;
   --radius-sm: 0.25rem;
+
+  --text-2xs: 0.625rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
 }
 
 @theme inline {
@@ -108,12 +118,20 @@
 }
 
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+    Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow: hidden;

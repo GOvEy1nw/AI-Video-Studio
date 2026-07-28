@@ -11,7 +11,7 @@ export function VideoModeTabs({
 }) {
   return (
     <div className="border-b border-zinc-800/60 px-4 py-3 text-xs text-zinc-400">
-      <div className="mb-2 text-sm font-medium uppercase tracking-wider text-zinc-500">
+      <div className="mb-2 text-2xs font-medium uppercase tracking-wider text-zinc-500">
         Mode
       </div>
       <div
@@ -34,7 +34,7 @@ export function VideoModeTabs({
             disabled={disabled}
             title={disabled ? "Retake is not yet compatible with WanGP" : label}
             onClick={() => onChange(value)}
-            className={`flex items-center justify-center gap-1 rounded-md px-1.5 py-2 text-sm font-medium transition-colors ${
+            className={`flex items-center justify-center gap-1 rounded-md px-1.5 py-2 text-xs font-medium transition-colors ${
               mode === value
                 ? "bg-zinc-800 text-white shadow-xs"
                 : disabled

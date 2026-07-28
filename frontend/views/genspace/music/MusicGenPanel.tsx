@@ -50,7 +50,11 @@ export function MusicGenPanel({
 
   return (
     <>
-      <GenPanelSection title="Model" className="text-xs text-zinc-400">
+      <GenPanelSection
+        title="Model"
+        className="text-xs text-zinc-400"
+        collapsible={false}
+      >
         <SettingsDropdown
           title="MUSIC MODEL"
           value={selectedProfile?.id ?? ""}
@@ -111,7 +115,7 @@ export function MusicGenPanel({
                 role="tab"
                 aria-selected={keywordCategory === category}
                 onClick={() => setKeywordCategory(category)}
-                className={`flex items-center gap-2 rounded-full px-3 py-1 text-sm font-medium ${
+                className={`flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium ${
                   keywordCategory === category
                     ? "bg-zinc-800 text-white"
                     : "text-zinc-500 hover:text-zinc-200"

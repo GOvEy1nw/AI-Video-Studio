@@ -44,11 +44,11 @@ export function ModelDropdownTrigger({
           {icon}
         </span>
         <span className="flex min-w-0 flex-col items-start">
-          <span className="max-w-full truncate text-sm font-medium text-zinc-100">
+          <span className="max-w-full truncate text-xs font-medium text-zinc-100">
             {profile.displayName}
           </span>
           <span
-            className={`mt-0.5 flex items-center gap-1.5 text-xs ${
+            className={`mt-0.5 flex items-center gap-1.5 text-2xs ${
               downloading ? "text-blue-400" : status.className
             }`}
           >

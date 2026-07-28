@@ -85,7 +85,7 @@ export function MusicSettings({
               role="tab"
               aria-selected={vocalMode === value}
               onClick={() => setVocalMode(value)}
-              className={`rounded-md px-1.5 py-1.5 text-sm font-medium ${
+              className={`rounded-md px-1.5 py-1.5 text-xs font-medium ${
                 vocalMode === value
                   ? "bg-zinc-800 text-white"
                   : "text-zinc-500 hover:text-zinc-200"

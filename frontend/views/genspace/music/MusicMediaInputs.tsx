@@ -1,11 +1,12 @@
-import { FileAudio, Upload, X } from "lucide-react";
-import { useRef, type RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { fileUrlToPath } from "../../../lib/url-to-path";
 import type {
   MusicAudioInputDraft,
   MusicAudioRole,
 } from "../../../types/music";
 import { GenPanelSection } from "../components/GenPanelSection";
+import { MediaInputSlot } from "../components/MediaInputSlot";
+import { MediaRoleMenu } from "../components/MediaRoleMenu";
 
 export function MusicMediaInputs({
   coverInput,
@@ -32,6 +33,23 @@ export function MusicMediaInputs({
 }) {
   const coverRef = useRef<HTMLInputElement>(null);
   const timbreRef = useRef<HTMLInputElement>(null);
+  const [activeRole, setActiveRole] = useState<MusicAudioRole | null>(null);
+  const [dragRole, setDragRole] = useState<MusicAudioRole | null>(null);
+
+  useEffect(() => {
+    if (!activeRole) return;
+    const close = (event: PointerEvent) => {
+      if (
+        event.target instanceof Element &&
+        event.target.closest("[data-media-menu]")
+      ) {
+        return;
+      }
+      setActiveRole(null);
+    };
+    document.addEventListener("pointerdown", close);
+    return () => document.removeEventListener("pointerdown", close);
+  }, [activeRole]);
 
   const importFile = async (file: File | undefined, role: MusicAudioRole) => {
     if (!file) return;
@@ -46,6 +64,7 @@ export function MusicMediaInputs({
 
   const handleDrop = (role: MusicAudioRole) => (event: React.DragEvent) => {
     event.preventDefault();
+    setDragRole(null);
     const raw = event.dataTransfer.getData("asset");
     if (raw) {
       try {
@@ -76,35 +95,60 @@ export function MusicMediaInputs({
     role: MusicAudioRole,
     input: MusicAudioInputDraft | null,
     inputRef: RefObject<HTMLInputElement | null>,
-  ) => (
-    <div className="min-w-0 space-y-1.5">
-      <div className="text-xs text-zinc-500">{label}</div>
-      {input ? (
-        <div className="flex h-14 items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-950/60 p-2.5 text-xs text-zinc-300">
-          <FileAudio className="h-4 w-4 shrink-0 text-violet-400" />
-          <span className="min-w-0 flex-1 truncate">
-            {decodeURIComponent(input.url.split("/").pop() ?? "Audio")}
-          </span>
-          <button
-            type="button"
-            onClick={() => onInputChange(role, null)}
-            aria-label={`Remove ${label}`}
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      ) : (
-        <button
-          type="button"
-          aria-label={`Add ${label}`}
-          onClick={() => inputRef.current?.click()}
-          onDragOver={(event) => event.preventDefault()}
+  ) => {
+    const item = input
+      ? {
+          id: role,
+          url: input.url,
+          role,
+          type: "audio" as const,
+          mediaDuration: input.mediaDuration,
+        }
+      : undefined;
+
+    return (
+      <div
+        onDragEnter={() => setDragRole(role)}
+        onDragLeave={() => setDragRole(null)}
+      >
+        <MediaInputSlot
+          item={item}
+          kind="audio"
+          label={label}
+          badge={input ? label : undefined}
+          title={input ? `${label} - Click for actions` : `Add ${label}`}
+          ariaLabel={input ? `${label} actions` : `Add ${label}`}
+          active={activeRole === role}
+          dragActive={dragRole === role}
+          removeLabel={label}
+          onRemove={() => {
+            onInputChange(role, null);
+            setActiveRole(null);
+          }}
+          inputRef={inputRef}
+          onToggle={() =>
+            setActiveRole((current) => (current === role ? null : role))
+          }
           onDrop={handleDrop(role)}
-          className="flex h-14 w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-zinc-700 px-2 text-xs text-zinc-500 hover:border-violet-500 hover:text-zinc-300"
-        >
-          <Upload className="h-3.5 w-3.5" /> Add audio
-        </button>
-      )}
+          menu={
+            input ? (
+              <MediaRoleMenu
+                title="Audio input"
+                selectedRole={role}
+                options={[{ role, label }]}
+                onSelect={() => setActiveRole(null)}
+              />
+            ) : null
+          }
+        />
+      </div>
+    );
+  };
+
+  const fileInput = (
+    role: MusicAudioRole,
+    inputRef: RefObject<HTMLInputElement | null>,
+  ) => (
       <input
         ref={inputRef}
         type="file"
@@ -115,12 +159,11 @@ export function MusicMediaInputs({
           event.target.value = "";
         }}
       />
-    </div>
   );
 
   return (
-    <GenPanelSection title="Media inputs">
-      <div className="grid grid-cols-2 gap-2">
+    <GenPanelSection title="Media inputs" collapsible>
+      <div className="relative flex items-center gap-2 overflow-visible">
         {slot("Cover Song", "cover", coverInput, coverRef)}
         {slot(
           "Transfer Timbre",
@@ -129,8 +172,10 @@ export function MusicMediaInputs({
           timbreRef,
         )}
       </div>
+      {fileInput("cover", coverRef)}
+      {fileInput("reference-timbre", timbreRef)}
       {coverInput ? (
-        <label className="mt-3 block text-[10px] text-zinc-500">
+        <label className="mt-3 block text-2xs text-zinc-500">
           <span className="flex justify-between">
             <span>Source Audio Strength</span>
             <span>{coverStrength}</span>

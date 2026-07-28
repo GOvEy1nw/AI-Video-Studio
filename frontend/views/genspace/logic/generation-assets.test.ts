@@ -29,6 +29,7 @@ describe("GenSpace generated asset builders", () => {
   it("preserves image input roles, paths, and trim metadata", () => {
     const snapshot: ImageSubmissionSnapshot = {
       projectId: "project-a",
+      submittedAt: 1_000,
       prompt: "portrait",
       settings: { ...DEFAULT_VIDEO_SETTINGS },
       inputs: [input],
@@ -38,7 +39,7 @@ describe("GenSpace generated asset builders", () => {
       snapshot,
       finalPath: "C:\\output.png",
       finalUrl: "file:///C:/output.png",
-      createdAt: 1,
+      createdAt: 15_000,
     });
 
     expect(asset.generationParams?.imageInputMedia).toEqual([
@@ -52,6 +53,7 @@ describe("GenSpace generated asset builders", () => {
         mediaDuration: 9,
       },
     ]);
+    expect(asset.generationTimeSeconds).toBe(14);
   });
 
   it("uses the immutable video snapshot for guide metadata", () => {

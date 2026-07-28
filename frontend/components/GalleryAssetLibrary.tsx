@@ -1,6 +1,5 @@
 import {
   useEffect,
-  useRef,
   useState,
   type Dispatch,
   type DragEvent,
@@ -12,6 +11,7 @@ import {
 import {
   ChevronLeft,
   ChevronRight,
+  Clock3,
   ClipboardPaste,
   Expand,
   Film,
@@ -23,13 +23,10 @@ import {
   Trash2,
   Upload,
   Video,
-  Volume2,
-  VolumeX,
 } from "lucide-react";
 import type { Asset } from "../types/project";
 import type { GalleryFilterState } from "../lib/gallery-filters";
 import { ClipWaveform } from "./AudioWaveform";
-import { needsBlurredBackdrop } from "../lib/media-aspect";
 import { GalleryAssetList } from "./GalleryAssetList";
 import { GalleryFilters } from "./GalleryFilters";
 import {
@@ -70,6 +67,7 @@ export type GalleryAssetLibraryProps = {
   showFavorites: boolean;
   onShowFavoritesChange: (show: boolean) => void;
   getThumbnailUrl: (asset: Asset) => string | undefined;
+  getAssetModelName?: (asset: Asset) => string | undefined;
   previewEnabled: boolean;
   selectedAssetIds?: Set<string>;
   onSelectedAssetIdsChange?: Dispatch<SetStateAction<Set<string>>>;
@@ -133,56 +131,27 @@ function AudioVariationRow({
   url,
   index,
   active,
-  previewEnabled,
   onSelect,
 }: {
   url: string;
   index: number;
   active: boolean;
-  previewEnabled: boolean;
   onSelect?: () => void;
 }) {
-  const audioRef = useRef<HTMLAudioElement>(null);
-
-  const stopPreview = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    audio.pause();
-    audio.currentTime = 0;
-  };
-
-  useEffect(() => {
-    if (!previewEnabled) stopPreview();
-    return stopPreview;
-  }, [previewEnabled]);
-
-  const startPreview = () => {
-    if (previewEnabled) void audioRef.current?.play().catch(() => undefined);
-  };
-
   return (
     <button
       type="button"
       aria-label={`Select music variation ${index + 1}`}
       aria-pressed={active}
-      title={`Variation ${index + 1} — hover to preview`}
+      title={`Variation ${index + 1}`}
       onClick={onSelect}
-      onMouseEnter={startPreview}
-      onMouseLeave={stopPreview}
-      onFocus={startPreview}
-      onBlur={stopPreview}
       className={`relative min-h-0 flex-1 overflow-hidden border-b border-zinc-800 text-left last:border-b-0 ${
-        active
-          ? "bg-emerald-950/50"
-          : "bg-zinc-950 hover:bg-emerald-950/40"
+        active ? "bg-emerald-950/50" : "bg-zinc-950 hover:bg-emerald-950/40"
       }`}
     >
-      <audio ref={audioRef} src={url} preload="metadata" loop className="hidden" />
       <ClipWaveform
         url={url}
-        color={
-          active ? "rgba(110, 231, 183, 0.9)" : "rgba(52, 211, 153, 0.65)"
-        }
+        color={active ? "rgba(110, 231, 183, 0.9)" : "rgba(52, 211, 153, 0.65)"}
       />
       <span className="absolute bottom-1 right-1 z-10 rounded-sm bg-black/70 px-1.5 py-0.5 text-[9px] font-medium text-emerald-200">
         {index + 1}
@@ -195,6 +164,7 @@ export function GalleryAssetCard({
   asset,
   selected = false,
   thumbnailUrl,
+  modelName,
   previewEnabled,
   binColor,
   onClick,
@@ -211,6 +181,7 @@ export function GalleryAssetCard({
   asset: Asset;
   selected?: boolean;
   thumbnailUrl?: string;
+  modelName?: string;
   previewEnabled: boolean;
   binColor?: string;
   onClick: (event: MouseEvent, asset: Asset) => void;
@@ -224,12 +195,7 @@ export function GalleryAssetCard({
   onCopySettings?: (asset: Asset) => void;
   onSelectTake?: (takeIndex: number) => void;
 }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const audioRef = useRef<HTMLAudioElement>(null);
   const [isHovered, setIsHovered] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [isMuted, setIsMuted] = useState(true);
-  const [showBackdrop, setShowBackdrop] = useState(false);
   const hasStackedAudioTakes =
     asset.type === "audio" && (asset.takes?.length ?? 0) > 1;
   const canCopySettings = !!asset.generationParams && !!onCopySettings;
@@ -239,45 +205,6 @@ export function GalleryAssetCard({
     !!onReframe ||
     canCopySettings ||
     !!onDelete;
-
-  useEffect(() => {
-    if (asset.type !== "video" || !isHovered || !previewEnabled) {
-      setCurrentTime(0);
-      return;
-    }
-    const video = videoRef.current;
-    if (!video) return;
-    void video.play().catch(() => undefined);
-    return () => {
-      video.pause();
-      video.currentTime = 0;
-    };
-  }, [asset.type, isHovered, previewEnabled]);
-
-  useEffect(() => {
-    setShowBackdrop(false);
-  }, [asset.url]);
-
-  useEffect(() => {
-    if (
-      asset.type !== "audio" ||
-      hasStackedAudioTakes ||
-      !audioRef.current
-    )
-      return;
-    if (isHovered && previewEnabled)
-      void audioRef.current.play().catch(() => undefined);
-    else {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
-  }, [asset.type, hasStackedAudioTakes, isHovered, previewEnabled]);
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-  };
 
   return (
     <div
@@ -299,66 +226,24 @@ export function GalleryAssetCard({
       draggable={asset.type !== "adjustment"}
       onDragStart={(event) => onDragStart(event, asset)}
     >
-      <div className="relative aspect-video bg-zinc-900">
+      <div className="relative aspect-square bg-zinc-900">
         {asset.type === "video" ? (
-          <>
-            {thumbnailUrl ? (
-              <>
-                {showBackdrop && (
-                  <img
-                    src={thumbnailUrl}
-                    alt=""
-                    aria-hidden
-                    className="absolute inset-0 h-full w-full scale-110 object-cover opacity-25"
-                  />
-                )}
-                <img
-                  src={thumbnailUrl}
-                  alt=""
-                  onLoad={(event) =>
-                    setShowBackdrop(
-                      needsBlurredBackdrop(
-                        event.currentTarget.naturalWidth,
-                        event.currentTarget.naturalHeight,
-                      ),
-                    )
-                  }
-                  className={`absolute inset-0 h-full w-full ${showBackdrop ? "object-contain" : "object-cover"}`}
-                />
-              </>
-            ) : showBackdrop ? (
-              <video
-                src={asset.url}
-                preload="metadata"
-                muted
-                playsInline
-                className="absolute inset-0 h-full w-full opacity-25 object-cover"
-              />
-            ) : null}
-            {(previewEnabled || !thumbnailUrl) && (
-              <video
-                key={asset.url}
-                ref={videoRef}
-                src={asset.url}
-                preload="metadata"
-                className={`absolute inset-0 h-full w-full ${showBackdrop ? "object-contain" : "object-cover"}`}
-                muted={isMuted}
-                playsInline
-                loop
-                onLoadedMetadata={(event) =>
-                  setShowBackdrop(
-                    needsBlurredBackdrop(
-                      event.currentTarget.videoWidth,
-                      event.currentTarget.videoHeight,
-                    ),
-                  )
-                }
-                onTimeUpdate={() =>
-                  setCurrentTime(videoRef.current?.currentTime ?? 0)
-                }
-              />
-            )}
-          </>
+          thumbnailUrl ? (
+            <img
+              src={thumbnailUrl}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          ) : previewEnabled ? (
+            <video
+              key={asset.url}
+              src={asset.url}
+              preload="metadata"
+              className="absolute inset-0 h-full w-full object-cover"
+              muted
+              playsInline
+            />
+          ) : null
         ) : hasStackedAudioTakes ? (
           <div className="flex h-full w-full flex-col">
             {asset.takes!.map((take, index) => (
@@ -367,26 +252,15 @@ export function GalleryAssetCard({
                 url={take.url}
                 index={index}
                 active={(asset.activeTakeIndex ?? 0) === index}
-                previewEnabled={previewEnabled}
                 onSelect={() => onSelectTake?.(index)}
               />
             ))}
           </div>
         ) : asset.type === "audio" ? (
-          <>
-            <audio
-              key={asset.url}
-              ref={audioRef}
-              src={asset.url}
-              preload="metadata"
-              loop
-              className="hidden"
-            />
-            <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-zinc-950 transition-colors hover:bg-emerald-950/40">
-              <ClipWaveform url={asset.url} />
-              <Music className="relative z-10 h-7 w-7 text-emerald-300/80" />
-            </div>
-          </>
+          <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-zinc-950 transition-colors hover:bg-emerald-950/40">
+            <ClipWaveform url={asset.url} />
+            <Music className="relative z-10 h-7 w-7 text-emerald-300/80" />
+          </div>
         ) : asset.type === "adjustment" ? (
           <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 border border-dashed border-blue-500/30 bg-linear-to-br from-blue-900/40 to-zinc-900">
             <Layers className="h-8 w-8 text-blue-400" />
@@ -395,30 +269,12 @@ export function GalleryAssetCard({
             </span>
           </div>
         ) : (
-          <>
-            {showBackdrop && (
-              <img
-                src={asset.url}
-                alt=""
-                aria-hidden
-                className="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-xl"
-              />
-            )}
-            <img
-              key={asset.url}
-              src={asset.url}
-              alt=""
-              onLoad={(event) =>
-                setShowBackdrop(
-                  needsBlurredBackdrop(
-                    event.currentTarget.naturalWidth,
-                    event.currentTarget.naturalHeight,
-                  ),
-                )
-              }
-              className={`relative h-full w-full ${showBackdrop ? "object-contain" : "object-cover"}`}
-            />
-          </>
+          <img
+            key={asset.url}
+            src={asset.url}
+            alt=""
+            className="h-full w-full object-cover"
+          />
         )}
 
         <div className="absolute left-2 top-2 z-30 flex items-center gap-1">
@@ -438,9 +294,22 @@ export function GalleryAssetCard({
               <Image className="h-4 w-4" />
             )}
           </div>
-          {asset.type !== "audio" &&
-            asset.takes &&
-            asset.takes.length > 1 && (
+          {(modelName || asset.generationTimeSeconds !== undefined) && (
+            <div className="flex min-w-0 w-full items-center gap-1 rounded-full bg-black/80 px-2 py-1 text-[10px] font-medium text-white shadow-xs backdrop-blur-sm">
+              {modelName ? (
+                <span className="truncate" title={modelName}>
+                  {modelName}
+                </span>
+              ) : null}
+              {asset.generationTimeSeconds !== undefined ? (
+                <span className="flex shrink-0 items-center gap-0.5 text-zinc-300">
+                  <Clock3 className="h-2.5 w-2.5" />
+                  {asset.generationTimeSeconds}s
+                </span>
+              ) : null}
+            </div>
+          )}
+          {asset.type !== "audio" && asset.takes && asset.takes.length > 1 && (
             <div className="flex items-center gap-0.5 rounded-full bg-black/80">
               <button
                 type="button"
@@ -555,31 +424,6 @@ export function GalleryAssetCard({
                   }}
                 />
               )}
-            </div>
-          )}
-
-          {asset.type === "video" && (
-            <div className="pointer-events-auto absolute bottom-2 left-2 right-2 flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <div className="rounded-lg bg-black/50 px-2 py-1 font-mono text-xs text-white backdrop-blur-md">
-                  {formatTime(currentTime)}
-                </div>
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setIsMuted((muted) => !muted);
-                  }}
-                  className="rounded-lg bg-black/40 p-1.5 text-white backdrop-blur-md transition-colors hover:bg-black/60"
-                  aria-label={isMuted ? "Unmute preview" : "Mute preview"}
-                >
-                  {isMuted ? (
-                    <VolumeX className="h-3.5 w-3.5" />
-                  ) : (
-                    <Volume2 className="h-3.5 w-3.5" />
-                  )}
-                </button>
-              </div>
             </div>
           )}
         </div>
@@ -763,6 +607,7 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
                 asset={asset}
                 selected={props.selectedAssetIds?.has(asset.id)}
                 thumbnailUrl={props.getThumbnailUrl(asset)}
+                modelName={props.getAssetModelName?.(asset)}
                 previewEnabled={props.previewEnabled && documentVisible}
                 binColor={
                   getColorLabel(

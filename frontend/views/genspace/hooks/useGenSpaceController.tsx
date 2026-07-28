@@ -20,6 +20,7 @@ import {
   useVideoProfiles,
 } from "../../../hooks/use-image-profiles";
 import type { Asset } from "../../../types/project";
+import { getAssetModelId } from "../logic/generation-assets";
 import {
   compileMusicRequest,
 } from "../music/compile-music-request";
@@ -30,6 +31,7 @@ import {
 } from "../../../types/project";
 import type { GenSpaceGalleryProps } from "../GenSpaceGallery";
 import type { GenSpaceOverlaysProps } from "../GenSpaceOverlays";
+import type { GenSpaceSelectedGenerationProps } from "../GenSpaceSelectedGeneration";
 import { useGenSpaceModeState } from "./useGenSpaceModeState";
 import { useGenSpaceSettingsState } from "./useGenSpaceSettingsState";
 import { useGenSpaceGenerationActions } from "./useGenSpaceGenerationActions";
@@ -112,6 +114,25 @@ export function useGenSpaceController() {
     musicSettings,
     setMusicSettings,
   } = useGenSpaceSettingsState(musicProfiles);
+  const profileNames = useMemo(
+    () =>
+      new Map(
+        [...imageProfiles, ...videoProfiles, ...musicProfiles].map((profile) => [
+          profile.id,
+          profile.displayName,
+        ]),
+      ),
+    [imageProfiles, musicProfiles, videoProfiles],
+  );
+  const getAssetModelName = useCallback(
+    (asset: Asset) => {
+      const modelId = getAssetModelId(asset);
+      return modelId
+        ? profileNames.get(modelId) ?? modelId.split("_").join(" ")
+        : undefined;
+    },
+    [profileNames],
+  );
   const {
     generate,
     generateImage,
@@ -349,6 +370,7 @@ export function useGenSpaceController() {
     onCreateVideo: handleCreateVideo,
     onReframe: handleReframe,
     onCopySettings: handleCopySettings,
+    getAssetModelName,
   });
   const {
     assets,
@@ -512,10 +534,24 @@ export function useGenSpaceController() {
       transferActive,
     ],
   );
+  const activeProfileId =
+    imageSubmissionRef.current?.settings.imageProfileId ??
+    videoSubmissionRef.current?.settings.videoProfileId ??
+    reframeSubmissionRef.current?.settings.videoProfileId ??
+    musicSubmissionRef.current?.recipe.profileId ??
+    (mode === "image"
+      ? imageSettings.profileId
+      : mode === "video"
+        ? videoSettings.profileId
+        : musicSettings.profileId);
+  const activeGenerationModelName =
+    profileNames.get(activeProfileId) ??
+    activeProfileId.split("_").join(" ");
 
   const galleryGeneration = useMemo<GenSpaceGalleryProps["generation"]>(
     () => ({
       isRunning: isGenerating,
+      isSelected: isGenerating && galleryOverlays.selectedAsset === null,
       isCancelling,
       previewUrl,
       modelDownload,
@@ -523,11 +559,16 @@ export function useGenSpaceController() {
       statusMessage,
       progress,
       badges: generationBadges,
+      modelName: activeGenerationModelName,
+      onSelect: () => galleryOverlays.setSelectedAsset(null),
       cancel: () => void cancel(),
     }),
     [
       cancel,
+      activeGenerationModelName,
       generationBadges,
+      galleryOverlays.selectedAsset,
+      galleryOverlays.setSelectedAsset,
       isCancelling,
       isGenerating,
       modelDownload,
@@ -540,6 +581,14 @@ export function useGenSpaceController() {
   const handleImportFiles = useCallback(
     (files: File[]) => void importFilesToGallery(files),
     [importFilesToGallery],
+  );
+  const handleCopyPrompt = useCallback(
+    (value: string) => {
+      void navigator.clipboard.writeText(value);
+      galleryOverlays.setCopiedPrompt(true);
+      window.setTimeout(() => galleryOverlays.setCopiedPrompt(false), 2000);
+    },
+    [galleryOverlays.setCopiedPrompt],
   );
 
   return {
@@ -563,22 +612,32 @@ export function useGenSpaceController() {
       isPanelMode,
       generation: galleryGeneration,
     } satisfies GenSpaceGalleryProps,
-    sidebar: sidebarController,
-    overlays: {
-      selectedAsset: galleryOverlays.selectedAsset,
+    selectedGeneration: {
+      asset: galleryOverlays.selectedAsset,
+      modelName: galleryOverlays.selectedAsset
+        ? getAssetModelName(galleryOverlays.selectedAsset)
+        : undefined,
+      generation: galleryGeneration,
       selectedIndex: galleryOverlays.selectedIndex,
       visibleAssetCount: galleryLibrary.visibleAssets.length,
       copiedPrompt: galleryOverlays.copiedPrompt,
       canGoPrev: galleryOverlays.canGoPrev,
       canGoNext: galleryOverlays.canGoNext,
-      onClosePreview: () => galleryOverlays.setSelectedAsset(null),
+      onClose: () => galleryOverlays.setSelectedAsset(null),
       onPrevious: galleryOverlays.goToPrev,
       onNext: galleryOverlays.goToNext,
-      onCopyPrompt: (value: string) => {
-        void navigator.clipboard.writeText(value);
-        galleryOverlays.setCopiedPrompt(true);
-        window.setTimeout(() => galleryOverlays.setCopiedPrompt(false), 2000);
+      onCopyPrompt: handleCopyPrompt,
+      onToggleFavorite: (asset: Asset) => {
+        if (currentProjectId) toggleFavorite(currentProjectId, asset.id);
       },
+      onCreateVideo: handleCreateVideo,
+      onReframe: handleReframe,
+      onCopySettings: handleCopySettings,
+      onDelete: (asset: Asset) =>
+        galleryOverlays.requestDeleteAssets([asset.id]),
+    } satisfies GenSpaceSelectedGenerationProps,
+    sidebar: sidebarController,
+    overlays: {
       duplicateFilenameChoice: galleryOverlays.duplicateFilenameChoice,
       onDuplicateFilenameChoice: galleryOverlays.chooseDuplicate,
       takesAsset: galleryOverlays.takesAsset,

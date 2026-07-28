@@ -10,6 +10,24 @@ import { AUDIO_MEDIA_ROLE_SET } from "../constants";
 
 type NewAsset = Omit<Asset, "id" | "createdAt">;
 
+function generationTimeSeconds(
+  submittedAt: number | undefined,
+  completedAt: number,
+): number | undefined {
+  return submittedAt === undefined
+    ? undefined
+    : Math.max(1, Math.round((completedAt - submittedAt) / 1000));
+}
+
+export function getAssetModelId(asset: Asset): string | undefined {
+  return (
+    asset.generationParams?.imageProfileId ??
+    asset.generationParams?.videoProfileId ??
+    asset.generationParams?.music?.profileId ??
+    asset.generationParams?.model
+  );
+}
+
 function resolvePath(
   url: string | undefined,
   assetPaths: Array<{ url: string; path: string }>,
@@ -52,6 +70,10 @@ export function buildGeneratedImageAsset({
     url: finalUrl,
     prompt: snapshot.prompt,
     resolution: snapshot.settings.imageResolution,
+    generationTimeSeconds: generationTimeSeconds(
+      snapshot.submittedAt,
+      createdAt,
+    ),
     source: "generated",
     generationParams: {
       mode: "text-to-image",
@@ -107,6 +129,10 @@ export function buildGeneratedVideoAsset({
     prompt: snapshot.prompt,
     resolution: snapshot.settings.videoResolution,
     duration: snapshot.settings.duration,
+    generationTimeSeconds: generationTimeSeconds(
+      snapshot.submittedAt,
+      createdAt,
+    ),
     source: "generated",
     generationParams: {
       mode,
@@ -152,6 +178,10 @@ export function buildReframeAsset({
     prompt: snapshot.prompt,
     resolution: snapshot.settings.videoResolution,
     duration: input.duration,
+    generationTimeSeconds: generationTimeSeconds(
+      snapshot.submittedAt,
+      createdAt,
+    ),
     source: "generated",
     generationParams: {
       mode: "reframe",
@@ -205,6 +235,10 @@ export function buildGeneratedMusicAsset({
       first.duration ??
       recipe.requestedDurationSeconds ??
       recipe.fallbackDurationSeconds,
+    generationTimeSeconds: generationTimeSeconds(
+      snapshot.submittedAt,
+      first.createdAt,
+    ),
     source: "generated",
     generationParams: {
       mode: "text-to-music",

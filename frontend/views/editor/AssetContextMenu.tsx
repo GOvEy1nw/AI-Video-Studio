@@ -312,7 +312,7 @@ export function AssetContextMenu({
 
       <div className="h-px bg-zinc-700 my-1" />
 
-      <div className="px-3 py-1 text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">
+      <div className="px-3 py-1 text-2xs text-zinc-500 font-semibold uppercase tracking-wider">
         Move to Bin
       </div>
 

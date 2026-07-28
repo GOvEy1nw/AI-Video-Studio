@@ -19,7 +19,11 @@ export function ImageGenPanel({
 
   return (
     <>
-      <GenPanelSection title="Model" className="text-xs text-zinc-400">
+      <GenPanelSection
+        title="Model"
+        className="text-xs text-zinc-400"
+        collapsible={false}
+      >
         <ImageModelControls
           settings={settings.value}
           onSettingsChange={settings.patch}

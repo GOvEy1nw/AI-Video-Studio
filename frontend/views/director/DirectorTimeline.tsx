@@ -636,7 +636,7 @@ export function DirectorTimeline({
       aria-label="Director Timeline"
     >
       <div className="flex">
-        <div className="flex h-6 w-40 shrink-0 items-center justify-center border-b border-r border-zinc-800 bg-zinc-900 font-mono text-[10px] text-zinc-500">
+        <div className="flex h-6 w-40 shrink-0 items-center justify-center border-b border-r border-zinc-800 bg-zinc-900 font-mono text-2xs text-zinc-500">
           24 FPS
         </div>
         <div ref={rulerScrollRef} className="min-w-0 flex-1 overflow-hidden">
@@ -1040,7 +1040,7 @@ export function DirectorTimeline({
 
             {sequence.guideAudio && (
               <TimelineSegmentFrame
-                className="absolute h-8 border-zinc-700 bg-zinc-800/60 px-2 text-[10px] text-zinc-500"
+                className="absolute h-8 border-zinc-700 bg-zinc-800/60 px-2 text-2xs text-zinc-500"
                 style={{
                   left: 0,
                   top: GENERATED_HEIGHT + PROMPT_HEIGHT + 5,
@@ -1066,7 +1066,7 @@ export function DirectorTimeline({
             )}
             {sequence.guidance && (
               <TimelineSegmentFrame
-                className="absolute h-8 border-zinc-700 bg-zinc-800/60 px-2 text-[10px] text-zinc-500"
+                className="absolute h-8 border-zinc-700 bg-zinc-800/60 px-2 text-2xs text-zinc-500"
                 style={{
                   left: 0,
                   top: GENERATED_HEIGHT + PROMPT_HEIGHT + LOCKED_HEIGHT + 5,

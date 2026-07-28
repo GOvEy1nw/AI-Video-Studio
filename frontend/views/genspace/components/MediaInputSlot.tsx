@@ -1,10 +1,5 @@
-import { Image, Music, Pencil, Video } from "lucide-react";
-import type {
-  DragEvent,
-  MouseEvent,
-  ReactNode,
-  RefObject,
-} from "react";
+import { Image, Music, Pencil, Video, X } from "lucide-react";
+import type { DragEvent, MouseEvent, ReactNode, RefObject } from "react";
 import type { GenSpaceMediaInput, GenSpaceMediaKind } from "../types";
 
 const icon = {
@@ -19,11 +14,14 @@ export function MediaInputSlot({
   label,
   badge,
   title,
+  ariaLabel,
   active,
   dragActive,
   inputRef,
   menu,
   onToggle,
+  onRemove,
+  removeLabel,
   onDrop,
 }: {
   item?: GenSpaceMediaInput;
@@ -31,11 +29,14 @@ export function MediaInputSlot({
   label?: string;
   badge?: string;
   title: string;
+  ariaLabel?: string;
   active?: boolean;
   dragActive?: boolean;
   inputRef?: RefObject<HTMLInputElement | null>;
   menu?: ReactNode;
   onToggle?: () => void;
+  onRemove?: () => void;
+  removeLabel?: string;
   onDrop: (event: DragEvent<HTMLDivElement>) => void | Promise<void>;
 }) {
   const Icon = icon[kind];
@@ -47,7 +48,7 @@ export function MediaInputSlot({
 
   return (
     <div
-      className="relative"
+      className="group relative"
       onDragOver={(event) => {
         event.preventDefault();
         event.dataTransfer.dropEffect = "copy";
@@ -59,7 +60,8 @@ export function MediaInputSlot({
         type="button"
         onClick={open}
         title={title}
-        className={`group relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg ${
+        aria-label={ariaLabel}
+        className={`relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-lg ${
           item
             ? "border bg-zinc-800"
             : "flex-col border-2 border-dashed transition-colors hover:border-zinc-500"
@@ -68,7 +70,11 @@ export function MediaInputSlot({
         {item ? (
           <>
             {kind === "image" ? (
-              <img src={item.url} alt="" className="h-full w-full object-cover" />
+              <img
+                src={item.url}
+                alt=""
+                className="h-full w-full object-cover"
+              />
             ) : kind === "video" ? (
               <video
                 src={item.url}
@@ -99,6 +105,21 @@ export function MediaInputSlot({
           </span>
         ) : null}
       </button>
+      {item && onRemove ? (
+        <button
+          type="button"
+          aria-label={`Remove ${removeLabel ?? badge ?? label ?? kind}`}
+          title={`Remove ${removeLabel ?? badge ?? label ?? kind}`}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            onRemove();
+          }}
+          className="pointer-events-none absolute right-1 top-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-black/75 text-zinc-300 opacity-0 shadow-sm transition-colors transition-opacity hover:bg-red-500 hover:text-white group-hover:pointer-events-auto group-hover:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      ) : null}
     </div>
   );
 }

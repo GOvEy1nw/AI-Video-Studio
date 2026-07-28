@@ -7,11 +7,7 @@ import {
   Sparkles,
   Trash2,
 } from "lucide-react";
-import {
-  memo,
-  type HTMLAttributes,
-  type RefObject,
-} from "react";
+import { memo, type HTMLAttributes, type RefObject } from "react";
 import { DownloadProgressView } from "../../components/DownloadProgressView";
 import {
   AssetLibraryImportButton,
@@ -38,6 +34,7 @@ export interface GenSpaceGalleryProps {
   isPanelMode: boolean;
   generation: {
     isRunning: boolean;
+    isSelected: boolean;
     isCancelling: boolean;
     previewUrl: string | null;
     modelDownload: ModelDownloadProgress | null;
@@ -45,6 +42,8 @@ export interface GenSpaceGalleryProps {
     statusMessage: string;
     progress: number;
     badges: string[];
+    modelName: string;
+    onSelect: () => void;
     cancel: () => void;
   };
 }
@@ -66,7 +65,7 @@ function GenSpaceGalleryView({
     <div
       {...dropZoneProps}
       data-testid="genspace-gallery-dropzone"
-      className="absolute inset-y-0 left-[480px] right-0"
+      className="absolute inset-y-0 right-0 w-[480px] border-l border-zinc-800 bg-zinc-900"
     >
       {toast ? (
         <div className="absolute left-1/2 top-6 z-30 -translate-x-1/2 rounded-lg border border-zinc-700 bg-zinc-900/95 px-4 py-2 text-sm text-zinc-200 shadow-xl">
@@ -139,7 +138,7 @@ function GenSpaceGalleryView({
       {assets.length > 0 || generation.isRunning ? (
         <GalleryAssetLibrary
           {...library}
-          className="absolute inset-0 px-4 pt-4"
+          className="absolute inset-0 px-3 pt-4"
           headerAction={
             <>
               <AssetLibraryImportButton
@@ -206,7 +205,27 @@ function GenSpaceGalleryView({
           leadingContent={
             <>
               {generation.isRunning ? (
-                <div className="relative aspect-video overflow-hidden rounded-xl bg-zinc-800">
+                <div
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Select active generation"
+                  aria-pressed={generation.isSelected}
+                  onClick={generation.onSelect}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      generation.onSelect();
+                    }
+                  }}
+                  className={`relative aspect-square cursor-pointer overflow-hidden rounded-xl border-2 bg-zinc-800 transition-colors ${
+                    generation.isSelected
+                      ? "border-violet-500 ring-2 ring-violet-500/30"
+                      : "border-transparent hover:border-zinc-700"
+                  }`}
+                >
+                  <span className="absolute left-2 top-2 z-10 max-w-[calc(100%_-_1rem)] truncate rounded-full bg-black/75 px-2 py-1 text-[10px] font-medium text-white">
+                    {generation.modelName}
+                  </span>
                   {generation.previewUrl ? (
                     <img
                       src={generation.previewUrl}
@@ -258,7 +277,10 @@ function GenSpaceGalleryView({
                     )}
                     <button
                       type="button"
-                      onClick={generation.cancel}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        generation.cancel();
+                      }}
                       disabled={generation.isCancelling}
                       className="mt-3 rounded-md border border-white/15 bg-black/30 px-2 py-1 text-xs text-zinc-200 transition-colors hover:bg-black/50 disabled:cursor-wait disabled:opacity-60"
                     >
@@ -268,7 +290,7 @@ function GenSpaceGalleryView({
                 </div>
               ) : null}
               {isImporting ? (
-                <div className="relative aspect-video overflow-hidden rounded-xl bg-zinc-800">
+                <div className="relative aspect-square overflow-hidden rounded-xl bg-zinc-800">
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <LoaderCircle className="mb-2 h-8 w-8 animate-spin text-violet-400" />
                     <p className="text-sm text-zinc-400">Importing...</p>

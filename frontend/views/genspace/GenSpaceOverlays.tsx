@@ -1,8 +1,4 @@
 import {
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  Copy,
   Music,
   X,
 } from "lucide-react";
@@ -15,7 +11,6 @@ import { DeleteAssetDialog } from "../../components/DeleteAssetDialog";
 import { DuplicateFilenameDialog } from "../../components/DuplicateFilenameDialog";
 import { GenerationErrorDialog } from "../../components/GenerationErrorDialog";
 import { useProjects } from "../../contexts/ProjectContext";
-import { getAssetDisplayFileName } from "../../lib/gallery-filters";
 import type { DuplicateFilenameChoice } from "../../lib/media-import";
 import type { Asset } from "../../types/project";
 import { AssetContextMenu } from "../editor/AssetContextMenu";
@@ -23,16 +18,6 @@ import { AssetContextMenu } from "../editor/AssetContextMenu";
 type Projects = ReturnType<typeof useProjects>;
 
 export interface GenSpaceOverlaysProps {
-  selectedAsset: Asset | null;
-  selectedIndex: number;
-  visibleAssetCount: number;
-  copiedPrompt: boolean;
-  canGoPrev: boolean;
-  canGoNext: boolean;
-  onClosePreview: () => void;
-  onPrevious: () => void;
-  onNext: () => void;
-  onCopyPrompt: (prompt: string) => void;
   duplicateFilenameChoice: {
     fileName: string;
     resolve: (choice: DuplicateFilenameChoice) => void;
@@ -72,16 +57,6 @@ export interface GenSpaceOverlaysProps {
 }
 
 export function GenSpaceOverlays({
-  selectedAsset,
-  selectedIndex,
-  visibleAssetCount,
-  copiedPrompt,
-  canGoPrev,
-  canGoNext,
-  onClosePreview,
-  onPrevious,
-  onNext,
-  onCopyPrompt,
   duplicateFilenameChoice,
   onDuplicateFilenameChoice,
   takesAsset,
@@ -116,116 +91,6 @@ export function GenSpaceOverlays({
 }: GenSpaceOverlaysProps) {
   return (
     <>
-      {selectedAsset ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
-          onClick={onClosePreview}
-        >
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onPrevious();
-            }}
-            disabled={!canGoPrev}
-            className={`absolute left-4 top-1/2 z-10 -translate-y-1/2 rounded-full p-3 backdrop-blur-md transition-all ${
-              canGoPrev
-                ? "cursor-pointer bg-white/10 text-white hover:bg-white/20"
-                : "cursor-default bg-white/5 text-zinc-600"
-            }`}
-          >
-            <ChevronLeft className="h-6 w-6" />
-          </button>
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onNext();
-            }}
-            disabled={!canGoNext}
-            className={`absolute right-4 top-1/2 z-10 -translate-y-1/2 rounded-full p-3 backdrop-blur-md transition-all ${
-              canGoNext
-                ? "cursor-pointer bg-white/10 text-white hover:bg-white/20"
-                : "cursor-default bg-white/5 text-zinc-600"
-            }`}
-          >
-            <ChevronRight className="h-6 w-6" />
-          </button>
-          <div
-            className="relative max-h-full w-full max-w-5xl px-20 py-8"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="mb-4 flex items-center justify-between">
-              <span className="text-sm font-medium text-zinc-500">
-                {selectedIndex + 1} / {visibleAssetCount}
-              </span>
-              <button
-                type="button"
-                onClick={onClosePreview}
-                className="rounded-md p-2 text-zinc-400 transition-colors hover:text-white"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-            {selectedAsset.type === "video" ? (
-              <video
-                key={selectedAsset.id}
-                src={selectedAsset.url}
-                controls
-                autoPlay
-                className="max-h-[75vh] w-full rounded-xl object-contain"
-              />
-            ) : selectedAsset.type === "audio" ? (
-              <div className="flex flex-col items-center justify-center rounded-xl bg-zinc-900 px-8 py-16">
-                <Music className="mb-6 h-16 w-16 text-emerald-400" />
-                <audio
-                  key={selectedAsset.id}
-                  src={selectedAsset.url}
-                  controls
-                  autoPlay
-                  className="w-full max-w-md"
-                />
-              </div>
-            ) : (
-              <img
-                key={selectedAsset.id}
-                src={selectedAsset.url}
-                alt=""
-                className="max-h-[75vh] w-full rounded-xl object-contain"
-              />
-            )}
-            <div className="mt-4 text-center">
-              <div className="inline-flex max-w-full items-start gap-2">
-                <p className="text-zinc-300">{selectedAsset.prompt}</p>
-                {selectedAsset.prompt ? (
-                  <button
-                    type="button"
-                    onClick={() => onCopyPrompt(selectedAsset.prompt)}
-                    className="shrink-0 rounded-sm p-1 text-zinc-400 transition-colors hover:bg-zinc-700 hover:text-zinc-200"
-                    title="Copy prompt"
-                  >
-                    {copiedPrompt ? (
-                      <Check className="h-4 w-4 text-green-400" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </button>
-                ) : null}
-              </div>
-              <p className="mt-1 text-sm text-zinc-500">
-                {selectedAsset.type === "audio"
-                  ? getAssetDisplayFileName(selectedAsset)
-                  : `${selectedAsset.resolution} • ${
-                      selectedAsset.duration
-                        ? `${selectedAsset.duration}s`
-                        : "Image"
-                    }`}
-              </p>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
       {duplicateFilenameChoice ? (
         <DuplicateFilenameDialog
           fileName={duplicateFilenameChoice.fileName}

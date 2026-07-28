@@ -173,6 +173,12 @@ export function VideoMediaInputs({
         badge={item ? (role === "start_image" ? "Start" : "End") : undefined}
         title={`${label}${item ? " - Click for actions" : ""}`}
         active={activeId === role}
+        removeLabel={label}
+        onRemove={() => {
+          if (!item) return;
+          onChange(removeMediaInput(inputs, item.id));
+          setActiveId(null);
+        }}
         inputRef={imageInputRef}
         onToggle={() =>
           setActiveId((current) => (current === role ? null : role))
@@ -192,10 +198,6 @@ export function VideoMediaInputs({
                       : input,
                   ),
                 );
-                setActiveId(null);
-              }}
-              onRemove={() => {
-                onChange(removeMediaInput(inputs, item.id));
                 setActiveId(null);
               }}
             />
@@ -271,6 +273,13 @@ export function VideoMediaInputs({
             title="Click or drop video/audio from gallery"
             active={activeId === "guide_slot"}
             dragActive={guideDragActive}
+            removeLabel={guideKind === "audio" ? "audio input" : "video input"}
+            onRemove={() => {
+              if (!guide) return;
+              onChange(removeMediaInput(inputs, guide.id));
+              setActiveId(null);
+              setEditingGuideId(null);
+            }}
             inputRef={guideInputRef}
             onToggle={() =>
               setActiveId((current) =>
@@ -301,11 +310,6 @@ export function VideoMediaInputs({
                     setActiveId(null);
                   }}
                   extra={guideExtra}
-                  onRemove={() => {
-                    onChange(removeMediaInput(inputs, guide.id));
-                    setActiveId(null);
-                    setEditingGuideId(null);
-                  }}
                 />
               ) : null
             }

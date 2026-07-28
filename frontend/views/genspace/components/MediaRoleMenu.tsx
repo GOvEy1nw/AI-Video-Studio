@@ -1,4 +1,4 @@
-import { Scissors, Trash2 } from "lucide-react";
+import { Scissors } from "lucide-react";
 import type { ReactNode } from "react";
 
 export interface MediaRoleOption {
@@ -15,7 +15,6 @@ export function MediaRoleMenu({
   onSelect,
   onTrim,
   extra,
-  onRemove,
 }: {
   title: string;
   options: MediaRoleOption[];
@@ -23,12 +22,11 @@ export function MediaRoleMenu({
   onSelect: (role: string) => void;
   onTrim?: () => void;
   extra?: ReactNode;
-  onRemove: () => void;
 }) {
   return (
     <div
       data-media-menu
-      className="absolute bottom-full left-0 z-10000 mb-2 w-64 rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl"
+      className="absolute left-0 top-full z-10000 mt-2 w-64 rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl"
     >
       <div className="mb-2 text-[10px] uppercase tracking-wider text-zinc-500">
         {title}
@@ -71,22 +69,6 @@ export function MediaRoleMenu({
           </>
         ) : null}
         {extra}
-        <div className="my-1 h-px bg-zinc-700" />
-        <button
-          type="button"
-          onPointerDown={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            onRemove();
-          }}
-          onClick={(event) => {
-            if (event.detail === 0) onRemove();
-          }}
-          className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-red-300 transition-colors hover:bg-red-500/15"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-          <span className="text-xs">Remove</span>
-        </button>
       </div>
     </div>
   );

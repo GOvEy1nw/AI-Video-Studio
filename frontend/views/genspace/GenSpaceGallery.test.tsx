@@ -1,4 +1,4 @@
-import { createRef } from "react";
+import { createRef, type ReactNode } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { DEFAULT_GALLERY_FILTER } from "../../lib/gallery-filters";
@@ -9,15 +9,20 @@ vi.mock("../../components/DownloadProgressView", () => ({
 }));
 vi.mock("../../components/GalleryAssetLibrary", () => ({
   AssetLibraryImportButton: () => null,
-  GalleryAssetLibrary: () => null,
+  GalleryAssetLibrary: ({
+    leadingContent,
+  }: {
+    leadingContent?: ReactNode;
+  }) => <>{leadingContent}</>,
 }));
 
 const noop = () => undefined;
 
 describe("GenSpace gallery dropzone", () => {
-  it("owns OS drops only inside the gallery pane", () => {
+  it("owns OS drops inside the narrow library and selects the active job", () => {
     const onDragEnter = vi.fn();
     const onDrop = vi.fn();
+    const onSelectGeneration = vi.fn();
 
     render(
       <div data-testid="workspace">
@@ -62,7 +67,8 @@ describe("GenSpace gallery dropzone", () => {
           filterActive={false}
           isPanelMode={false}
           generation={{
-            isRunning: false,
+            isRunning: true,
+            isSelected: false,
             isCancelling: false,
             previewUrl: null,
             modelDownload: null,
@@ -70,6 +76,8 @@ describe("GenSpace gallery dropzone", () => {
             statusMessage: "",
             progress: 0,
             badges: [],
+            modelName: "Test model",
+            onSelect: onSelectGeneration,
             cancel: noop,
           }}
         />
@@ -79,12 +87,17 @@ describe("GenSpace gallery dropzone", () => {
     const workspace = screen.getByTestId("workspace");
     const dropzone = screen.getByTestId("genspace-gallery-dropzone");
 
-    expect(dropzone.className).toContain("left-[480px]");
+    expect(dropzone.className).toContain("right-0");
+    expect(dropzone.className).toContain("w-[360px]");
     fireEvent.dragEnter(workspace);
     expect(onDragEnter).not.toHaveBeenCalled();
     fireEvent.dragEnter(dropzone);
     fireEvent.drop(dropzone);
     expect(onDragEnter).toHaveBeenCalledOnce();
     expect(onDrop).toHaveBeenCalledOnce();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Select active generation" }),
+    );
+    expect(onSelectGeneration).toHaveBeenCalledOnce();
   });
 });

@@ -469,7 +469,7 @@ export function DirectorSidebar(props: Props) {
                       {timeline.name}
                     </p>
                   )}
-                  <div className="flex items-center gap-2 text-[10px] text-zinc-500">
+                  <div className="flex items-center gap-2 text-2xs text-zinc-500">
                     <span>
                       {segmentCount} segment{segmentCount === 1 ? "" : "s"}
                     </span>
