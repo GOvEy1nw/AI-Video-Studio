@@ -10,6 +10,7 @@ export function PromptEditor({
   disabled,
   placeholder,
   leading,
+  bottomRight,
   children,
   actions,
   maxLength,
@@ -23,6 +24,7 @@ export function PromptEditor({
   disabled: boolean;
   placeholder: string;
   leading?: ReactNode;
+  bottomRight?: ReactNode;
   children?: ReactNode;
   actions?: ReactNode;
   maxLength?: number;
@@ -39,7 +41,7 @@ export function PromptEditor({
     <GenPanelSection title={title}>
       <div className="flex items-start rounded-lg border border-zinc-800 bg-zinc-950/35">
         {leading}
-        <div className="flex min-w-0 flex-1 flex-col py-1">
+        <div className="relative flex min-w-0 flex-1 flex-col py-1">
           {children ?? (
             <textarea
               value={value}
@@ -47,10 +49,28 @@ export function PromptEditor({
               onKeyDown={handleKeyDown}
               maxLength={maxLength}
               placeholder={placeholder}
-              className={`${height} w-full resize-none overflow-y-auto bg-transparent px-3 py-3 text-sm leading-5 text-white placeholder:text-zinc-500 focus:outline-hidden`}
+              className={`${height} w-full resize-none overflow-y-auto bg-transparent px-3 pb-3 pt-3 text-sm leading-5 text-white placeholder:text-zinc-500 focus:outline-hidden`}
             />
           )}
-          {actions}
+          {actions || bottomRight ? (
+            <div
+              data-testid="prompt-editor-footer"
+              className="flex items-center justify-between gap-2 px-2 pb-0.5 pt-1"
+            >
+              <div
+                data-testid="prompt-editor-footer-left"
+                className="flex min-w-0 items-center"
+              >
+                {actions}
+              </div>
+              <div
+                data-testid="prompt-editor-footer-right"
+                className="ml-auto flex min-w-0 items-center"
+              >
+                {bottomRight}
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </GenPanelSection>

@@ -38,7 +38,8 @@ export function ImageMediaInputs({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const fallbackRole = getDefaultImageInputRole(policy);
-  const canAdd = !!policy?.supportsImageInputs && inputs.length < policy.maxImages;
+  const canAdd =
+    !!policy?.supportsImageInputs && inputs.length < policy.maxImages;
 
   useEffect(() => {
     const normalized = normalizeImageInputsForProfile(inputs, policy);
@@ -116,6 +117,7 @@ export function ImageMediaInputs({
               key={input.id}
               item={input}
               kind="image"
+              badge={role?.label ?? input.role}
               title={role?.label ?? policy.tooltipLabel}
               active={activeId === input.id}
               removeLabel={role?.label ?? "image input"}
@@ -124,7 +126,9 @@ export function ImageMediaInputs({
                 setActiveId(null);
               }}
               onToggle={() =>
-                setActiveId((current) => (current === input.id ? null : input.id))
+                setActiveId((current) =>
+                  current === input.id ? null : input.id,
+                )
               }
               onDrop={handleDrop}
               menu={
@@ -157,6 +161,7 @@ export function ImageMediaInputs({
           >
             <MediaInputSlot
               kind="image"
+              label={policy.tooltipLabel}
               title={policy.tooltipLabel}
               dragActive={isDragOver}
               inputRef={inputRef}

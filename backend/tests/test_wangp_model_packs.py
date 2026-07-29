@@ -24,6 +24,26 @@ def test_music_packs_use_verified_wangp_model_types() -> None:
     )
 
 
+def test_ideogram4_packs_use_requested_wangp_model_profiles() -> None:
+    assert PACKS["ideogram4_int8"]["model_type"] == "ideogram4_int8"
+    assert (
+        PACKS["ideogram4_turbotime_int8"]["model_type"]
+        == "ideogram4_turbotime_int8"
+    )
+
+
+def test_requested_image_packs_use_exact_wangp_model_profiles() -> None:
+    expected_model_types = {
+        "flux2_klein_9b": "flux2_klein_9b",
+        "qwen_image_2512_20B": "qwen_image_2512_20B",
+        "qwen_image_edit_plus2_20B": "qwen_image_edit_plus2_20B",
+        "krea2_turbo_edit": "krea2_turbo_edit",
+    }
+
+    for pack_id, model_type in expected_model_types.items():
+        assert PACKS[pack_id]["model_type"] == model_type
+
+
 class FakeWanGP:
     transformer_quantization = "int8"
     transformer_dtype_policy = "auto"

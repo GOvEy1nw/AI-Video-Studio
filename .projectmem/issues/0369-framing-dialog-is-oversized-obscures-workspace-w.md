@@ -1,0 +1,12 @@
+# #0369 Framing dialog is oversized, obscures workspace with modal backdrop, and uses dropdowns instead of direct carousel controls
+
+- 2026-07-29T12:19:00Z `issue`: Framing dialog is oversized, obscures workspace with modal backdrop, and uses dropdowns instead of direct carousel controls [frontend/views/genspace/components/FramingControl.tsx]
+- 2026-07-29T12:21:12Z `attempt`: Added carousel/popover regression tests, but bare pnpm runner could not start because registry signature verification failed [frontend/views/genspace/components/FramingControl.test.tsx] (failed)
+- 2026-07-29T12:25:32Z `attempt`: Tried replacing framing modal render in one large patch; context mismatch left file unchanged [frontend/views/genspace/components/FramingControl.tsx] (failed)
+- 2026-07-29T12:27:22Z `attempt`: Implemented compact body-portaled framing popover plus vertical/horizontal click-drag carousels; focused FramingControl tests pass 4/4 [frontend/views/genspace/components/FramingControl.tsx; frontend/views/genspace/components/FramingControl.test.tsx] (worked)
+- 2026-07-29T12:28:04Z `attempt`: Full frontend suite keeps three known unrelated failures in GenPanelSection and GenSpaceGallery; framing tests remain green [frontend/views/genspace/components/FramingControl.tsx] (partial)
+- 2026-07-29T12:28:46Z `attempt`: Standalone renderer preview launch via cached pnpm exec failed because Windows could not resolve local Vite binary [local renderer visual QA] (failed)
+- 2026-07-29T12:29:36Z `attempt`: Direct Vite dev preview triggered Electron and exited on known Windows process_singleton lock error, so browser could not connect [local renderer visual QA] (failed)
+- 2026-07-29T12:35:07Z `attempt`: Made focal length/aperture/shutter/ISO a compact 2x2 grid, shortened wheels, and fixed selected-option centering from rendered geometry; focused tests pass 4/4 [frontend/views/genspace/components/FramingControl.tsx; frontend/views/genspace/components/FramingControl.test.tsx] (worked)
+- 2026-07-29T12:36:33Z `attempt`: Post-compact-layout full frontend run: framing coverage passes; suite remains 100/103 with only known GenPanelSection and 480px gallery expectation failures [frontend/views/genspace/components/FramingControl.tsx] (partial)
+- 2026-07-29T13:00:07Z `fix`: Compact backdrop-free side popover remains; original all-carousel requirement was superseded by user's dropdown-and-slider interaction choice. [frontend/views/genspace/components/FramingControl.tsx]

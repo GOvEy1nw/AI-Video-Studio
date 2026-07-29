@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { backendFetch } from '../lib/backend'
+import { applyModelPackAvailability } from '../lib/model-profile-availability'
 import type { ModelProfile, ModelProfileListResponse } from '../types/model-profiles'
 import { logger } from '../lib/logger'
 
@@ -25,12 +26,22 @@ function useProfilesByMediaType(mediaType: CuratedMediaType) {
   const refresh = useCallback(async (): Promise<boolean> => {
     setLoading(true)
     try {
+      const modelPacksRequest =
+        typeof window.electronAPI?.getModelPacks === 'function'
+          ? window.electronAPI.getModelPacks().catch(() => [])
+          : Promise.resolve([])
       const res = await backendFetch('/api/model-profiles')
       if (!res.ok) {
         throw new Error(`Failed to load model profiles: ${res.status}`)
       }
       const data: ModelProfileListResponse = await res.json()
-      setProfiles(data.profiles.filter((p) => p.mediaType === mediaType))
+      const modelPacks = await modelPacksRequest
+      setProfiles(
+        applyModelPackAvailability(
+          data.profiles.filter((p) => p.mediaType === mediaType),
+          modelPacks,
+        ),
+      )
       setError(null)
       return true
     } catch (err) {

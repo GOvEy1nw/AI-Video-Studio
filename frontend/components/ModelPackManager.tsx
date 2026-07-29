@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { Download, Loader2, RefreshCw, Square, Trash2 } from "lucide-react";
+import { Download, RefreshCw, Square } from "lucide-react";
 import type { ModelPackProgress } from "@/types/progress";
 import {
   clampPercent,
   formatEta,
   formatTransferRate,
-} from "@/lib/transfer-format";
+} from "../lib/transfer-format";
 import { Button } from "./ui/button";
 
 interface ModelPack {
@@ -13,11 +13,40 @@ interface ModelPack {
   name: string;
   estimatedSize: string;
   installed: boolean;
+  groupId?: string;
+  groupName?: string;
+  variantName?: string;
 }
 
 interface ModelPackManagerProps {
   firstRun?: boolean;
   onContinue?: () => void;
+}
+
+interface ModelPackGroup {
+  id: string;
+  name: string;
+  grouped: boolean;
+  packs: ModelPack[];
+}
+
+function groupModelPacks(packs: ModelPack[]): ModelPackGroup[] {
+  const groups = new Map<string, ModelPackGroup>();
+  for (const pack of packs) {
+    const id = pack.groupId ?? `pack:${pack.id}`;
+    const existing = groups.get(id);
+    if (existing) {
+      existing.packs.push(pack);
+      continue;
+    }
+    groups.set(id, {
+      id,
+      name: pack.groupName ?? pack.name,
+      grouped: pack.groupId !== undefined,
+      packs: [pack],
+    });
+  }
+  return [...groups.values()];
 }
 
 export function ModelPackManager({
@@ -35,6 +64,12 @@ export function ModelPackManager({
   const downloading =
     progress?.status === "preparing" || progress?.status === "downloading";
   const busy = operationActive || downloading || deleting !== null || checking;
+  const selectedMissingIds = selected.filter(
+    (id) => !packs.find((pack) => pack.id === id)?.installed,
+  );
+  const selectedInstalledPacks = packs.filter(
+    (pack) => pack.installed && selected.includes(pack.id),
+  );
 
   const refresh = async (scan = false) => {
     const result = scan
@@ -82,11 +117,9 @@ export function ModelPackManager({
   };
 
   const downloadSelected = async () => {
-    if (!selected.length) {
-      onContinue?.();
-      return;
-    }
-    const attemptedPackId = selected[0] ?? null;
+    if (!selectedMissingIds.length) return;
+    const downloadIds = selectedMissingIds;
+    const attemptedPackId = downloadIds[0] ?? null;
     setError(null);
     setFailedPackId(null);
     setOperationActive(true);
@@ -100,9 +133,11 @@ export function ModelPackManager({
       transfer: null,
     });
     try {
-      const complete = await window.electronAPI.downloadModelPacks(selected);
+      const complete = await window.electronAPI.downloadModelPacks(downloadIds);
       await refresh();
-      setSelected([]);
+      setSelected((current) =>
+        current.filter((id) => !downloadIds.includes(id)),
+      );
       if (complete) {
         setProgress(null);
         onContinue?.();
@@ -129,24 +164,36 @@ export function ModelPackManager({
     }
   };
 
-  const deletePack = async (pack: ModelPack) => {
+  const removeSelected = async () => {
+    const packsToRemove = selectedInstalledPacks;
     if (
       busy ||
+      !packsToRemove.length ||
       !window.confirm(
-        `Delete ${pack.name}? Files shared with another model pack will be kept.`,
+        packsToRemove.length === 1
+          ? `Remove ${packsToRemove[0].name}? Files shared with another model pack will be kept.`
+          : `Remove ${packsToRemove.length} selected model packs? Files shared between packs will be kept.`,
       )
     ) {
       return;
     }
     setError(null);
-    setDeleting(pack.id);
+    const removedIds: string[] = [];
     try {
-      await window.electronAPI.deleteModelPack(pack.id);
+      for (const pack of packsToRemove) {
+        setDeleting(pack.id);
+        await window.electronAPI.deleteModelPack(pack.id);
+        removedIds.push(pack.id);
+      }
       await refresh();
       setSelected((current) =>
-        current.filter((value) => value !== pack.id),
+        current.filter((id) => !removedIds.includes(id)),
       );
     } catch (reason) {
+      setSelected((current) =>
+        current.filter((id) => !removedIds.includes(id)),
+      );
+      void refresh().catch(() => undefined);
       setError(
         reason instanceof Error ? reason.message : "Model-pack deletion failed.",
       );
@@ -154,6 +201,50 @@ export function ModelPackManager({
       setDeleting(null);
     }
   };
+
+  const getPackState = (pack: ModelPack) => {
+    const checked = selected.includes(pack.id);
+    const matchesProgress =
+      progress?.packId === pack.id ||
+      (progress?.packName !== null && progress?.packName === pack.name);
+    const active =
+      downloading &&
+      (matchesProgress ||
+        (progress?.status === "preparing" &&
+          progress.packId === null &&
+          selectedMissingIds[0] === pack.id));
+    const failed =
+      !pack.installed &&
+      (failedPackId === pack.id ||
+        (progress?.status === "error" && matchesProgress));
+    const transfer = active ? progress?.transfer : null;
+    const percent = clampPercent(transfer?.percent);
+    const speed = formatTransferRate(transfer?.speedBps);
+    const eta = formatEta(transfer?.etaSeconds);
+    const activeText = active
+      ? [speed, eta ? `ETA ${eta}` : ""].filter(Boolean).join(" · ") ||
+        "Preparing"
+      : null;
+    const statusName = active
+      ? "Downloading"
+      : checked
+        ? "Selected"
+        : pack.installed
+          ? "Available"
+          : failed
+            ? "Failed"
+            : "Missing";
+    return {
+      checked,
+      active,
+      failed,
+      transfer,
+      percent,
+      activeText,
+      statusName,
+    };
+  };
+  const packGroups = groupModelPacks(packs);
 
   return (
     <div className={firstRun ? "w-full max-w-3xl" : "space-y-4"}>
@@ -195,66 +286,167 @@ export function ModelPackManager({
           Shared files are skipped automatically, so estimated sizes can be
           smaller when another pack is already installed.
         </p>
+        <div
+          className="flex flex-wrap gap-x-4 gap-y-1 pt-2 text-xs text-zinc-300"
+          aria-label="Model status key"
+        >
+          {[
+            ["Available", "bg-emerald-500"],
+            ["Failed", "bg-red-500"],
+            ["Missing", "bg-zinc-500"],
+            ["Selected", "bg-blue-500"],
+            ["Downloading", "bg-amber-400"],
+          ].map(([label, color]) => (
+            <span key={label} className="inline-flex items-center gap-1.5">
+              <span
+                className={`h-2.5 w-2.5 rounded-full ${color}`}
+                aria-hidden="true"
+              />
+              {label}
+            </span>
+          ))}
+        </div>
       </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
-        {packs.map((pack) => {
-          const checked = selected.includes(pack.id);
-          const matchesProgress =
-            progress?.packId === pack.id ||
-            (progress?.packName !== null && progress?.packName === pack.name);
-          const active =
-            downloading &&
-            (matchesProgress ||
-              (progress?.status === "preparing" &&
-                progress.packId === null &&
-                selected[0] === pack.id));
-          const failed =
-            !pack.installed &&
-            (failedPackId === pack.id ||
-              (progress?.status === "error" && matchesProgress));
-          const transfer = active ? progress?.transfer : null;
-          const percent = clampPercent(transfer?.percent);
-          const speed = formatTransferRate(transfer?.speedBps);
-          const eta = formatEta(transfer?.etaSeconds);
-          const stateClasses = active
+        {packGroups.map((group) => {
+          const entries = group.packs.map((pack) => ({
+            pack,
+            state: getPackState(pack),
+          }));
+          const activeEntry = entries.find(({ state }) => state.active);
+          const groupFailed = entries.some(({ state }) => state.failed);
+          const groupChecked = entries.some(({ state }) => state.checked);
+          const groupInstalled = entries.some(({ pack }) => pack.installed);
+
+          if (group.grouped) {
+            const stateClasses = activeEntry
+              ? "border-amber-400 bg-amber-950/30"
+              : groupChecked
+                ? "border-blue-500 bg-blue-500/20"
+                : groupFailed
+                  ? "border-red-500 bg-red-500/15"
+                  : groupInstalled
+                    ? "border-emerald-500 bg-emerald-500/15"
+                    : "border-zinc-700 bg-zinc-800/50";
+            const percent = activeEntry?.state.percent ?? null;
+
+            return (
+              <section
+                key={group.id}
+                className={`relative min-h-20 overflow-hidden rounded-xl border-2 px-4 py-3 transition-colors ${stateClasses}`}
+                role={activeEntry ? "progressbar" : undefined}
+                aria-valuenow={
+                  activeEntry && percent !== null ? percent : undefined
+                }
+                aria-valuemin={activeEntry ? 0 : undefined}
+                aria-valuemax={activeEntry ? 100 : undefined}
+              >
+                {activeEntry && (
+                  <div
+                    className={`absolute inset-y-0 left-0 bg-amber-400/20 transition-[width] ${percent === null ? "w-1/3 animate-pulse" : ""}`}
+                    style={
+                      percent === null ? undefined : { width: `${percent}%` }
+                    }
+                  />
+                )}
+                <div className="relative z-10 flex items-start justify-between gap-3">
+                  <h4 className="truncate text-sm font-medium text-white">
+                    {group.name}
+                  </h4>
+                  {activeEntry && (
+                    <span className="shrink-0 text-xs text-amber-300">
+                      {activeEntry.state.activeText}
+                    </span>
+                  )}
+                </div>
+                <div className="relative z-10 mt-2 flex flex-wrap gap-2">
+                  {entries.map(({ pack, state }) => {
+                    const chipClasses = state.active
+                      ? "border-amber-300 bg-amber-400 text-zinc-950"
+                      : state.checked
+                        ? "border-blue-300 bg-blue-500 text-white"
+                        : pack.installed
+                          ? "border-emerald-300 bg-emerald-400 text-zinc-950"
+                          : state.failed
+                            ? "border-red-300 bg-red-500 text-white"
+                            : "border-zinc-600 bg-zinc-900/80 text-zinc-300 hover:border-zinc-400";
+                    const variantName = pack.variantName ?? pack.name;
+
+                    return (
+                      <button
+                        key={pack.id}
+                        type="button"
+                        onClick={() => toggle(pack.id)}
+                        disabled={busy}
+                        aria-label={`${state.checked ? "Deselect" : "Select"} ${pack.name} (${state.statusName})`}
+                        aria-pressed={state.checked}
+                        title={`${pack.name}: ${state.statusName}`}
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-70 ${chipClasses}`}
+                      >
+                        <span
+                          className={`flex h-3.5 w-3.5 items-center justify-center rounded-full border-2 border-current ${state.active ? "animate-pulse" : ""}`}
+                          aria-hidden="true"
+                        >
+                          {(state.checked || state.active) && (
+                            <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                          )}
+                        </span>
+                        <span aria-hidden="true">
+                          {variantName} {pack.estimatedSize}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {activeEntry?.state.transfer?.filename && (
+                  <p className="relative z-10 mt-2 truncate text-xs text-amber-300/80">
+                    {activeEntry.state.transfer.filename}
+                  </p>
+                )}
+              </section>
+            );
+          }
+
+          const { pack, state } = entries[0];
+          const stateClasses = state.active
             ? "border-amber-400 bg-amber-950/30"
-            : pack.installed
-              ? "border-emerald-500 bg-emerald-500/15"
-              : failed
-                ? "border-red-500 bg-red-500/15 hover:bg-red-500/20"
-                : checked
-                  ? "border-blue-500 bg-blue-500/20"
+            : state.checked
+              ? "border-blue-500 bg-blue-500/20"
+              : pack.installed
+                ? "border-emerald-500 bg-emerald-500/15"
+                : state.failed
+                  ? "border-red-500 bg-red-500/15 hover:bg-red-500/20"
                   : "border-zinc-700 bg-zinc-800/50 hover:border-zinc-500";
-          const statusLabel = active
-            ? [speed, eta ? `ETA ${eta}` : ""].filter(Boolean).join(" · ") ||
-              "Preparing"
-            : pack.installed
-              ? "Ready"
-              : failed
-                ? "Retry download"
-                : checked
-                  ? "Selected"
-                  : "Missing";
           return (
             <div
               key={pack.id}
               className={`relative min-h-20 overflow-hidden rounded-xl border-2 transition-colors ${stateClasses}`}
-              role={active ? "progressbar" : undefined}
-              aria-valuenow={active && percent !== null ? percent : undefined}
-              aria-valuemin={active ? 0 : undefined}
-              aria-valuemax={active ? 100 : undefined}
+              role={state.active ? "progressbar" : undefined}
+              aria-valuenow={
+                state.active && state.percent !== null
+                  ? state.percent
+                  : undefined
+              }
+              aria-valuemin={state.active ? 0 : undefined}
+              aria-valuemax={state.active ? 100 : undefined}
             >
-              {active && (
+              {state.active && (
                 <div
-                  className={`absolute inset-y-0 left-0 bg-amber-400/20 transition-[width] ${percent === null ? "w-1/3 animate-pulse" : ""}`}
-                  style={percent === null ? undefined : { width: `${percent}%` }}
+                  className={`absolute inset-y-0 left-0 bg-amber-400/20 transition-[width] ${state.percent === null ? "w-1/3 animate-pulse" : ""}`}
+                  style={
+                    state.percent === null
+                      ? undefined
+                      : { width: `${state.percent}%` }
+                  }
                 />
               )}
               <button
                 type="button"
                 onClick={() => toggle(pack.id)}
-                disabled={busy || pack.installed}
+                disabled={busy}
+                aria-label={`${state.checked ? "Deselect" : "Select"} ${pack.name} (${state.statusName})`}
+                aria-pressed={state.checked}
                 className="relative z-10 flex min-h-20 w-full min-w-0 items-center justify-between gap-4 px-4 py-3 text-left disabled:cursor-default"
               >
                 <span className="min-w-0">
@@ -264,46 +456,36 @@ export function ModelPackManager({
                   <span className="mt-1 block text-xs text-zinc-400">
                     {pack.estimatedSize}
                   </span>
-                </span>
-                <span className="min-w-0 shrink-0 text-right">
-                  <span
-                    className={`block text-xs ${
-                      active
-                        ? "text-amber-300"
-                        : pack.installed
-                          ? "text-emerald-400"
-                          : failed
-                            ? "text-red-400"
-                            : checked
-                              ? "text-blue-300"
-                              : "text-zinc-400"
-                    }`}
-                  >
-                    {statusLabel}
-                  </span>
-                  {active && transfer?.filename && (
+                  {state.active && state.activeText && (
+                    <span className="mt-1 block text-xs text-amber-300">
+                      {state.activeText}
+                    </span>
+                  )}
+                  {state.active && state.transfer?.filename && (
                     <span className="mt-1 block max-w-52 truncate text-xs text-amber-300/80">
-                      {transfer.filename}
+                      {state.transfer.filename}
                     </span>
                   )}
                 </span>
-              </button>
-              {pack.installed && (
-                <button
-                  type="button"
-                  onClick={() => void deletePack(pack)}
-                  disabled={busy}
-                  className="absolute bottom-2 right-2 z-20 rounded-sm p-1 text-emerald-300/60 transition-colors hover:bg-zinc-900/40 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-50"
-                  aria-label={`Delete ${pack.name}`}
-                  title={`Delete ${pack.name}`}
+                <span
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
+                    state.active
+                      ? "border-amber-300 text-amber-300"
+                      : state.checked
+                        ? "border-blue-300 text-blue-300"
+                        : pack.installed
+                          ? "border-emerald-400 text-emerald-400"
+                          : state.failed
+                            ? "border-red-400 text-red-400"
+                            : "border-zinc-500 text-zinc-500"
+                  } ${state.active ? "animate-pulse" : ""}`}
+                  aria-hidden="true"
                 >
-                  {deleting === pack.id ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-3.5 w-3.5" />
+                  {(state.checked || state.active) && (
+                    <span className="h-2 w-2 rounded-full bg-current" />
                   )}
-                </button>
-              )}
+                </span>
+              </button>
             </div>
           );
         })}
@@ -316,40 +498,44 @@ export function ModelPackManager({
       )}
       {error && <p className="mt-3 text-xs text-red-400">{error}</p>}
 
-      {(downloading || firstRun || selected.length > 0) && (
-        <div className="mt-4 flex justify-end gap-2">
-          {operationActive || downloading ? (
+      <div className="mt-4 flex justify-end gap-2">
+        {operationActive || downloading ? (
+          <Button
+            variant="outline"
+            className="border-zinc-600"
+            onClick={() => void window.electronAPI.cancelModelPackDownload()}
+          >
+            <Square className="mr-2 h-3.5 w-3.5" /> Cancel download
+          </Button>
+        ) : (
+          <>
+            {firstRun && (
+              <Button
+                variant="ghost"
+                className="text-zinc-300"
+                onClick={onContinue}
+              >
+                Skip for now
+              </Button>
+            )}
             <Button
               variant="outline"
-              className="border-zinc-600"
-              onClick={() => void window.electronAPI.cancelModelPackDownload()}
+              className="border-red-500/60 text-red-300 hover:bg-red-500/10 hover:text-red-200"
+              disabled={busy || selectedInstalledPacks.length === 0}
+              onClick={() => void removeSelected()}
             >
-              <Square className="mr-2 h-3.5 w-3.5" /> Cancel download
+              Remove
             </Button>
-          ) : (
-            <>
-              {firstRun && (
-                <Button
-                  variant="ghost"
-                  className="text-zinc-300"
-                  onClick={onContinue}
-                >
-                  Skip for now
-                </Button>
-              )}
-              <Button
-                className="bg-blue-600 hover:bg-blue-500"
-                onClick={downloadSelected}
-              >
-                <Download className="mr-2 h-4 w-4" />{" "}
-                {selected.length
-                  ? `Download ${selected.length} pack${selected.length === 1 ? "" : "s"}`
-                  : "Continue"}
-              </Button>
-            </>
-          )}
-        </div>
-      )}
+            <Button
+              className="bg-blue-600 hover:bg-blue-500"
+              disabled={busy || selectedMissingIds.length === 0}
+              onClick={() => void downloadSelected()}
+            >
+              <Download className="mr-2 h-4 w-4" /> Download
+            </Button>
+          </>
+        )}
+      </div>
     </div>
   );
 }

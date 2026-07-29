@@ -14,8 +14,18 @@ import type { ReframePanelState } from "./video/ReframePanel";
 import type { GenSpaceSettings } from "./constants";
 
 export type GenSpaceMode = "image" | "video" | "music";
+export type ImageProcessMode = "create" | "edit" | "region";
 export type VideoProcessMode = "generate" | "reframe" | "retake";
 export type GenSpaceMediaKind = "image" | "video" | "audio";
+
+export interface FramingSettings {
+  camera: string;
+  lens: string;
+  focalLength: string;
+  aperture: string;
+  shutter: string;
+  iso: string;
+}
 
 export interface GenSpaceMediaInput {
   id: string;
@@ -50,6 +60,7 @@ export interface GenSpacePromptController {
   value: string;
   setValue: (value: string) => void;
   enhance: () => void;
+  enhanceEnabled: boolean;
   isEnhancing: boolean;
   seedLocked: boolean;
   lockedSeed: number;
@@ -111,6 +122,16 @@ export interface GenSpaceVideoToolsController {
   reframeDurationSeconds: number;
 }
 
+export interface GenSpaceImageToolsController {
+  mode: ImageProcessMode;
+  setMode: (mode: ImageProcessMode) => void;
+}
+
+export interface GenSpaceFramingController {
+  value: FramingSettings | null;
+  setValue: (value: FramingSettings | null) => void;
+}
+
 export interface ImageGenPanelController {
   prompt: GenSpacePromptController;
   generation: GenSpaceGenerationController;
@@ -123,6 +144,8 @@ export interface ImageGenPanelController {
     | "syncInputFileToGallery"
   >;
   profiles: GenSpacePanelProfiles;
+  imageTools: GenSpaceImageToolsController;
+  framing: GenSpaceFramingController;
 }
 
 export interface VideoGenPanelController {
@@ -132,6 +155,7 @@ export interface VideoGenPanelController {
   media: GenSpaceMediaController;
   profiles: GenSpacePanelProfiles;
   videoTools: GenSpaceVideoToolsController;
+  framing: GenSpaceFramingController;
 }
 
 export interface MusicGenPanelController {

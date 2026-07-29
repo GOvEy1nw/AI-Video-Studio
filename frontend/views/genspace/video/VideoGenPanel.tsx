@@ -2,9 +2,11 @@ import { AlertCircle, Clock, Image, Monitor, Music, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ModelDropdownTrigger } from "../../../components/ModelDropdownTrigger";
 import { SettingsDropdown } from "../../../components/SettingsDropdown";
+import { getModelDropdownAvailability } from "../../../lib/model-profile-availability";
 import { detectMediaType } from "../../../lib/media-import";
 import { AUDIO_MEDIA_ROLE_SET, GUIDE_MEDIA_ROLE_SET } from "../constants";
 import { AspectIcon } from "../components/AspectIcon";
+import { FramingControl } from "../components/FramingControl";
 import { GenerateButton } from "../components/GenerateButton";
 import { GenPanelSection } from "../components/GenPanelSection";
 import { PromptActions } from "../components/PromptActions";
@@ -181,7 +183,7 @@ export function VideoGenPanel({
 }: {
   controller: VideoGenPanelController;
 }) {
-  const { prompt, generation, settings, media, profiles, videoTools } =
+  const { prompt, generation, settings, media, profiles, videoTools, framing } =
     controller;
   const videoSettings = settings.value;
   const patchVideoSettings = settings.patch;
@@ -238,13 +240,12 @@ export function VideoGenPanel({
     label:
       profile.displayName +
       (profile.status === "experimental" ? " (experimental)" : ""),
-    disabled:
-      profile.availability === "missing_model_files" ||
-      profile.availability === "unsupported",
+    ...getModelDropdownAvailability(profile.availability),
   }));
 
   return (
     <>
+      <VideoModeTabs mode={videoTools.mode} onChange={videoTools.setMode} />
       <GenPanelSection
         title="Model"
         className="text-xs text-zinc-400"
@@ -273,7 +274,6 @@ export function VideoGenPanel({
           </div>
         )}
       </GenPanelSection>
-      <VideoModeTabs mode={videoTools.mode} onChange={videoTools.setMode} />
       {!isPanelMode ? (
         <VideoMediaInputs
           inputs={media.inputs}
@@ -308,6 +308,15 @@ export function VideoGenPanel({
             <LegacyPromptMedia controller={controller} />
           ) : undefined
         }
+        bottomRight={
+          !isPanelMode ? (
+            <FramingControl
+              value={framing.value}
+              onChange={framing.setValue}
+              disabled={generation.isRunning}
+            />
+          ) : undefined
+        }
         actions={
           !isPanelMode ? (
             <PromptActions
@@ -317,6 +326,7 @@ export function VideoGenPanel({
               disabled={generation.isRunning}
               prompt={prompt.value}
               onEnhance={prompt.enhance}
+              enhanceEnabled={prompt.enhanceEnabled}
               isEnhancing={prompt.isEnhancing}
             />
           ) : undefined

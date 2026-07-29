@@ -20,6 +20,7 @@ describe("MusicGenPanel", () => {
         value: "",
         setValue: vi.fn(),
         enhance: vi.fn(),
+        enhanceEnabled: false,
         isEnhancing: false,
         seedLocked: false,
         lockedSeed: 42,

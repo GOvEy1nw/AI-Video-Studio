@@ -10,11 +10,14 @@ import {
   Trash2,
   FolderOpen,
   Heart,
-  Film,
   Expand,
   ClipboardPaste,
 } from "lucide-react";
 import type { Asset } from "../../types/project";
+import {
+  IMAGE_USE_OPTIONS,
+  type ImageUseTarget,
+} from "../../components/UseImageDropdown";
 import { getColorLabel } from "./video-editor-utils";
 
 export interface AssetContextMenuProps {
@@ -35,7 +38,7 @@ export interface AssetContextMenuProps {
     startTime?: number,
   ) => void;
   onToggleFavorite?: (asset: Asset) => void;
-  onCreateVideo?: (asset: Asset) => void;
+  onUseImage?: (asset: Asset, target: ImageUseTarget) => void;
   onReframe?: (asset: Asset) => void;
   onCopySettings?: (asset: Asset) => void;
   handleRegenerate?: (assetId: string) => void;
@@ -82,7 +85,7 @@ export function AssetContextMenu({
   pushAssetUndoRef,
   addClipToTimeline,
   onToggleFavorite,
-  onCreateVideo,
+  onUseImage,
   onReframe,
   onCopySettings,
   handleRegenerate,
@@ -153,18 +156,26 @@ export function AssetContextMenu({
         </button>
       )}
 
-      {!isMulti && asset.type === "image" && onCreateVideo && (
-        <button
-          onClick={() => {
-            onCreateVideo(asset);
-            setAssetContextMenu(null);
-          }}
-          className="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-700 flex items-center gap-3"
-        >
-          <Film className="h-3.5 w-3.5 text-zinc-500" />
-          <span>Create video</span>
-        </button>
-      )}
+      {!isMulti && asset.type === "image" && onUseImage ? (
+        <>
+          <div className="px-3 pb-0.5 pt-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+            Use image
+          </div>
+          {IMAGE_USE_OPTIONS.map((option) => (
+            <button
+              key={option.target}
+              onClick={() => {
+                onUseImage(asset, option.target);
+                setAssetContextMenu(null);
+              }}
+              className="flex w-full items-center gap-3 px-3 py-1.5 text-left text-zinc-300 hover:bg-zinc-700"
+            >
+              <span className="text-zinc-500">{option.icon}</span>
+              <span>{option.label}</span>
+            </button>
+          ))}
+        </>
+      ) : null}
 
       {!isMulti && asset.type === "video" && onReframe && (
         <button

@@ -15,6 +15,7 @@ import {
   AssetLibraryImportButton,
   GalleryAssetLibrary,
 } from "../../components/GalleryAssetLibrary";
+import type { GalleryGridColumns } from "../../components/GalleryViewControls";
 import type { GalleryFilterState } from "../../lib/gallery-filters";
 
 export interface LeftPanelProps {
@@ -198,7 +199,8 @@ export function LeftPanel(props: LeftPanelProps) {
   } = props;
 
   const [assetViewMode, setAssetViewMode] = useState<"grid" | "list">("grid");
-  const [assetCardSize, setAssetCardSize] = useState(144);
+  const [assetGridColumns, setAssetGridColumns] =
+    useState<GalleryGridColumns>(3);
   const [showFavorites, setShowFavorites] = useState(false);
   const takesAsset = takesViewAssetId
     ? assets.find((asset) => asset.id === takesViewAssetId)
@@ -257,10 +259,8 @@ export function LeftPanel(props: LeftPanelProps) {
               onBinContextMenuChange={setBinContextMenu}
               viewMode={assetViewMode}
               onViewModeChange={setAssetViewMode}
-              cardSize={assetCardSize}
-              onCardSizeChange={setAssetCardSize}
-              cardSizeMin={96}
-              cardSizeMax={700}
+              gridColumns={assetGridColumns}
+              onGridColumnsChange={setAssetGridColumns}
               showFavorites={showFavorites}
               onShowFavoritesChange={setShowFavorites}
               getThumbnailUrl={(asset) =>

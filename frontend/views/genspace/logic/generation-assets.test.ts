@@ -30,7 +30,7 @@ describe("GenSpace generated asset builders", () => {
     const snapshot: ImageSubmissionSnapshot = {
       projectId: "project-a",
       submittedAt: 1_000,
-      prompt: "portrait",
+      prompt: "enhanced portrait",
       settings: { ...DEFAULT_VIDEO_SETTINGS },
       inputs: [input],
       assetPaths: [{ url: input.url, path: "C:\\guide.mp4" }],
@@ -53,6 +53,8 @@ describe("GenSpace generated asset builders", () => {
         mediaDuration: 9,
       },
     ]);
+    expect(asset.prompt).toBe("enhanced portrait");
+    expect(asset.generationParams?.prompt).toBe("enhanced portrait");
     expect(asset.generationTimeSeconds).toBe(14);
   });
 

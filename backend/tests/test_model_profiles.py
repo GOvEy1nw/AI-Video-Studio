@@ -26,14 +26,19 @@ def _write_test_image(path: Path) -> Path:
 
 
 class TestCuratedProfiles:
-    def test_four_visible_image_profiles(self) -> None:
+    def test_requested_visible_image_profiles(self) -> None:
         visible = get_visible_image_profiles()
-        assert len(visible) == 4
         assert {p.id for p in visible} == {
             "z_image_turbo",
             "krea2_turbo",
             "flux2_klein_4b",
+            "flux2_klein_9b",
+            "qwen_image_2512_20B",
+            "qwen_image_edit_plus2_20B",
+            "krea2_turbo_edit",
             "hidream_o1_dev",
+            "ideogram4_int8",
+            "ideogram4_turbotime_int8",
         }
 
     def test_z_image_turbo_is_stable(self) -> None:
@@ -99,6 +104,37 @@ class TestCuratedProfiles:
         assert profile.input_media.max_images == 5
         assert "1440p" in profile.allowed_resolution_tiers
 
+    def test_requested_image_profiles_use_exact_wangp_ids(self) -> None:
+        expected_model_types = {
+            "flux2_klein_9b": "flux2_klein_9b",
+            "qwen_image_2512_20B": "qwen_image_2512_20B",
+            "qwen_image_edit_plus2_20B": "qwen_image_edit_plus2_20B",
+            "krea2_turbo_edit": "krea2_turbo_edit",
+            "ideogram4_int8": "ideogram4_int8",
+            "ideogram4_turbotime_int8": "ideogram4_turbotime_int8",
+        }
+
+        for profile_id, model_type in expected_model_types.items():
+            profile = get_image_profile(profile_id)
+            assert profile is not None
+            assert profile.wangp_model_type == model_type
+            assert profile.status == "experimental"
+
+    def test_requested_edit_profiles_expose_supported_image_inputs(self) -> None:
+        flux = get_image_profile("flux2_klein_9b")
+        qwen = get_image_profile("qwen_image_edit_plus2_20B")
+        krea = get_image_profile("krea2_turbo_edit")
+        assert flux is not None
+        assert qwen is not None
+        assert krea is not None
+        assert flux.input_media.max_images == 5
+        assert qwen.input_media.max_images == 5
+        assert krea.input_media.max_images == 2
+        assert qwen.reference_images is True
+        assert qwen.control_image is True
+        assert krea.reference_images is True
+        assert krea.control_image is False
+
     def test_unknown_profile_returns_none(self) -> None:
         assert get_image_profile("does_not_exist") is None
 
@@ -145,6 +181,14 @@ class TestCuratedProfiles:
                 profile.min_resolution_tier is not None
                 and profile.min_resolution_tier >= "540p"  # noqa: E501
             )
+
+    def test_all_visible_profile_ui_combinations_have_curated_resolutions(self) -> None:
+        for profile in [*IMAGE_PROFILES, *VIDEO_PROFILES]:
+            if not profile.visible:
+                continue
+            for tier in profile.allowed_resolution_tiers:
+                for aspect in profile.allowed_aspect_ratios:
+                    assert is_combination_supported(profile, tier, aspect)
 
 
 class TestResolutionResolver:
@@ -208,7 +252,18 @@ class TestModelProfilesEndpoint:
         assert r.status_code == 200
         data = r.json()
         ids = [p["id"] for p in data["profiles"] if p["mediaType"] == "image"]
-        assert ids == ["z_image_turbo", "krea2_turbo", "flux2_klein_4b", "hidream_o1_dev"]
+        assert ids == [
+            "z_image_turbo",
+            "krea2_turbo",
+            "flux2_klein_4b",
+            "flux2_klein_9b",
+            "qwen_image_2512_20B",
+            "hidream_o1_dev",
+            "krea2_turbo_edit",
+            "qwen_image_edit_plus2_20B",
+            "ideogram4_int8",
+            "ideogram4_turbotime_int8",
+        ]
         video_ids = [p["id"] for p in data["profiles"] if p["mediaType"] == "video"]
         assert video_ids == ["ltx2_22b_distilled"]
 
@@ -381,6 +436,70 @@ class TestImageGenerationProfileRouting:
         assert call.model_type == "hidream_o1_dev"
         assert call.width == 1024
         assert call.height == 1024
+
+    @pytest.mark.parametrize(
+        ("profile_id", "model_type"),
+        [
+            ("flux2_klein_9b", "flux2_klein_9b"),
+            ("qwen_image_2512_20B", "qwen_image_2512_20B"),
+            ("qwen_image_edit_plus2_20B", "qwen_image_edit_plus2_20B"),
+            ("krea2_turbo_edit", "krea2_turbo_edit"),
+            ("ideogram4_int8", "ideogram4_int8"),
+            ("ideogram4_turbotime_int8", "ideogram4_turbotime_int8"),
+        ],
+    )
+    def test_requested_profile_routes_to_exact_wangp_model(
+        self,
+        client,
+        enable_wangp,
+        profile_id: str,
+        model_type: str,
+    ) -> None:
+        r = client.post(
+            "/api/generate-image",
+            json={
+                "prompt": "A cat",
+                "modelProfileId": profile_id,
+                "aspectRatio": "1:1",
+                "resolutionTier": "720p",
+            },
+        )
+        assert r.status_code == 200
+        assert enable_wangp.image_calls[0].model_type == model_type
+
+    @pytest.mark.parametrize(
+        "profile_id",
+        ["qwen_image_edit_plus2_20B", "krea2_turbo_edit"],
+    )
+    def test_requested_edit_profile_routes_reference_image(
+        self,
+        client,
+        enable_wangp,
+        tmp_path: Path,
+        profile_id: str,
+    ) -> None:
+        image_path = _write_test_image(tmp_path / f"{profile_id}.png")
+        r = client.post(
+            "/api/generate-image",
+            json={
+                "prompt": "Add a hat",
+                "modelProfileId": profile_id,
+                "aspectRatio": "1:1",
+                "resolutionTier": "720p",
+                "inputMedia": [
+                    {
+                        "type": "image",
+                        "path": str(image_path),
+                        "role": "reference_subject",
+                    },
+                ],
+            },
+        )
+        assert r.status_code == 200
+        call = enable_wangp.image_calls[0]
+        assert call.model_type == profile_id
+        assert call.default_settings["video_prompt_type"] == "KI"
+        assert call.default_settings["image_refs"] == [str(image_path.resolve())]
 
     def test_image_input_to_krea2_rejected(
         self, client, enable_wangp, tmp_path: Path

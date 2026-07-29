@@ -20,6 +20,7 @@ export function MediaInputSlot({
   inputRef,
   menu,
   onToggle,
+  onAdd,
   onRemove,
   removeLabel,
   onDrop,
@@ -35,6 +36,7 @@ export function MediaInputSlot({
   inputRef?: RefObject<HTMLInputElement | null>;
   menu?: ReactNode;
   onToggle?: () => void;
+  onAdd?: () => void;
   onRemove?: () => void;
   removeLabel?: string;
   onDrop: (event: DragEvent<HTMLDivElement>) => void | Promise<void>;
@@ -43,7 +45,10 @@ export function MediaInputSlot({
   const open = (event: MouseEvent) => {
     event.stopPropagation();
     if (item && onToggle) onToggle();
-    else inputRef?.current?.click();
+    else {
+      onAdd?.();
+      inputRef?.current?.click();
+    }
   };
 
   return (
@@ -93,18 +98,34 @@ export function MediaInputSlot({
           <>
             <Icon className="h-4 w-4 text-zinc-500" />
             {label ? (
-              <span className="mt-1 select-none text-[8px] uppercase text-zinc-500">
+              <span className="mt-1 select-none text-2xs uppercase text-zinc-500">
                 {label}
               </span>
             ) : null}
           </>
         )}
-        {badge ? (
-          <span className="absolute bottom-1 right-1 max-w-[48px] truncate rounded-sm bg-black/70 p-0.5 text-[9px] text-zinc-400">
+      </button>
+      {badge ? (
+        item && onToggle ? (
+          <button
+            type="button"
+            aria-label={`Change ${badge} usage`}
+            title={`Change ${badge} usage`}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggle();
+            }}
+            className="absolute bottom-2 left-1/2 z-10 max-w-[calc(100%_-_1rem)] -translate-x-1/2 truncate rounded-full border border-white/10 bg-black/75 px-2 py-0.5 text-[10px] font-medium text-zinc-200 shadow-sm transition-colors hover:bg-zinc-700 hover:text-white"
+          >
+            {badge}
+          </button>
+        ) : (
+          <span className="pointer-events-none absolute bottom-2 left-1/2 z-10 max-w-[calc(100%_-_1rem)] -translate-x-1/2 truncate rounded-full bg-black/75 px-2 py-0.5 text-[10px] text-zinc-300">
             {badge}
           </span>
-        ) : null}
-      </button>
+        )
+      ) : null}
       {item && onRemove ? (
         <button
           type="button"

@@ -13,8 +13,10 @@ import type { MusicSettings } from "../../../types/music";
 import type { Asset } from "../../../types/project";
 import type { GenSpaceSettings } from "../constants";
 import type {
+  FramingSettings,
   GenSpaceMediaInput,
   GenSpaceMode,
+  ImageProcessMode,
   ImageSubmissionSnapshot,
   MusicSubmissionSnapshot,
   ReframeSubmissionSnapshot,
@@ -22,6 +24,7 @@ import type {
   VideoSubmissionSnapshot,
   VideoProcessMode,
 } from "../types";
+import { applyFramingPrefix } from "../logic/framing";
 import {
   buildImageGenerationCommand,
   buildMusicGenerationCommand,
@@ -39,8 +42,12 @@ interface RetakeInput {
 
 export function useGenSpaceGenerationActions({
   mode,
+  imageMode,
   videoMode,
   prompt,
+  framingSettings,
+  promptEnhancementEnabled,
+  resolvePromptForGeneration,
   currentProjectId,
   projectAssets,
   settings,
@@ -62,8 +69,12 @@ export function useGenSpaceGenerationActions({
   submitRetake,
 }: {
   mode: GenSpaceMode;
+  imageMode: ImageProcessMode;
   videoMode: VideoProcessMode;
   prompt: string;
+  framingSettings: FramingSettings | null;
+  promptEnhancementEnabled: boolean;
+  resolvePromptForGeneration: (prompt: string) => Promise<string | null>;
   currentProjectId: string | null;
   projectAssets: Asset[];
   settings: GenSpaceSettings;
@@ -158,9 +169,20 @@ export function useGenSpaceGenerationActions({
       return;
     }
 
+    const resolvedPrompt = promptEnhancementEnabled
+      ? await resolvePromptForGeneration(prompt)
+      : prompt;
+    if (!resolvedPrompt) return;
+    const effectivePrompt = applyFramingPrefix(
+      resolvedPrompt,
+      mode === "video" || imageMode === "create"
+        ? framingSettings
+        : null,
+    );
+
     if (mode === "image") {
       const command = buildImageGenerationCommand(
-        prompt,
+        effectivePrompt,
         settings,
         imageInputs,
       );
@@ -168,7 +190,7 @@ export function useGenSpaceGenerationActions({
       imageSubmissionRef.current = {
         projectId: currentProjectId,
         submittedAt: Date.now(),
-        prompt,
+        prompt: effectivePrompt,
         settings: { ...settings },
         inputs: imageInputs.map((input) => ({ ...input })),
         assetPaths: projectAssets.map(({ url, path }) => ({ url, path })),
@@ -182,7 +204,7 @@ export function useGenSpaceGenerationActions({
     }
 
     const command = buildVideoGenerationCommand({
-      prompt,
+      prompt: effectivePrompt,
       settings,
       imageInputs,
       inputImage,
@@ -196,7 +218,7 @@ export function useGenSpaceGenerationActions({
     videoSubmissionRef.current = {
       projectId: currentProjectId,
       submittedAt: Date.now(),
-      prompt,
+      prompt: effectivePrompt,
       settings: { ...command.normalizedSettings },
       inputs: imageInputs.map((input) => ({ ...input })),
       inputImage,
@@ -217,15 +239,19 @@ export function useGenSpaceGenerationActions({
     generateImage,
     generateMusic,
     imageInputs,
+    imageMode,
     inputAudio,
     inputImage,
     mode,
+    framingSettings,
     musicProfiles,
     musicSettings,
     prompt,
+    promptEnhancementEnabled,
     projectAssets,
     reframeInput,
     reframeSubmissionRef,
+    resolvePromptForGeneration,
     retakeInput,
     retakeSubmissionRef,
     setLocalError,

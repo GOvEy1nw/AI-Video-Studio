@@ -1,0 +1,12 @@
+# #0367 Model dropdowns omit per-option install status and disable missing packs, preventing selection for generation-triggered download.
+
+- 2026-07-29T11:17:38Z `issue`: Model dropdowns omit per-option install status and disable missing packs, preventing selection for generation-triggered download. [frontend/components/SettingsDropdown.tsx; frontend/hooks/use-image-profiles.ts]
+- 2026-07-29T11:22:46Z `attempt`: Focused readiness tests: availability helper passed, but SettingsDropdown query expected spaced accessible name while DOM exposes concatenated nested text [frontend/components/SettingsDropdown.test.tsx] (partial)
+- 2026-07-29T11:23:23Z `attempt`: Made dropdown interaction test match nested option/status accessible text without assuming whitespace insertion [frontend/components/SettingsDropdown.test.tsx] (partial)
+- 2026-07-29T11:23:44Z `attempt`: Focused SettingsDropdown and model-profile availability tests pass: 2 files, 3 tests [frontend/components/SettingsDropdown.test.tsx; frontend/lib/model-profile-availability.test.ts] (worked)
+- 2026-07-29T11:24:02Z `attempt`: Strict TypeScript validation passes with pack-derived selector status wiring [frontend/components/SettingsDropdown.tsx; frontend/hooks/use-image-profiles.ts] (worked)
+- 2026-07-29T11:24:16Z `attempt`: Full frontend suite passes 98/101; only three pre-existing GenPanelSection and GenSpaceGallery expectation failures remain, while new selector tests pass [frontend/components/SettingsDropdown.tsx; frontend/lib/model-profile-availability.ts] (partial)
+- 2026-07-29T11:24:27Z `attempt`: Production renderer, Electron main, and preload builds pass with selector readiness changes [frontend/hooks/use-image-profiles.ts; frontend/components/SettingsDropdown.tsx] (worked)
+- 2026-07-29T11:24:36Z `attempt`: git diff --check passes; only repository line-ending warnings emitted [frontend selector readiness changes] (worked)
+- 2026-07-29T11:26:02Z `attempt`: Renderer preview visual QA blocked: browser lacks preload API and native Electron launch still hits known process_singleton lock issue #0363 [Electron/renderer visual QA] (partial)
+- 2026-07-29T11:30:38Z `fix`: All GenSpace model dropdowns now show pack-derived green Ready/red Missing labels; missing packs remain selectable for first-generation auto-download [frontend/components/SettingsDropdown.tsx; frontend/hooks/use-image-profiles.ts; frontend/lib/model-profile-availability.ts]

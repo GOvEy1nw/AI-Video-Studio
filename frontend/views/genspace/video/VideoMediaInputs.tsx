@@ -20,10 +20,7 @@ import {
   replaceGuideInput,
   replaceInputForRole,
 } from "../logic/media-inputs";
-import type {
-  GenSpaceMediaInput,
-  GenSpaceMediaKind,
-} from "../types";
+import type { GenSpaceMediaInput, GenSpaceMediaKind } from "../types";
 import { GenPanelSection } from "../components/GenPanelSection";
 import { GuideMediaTrimEditor } from "./GuideMediaTrimEditor";
 import { MediaInputSlot } from "../components/MediaInputSlot";
@@ -63,6 +60,9 @@ export function VideoMediaInputs({
 }) {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const guideInputRef = useRef<HTMLInputElement>(null);
+  const pendingFrameRoleRef = useRef<"start_image" | "end_image">(
+    "start_image",
+  );
   const [activeId, setActiveId] = useState<string | null>(null);
   const [editingGuideId, setEditingGuideId] = useState<string | null>(null);
   const [guideDragActive, setGuideDragActive] = useState(false);
@@ -100,12 +100,7 @@ export function VideoMediaInputs({
   }, [activeId]);
 
   const setSlot = useCallback(
-    (
-      url: string,
-      role: string,
-      kind: GenSpaceMediaKind,
-      editGuide = true,
-    ) => {
+    (url: string, role: string, kind: GenSpaceMediaKind, editGuide = true) => {
       const next = { id: crypto.randomUUID(), url, role, type: kind };
       onChange((current) =>
         role === "start_image" || role === "end_image"
@@ -117,10 +112,7 @@ export function VideoMediaInputs({
     [onChange],
   );
 
-  const addFile = async (
-    file: File,
-    role?: "start_image" | "end_image",
-  ) => {
+  const addFile = async (file: File, role?: "start_image" | "end_image") => {
     const kind = detectMediaType(file.name, file.type);
     if (!kind) return;
     if (role && kind !== "image") return;
@@ -133,28 +125,30 @@ export function VideoMediaInputs({
     );
   };
 
-  const dropFor = (
-    role: "start_image" | "end_image" | "guide",
-    expected?: GenSpaceMediaKind,
-  ) => async (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setGuideDragActive(false);
-    const asset = readGalleryAsset(event);
-    if (asset && (!expected || asset.type === expected)) {
-      setSlot(
-        asset.url,
-        role === "guide"
-          ? asset.type === "audio"
-            ? "audio_to_video"
-            : "human_motion"
-          : role,
-        asset.type,
-      );
-      return;
-    }
-    const file = event.dataTransfer.files?.[0];
-    if (file) await addFile(file, role === "guide" ? undefined : role);
-  };
+  const dropFor =
+    (
+      role: "start_image" | "end_image" | "guide",
+      expected?: GenSpaceMediaKind,
+    ) =>
+    async (event: React.DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      setGuideDragActive(false);
+      const asset = readGalleryAsset(event);
+      if (asset && (!expected || asset.type === expected)) {
+        setSlot(
+          asset.url,
+          role === "guide"
+            ? asset.type === "audio"
+              ? "audio_to_video"
+              : "human_motion"
+            : role,
+          asset.type,
+        );
+        return;
+      }
+      const file = event.dataTransfer.files?.[0];
+      if (file) await addFile(file, role === "guide" ? undefined : role);
+    };
 
   if (!supportsInputs) return null;
 
@@ -170,7 +164,13 @@ export function VideoMediaInputs({
         item={item}
         kind="image"
         label={role === "start_image" ? "Start" : "End"}
-        badge={item ? (role === "start_image" ? "Start" : "End") : undefined}
+        badge={
+          item
+            ? role === "start_image"
+              ? "Start Frame"
+              : "End Frame"
+            : undefined
+        }
         title={`${label}${item ? " - Click for actions" : ""}`}
         active={activeId === role}
         removeLabel={label}
@@ -180,6 +180,9 @@ export function VideoMediaInputs({
           setActiveId(null);
         }}
         inputRef={imageInputRef}
+        onAdd={() => {
+          pendingFrameRoleRef.current = role;
+        }}
         onToggle={() =>
           setActiveId((current) => (current === role ? null : role))
         }
@@ -193,9 +196,7 @@ export function VideoMediaInputs({
               onSelect={(nextRole) => {
                 onChange(
                   inputs.map((input) =>
-                    input.id === item.id
-                      ? { ...input, role: nextRole }
-                      : input,
+                    input.id === item.id ? { ...input, role: nextRole } : input,
                   ),
                 );
                 setActiveId(null);
@@ -212,6 +213,9 @@ export function VideoMediaInputs({
     guideKind === "audio"
       ? [...AUDIO_GUIDE_ROLE_OPTIONS]
       : [...VIDEO_GUIDE_ROLE_OPTIONS];
+  const guideLabel = guideOptions.find(
+    ({ role }) => role === guide?.role,
+  )?.label;
   const guideExtra: ReactNode =
     guide?.type === "video" && guide.role !== "continue_video" ? (
       <>
@@ -250,9 +254,7 @@ export function VideoMediaInputs({
       ) : null}
       <div className="relative flex items-center gap-2 overflow-visible">
         {frameSlot("start_image", "Image 1 (Start)")}
-        {inputs.some(({ role }) => role === "start_image")
-          ? frameSlot("end_image", "Image 2 (End)")
-          : null}
+        {frameSlot("end_image", "Image 2 (End)")}
         <div
           onDragEnter={() => setGuideDragActive(true)}
           onDragLeave={() => setGuideDragActive(false)}
@@ -260,16 +262,8 @@ export function VideoMediaInputs({
           <MediaInputSlot
             item={guide}
             kind={guideKind}
-            label="Vid/Aud"
-            badge={
-              guide
-                ? guide.type === "audio"
-                  ? "Audio"
-                  : guide.role === "continue_video"
-                    ? "Continue"
-                    : "Video"
-                : undefined
-            }
+            label="Ref"
+            badge={guide ? (guideLabel ?? guide.role) : undefined}
             title="Click or drop video/audio from gallery"
             active={activeId === "guide_slot"}
             dragActive={guideDragActive}
@@ -323,12 +317,7 @@ export function VideoMediaInputs({
         className="hidden"
         onChange={(event) => {
           const file = event.target.files?.[0];
-          if (file) {
-            const role = inputs.some(({ role }) => role === "start_image")
-              ? "end_image"
-              : "start_image";
-            void addFile(file, role);
-          }
+          if (file) void addFile(file, pendingFrameRoleRef.current);
           event.target.value = "";
         }}
       />

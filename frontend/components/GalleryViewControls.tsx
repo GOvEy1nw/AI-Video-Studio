@@ -1,21 +1,19 @@
 import { LayoutGrid, List } from 'lucide-react'
 
+export type GalleryGridColumns = 1 | 2 | 3 | 4
+
 type GalleryViewControlsProps = {
   viewMode: 'grid' | 'list'
   onViewModeChange: (mode: 'grid' | 'list') => void
-  cardSize: number
-  onCardSizeChange: (size: number) => void
-  min?: number
-  max?: number
+  gridColumns: GalleryGridColumns
+  onGridColumnsChange: (columns: GalleryGridColumns) => void
 }
 
 export function GalleryViewControls({
   viewMode,
   onViewModeChange,
-  cardSize,
-  onCardSizeChange,
-  min = 120,
-  max = 360,
+  gridColumns,
+  onGridColumnsChange,
 }: GalleryViewControlsProps) {
   const buttonClass = (active: boolean) =>
     `rounded p-1.5 transition-colors ${
@@ -49,14 +47,21 @@ export function GalleryViewControls({
       {viewMode === 'grid' && (
         <input
           type="range"
-          min={min}
-          max={max}
-          step={8}
-          value={cardSize}
-          onChange={(event) => onCardSizeChange(Number(event.target.value))}
+          min={1}
+          max={4}
+          step={1}
+          value={5 - gridColumns}
+          onChange={(event) =>
+            onGridColumnsChange(
+              (5 - Number(event.target.value)) as GalleryGridColumns,
+            )
+          }
           className="h-1 w-20 cursor-pointer accent-blue-500"
-          aria-label="Grid card size"
-          title="Grid card size"
+          aria-label="Grid columns"
+          aria-valuetext={`${gridColumns} ${
+            gridColumns === 1 ? 'column' : 'columns'
+          }`}
+          title={`${gridColumns} ${gridColumns === 1 ? 'column' : 'columns'}`}
         />
       )}
     </div>

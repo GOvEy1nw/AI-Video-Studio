@@ -22,6 +22,10 @@ export interface ModelPack {
   name: string
   estimatedSize: string
   installed: boolean
+  modelType?: string
+  groupId?: string
+  groupName?: string
+  variantName?: string
 }
 
 export interface ModelPackProgress {
@@ -49,13 +53,109 @@ export interface ModelPackProgress {
 
 const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
   { id: 'utility', name: 'Utility Models', estimatedSize: '2.3 GB' },
-  { id: 'z_image_turbo', name: 'Z-Image Turbo', estimatedSize: '14.3 GB' },
-  { id: 'flux2_klein_4b', name: 'Flux 2 Klein 4B', estimatedSize: '11.8 GB' },
-  { id: 'krea2_turbo', name: 'Krea 2 Turbo', estimatedSize: '20.5 GB' },
-  { id: 'hidream_o1', name: 'HiDream O1', estimatedSize: '15.4 GB' },
-  { id: 'ltx2_turbo', name: 'LTX 2.3 Turbo 1.1', estimatedSize: '42.8 GB' },
-  { id: 'ace_step_15_turbo', name: 'ACE-Step 1.5 Fast', estimatedSize: '12.0 GB' },
-  { id: 'ace_step_15_xl_turbo', name: 'ACE-Step 1.5 XL', estimatedSize: '20.0 GB' },
+  { id: 'z_image_turbo', name: 'Z-Image Turbo', estimatedSize: '14.3 GB', modelType: 'z_image' },
+  {
+    id: 'flux2_klein_4b',
+    name: 'Flux 2 Klein 4B',
+    estimatedSize: '11.8 GB',
+    modelType: 'flux2_klein_4b',
+    groupId: 'flux2_klein',
+    groupName: 'Flux 2 Klein',
+    variantName: '4B',
+  },
+  {
+    id: 'flux2_klein_9b',
+    name: 'Flux 2 Klein 9B',
+    estimatedSize: '20.8 GB',
+    modelType: 'flux2_klein_9b',
+    groupId: 'flux2_klein',
+    groupName: 'Flux 2 Klein',
+    variantName: '9B',
+  },
+  {
+    id: 'krea2_turbo',
+    name: 'Krea 2 Turbo',
+    estimatedSize: '20.5 GB',
+    modelType: 'krea2_turbo',
+    groupId: 'krea2',
+    groupName: 'Krea 2',
+    variantName: 'Create',
+  },
+  {
+    id: 'krea2_turbo_edit',
+    name: 'Krea 2 Edit',
+    estimatedSize: '40.9 GB',
+    modelType: 'krea2_turbo_edit',
+    groupId: 'krea2',
+    groupName: 'Krea 2',
+    variantName: 'Edit',
+  },
+  {
+    id: 'qwen_image_2512_20B',
+    name: 'Qwen Image',
+    estimatedSize: '27.9 GB',
+    modelType: 'qwen_image_2512_20B',
+    groupId: 'qwen_image',
+    groupName: 'Qwen Image',
+    variantName: 'Create',
+  },
+  {
+    id: 'qwen_image_edit_plus2_20B',
+    name: 'Qwen Image Edit',
+    estimatedSize: '27.9 GB',
+    modelType: 'qwen_image_edit_plus2_20B',
+    groupId: 'qwen_image',
+    groupName: 'Qwen Image',
+    variantName: 'Edit',
+  },
+  {
+    id: 'hidream_o1',
+    name: 'HiDream O1',
+    estimatedSize: '15.4 GB',
+    modelType: 'hidream_o1_dev',
+  },
+  {
+    id: 'ideogram4_int8',
+    name: 'Ideogram 4 Standard',
+    estimatedSize: '26.4 GB',
+    modelType: 'ideogram4_int8',
+    groupId: 'ideogram4',
+    groupName: 'Ideogram 4',
+    variantName: 'Standard',
+  },
+  {
+    id: 'ideogram4_turbotime_int8',
+    name: 'Ideogram 4 TurboTime',
+    estimatedSize: '18.3 GB',
+    modelType: 'ideogram4_turbotime_int8',
+    groupId: 'ideogram4',
+    groupName: 'Ideogram 4',
+    variantName: 'TurboTime',
+  },
+  {
+    id: 'ltx2_turbo',
+    name: 'LTX 2.3 Turbo 1.1',
+    estimatedSize: '42.8 GB',
+    modelType: 'ltx2_22B_distilled_1_1',
+  },
+  {
+    id: 'ace_step_15_turbo',
+    name: 'ACE-Step 1.5 Fast',
+    estimatedSize: '12.0 GB',
+    modelType: 'ace_step_v1_5_turbo_lm_1_7b',
+    groupId: 'ace_step_15',
+    groupName: 'ACE-Step 1.5',
+    variantName: 'Fast',
+  },
+  {
+    id: 'ace_step_15_xl_turbo',
+    name: 'ACE-Step 1.5 XL',
+    estimatedSize: '20.0 GB',
+    modelType: 'ace_step_v1_5_xl_turbo_lm_1_7b',
+    groupId: 'ace_step_15',
+    groupName: 'ACE-Step 1.5',
+    variantName: 'XL',
+  },
   { id: 'prompt_enhancer', name: 'Prompt Enhancer', estimatedSize: '36.0 GB' },
 ]
 

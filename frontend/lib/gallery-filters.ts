@@ -9,8 +9,8 @@ export type GalleryFilterState = {
 }
 
 export const DEFAULT_GALLERY_FILTER: GalleryFilterState = {
-  types: ['image', 'video', 'audio'],
-  sources: ['generated', 'uploaded'],
+  types: [],
+  sources: [],
 }
 
 export const GALLERY_TYPE_OPTIONS: {
@@ -37,10 +37,7 @@ export function inferAssetSource(asset: Asset): GalleryAssetSource {
 }
 
 export function isGalleryFilterActive(filter: GalleryFilterState): boolean {
-  return (
-    filter.types.length < GALLERY_TYPE_OPTIONS.length ||
-    filter.sources.length < GALLERY_SOURCE_OPTIONS.length
-  )
+  return filter.types.length > 0 || filter.sources.length > 0
 }
 
 export function filterGalleryAssets(
@@ -48,10 +45,16 @@ export function filterGalleryAssets(
   filter: GalleryFilterState,
 ): Asset[] {
   return assets.filter((asset) => {
-    if (!filter.types.includes(asset.type as GalleryMediaType)) {
+    if (
+      filter.types.length > 0 &&
+      !filter.types.includes(asset.type as GalleryMediaType)
+    ) {
       return false
     }
-    return filter.sources.includes(inferAssetSource(asset))
+    return (
+      filter.sources.length === 0 ||
+      filter.sources.includes(inferAssetSource(asset))
+    )
   })
 }
 

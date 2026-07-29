@@ -40,7 +40,7 @@ describe("MusicSettings", () => {
     });
   });
 
-  it("keeps the merged lyrics prompt visible but enables it only for Custom Lyrics", () => {
+  it("shows lyrics and vocal controls only when the vocal mode can use them", () => {
     const common = {
       description: "song",
       onChange: vi.fn(),
@@ -64,6 +64,8 @@ describe("MusicSettings", () => {
     expect(screen.getByLabelText("Lyrics")).toHaveProperty("disabled", false);
     expect(screen.getByRole("button", { name: /Compose Lyrics/ })).toHaveProperty("disabled", false);
     expect(screen.getByRole("switch", { name: "Think" })).toHaveProperty("disabled", false);
+    expect(screen.getByLabelText("Language")).toBeTruthy();
+    expect(screen.getByLabelText("Vocal character")).toBeTruthy();
 
     rerender(
       <MusicSettings
@@ -76,10 +78,9 @@ describe("MusicSettings", () => {
         }}
       />,
     );
-    expect(screen.getAllByRole("textbox")).toHaveLength(1);
-    expect(screen.getByLabelText("Lyrics")).toHaveProperty("disabled", true);
-    expect(screen.getByRole("button", { name: /Compose Lyrics/ })).toHaveProperty("disabled", true);
-    expect(screen.getByRole("switch", { name: "Think" })).toHaveProperty("disabled", true);
+    expect(screen.queryByLabelText("Lyrics")).toBeNull();
+    expect(screen.getByLabelText("Language")).toBeTruthy();
+    expect(screen.getByLabelText("Vocal character")).toBeTruthy();
 
     rerender(
       <MusicSettings
@@ -90,8 +91,9 @@ describe("MusicSettings", () => {
         }}
       />,
     );
-    expect(screen.getAllByRole("textbox")).toHaveLength(1);
-    expect(screen.getByLabelText("Lyrics")).toHaveProperty("disabled", true);
+    expect(screen.queryByLabelText("Lyrics")).toBeNull();
+    expect(screen.queryByLabelText("Language")).toBeNull();
+    expect(screen.queryByLabelText("Vocal character")).toBeNull();
   });
 
   it("uses the merged prompt as the Compose Lyrics idea", async () => {

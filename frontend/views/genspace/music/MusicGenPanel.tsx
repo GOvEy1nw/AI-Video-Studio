@@ -2,6 +2,7 @@ import { Music } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ModelDropdownTrigger } from "../../../components/ModelDropdownTrigger";
 import { SettingsDropdown } from "../../../components/SettingsDropdown";
+import { getModelDropdownAvailability } from "../../../lib/model-profile-availability";
 import { GenerateButton } from "../components/GenerateButton";
 import { GenPanelSection } from "../components/GenPanelSection";
 import { PromptActions } from "../components/PromptActions";
@@ -64,9 +65,7 @@ export function MusicGenPanel({
           options={profiles.options.map((profile) => ({
             value: profile.id,
             label: profile.displayName,
-            disabled:
-              profile.availability === "missing_model_files" ||
-              profile.availability === "unsupported",
+            ...getModelDropdownAvailability(profile.availability),
           }))}
           placement="bottom"
           variant="model"

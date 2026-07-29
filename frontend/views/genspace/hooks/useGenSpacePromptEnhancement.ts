@@ -1,4 +1,10 @@
-import { useCallback, useState, type Dispatch, type SetStateAction } from "react";
+import {
+  useCallback,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import { backendFetch } from "../../../lib/backend";
 import { fileUrlToPath } from "../../../lib/url-to-path";
 import type { GenSpaceSettings } from "../constants";
@@ -11,8 +17,6 @@ import type {
 export function useGenSpacePromptEnhancement({
   mode,
   videoMode,
-  prompt,
-  setPrompt,
   settings,
   imageInputs,
   inputImage,
@@ -21,8 +25,6 @@ export function useGenSpacePromptEnhancement({
 }: {
   mode: GenSpaceMode;
   videoMode: VideoProcessMode;
-  prompt: string;
-  setPrompt: Dispatch<SetStateAction<string>>;
   settings: GenSpaceSettings;
   imageInputs: GenSpaceMediaInput[];
   inputImage: string | null;
@@ -30,17 +32,18 @@ export function useGenSpacePromptEnhancement({
   setLocalError: Dispatch<SetStateAction<string | null>>;
 }) {
   const [isEnhancingPrompt, setIsEnhancingPrompt] = useState(false);
+  const enhancingRef = useRef(false);
 
-  const enhancePrompt = useCallback(async () => {
+  const resolvePromptForGeneration = useCallback(async (prompt: string) => {
     const trimmedPrompt = prompt.trim();
     if (
       !trimmedPrompt ||
       mode === "music" ||
       (mode === "video" && videoMode !== "generate") ||
       isBusy ||
-      isEnhancingPrompt
+      enhancingRef.current
     ) {
-      return;
+      return null;
     }
 
     const inputImageUrl =
@@ -50,6 +53,7 @@ export function useGenSpacePromptEnhancement({
           inputImage;
     const inputImagePath = inputImageUrl ? fileUrlToPath(inputImageUrl) : null;
 
+    enhancingRef.current = true;
     setIsEnhancingPrompt(true);
     setLocalError(null);
     try {
@@ -71,28 +75,28 @@ export function useGenSpacePromptEnhancement({
       }
       const data = (await response.json()) as { prompt?: unknown };
       if (typeof data.prompt === "string" && data.prompt.trim()) {
-        setPrompt(data.prompt);
+        return data.prompt.trim();
       }
+      throw new Error("Prompt enhancement returned an empty prompt");
     } catch (error) {
       setLocalError(
         error instanceof Error ? error.message : "Prompt enhancement failed",
       );
+      return null;
     } finally {
+      enhancingRef.current = false;
       setIsEnhancingPrompt(false);
     }
   }, [
     imageInputs,
     inputImage,
     isBusy,
-    isEnhancingPrompt,
     mode,
-    prompt,
     setLocalError,
-    setPrompt,
     settings.imageProfileId,
     settings.videoProfileId,
     videoMode,
   ]);
 
-  return { enhancePrompt, isEnhancingPrompt };
+  return { resolvePromptForGeneration, isEnhancingPrompt };
 }

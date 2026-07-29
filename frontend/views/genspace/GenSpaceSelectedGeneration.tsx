@@ -1,4 +1,10 @@
-import type { ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   Check,
   ChevronLeft,
@@ -6,16 +12,23 @@ import {
   ClipboardPaste,
   Copy,
   Expand,
-  Film,
   FolderOpen,
   Heart,
   LoaderCircle,
-  Music,
+  Pause,
+  Play,
   Sparkles,
   Trash2,
+  Volume2,
+  VolumeX,
   X,
 } from "lucide-react";
+import { ClipWaveform } from "../../components/AudioWaveform";
 import { DownloadProgressView } from "../../components/DownloadProgressView";
+import {
+  UseImageDropdown,
+  type ImageUseTarget,
+} from "../../components/UseImageDropdown";
 import type { Asset } from "../../types/project";
 import type { GenSpaceGalleryProps } from "./GenSpaceGallery";
 
@@ -33,7 +46,7 @@ export interface GenSpaceSelectedGenerationProps {
   onNext: () => void;
   onCopyPrompt: (prompt: string) => void;
   onToggleFavorite: (asset: Asset) => void;
-  onCreateVideo: (asset: Asset) => void;
+  onUseImage: (asset: Asset, target: ImageUseTarget) => void;
   onReframe: (asset: Asset) => void;
   onCopySettings: (asset: Asset) => void;
   onDelete: (asset: Asset) => void;
@@ -151,33 +164,269 @@ function GenerationProgress({
   );
 }
 
-function AssetPreview({ asset }: { asset: Asset }) {
-  if (asset.type === "video") {
-    return (
-      <video
-        key={asset.url}
-        src={asset.url}
-        controls
-        preload="metadata"
-        className="max-h-full max-w-full object-contain"
-      />
-    );
-  }
-  if (asset.type === "audio") {
-    return (
-      <div className="flex w-full max-w-xl flex-col items-center rounded-xl border border-emerald-500/15 bg-emerald-950/20 p-10">
-        <Music className="mb-6 h-16 w-16 text-emerald-400" />
-        <audio key={asset.url} src={asset.url} controls className="w-full" />
+function formatPlaybackTime(value: number) {
+  const seconds = Math.max(0, Math.floor(Number.isFinite(value) ? value : 0));
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+function MediaPlayerControls({
+  currentTime,
+  duration,
+  isPlaying,
+  muted,
+  audio,
+  onPlayPause,
+  onSeek,
+  onToggleMuted,
+}: {
+  currentTime: number;
+  duration: number;
+  isPlaying: boolean;
+  muted: boolean;
+  audio: boolean;
+  onPlayPause: () => void;
+  onSeek: (time: number) => void;
+  onToggleMuted: () => void;
+}) {
+  return (
+    <div
+      data-testid="media-player-controls"
+      className="w-full shrink-0 border-t border-zinc-800 bg-zinc-900/95 px-5 py-3 backdrop-blur"
+    >
+      <div
+        className={`flex w-full items-center gap-3 ${audio ? "justify-center" : ""}`}
+      >
+        <button
+          type="button"
+          onClick={onPlayPause}
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-colors ${
+            audio
+              ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-300 hover:bg-emerald-400/20"
+              : "border-violet-400/20 bg-violet-400/10 text-violet-300 hover:bg-violet-400/20"
+          }`}
+          aria-label={isPlaying ? "Pause" : "Play"}
+        >
+          {isPlaying ? (
+            <Pause className="h-4 w-4 fill-current" />
+          ) : (
+            <Play className="ml-0.5 h-4 w-4 fill-current" />
+          )}
+        </button>
+        {!audio ? (
+          <>
+            <span className="w-20 shrink-0 text-center font-mono text-[11px] text-zinc-400">
+              {formatPlaybackTime(currentTime)} / {formatPlaybackTime(duration)}
+            </span>
+            <input
+              type="range"
+              min={0}
+              max={duration || 0}
+              step="0.01"
+              value={Math.min(currentTime, duration || 0)}
+              disabled={duration <= 0}
+              onChange={(event) => onSeek(Number(event.currentTarget.value))}
+              aria-label="Playback position"
+              className="min-w-0 flex-1 cursor-pointer accent-violet-400 disabled:cursor-wait"
+            />
+            <button
+              type="button"
+              onClick={onToggleMuted}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
+              aria-label={muted ? "Unmute" : "Mute"}
+            >
+              {muted ? (
+                <VolumeX className="h-4 w-4" />
+              ) : (
+                <Volume2 className="h-4 w-4" />
+              )}
+            </button>
+          </>
+        ) : null}
       </div>
+    </div>
+  );
+}
+
+function PlayableAssetPreview({ asset }: { asset: Asset }) {
+  const mediaRef = useRef<HTMLMediaElement | null>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(asset.duration ?? 0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const audio = asset.type === "audio";
+  const progress = duration > 0 ? currentTime / duration : 0;
+
+  const syncDuration = (media: HTMLMediaElement) => {
+    if (Number.isFinite(media.duration) && media.duration > 0) {
+      setDuration(media.duration);
+    }
+  };
+
+  const handlePlayPause = useCallback(() => {
+    const media = mediaRef.current;
+    if (!media) return;
+    if (media.paused || media.ended) {
+      void media.play().catch(() => setIsPlaying(false));
+    } else {
+      media.pause();
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const isSpace =
+        event.code === "Space" ||
+        event.key === " " ||
+        event.key === "Spacebar" ||
+        event.key === "Space";
+      if (
+        !isSpace ||
+        event.repeat ||
+        event.defaultPrevented
+      ) {
+        return;
+      }
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        target.closest(
+          "input, textarea, select, button, [contenteditable='true']",
+        )
+      ) {
+        return;
+      }
+      const media = mediaRef.current;
+      if (!media || media.closest("[hidden]")) return;
+      event.preventDefault();
+      handlePlayPause();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handlePlayPause]);
+
+  const handleSeek = (time: number) => {
+    const media = mediaRef.current;
+    if (!media) return;
+    media.currentTime = time;
+    setCurrentTime(time);
+  };
+
+  const handleWaveformClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    if (bounds.width <= 0 || duration <= 0) return;
+    const fraction = Math.max(
+      0,
+      Math.min(1, (event.clientX - bounds.left) / bounds.width),
     );
+    handleSeek(fraction * duration);
+  };
+
+  const handleWaveformKeyDown = (
+    event: React.KeyboardEvent<HTMLDivElement>,
+  ) => {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    event.preventDefault();
+    handleSeek(
+      Math.max(
+        0,
+        Math.min(duration, currentTime + (event.key === "ArrowRight" ? 5 : -5)),
+      ),
+    );
+  };
+
+  const handleToggleMuted = () => {
+    const media = mediaRef.current;
+    if (!media) return;
+    media.muted = !media.muted;
+    setMuted(media.muted);
+  };
+
+  const mediaEvents = {
+    onLoadedMetadata: (event: React.SyntheticEvent<HTMLMediaElement>) =>
+      syncDuration(event.currentTarget),
+    onDurationChange: (event: React.SyntheticEvent<HTMLMediaElement>) =>
+      syncDuration(event.currentTarget),
+    onTimeUpdate: (event: React.SyntheticEvent<HTMLMediaElement>) =>
+      setCurrentTime(event.currentTarget.currentTime),
+    onPlay: () => setIsPlaying(true),
+    onPause: () => setIsPlaying(false),
+    onEnded: () => setIsPlaying(false),
+    onVolumeChange: (event: React.SyntheticEvent<HTMLMediaElement>) =>
+      setMuted(event.currentTarget.muted),
+  };
+
+  return (
+    <div className="flex h-full w-full min-h-0 flex-col">
+      {audio ? (
+        <div
+          data-testid="audio-waveform"
+          role="slider"
+          tabIndex={duration > 0 ? 0 : -1}
+          aria-label="Audio playback position"
+          aria-valuemin={0}
+          aria-valuemax={duration}
+          aria-valuenow={currentTime}
+          aria-valuetext={`${formatPlaybackTime(currentTime)} of ${formatPlaybackTime(duration)}`}
+          onClick={handleWaveformClick}
+          onKeyDown={handleWaveformKeyDown}
+          className="relative min-h-0 w-full flex-1 cursor-pointer overflow-hidden bg-linear-to-b from-emerald-950/20 to-zinc-950 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-400/70"
+        >
+          <audio
+            ref={(node) => {
+              mediaRef.current = node;
+            }}
+            src={asset.url}
+            preload="metadata"
+            {...mediaEvents}
+          />
+          <ClipWaveform
+            url={asset.url}
+            progress={progress}
+            color="rgba(52, 211, 153, 0.62)"
+            playedColor="rgba(74, 222, 168, 0.74)"
+          />
+        </div>
+      ) : (
+        <div className="flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden bg-black">
+          <video
+            ref={(node) => {
+              mediaRef.current = node;
+            }}
+            src={asset.url}
+            preload="metadata"
+            className="h-full w-full object-contain"
+            {...mediaEvents}
+          />
+        </div>
+      )}
+      <MediaPlayerControls
+        currentTime={currentTime}
+        duration={duration}
+        isPlaying={isPlaying}
+        muted={muted}
+        audio={audio}
+        onPlayPause={handlePlayPause}
+        onSeek={handleSeek}
+        onToggleMuted={handleToggleMuted}
+      />
+    </div>
+  );
+}
+
+function AssetPreview({ asset }: { asset: Asset }) {
+  if (asset.type === "video" || asset.type === "audio") {
+    return <PlayableAssetPreview key={asset.url} asset={asset} />;
   }
   return (
-    <img
-      key={asset.url}
-      src={asset.url}
-      alt={asset.prompt}
-      className="max-h-full max-w-full object-contain"
-    />
+    <div className="flex h-full w-full items-center justify-center p-5">
+      <img
+        key={asset.url}
+        src={asset.url}
+        alt={asset.prompt}
+        className="max-h-full max-w-full object-contain"
+      />
+    </div>
   );
 }
 
@@ -195,7 +444,7 @@ export function GenSpaceSelectedGeneration({
   onNext,
   onCopyPrompt,
   onToggleFavorite,
-  onCreateVideo,
+  onUseImage,
   onReframe,
   onCopySettings,
   onDelete,
@@ -322,7 +571,7 @@ export function GenSpaceSelectedGeneration({
         <GenerationProgress generation={generation} />
       ) : asset ? (
         <>
-          <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-black/40 p-5">
+          <div className="flex min-h-0 flex-1 overflow-hidden bg-black/40">
             <AssetPreview asset={asset} />
           </div>
           <div className="shrink-0 border-t bg-zinc-900 border-zinc-800 px-5 py-4">
@@ -347,10 +596,8 @@ export function GenSpaceSelectedGeneration({
                 }
               />
               {asset.type === "image" ? (
-                <ActionButton
-                  label="Create video"
-                  icon={<Film className="h-4 w-4" />}
-                  onClick={() => onCreateVideo(asset)}
+                <UseImageDropdown
+                  onSelect={(target) => onUseImage(asset, target)}
                 />
               ) : null}
               {asset.type === "video" ? (

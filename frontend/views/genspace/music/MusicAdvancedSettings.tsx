@@ -2,10 +2,8 @@ import type { ModelProfile } from "../../../types/model-profiles";
 import type {
   MusicSettings,
   MusicTimeSignature,
-  MusicVocalGender,
 } from "../../../types/music";
 import { GenPanelSection } from "../components/GenPanelSection";
-import { resolveMusicVocalMode } from "./compile-music-request";
 
 const KEY_OPTIONS = [
   "C major",
@@ -47,57 +45,12 @@ export function MusicAdvancedSettings({
   profile?: ModelProfile;
 }) {
   const policy = profile?.music;
-  const vocalMode = resolveMusicVocalMode(settings);
   const update = (patch: Partial<MusicSettings>) =>
     onChange({ ...settings, ...patch });
 
   return (
     <GenPanelSection title="Advanced Settings" collapsed={true}>
       <div className="space-y-3">
-        <div>
-          <div className="mb-2 text-xs font-medium text-zinc-300">Vocals</div>
-          <div className="grid grid-cols-2 gap-2">
-            <label className="text-2xs text-zinc-500">
-              Language
-              <select
-                disabled={vocalMode === "instrumental"}
-                value={settings.vocalLanguage}
-                onChange={(event) =>
-                  update({ vocalLanguage: event.target.value })
-                }
-                className={`${inputClass} mt-1`}
-              >
-                <option value="auto">Auto Detect</option>
-                {(policy?.supportedLanguages ?? ["en"])
-                  .filter((language) => language !== "unknown")
-                  .map((language) => (
-                    <option key={language} value={language}>
-                      {language.toUpperCase()}
-                    </option>
-                  ))}
-              </select>
-            </label>
-            <label className="text-2xs text-zinc-500">
-              Vocal character
-              <select
-                disabled={vocalMode === "instrumental"}
-                value={settings.vocalGender}
-                onChange={(event) =>
-                  update({
-                    vocalGender: event.target.value as MusicVocalGender,
-                  })
-                }
-                className={`${inputClass} mt-1`}
-              >
-                <option value="auto">Auto</option>
-                <option value="female">Female</option>
-                <option value="male">Male</option>
-                <option value="mixed">Mixed / Duet</option>
-              </select>
-            </label>
-          </div>
-        </div>
-
         <div>
           <div className="mb-2 text-xs font-medium text-zinc-300">
             Music Parameters

@@ -339,12 +339,16 @@ interface ClipWaveformProps {
   url: string;
   className?: string;
   color?: string;
+  playedColor?: string;
+  progress?: number;
 }
 
 export function ClipWaveform({
   url,
   className = "",
   color = "rgba(52, 211, 153, 0.7)",
+  playedColor = "rgba(110, 231, 183, 0.9)",
+  progress,
 }: ClipWaveformProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -371,7 +375,7 @@ export function ClipWaveform({
     const dpr = window.devicePixelRatio || 1;
     const rect = container.getBoundingClientRect();
     const w = rect.width;
-    const h = rect.height;
+    const h = rect.height / 3;
     if (w === 0 || h === 0) return;
 
     canvas.width = w * dpr;
@@ -387,24 +391,37 @@ export function ClipWaveform({
     const centerY = h / 2;
     const maxAmp = h * 0.45;
 
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    for (let i = 0; i < w; i++) {
-      const peakIdx = Math.floor((i / w) * peaks.length);
-      const amp = peaks[Math.min(peakIdx, peaks.length - 1)];
-      const y = centerY - amp * maxAmp;
-      if (i === 0) ctx.moveTo(i, y);
-      else ctx.lineTo(i, y);
+    const drawPeaks = (fillStyle: string) => {
+      ctx.fillStyle = fillStyle;
+      ctx.beginPath();
+      for (let i = 0; i < w; i++) {
+        const peakIdx = Math.floor((i / w) * peaks.length);
+        const amp = peaks[Math.min(peakIdx, peaks.length - 1)];
+        const y = centerY - amp * maxAmp;
+        if (i === 0) ctx.moveTo(i, y);
+        else ctx.lineTo(i, y);
+      }
+      for (let i = w - 1; i >= 0; i--) {
+        const peakIdx = Math.floor((i / w) * peaks.length);
+        const amp = peaks[Math.min(peakIdx, peaks.length - 1)];
+        const y = centerY + amp * maxAmp;
+        ctx.lineTo(i, y);
+      }
+      ctx.closePath();
+      ctx.fill();
+    };
+
+    drawPeaks(color);
+
+    if (progress !== undefined && progress > 0) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, Math.min(1, progress) * w, h);
+      ctx.clip();
+      drawPeaks(playedColor);
+      ctx.restore();
     }
-    for (let i = w - 1; i >= 0; i--) {
-      const peakIdx = Math.floor((i / w) * peaks.length);
-      const amp = peaks[Math.min(peakIdx, peaks.length - 1)];
-      const y = centerY + amp * maxAmp;
-      ctx.lineTo(i, y);
-    }
-    ctx.closePath();
-    ctx.fill();
-  }, [peaks, color]);
+  }, [peaks, color, playedColor, progress]);
 
   useEffect(() => {
     draw();
@@ -418,7 +435,10 @@ export function ClipWaveform({
 
   return (
     <div ref={containerRef} className={`absolute inset-0 ${className}`}>
-      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 w-full h-full m-auto"
+      />
     </div>
   );
 }

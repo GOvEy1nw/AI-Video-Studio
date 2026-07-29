@@ -21,6 +21,7 @@ import {
   AssetLibraryImportButton,
   GalleryAssetLibrary,
 } from "@/components/GalleryAssetLibrary";
+import type { GalleryGridColumns } from "@/components/GalleryViewControls";
 import { DeleteAssetDialog } from "@/components/DeleteAssetDialog";
 import { useAssetDeletion } from "@/hooks/use-asset-deletion";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -107,7 +108,8 @@ export function DirectorSidebar(props: Props) {
   );
   const [takesViewAssetId, setTakesViewAssetId] = useState<string | null>(null);
   const [assetViewMode, setAssetViewMode] = useState<"grid" | "list">("grid");
-  const [assetCardSize, setAssetCardSize] = useState(144);
+  const [assetGridColumns, setAssetGridColumns] =
+    useState<GalleryGridColumns>(3);
   const [showFavorites, setShowFavorites] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [timelineContextMenu, setTimelineContextMenu] = useState<{
@@ -295,10 +297,8 @@ export function DirectorSidebar(props: Props) {
             onBinContextMenuChange={setBinContextMenu}
             viewMode={assetViewMode}
             onViewModeChange={setAssetViewMode}
-            cardSize={assetCardSize}
-            onCardSizeChange={setAssetCardSize}
-            cardSizeMin={96}
-            cardSizeMax={700}
+            gridColumns={assetGridColumns}
+            onGridColumnsChange={setAssetGridColumns}
             showFavorites={showFavorites}
             onShowFavoritesChange={setShowFavorites}
             getThumbnailUrl={(asset) =>

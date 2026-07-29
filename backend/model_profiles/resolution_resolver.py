@@ -83,6 +83,19 @@ _RESOLUTION_TABLE: dict[tuple[str, ResolutionTier, AspectRatio], tuple[int, int]
     ("ltx2_22b_distilled", "1080p", "9:16"): (1088, 1920),
 }
 
+_SHARED_IMAGE_RESOLUTION_PROFILE_IDS = (
+    "flux2_klein_9b",
+    "qwen_image_2512_20B",
+    "qwen_image_edit_plus2_20B",
+    "krea2_turbo_edit",
+    "ideogram4_int8",
+    "ideogram4_turbotime_int8",
+)
+for profile_id in _SHARED_IMAGE_RESOLUTION_PROFILE_IDS:
+    for (source_id, tier, aspect), dimensions in tuple(_RESOLUTION_TABLE.items()):
+        if source_id == "flux2_klein_4b":
+            _RESOLUTION_TABLE[(profile_id, tier, aspect)] = dimensions
+
 
 def resolve_resolution(
     profile: ModelProfile,

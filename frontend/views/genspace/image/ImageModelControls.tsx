@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { AlertCircle, Monitor, Sparkles } from "lucide-react";
 import { ModelDropdownTrigger } from "../../../components/ModelDropdownTrigger";
 import { SettingsDropdown } from "../../../components/SettingsDropdown";
+import { getModelDropdownAvailability } from "../../../lib/model-profile-availability";
 import type { ModelProfile } from "../../../types/model-profiles";
 import type { ModelDownloadProgress } from "../../../types/progress";
 import { AspectIcon } from "../components/AspectIcon";
@@ -68,9 +69,7 @@ export function ImageModelControls({
     value: p.id,
     label:
       p.displayName + (p.status === "experimental" ? " (experimental)" : ""),
-    disabled:
-      p.availability === "missing_model_files" ||
-      p.availability === "unsupported",
+    ...getModelDropdownAvailability(p.availability),
     tooltip:
       p.availability === "missing_model_files"
         ? `${p.displayName} is supported by AiVS, but the required WanGP model files are not installed yet.`

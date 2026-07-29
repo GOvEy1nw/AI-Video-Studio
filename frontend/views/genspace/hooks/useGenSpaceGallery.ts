@@ -6,6 +6,7 @@ import {
   useState,
 } from "react";
 import type { GalleryBinContextMenuState } from "../../../components/GalleryBinBar";
+import type { GalleryGridColumns } from "../../../components/GalleryViewControls";
 import { useProjects } from "../../../contexts/ProjectContext";
 import { useAssetDeletion } from "../../../hooks/use-asset-deletion";
 import {
@@ -22,6 +23,7 @@ import {
   type DuplicateFilenameChoice,
 } from "../../../lib/media-import";
 import type { Asset } from "../../../types/project";
+import type { ImageUseTarget } from "../../../components/UseImageDropdown";
 import type { GenSpaceGalleryProps } from "../GenSpaceGallery";
 
 type Projects = ReturnType<typeof useProjects>;
@@ -39,7 +41,7 @@ export function useGenSpaceGallery({
   deleteAssetBin,
   setAssetBinColor,
   setAssetActiveTake,
-  onCreateVideo,
+  onUseImage,
   onReframe,
   onCopySettings,
   getAssetModelName,
@@ -56,7 +58,7 @@ export function useGenSpaceGallery({
   deleteAssetBin: Projects["deleteAssetBin"];
   setAssetBinColor: Projects["setAssetBinColor"];
   setAssetActiveTake: Projects["setAssetActiveTake"];
-  onCreateVideo: (asset: Asset) => void;
+  onUseImage: (asset: Asset, target: ImageUseTarget) => void;
   onReframe: (asset: Asset) => void;
   onCopySettings: (asset: Asset) => void;
   getAssetModelName: (asset: Asset) => string | undefined;
@@ -75,7 +77,7 @@ export function useGenSpaceGallery({
   const [filter, setFilter] =
     useState<GalleryFilterState>(DEFAULT_GALLERY_FILTER);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [cardSize, setCardSize] = useState(340);
+  const [gridColumns, setGridColumns] = useState<GalleryGridColumns>(3);
   const [isDocumentVisible, setIsDocumentVisible] = useState(
     () => !document.hidden,
   );
@@ -333,10 +335,8 @@ export function useGenSpaceGallery({
       onBinContextMenuChange: setBinContextMenu,
       viewMode,
       onViewModeChange: setViewMode,
-      cardSize,
-      onCardSizeChange: setCardSize,
-      cardSizeMin: 96,
-      cardSizeMax: 700,
+      gridColumns,
+      onGridColumnsChange: setGridColumns,
       showFavorites,
       onShowFavoritesChange: setShowFavorites,
       getThumbnailUrl: ({ thumbnail }) => thumbnail,
@@ -367,7 +367,7 @@ export function useGenSpaceGallery({
       onToggleFavorite: (asset) => {
         if (currentProjectId) toggleFavorite(currentProjectId, asset.id);
       },
-      onCreateVideo,
+      onUseImage,
       onReframe,
       onCopySettings,
       onSelectTake: (asset, takeIndex) => {
@@ -380,7 +380,6 @@ export function useGenSpaceGallery({
       assets,
       binContextMenu,
       bins,
-      cardSize,
       createAssetBin,
       creatingBin,
       currentProject?.assetBinColors,
@@ -389,10 +388,11 @@ export function useGenSpaceGallery({
       deleteAssetBin,
       filter,
       getAssetModelName,
+      gridColumns,
       isDocumentVisible,
       newBinName,
       onCopySettings,
-      onCreateVideo,
+      onUseImage,
       onReframe,
       renameAssetBin,
       requestDeleteAssets,

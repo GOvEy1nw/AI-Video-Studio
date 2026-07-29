@@ -20,7 +20,12 @@ import {
   useVideoProfiles,
 } from "../../../hooks/use-image-profiles";
 import type { Asset } from "../../../types/project";
+import type { ImageUseTarget } from "../../../components/UseImageDropdown";
 import { getAssetModelId } from "../logic/generation-assets";
+import {
+  getDefaultImageInputRole,
+  replaceInputForRole,
+} from "../logic/media-inputs";
 import {
   compileMusicRequest,
 } from "../music/compile-music-request";
@@ -39,7 +44,10 @@ import { useGenSpacePromptEnhancement } from "./useGenSpacePromptEnhancement";
 import { useGenSpaceResultPersistence } from "./useGenSpaceResultPersistence";
 import { useGenSpaceGallery } from "./useGenSpaceGallery";
 import { useGenSpaceMediaInputs } from "./useGenSpaceMediaInputs";
-import type { GenSpaceSidebarController } from "../types";
+import type {
+  FramingSettings,
+  GenSpaceSidebarController,
+} from "../types";
 import { useGenSpaceVideoTools } from "./useGenSpaceVideoTools";
 import { useGenSpaceSettingsRestore } from "./useGenSpaceSettingsRestore";
 import { useGenSpaceExternalHandoffs } from "./useGenSpaceExternalHandoffs";
@@ -88,6 +96,8 @@ export function useGenSpaceController() {
   const {
     mode,
     setMode,
+    imageMode,
+    setImageMode,
     videoMode,
     setVideoMode,
     handleModeChange,
@@ -100,6 +110,10 @@ export function useGenSpaceController() {
     setPrompt,
   });
   const [localError, setLocalError] = useState<string | null>(null);
+  const [promptEnhancementEnabled, setPromptEnhancementEnabled] =
+    useState(true);
+  const [framingSettings, setFramingSettings] =
+    useState<FramingSettings | null>(null);
   const prevProjectIdRef = useRef<string | null>(null);
   const { profiles: imageProfiles } = useImageProfiles();
   const { profiles: videoProfiles } = useVideoProfiles();
@@ -232,11 +246,13 @@ export function useGenSpaceController() {
     if (!appSettingsLoaded) return;
     if (!currentProjectId) {
       prevProjectIdRef.current = null;
+      setFramingSettings(null);
       return;
     }
     if (prevProjectIdRef.current === currentProjectId) return;
 
     prevProjectIdRef.current = currentProjectId;
+    setFramingSettings(null);
     const projectSeed = {
       seedLocked: currentProject?.genSpaceSeedLocked ?? false,
       lockedSeed: clampGenSpaceSeed(
@@ -252,6 +268,17 @@ export function useGenSpaceController() {
     updateSettings,
   ]);
 
+  const { resolvePromptForGeneration, isEnhancingPrompt } =
+    useGenSpacePromptEnhancement({
+      mode,
+      videoMode,
+      settings,
+      imageInputs,
+      inputImage,
+      isBusy: isGenerating || isComposingLyrics || isRetaking,
+      setLocalError,
+    });
+
   const {
     submit: handleGenerate,
     imageSubmissionRef,
@@ -259,8 +286,12 @@ export function useGenSpaceController() {
     musicSubmissionRef,
   } = useGenSpaceGenerationActions({
     mode,
+    imageMode,
     videoMode,
     prompt,
+    framingSettings,
+    promptEnhancementEnabled,
+    resolvePromptForGeneration,
     currentProjectId,
     projectAssets: currentProject?.assets ?? [],
     settings,
@@ -305,25 +336,62 @@ export function useGenSpaceController() {
     musicSubmissionRef,
   });
 
-  const { enhancePrompt: handleEnhancePrompt, isEnhancingPrompt } =
-    useGenSpacePromptEnhancement({
-      mode,
-      videoMode,
-      prompt,
-      setPrompt,
-      settings,
-      imageInputs,
-      inputImage,
-      isBusy: isGenerating || isComposingLyrics || isRetaking,
-      setLocalError,
-    });
+  const handleUseImage = useCallback(
+    (imageAsset: Asset, target: ImageUseTarget) => {
+      const input = {
+        id: crypto.randomUUID(),
+        url: imageAsset.url,
+        type: "image" as const,
+      };
+      setInputImage(null);
 
-  const handleCreateVideo = useCallback((imageAsset: Asset) => {
-    setMode("video");
-    setVideoMode("generate");
-    setInputImage(imageAsset.url);
-    setPrompt(`${imageAsset.prompt || "The scene comes to life..."}`);
-  }, [setMode, setVideoMode, setInputImage, setPrompt]);
+      if (target === "image-guide") {
+        const currentProfile = imageProfiles.find(
+          ({ id }) => id === imageSettings.profileId,
+        );
+        const profile = currentProfile?.inputMedia.supportsImageInputs
+          ? currentProfile
+          : imageProfiles.find(
+              ({ inputMedia }) => inputMedia.supportsImageInputs,
+            );
+        if (profile && profile.id !== imageSettings.profileId) {
+          patchImageSettings({ profileId: profile.id });
+        }
+        setMode("image");
+        setVideoMode("generate");
+        setInputAudio(null);
+        setImageInputs([
+          {
+            ...input,
+            role: getDefaultImageInputRole(profile?.inputMedia),
+          },
+        ]);
+        return;
+      }
+
+      const role =
+        target === "first-frame" ? "start_image" : "end_image";
+      setMode("video");
+      setVideoMode("generate");
+      setImageInputs((current) =>
+        replaceInputForRole(current, { ...input, role }),
+      );
+      if (target === "first-frame") {
+        setPrompt(imageAsset.prompt || "The scene comes to life...");
+      }
+    },
+    [
+      imageProfiles,
+      imageSettings.profileId,
+      patchImageSettings,
+      setImageInputs,
+      setInputAudio,
+      setInputImage,
+      setMode,
+      setPrompt,
+      setVideoMode,
+    ],
+  );
 
   const handleReframe = useCallback((videoAsset: Asset) => {
     setMode("video");
@@ -367,7 +435,7 @@ export function useGenSpaceController() {
     deleteAssetBin,
     setAssetBinColor,
     setAssetActiveTake,
-    onCreateVideo: handleCreateVideo,
+    onUseImage: handleUseImage,
     onReframe: handleReframe,
     onCopySettings: handleCopySettings,
     getAssetModelName,
@@ -417,11 +485,12 @@ export function useGenSpaceController() {
   );
   const promptGenerating = isRetakeMode
     ? isRetaking
-    : isGenerating || isComposingLyrics;
+    : isGenerating || isComposingLyrics || isEnhancingPrompt;
   const promptController = {
     value: prompt,
     setValue: setPrompt,
-    enhance: handleEnhancePrompt,
+    enhance: () => setPromptEnhancementEnabled((current) => !current),
+    enhanceEnabled: promptEnhancementEnabled,
     isEnhancing: isEnhancingPrompt,
     seedLocked,
     lockedSeed,
@@ -454,6 +523,14 @@ export function useGenSpaceController() {
         options: imageProfiles,
         modelDownload,
       },
+      imageTools: {
+        mode: imageMode,
+        setMode: setImageMode,
+      },
+      framing: {
+        value: framingSettings,
+        setValue: setFramingSettings,
+      },
     },
     video: {
       prompt: promptController,
@@ -483,6 +560,10 @@ export function useGenSpaceController() {
         setMode: handleVideoModeChange,
         panel: videoToolPanel,
         reframeDurationSeconds: reframeInput.duration,
+      },
+      framing: {
+        value: framingSettings,
+        setValue: setFramingSettings,
       },
     },
     music: {
@@ -630,7 +711,7 @@ export function useGenSpaceController() {
       onToggleFavorite: (asset: Asset) => {
         if (currentProjectId) toggleFavorite(currentProjectId, asset.id);
       },
-      onCreateVideo: handleCreateVideo,
+      onUseImage: handleUseImage,
       onReframe: handleReframe,
       onCopySettings: handleCopySettings,
       onDelete: (asset: Asset) =>
@@ -658,7 +739,7 @@ export function useGenSpaceController() {
       onToggleFavorite: (asset: Asset) => {
         if (currentProjectId) toggleFavorite(currentProjectId, asset.id);
       },
-      onCreateVideo: handleCreateVideo,
+      onUseImage: handleUseImage,
       onReframe: handleReframe,
       onCopySettings: handleCopySettings,
       setAssetActiveTake,

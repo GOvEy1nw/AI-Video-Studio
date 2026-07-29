@@ -14,7 +14,6 @@ import {
   Clock3,
   ClipboardPaste,
   Expand,
-  Film,
   FolderOpen,
   Heart,
   Image,
@@ -33,8 +32,15 @@ import {
   GalleryBinBar,
   type GalleryBinContextMenuState,
 } from "./GalleryBinBar";
-import { GalleryViewControls } from "./GalleryViewControls";
+import {
+  GalleryViewControls,
+  type GalleryGridColumns,
+} from "./GalleryViewControls";
 import { getColorLabel } from "../views/editor/video-editor-utils";
+import {
+  UseImageDropdown,
+  type ImageUseTarget,
+} from "./UseImageDropdown";
 
 type AssetContextMenuPosition = { assetId: string; x: number; y: number };
 
@@ -60,10 +66,8 @@ export type GalleryAssetLibraryProps = {
   onBinContextMenuChange: (menu: GalleryBinContextMenuState | null) => void;
   viewMode: "grid" | "list";
   onViewModeChange: (mode: "grid" | "list") => void;
-  cardSize: number;
-  onCardSizeChange: (size: number) => void;
-  cardSizeMin?: number;
-  cardSizeMax?: number;
+  gridColumns: GalleryGridColumns;
+  onGridColumnsChange: (columns: GalleryGridColumns) => void;
   showFavorites: boolean;
   onShowFavoritesChange: (show: boolean) => void;
   getThumbnailUrl: (asset: Asset) => string | undefined;
@@ -77,7 +81,7 @@ export type GalleryAssetLibraryProps = {
   onAssetContextMenu: (event: MouseEvent, asset: Asset) => void;
   onDeleteAsset?: (asset: Asset) => void;
   onToggleFavorite?: (asset: Asset) => void;
-  onCreateVideo?: (asset: Asset) => void;
+  onUseImage?: (asset: Asset, target: ImageUseTarget) => void;
   onReframe?: (asset: Asset) => void;
   onCopySettings?: (asset: Asset) => void;
   onSelectTake?: (asset: Asset, takeIndex: number) => void;
@@ -173,7 +177,7 @@ export function GalleryAssetCard({
   onContextMenu,
   onDelete,
   onToggleFavorite,
-  onCreateVideo,
+  onUseImage,
   onReframe,
   onCopySettings,
   onSelectTake,
@@ -190,7 +194,7 @@ export function GalleryAssetCard({
   onContextMenu: (event: MouseEvent, asset: Asset) => void;
   onDelete?: () => void;
   onToggleFavorite?: () => void;
-  onCreateVideo?: (asset: Asset) => void;
+  onUseImage?: (asset: Asset, target: ImageUseTarget) => void;
   onReframe?: (asset: Asset) => void;
   onCopySettings?: (asset: Asset) => void;
   onSelectTake?: (takeIndex: number) => void;
@@ -201,7 +205,7 @@ export function GalleryAssetCard({
   const canCopySettings = !!asset.generationParams && !!onCopySettings;
   const hasActions =
     !!onToggleFavorite ||
-    !!onCreateVideo ||
+    !!onUseImage ||
     !!onReframe ||
     canCopySettings ||
     !!onDelete;
@@ -210,7 +214,7 @@ export function GalleryAssetCard({
     <div
       data-asset-card
       data-asset-id={asset.id}
-      className={`asset-library-card relative cursor-pointer overflow-hidden rounded-xl border-2 bg-zinc-900 transition-all ${
+      className={`asset-library-card relative cursor-pointer overflow-visible rounded-xl border-2 bg-zinc-900 transition-all ${
         selected
           ? "border-blue-500 ring-2 ring-blue-500/40 shadow-lg shadow-blue-500/20"
           : "border-transparent hover:border-zinc-700"
@@ -226,7 +230,7 @@ export function GalleryAssetCard({
       draggable={asset.type !== "adjustment"}
       onDragStart={(event) => onDragStart(event, asset)}
     >
-      <div className="relative aspect-square bg-zinc-900">
+      <div className="relative aspect-square overflow-hidden rounded-[10px] bg-zinc-900">
         {asset.type === "video" ? (
           thumbnailUrl ? (
             <img
@@ -259,7 +263,6 @@ export function GalleryAssetCard({
         ) : asset.type === "audio" ? (
           <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-zinc-950 transition-colors hover:bg-emerald-950/40">
             <ClipWaveform url={asset.url} />
-            <Music className="relative z-10 h-7 w-7 text-emerald-300/80" />
           </div>
         ) : asset.type === "adjustment" ? (
           <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 border border-dashed border-blue-500/30 bg-linear-to-br from-blue-900/40 to-zinc-900">
@@ -383,14 +386,10 @@ export function GalleryAssetCard({
                   void window.electronAPI?.showItemInFolder(asset.path);
                 }}
               />
-              {asset.type === "image" && onCreateVideo && (
-                <AssetCardActionButton
-                  label="Create video"
-                  icon={<Film className="h-4 w-4" />}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onCreateVideo(asset);
-                  }}
+              {asset.type === "image" && onUseImage && (
+                <UseImageDropdown
+                  variant="card"
+                  onSelect={(target) => onUseImage(asset, target)}
                 />
               )}
               {asset.type === "video" && onReframe && (
@@ -514,10 +513,8 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
           <GalleryViewControls
             viewMode={props.viewMode}
             onViewModeChange={props.onViewModeChange}
-            cardSize={props.cardSize}
-            onCardSizeChange={props.onCardSizeChange}
-            min={props.cardSizeMin}
-            max={props.cardSizeMax}
+            gridColumns={props.gridColumns}
+            onGridColumnsChange={props.onGridColumnsChange}
           />
         </div>
         <div className="flex items-center flex-wrap gap-2">
@@ -577,7 +574,7 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
           style={
             props.viewMode === "grid"
               ? {
-                  gridTemplateColumns: `repeat(auto-fill, minmax(min(${props.cardSize}px, 100%), 1fr))`,
+                  gridTemplateColumns: `repeat(${props.gridColumns}, minmax(0, 1fr))`,
                 }
               : undefined
           }
@@ -628,7 +625,7 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
                     ? () => props.onToggleFavorite?.(asset)
                     : undefined
                 }
-                onCreateVideo={props.onCreateVideo}
+                onUseImage={props.onUseImage}
                 onReframe={props.onReframe}
                 onCopySettings={props.onCopySettings}
                 onSelectTake={

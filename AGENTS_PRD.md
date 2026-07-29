@@ -217,8 +217,23 @@ Current curated image profiles:
 
 - Z-Image Turbo;
 - Krea 2 Turbo;
-- Flux 2 Klein 4B;
+- Flux 2 Klein 4B and 9B;
+- Qwen Image;
+- Krea 2 Edit;
+- Qwen Image Edit;
 - HiDream O1.
+- Ideogram 4 Standard and TurboTime.
+
+Image process modes filter these profiles deliberately:
+
+- **Create** — Flux 2 Klein 4B/9B, Krea 2 Turbo, Z-Image Turbo,
+  Qwen Image, and HiDream O1.
+- **Edit** — Flux 2 Klein 4B/9B, Krea 2 Edit, Qwen Image Edit,
+  and HiDream O1.
+- **Region** — Ideogram 4 Standard and TurboTime.
+
+Newly curated profiles remain experimental until their real WanGP generation
+paths complete supported-hardware validation.
 
 Image profiles may expose different curated reference or control-image roles. Unsupported roles must not be shown merely because another model supports them.
 

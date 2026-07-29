@@ -16,6 +16,7 @@ export function SettingsDropdown({
     disabled?: boolean;
     tooltip?: string;
     icon?: ReactNode;
+    status?: "ready" | "missing";
   }[];
   value: string;
   onChange: (value: string) => void;
@@ -96,7 +97,18 @@ export function SettingsDropdown({
                     {option.icon && (
                       <span className="shrink-0">{option.icon}</span>
                     )}
-                    {option.label}
+                    <span>{option.label}</span>
+                    {option.status && (
+                      <span
+                        className={`shrink-0 font-medium ${
+                          option.status === "ready"
+                            ? "text-emerald-400"
+                            : "text-red-400"
+                        }`}
+                      >
+                        {option.status === "ready" ? "Ready" : "Missing"}
+                      </span>
+                    )}
                   </span>
                   {value === option.value && !option.disabled && (
                     <svg

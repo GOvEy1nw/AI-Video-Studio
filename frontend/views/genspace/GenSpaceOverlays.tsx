@@ -13,6 +13,7 @@ import { GenerationErrorDialog } from "../../components/GenerationErrorDialog";
 import { useProjects } from "../../contexts/ProjectContext";
 import type { DuplicateFilenameChoice } from "../../lib/media-import";
 import type { Asset } from "../../types/project";
+import type { ImageUseTarget } from "../../components/UseImageDropdown";
 import { AssetContextMenu } from "../editor/AssetContextMenu";
 
 type Projects = ReturnType<typeof useProjects>;
@@ -35,7 +36,7 @@ export interface GenSpaceOverlaysProps {
   binColors: Record<string, string> | undefined;
   currentProjectId: string | null;
   onToggleFavorite: (asset: Asset) => void;
-  onCreateVideo: (asset: Asset) => void;
+  onUseImage: (asset: Asset, target: ImageUseTarget) => void;
   onReframe: (asset: Asset) => void;
   onCopySettings: (asset: Asset) => void;
   setAssetActiveTake: Projects["setAssetActiveTake"];
@@ -71,7 +72,7 @@ export function GenSpaceOverlays({
   binColors,
   currentProjectId,
   onToggleFavorite,
-  onCreateVideo,
+  onUseImage,
   onReframe,
   onCopySettings,
   setAssetActiveTake,
@@ -184,7 +185,7 @@ export function GenSpaceOverlays({
           regeneratingAssetId={null}
           currentProjectId={currentProjectId}
           onToggleFavorite={onToggleFavorite}
-          onCreateVideo={onCreateVideo}
+          onUseImage={onUseImage}
           onReframe={onReframe}
           onCopySettings={onCopySettings}
           setAssetActiveTake={setAssetActiveTake}

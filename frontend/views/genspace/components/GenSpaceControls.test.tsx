@@ -1,10 +1,19 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GenerateButton } from "./GenerateButton";
 import { ImageMediaInputs } from "../image/ImageMediaInputs";
 import { MusicMediaInputs } from "../music/MusicMediaInputs";
+import { VideoMediaInputs } from "../video/VideoMediaInputs";
+import { PromptActions } from "./PromptActions";
 import { PromptEditor } from "./PromptEditor";
+import type { ModelProfile } from "../../../types/model-profiles";
 
 afterEach(cleanup);
 
@@ -27,6 +36,54 @@ describe("GenSpace shared controls", () => {
     expect(submit).not.toHaveBeenCalled();
     await userEvent.keyboard("{Enter}");
     expect(submit).toHaveBeenCalledOnce();
+  });
+
+  it("places prompt actions and trailing controls on opposite footer sides", () => {
+    render(
+      <PromptEditor
+        value="prompt"
+        onChange={vi.fn()}
+        onSubmit={vi.fn()}
+        canSubmit
+        disabled={false}
+        placeholder="Prompt"
+        actions={<button type="button">Seed</button>}
+        bottomRight={<button type="button">Camera settings</button>}
+      />,
+    );
+
+    const footer = screen.getByTestId("prompt-editor-footer");
+    expect(
+      within(
+        within(footer).getByTestId("prompt-editor-footer-left"),
+      ).getByRole("button", { name: "Seed" }),
+    ).toBeTruthy();
+    expect(
+      within(
+        within(footer).getByTestId("prompt-editor-footer-right"),
+      ).getByRole("button", { name: "Camera settings" }),
+    ).toBeTruthy();
+  });
+
+  it("opens prompt Seed settings inward from the left footer", async () => {
+    render(
+      <PromptActions
+        seedLocked={false}
+        lockedSeed={42}
+        onSeedChange={vi.fn()}
+        disabled={false}
+        prompt=""
+        showEnhance={false}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: /seed/i }));
+    expect(
+      screen
+        .getByText("Lock seed")
+        .closest(".space-y-3")
+        ?.parentElement?.classList.contains("left-0"),
+    ).toBe(true);
   });
 
   it("keeps Generate disabled when submission is invalid", async () => {
@@ -141,6 +198,107 @@ describe("GenSpace shared controls", () => {
       mediaDuration: 9,
       role: "reference-timbre",
     });
+  });
+
+  it("shows the usage chip on occupied media and opens its role menu", async () => {
+    render(
+      <ImageMediaInputs
+        inputs={[
+          {
+            id: "reference",
+            type: "image",
+            url: "file:///C:/reference.png",
+            role: "reference_subject",
+          },
+        ]}
+        onChange={vi.fn()}
+        policy={{
+          supportsImageInputs: true,
+          tooltipLabel: "Reference image",
+          maxImages: 2,
+          defaultRole: "reference_subject",
+          roles: [
+            {
+              role: "reference_subject",
+              label: "Subject",
+              description: "Reference subject",
+              kind: "reference",
+            },
+          ],
+        }}
+        resolveInputFileUrl={vi.fn(async () => null)}
+      />,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Change Subject usage" }),
+    );
+    expect(screen.getByText("Image input")).toBeTruthy();
+    expect(screen.getAllByText("Subject")).toHaveLength(2);
+  });
+
+  it("shows First Frame, Last Frame, and Ref inputs immediately", () => {
+    const onChange = vi.fn();
+    const profile = {
+      inputMedia: {
+        supportsImageInputs: true,
+        tooltipLabel: "Media inputs",
+        maxImages: 4,
+        defaultRole: "start_image",
+        roles: [
+          {
+            role: "start_image",
+            label: "Start Image",
+            description: "Start frame",
+            kind: "reference",
+          },
+          {
+            role: "end_image",
+            label: "End Image",
+            description: "End frame",
+            kind: "reference",
+          },
+        ],
+      },
+    } as ModelProfile;
+
+    render(
+      <VideoMediaInputs
+        inputs={[]}
+        onChange={onChange}
+        profile={profile}
+        useAudioTrack
+        onUseAudioTrackChange={vi.fn()}
+        resolveInputFileUrl={vi.fn(async () => null)}
+      />,
+    );
+
+    expect(screen.getByTitle("Image 1 (Start)")).toBeTruthy();
+    expect(screen.getByTitle("Image 2 (End)")).toBeTruthy();
+    expect(
+      screen.getByTitle("Click or drop video/audio from gallery"),
+    ).toBeTruthy();
+
+    fireEvent.drop(screen.getByTitle("Image 2 (End)").parentElement!, {
+      dataTransfer: {
+        getData: () =>
+          JSON.stringify({
+            type: "image",
+            url: "file:///C:/last-frame.png",
+          }),
+        files: [],
+      },
+    });
+    const lastCall = onChange.mock.calls[onChange.mock.calls.length - 1];
+    const update = lastCall?.[0] as (
+      current: never[],
+    ) => Array<{ role: string; url: string }>;
+    expect(update([])).toEqual([
+      expect.objectContaining({
+        role: "end_image",
+        url: "file:///C:/last-frame.png",
+      }),
+    ]);
   });
 
   it("opens media menus below the header and removes from the slot control", async () => {

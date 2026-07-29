@@ -37,6 +37,7 @@ function FilterChipGroup<T extends string>({
             key={option.value}
             type="button"
             onClick={() => onToggle(option.value)}
+            aria-pressed={isActive}
             className={`flex h-8 shrink-0 items-center gap-1 rounded-md border px-2.5 text-xs font-medium transition-colors ${filterChipClass(isActive)}`}
           >
             {option.label}
@@ -49,9 +50,6 @@ function FilterChipGroup<T extends string>({
 
 export function GalleryFilters({ filter, onChange }: GalleryFiltersProps) {
   const toggleType = (value: GalleryMediaType) => {
-    if (filter.types.includes(value) && filter.types.length === 1) {
-      return;
-    }
     onChange({
       ...filter,
       types: toggleGalleryFilterValue(filter.types, value),
@@ -59,9 +57,6 @@ export function GalleryFilters({ filter, onChange }: GalleryFiltersProps) {
   };
 
   const toggleSource = (value: GalleryAssetSource) => {
-    if (filter.sources.includes(value) && filter.sources.length === 1) {
-      return;
-    }
     onChange({
       ...filter,
       sources: toggleGalleryFilterValue(filter.sources, value),

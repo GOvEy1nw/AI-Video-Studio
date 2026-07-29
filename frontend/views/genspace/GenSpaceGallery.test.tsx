@@ -19,7 +19,7 @@ vi.mock("../../components/GalleryAssetLibrary", () => ({
 const noop = () => undefined;
 
 describe("GenSpace gallery dropzone", () => {
-  it("owns OS drops inside the narrow library and selects the active job", () => {
+  it("owns OS drops inside the library and selects the active job", () => {
     const onDragEnter = vi.fn();
     const onDrop = vi.fn();
     const onSelectGeneration = vi.fn();
@@ -50,8 +50,8 @@ describe("GenSpace gallery dropzone", () => {
             onBinContextMenuChange: noop,
             viewMode: "grid",
             onViewModeChange: noop,
-            cardSize: 340,
-            onCardSizeChange: noop,
+            gridColumns: 3,
+            onGridColumnsChange: noop,
             showFavorites: false,
             onShowFavoritesChange: noop,
             getThumbnailUrl: () => undefined,
@@ -87,8 +87,6 @@ describe("GenSpace gallery dropzone", () => {
     const workspace = screen.getByTestId("workspace");
     const dropzone = screen.getByTestId("genspace-gallery-dropzone");
 
-    expect(dropzone.className).toContain("right-0");
-    expect(dropzone.className).toContain("w-[360px]");
     fireEvent.dragEnter(workspace);
     expect(onDragEnter).not.toHaveBeenCalled();
     fireEvent.dragEnter(dropzone);

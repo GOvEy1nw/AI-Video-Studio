@@ -7,6 +7,7 @@ import {
 import type {
   GenSpaceMediaInput,
   GenSpaceMode,
+  ImageProcessMode,
   VideoProcessMode,
 } from "../types";
 import {
@@ -28,6 +29,8 @@ export function useGenSpaceModeState({
   setPrompt: Dispatch<SetStateAction<string>>;
 }) {
   const [mode, setMode] = useState<GenSpaceMode>("image");
+  const [imageMode, setImageMode] =
+    useState<ImageProcessMode>("create");
   const [videoMode, setVideoMode] =
     useState<VideoProcessMode>("generate");
 
@@ -66,6 +69,8 @@ export function useGenSpaceModeState({
   return {
     mode,
     setMode,
+    imageMode,
+    setImageMode,
     videoMode,
     setVideoMode,
     handleModeChange,

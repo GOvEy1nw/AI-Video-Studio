@@ -41,7 +41,7 @@ and shallow rather than adding one-file `views/components/lib` subfolders.
 
 | Area | Owner |
 | --- | --- |
-| Main/video mode transitions | `hooks/useGenSpaceModeState.ts` |
+| Main/image/video mode transitions | `hooks/useGenSpaceModeState.ts` |
 | Typed image/video/music settings | `hooks/useGenSpaceSettingsState.ts` |
 | Prompt and attached media | `hooks/useGenSpaceMediaInputs.ts` |
 | Reframe/Retake panel state | `hooks/useGenSpaceVideoTools.tsx` |
@@ -62,6 +62,23 @@ Panels receive mode-specific controller contracts. They do not import project
 context, call backend endpoints, persist assets, or instantiate
 `useGeneration`.
 
+## Image contract
+
+- Image mode exposes Create, Edit, and Region as distinct process modes.
+  Edit and Region intentionally reuse the Create controls until their
+  dedicated workflows are implemented.
+- Model choices are process-specific. Create exposes Flux 2 Klein 4B/9B,
+  Krea 2 Turbo, Z-Image Turbo, Qwen Image, and HiDream O1. Edit exposes
+  Flux 2 Klein 4B/9B, Krea 2 Edit, Qwen Image Edit, and HiDream O1.
+  Region exposes only Ideogram 4 Standard and TurboTime.
+- Framing is available only in Image Create and Video Generate. Applied
+  camera, lens, focal length, aperture, shutter, and ISO stay outside the
+  authored prompt, appear as a compact prompt-area indicator, and compile into
+  the immutable submission prompt as `Shot on ...` at generation time.
+- Framing applies after optional prompt enhancement so the camera prefix keeps
+  its exact user-selected values. Generated asset prompt metadata stores the
+  final effective prompt sent for generation.
+
 ## Music contract
 
 - Music has one full settings mode. `experienceMode: "advanced"` remains only
@@ -70,10 +87,10 @@ context, call backend endpoints, persist assets, or instantiate
   The backend maps none/Cover/Timbre/both to WanGP audio tasks `""`, `A`, `B`,
   and `AB`.
 - Instrumental, Auto Lyrics, and Custom Lyrics share one three-way tab.
-  One lyrics prompt stays visible but is disabled outside Custom Lyrics.
-  Seed, Compose Lyrics, and the Think switch sit inside its lower-right action
-  row. Compose treats the current text as an idea and replaces it with the
-  composed lyrics.
+  Custom Lyrics shows the lyrics editor, seed, Compose Lyrics, Think, and vocal
+  controls. Auto Lyrics hides the editor but keeps vocal controls.
+  Instrumental hides both the editor and vocal controls. Compose treats the
+  current text as an idea and replaces it with the composed lyrics.
 - Auto Lyrics composes hidden lyrics from the song description during
   generation. Empty Custom Lyrics does the same with its optional idea,
   Think, and lyrics seed; vocal covers still require original custom lyrics.
