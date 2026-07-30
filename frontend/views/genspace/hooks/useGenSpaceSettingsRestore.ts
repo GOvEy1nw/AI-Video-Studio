@@ -9,13 +9,22 @@ import {
 import type { ModelProfile } from "../../../types/model-profiles";
 import type { MusicSettings } from "../../../types/music";
 import type { Asset } from "../../../types/project";
+import type {
+  ImageEditMaskRecipe,
+  ImageEditOutpaintRecipe,
+} from "../../../types/image-edit";
 import type { GenSpaceSettings } from "../constants";
 import { buildGenSpaceRestorePlan } from "../logic/settings-restore";
 import type {
   GenSpaceMediaInput,
   GenSpaceMode,
+  ImageProcessMode,
   VideoProcessMode,
 } from "../types";
+import {
+  parseRegionPrompt,
+  type RegionPromptState,
+} from "../image/region-prompt";
 
 export function useGenSpaceSettingsRestore({
   assets,
@@ -24,11 +33,16 @@ export function useGenSpaceSettingsRestore({
   imageProfiles,
   videoProfiles,
   setMode,
+  setImageMode,
   setVideoMode,
   setPrompt,
+  setRegionPrompt,
   setSettings,
   setMusicSettings,
   setInputs,
+  setEditImage,
+  setEditMask,
+  setEditOutpaint,
   setInputImage,
   setInputAudio,
   setReframeSource,
@@ -40,11 +54,16 @@ export function useGenSpaceSettingsRestore({
   imageProfiles: ModelProfile[];
   videoProfiles: ModelProfile[];
   setMode: (mode: GenSpaceMode) => void;
+  setImageMode: (mode: ImageProcessMode) => void;
   setVideoMode: (mode: VideoProcessMode) => void;
   setPrompt: (prompt: string) => void;
+  setRegionPrompt: (value: RegionPromptState) => void;
   setSettings: Dispatch<SetStateAction<GenSpaceSettings>>;
   setMusicSettings: Dispatch<SetStateAction<MusicSettings>>;
   setInputs: Dispatch<SetStateAction<GenSpaceMediaInput[]>>;
+  setEditImage: (image: GenSpaceMediaInput | null) => void;
+  setEditMask: (mask: ImageEditMaskRecipe | null) => void;
+  setEditOutpaint: (outpaint: ImageEditOutpaintRecipe | null) => void;
   setInputImage: (url: string | null) => void;
   setInputAudio: (url: string | null) => void;
   setReframeSource: (source: {
@@ -58,6 +77,7 @@ export function useGenSpaceSettingsRestore({
 }) {
   const pendingMedia = useRef<{
     imageInputs: GenSpaceMediaInput[];
+    editImage: GenSpaceMediaInput | null;
     inputImage: string | null;
     inputAudio: string | null;
     mode: GenSpaceMode;
@@ -76,11 +96,23 @@ export function useGenSpaceSettingsRestore({
       clearError();
       pendingMedia.current = { ...plan.media, mode: plan.mode };
       setInputs([]);
+      setEditImage(null);
       setInputImage(null);
       setInputAudio(null);
       setMode(plan.mode);
+      if (plan.mode === "image") {
+        setImageMode(plan.imageMode);
+        if (plan.imageMode === "region") {
+          setRegionPrompt(parseRegionPrompt(plan.prompt));
+        } else {
+          setPrompt(plan.prompt);
+        }
+      } else {
+        setPrompt(plan.prompt);
+      }
       setVideoMode(plan.videoMode);
-      setPrompt(plan.prompt);
+      setEditMask(plan.editMask);
+      setEditOutpaint(plan.editOutpaint);
       setSettings(plan.settings);
       if (plan.musicSettings) setMusicSettings(plan.musicSettings);
       if (plan.reframe) setReframeSource(plan.reframe);
@@ -93,9 +125,14 @@ export function useGenSpaceSettingsRestore({
       setInputAudio,
       setInputImage,
       setInputs,
+      setEditImage,
+      setEditMask,
+      setEditOutpaint,
+      setImageMode,
       setMode,
       setMusicSettings,
       setPrompt,
+      setRegionPrompt,
       setReframeSource,
       setSettings,
       setVideoMode,
@@ -108,6 +145,7 @@ export function useGenSpaceSettingsRestore({
     if (!pending) return;
     const hasMedia =
       pending.imageInputs.length > 0 ||
+      pending.editImage ||
       pending.inputImage ||
       pending.inputAudio;
     if (!hasMedia) {
@@ -118,6 +156,7 @@ export function useGenSpaceSettingsRestore({
     if (pending.mode === "video" && videoProfiles.length === 0) return;
     pendingMedia.current = null;
     setInputs(pending.imageInputs);
+    setEditImage(pending.editImage);
     setInputImage(pending.inputImage);
     setInputAudio(pending.inputAudio);
   }, [
@@ -125,6 +164,7 @@ export function useGenSpaceSettingsRestore({
     setInputAudio,
     setInputImage,
     setInputs,
+    setEditImage,
     version,
     videoProfiles.length,
   ]);

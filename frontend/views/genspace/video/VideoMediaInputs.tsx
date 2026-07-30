@@ -21,9 +21,9 @@ import {
   replaceInputForRole,
 } from "../logic/media-inputs";
 import type { GenSpaceMediaInput, GenSpaceMediaKind } from "../types";
+import { CroppableMediaInputSlot } from "../components/CroppableMediaInputSlot";
 import { GenPanelSection } from "../components/GenPanelSection";
 import { GuideMediaTrimEditor } from "./GuideMediaTrimEditor";
-import { MediaInputSlot } from "../components/MediaInputSlot";
 import { MediaRoleMenu } from "../components/MediaRoleMenu";
 
 function readGalleryAsset(
@@ -159,7 +159,7 @@ export function VideoMediaInputs({
         ({ role }) => role === "start_image" || role === "end_image",
       ) ?? [];
     return (
-      <MediaInputSlot
+      <CroppableMediaInputSlot
         key={role}
         item={item}
         kind="image"
@@ -187,6 +187,16 @@ export function VideoMediaInputs({
           setActiveId((current) => (current === role ? null : role))
         }
         onDrop={dropFor(role, "image")}
+        onCropChange={(crop) => {
+          if (!item) return;
+          onChange((current) =>
+            current.map((input) =>
+              input.id === item.id
+                ? { ...input, crop: crop ?? undefined }
+                : input,
+            ),
+          );
+        }}
         menu={
           item ? (
             <MediaRoleMenu
@@ -259,7 +269,7 @@ export function VideoMediaInputs({
           onDragEnter={() => setGuideDragActive(true)}
           onDragLeave={() => setGuideDragActive(false)}
         >
-          <MediaInputSlot
+          <CroppableMediaInputSlot
             item={guide}
             kind={guideKind}
             label="Ref"
@@ -281,6 +291,16 @@ export function VideoMediaInputs({
               )
             }
             onDrop={dropFor("guide")}
+            onCropChange={(crop) => {
+              if (!guide) return;
+              onChange((current) =>
+                current.map((input) =>
+                  input.id === guide.id
+                    ? { ...input, crop: crop ?? undefined }
+                    : input,
+                ),
+              );
+            }}
             menu={
               guide ? (
                 <MediaRoleMenu

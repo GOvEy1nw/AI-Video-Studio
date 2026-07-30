@@ -29,7 +29,19 @@ describe("generation transport request builders", () => {
       prompt: "prompt",
       imagePath: null,
       settings,
-      inputMedia: [{ path: "clip.mp4", role: "control_video" }],
+      inputMedia: [
+        {
+          path: "clip.mp4",
+          role: "control_video",
+          crop: {
+            aspectRatio: "16:9",
+            x: 0,
+            y: 0.2,
+            width: 1,
+            height: 0.6,
+          },
+        },
+      ],
     });
 
     expect(request.body.duration).toBe("5");
@@ -40,18 +52,90 @@ describe("generation transport request builders", () => {
         role: "control_video",
         trimStartTime: undefined,
         trimDuration: undefined,
+        crop: {
+          aspectRatio: "16:9",
+          x: 0,
+          y: 0.2,
+          width: 1,
+          height: 0.6,
+        },
       },
     ]);
   });
 
   it("preserves curated image profile payloads", () => {
-    expect(buildImageRequestBody("prompt", settings)).toMatchObject({
+    expect(
+      buildImageRequestBody("prompt", settings, [
+        {
+          path: "image.png",
+          role: "reference_subject",
+          crop: {
+            aspectRatio: "freeform",
+            x: 0.1,
+            y: 0.2,
+            width: 0.7,
+            height: 0.6,
+          },
+        },
+      ]),
+    ).toMatchObject({
       prompt: "prompt",
       modelProfileId: "image",
       aspectRatio: "16:9",
       resolutionTier: "1080p",
       numSteps: 8,
       numImages: 2,
+      inputMedia: [
+        {
+          path: "image.png",
+          role: "reference_subject",
+          crop: {
+            aspectRatio: "freeform",
+            x: 0.1,
+            y: 0.2,
+            width: 0.7,
+            height: 0.6,
+          },
+        },
+      ],
+    });
+  });
+
+  it("preserves native image Edit recipes without selecting LanPaint", () => {
+    expect(
+      buildImageRequestBody("replace the window", settings, [], {
+        image: { path: "master.png" },
+        mask: {
+          schemaVersion: 1,
+          operations: [
+            {
+              kind: "rectangle",
+              x: 0.2,
+              y: 0.25,
+              width: 0.4,
+              height: 0.3,
+            },
+          ],
+        },
+        outpaint: {
+          aspectMode: "16:9",
+          padding: { top: 0, bottom: 0, left: 25, right: 25 },
+        },
+      }),
+    ).toMatchObject({
+      prompt: "replace the window",
+      modelProfileId: "image",
+      edit: {
+        image: { path: "master.png" },
+        mask: {
+          schemaVersion: 1,
+          operations: [{ kind: "rectangle" }],
+        },
+        outpaint: {
+          aspectMode: "16:9",
+          padding: { top: 0, bottom: 0, left: 25, right: 25 },
+        },
+      },
     });
   });
 

@@ -49,6 +49,7 @@ function storedInput(
     trimStartTime: input.trimStartTime,
     trimDuration: input.trimDuration,
     mediaDuration: input.mediaDuration,
+    crop: input.crop ? { ...input.crop } : undefined,
   };
 }
 
@@ -88,6 +89,26 @@ export function buildGeneratedImageAsset({
         snapshot.settings.imageAspectRatio || snapshot.settings.aspectRatio,
       imageSteps: snapshot.settings.imageSteps,
       imageProfileId: snapshot.settings.imageProfileId,
+      imageProcessMode: snapshot.imageMode ?? "create",
+      imageEditMask: snapshot.editMask
+        ? {
+            schemaVersion: 1,
+            operations: snapshot.editMask.operations.map((operation) =>
+              operation.kind === "brush"
+                ? {
+                    ...operation,
+                    points: operation.points.map((point) => ({ ...point })),
+                  }
+                : { ...operation },
+            ),
+          }
+        : undefined,
+      imageEditOutpaint: snapshot.editOutpaint
+        ? {
+            ...snapshot.editOutpaint,
+            padding: { ...snapshot.editOutpaint.padding },
+          }
+        : undefined,
       inputImageUrl: firstInput?.url,
       inputImagePath: resolvePath(firstInput?.url, snapshot.assetPaths),
       imageInputRole: firstInput?.role,

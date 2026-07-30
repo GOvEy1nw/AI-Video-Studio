@@ -1,6 +1,11 @@
 // Project and Asset types for AiVS
 
 import type { DirectorGenerationMetadata, DirectorSequenceV1 } from './director'
+import type { MediaCropRecipe } from './media-crop'
+import type {
+  ImageEditMaskRecipe,
+  ImageEditOutpaintRecipe,
+} from './image-edit'
 import type {
   MusicAudioRole,
   MusicDurationMode,
@@ -96,6 +101,9 @@ export interface GenerationParams {
   imageSteps?: number
   videoProfileId?: string  // Curated AiVS video model profile id
   imageProfileId?: string  // Phase 4 curated AiVS model profile id
+  imageProcessMode?: 'create' | 'edit' | 'region'
+  imageEditMask?: ImageEditMaskRecipe
+  imageEditOutpaint?: ImageEditOutpaintRecipe
   inputImageUrl?: string // For I2V: the input image used
   inputImagePath?: string
   imageInputRole?: string
@@ -107,6 +115,7 @@ export interface GenerationParams {
     trimStartTime?: number
     trimDuration?: number
     mediaDuration?: number
+    crop?: MediaCropRecipe
   }[]
   inputAudioUrl?: string // For A2V: the input audio used
   inputAudioPath?: string

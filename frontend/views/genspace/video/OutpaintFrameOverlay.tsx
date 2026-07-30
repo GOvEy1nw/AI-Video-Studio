@@ -15,6 +15,7 @@ interface OutpaintFrameOverlayProps {
   aspectMode: ReframeAspectMode;
   padding: ReframePadding;
   onPaddingChange: (padding: ReframePadding) => void;
+  mediaLabel?: "video" | "image";
 }
 
 /** Invisible grab strip thickness (px). */
@@ -215,6 +216,7 @@ export function OutpaintFrameOverlay({
   aspectMode,
   padding,
   onPaddingChange,
+  mediaLabel = "video",
 }: OutpaintFrameOverlayProps) {
   const dragRef = useRef<DragState | null>(null);
   const [activeEdge, setActiveEdge] = useState<DragEdge | null>(null);
@@ -373,7 +375,7 @@ export function OutpaintFrameOverlay({
             pointerEvents: "auto",
           }}
           onMouseDown={handleMouseDownMove}
-          title="Drag to pan video"
+          title={`Drag to pan ${mediaLabel}`}
         />
       )}
 

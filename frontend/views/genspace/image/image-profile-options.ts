@@ -29,3 +29,16 @@ export function getImageProfilesForMode<T extends { id: string }>(
     return profile ? [profile] : [];
   });
 }
+
+export function getImageModeForProfileId(
+  profileId: string,
+): ImageProcessMode {
+  if (PROFILE_IDS_BY_MODE.region.includes(profileId)) return "region";
+  if (
+    profileId === "krea2_turbo_edit" ||
+    profileId === "qwen_image_edit_plus2_20B"
+  ) {
+    return "edit";
+  }
+  return "create";
+}

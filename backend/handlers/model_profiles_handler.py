@@ -102,6 +102,8 @@ class ModelProfilesHandler(StateHandlerBase):
                 referenceImages=profile.reference_images,
                 controlImage=profile.control_image,
                 inpainting=profile.inpainting,
+                outpainting=profile.outpainting,
+                maskedEditReferences=profile.masked_edit_references,
                 lora=profile.lora,
             ),
             ui=ModelProfileUi(

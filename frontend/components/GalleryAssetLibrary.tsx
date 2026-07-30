@@ -37,10 +37,7 @@ import {
   type GalleryGridColumns,
 } from "./GalleryViewControls";
 import { getColorLabel } from "../views/editor/video-editor-utils";
-import {
-  UseImageDropdown,
-  type ImageUseTarget,
-} from "./UseImageDropdown";
+import { UseImageDropdown, type ImageUseTarget } from "./UseImageDropdown";
 
 type AssetContextMenuPosition = { assetId: string; x: number; y: number };
 
@@ -297,8 +294,10 @@ export function GalleryAssetCard({
               <Image className="h-4 w-4" />
             )}
           </div>
+        </div>
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1">
           {(modelName || asset.generationTimeSeconds !== undefined) && (
-            <div className="flex min-w-0 w-full items-center gap-1 rounded-full bg-black/80 px-2 py-1 text-[10px] font-medium text-white shadow-xs backdrop-blur-sm">
+            <div className="flex min-w-0 w-full items-center gap-1 rounded-full bg-black/80 px-2 py-1 text-2xs font-medium text-white shadow-xs backdrop-blur-sm">
               {modelName ? (
                 <span className="truncate" title={modelName}>
                   {modelName}

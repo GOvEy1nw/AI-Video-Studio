@@ -1,4 +1,5 @@
 import type { Asset, GenerationParams } from '../types/project'
+import type { MediaCropRecipe } from '../types/media-crop'
 import type { MusicSettings, MusicTimeSignature, MusicVocalMode } from '../types/music'
 import {
   AUDIO_MEDIA_ROLE_SET,
@@ -93,6 +94,7 @@ export function toStoredInputMediaEntry(
     trimStartTime?: number
     trimDuration?: number
     mediaDuration?: number
+    crop?: MediaCropRecipe
   },
   projectAssets: Asset[],
 ): NonNullable<GenerationParams['imageInputMedia']>[number] {
@@ -106,6 +108,7 @@ export function toStoredInputMediaEntry(
   if (item.trimStartTime !== undefined) entry.trimStartTime = item.trimStartTime
   if (item.trimDuration !== undefined) entry.trimDuration = item.trimDuration
   if (item.mediaDuration !== undefined) entry.mediaDuration = item.mediaDuration
+  if (item.crop) entry.crop = { ...item.crop }
   return entry
 }
 
@@ -192,6 +195,7 @@ export function buildImageInputsFromParams(
         trimStartTime: item.trimStartTime,
         trimDuration: item.trimDuration,
         mediaDuration: item.mediaDuration,
+        crop: item.crop ? { ...item.crop } : undefined,
       })
     }
   }

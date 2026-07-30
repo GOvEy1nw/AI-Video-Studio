@@ -123,10 +123,12 @@ export function FramingControl({
   value,
   onChange,
   disabled = false,
+  buttonLabel,
 }: {
   value: FramingSettings | null;
   onChange: (value: FramingSettings | null) => void;
   disabled?: boolean;
+  buttonLabel?: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [draft, setDraft] = useState<FramingSettings>({
@@ -240,13 +242,18 @@ export function FramingControl({
         aria-expanded={isOpen}
         aria-controls="framing-settings-popover"
         title="Camera settings"
-        className={`rounded-md px-1 py-1 transition-colors disabled:opacity-40 ${
+        className={`inline-flex items-center gap-1.5 rounded-md transition-colors disabled:opacity-40 ${
+          buttonLabel ? "px-2 py-1.5" : "px-1 py-1"
+        } ${
           value
             ? "bg-violet-500/15 text-violet-300 hover:bg-violet-500/25"
             : "bg-zinc-900/90 text-zinc-400 hover:text-white"
         }`}
       >
         <Camera className="h-3.5 w-3.5" />
+        {buttonLabel ? (
+          <span className="text-[10px] font-medium">{buttonLabel}</span>
+        ) : null}
       </button>
 
       {isOpen

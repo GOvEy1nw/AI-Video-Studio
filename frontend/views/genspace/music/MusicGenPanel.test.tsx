@@ -6,6 +6,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_MUSIC_SETTINGS } from "../../../types/music";
 import type { MusicGenPanelController } from "../types";
@@ -13,65 +14,91 @@ import { MusicGenPanel } from "./MusicGenPanel";
 
 afterEach(cleanup);
 
+function MusicPanelHarness() {
+  const [value, setValue] = useState("");
+  const controller = {
+    prompt: {
+      value,
+      setValue,
+      enhance: vi.fn(),
+      enhanceEnabled: false,
+      isEnhancing: false,
+      seedLocked: false,
+      lockedSeed: 42,
+      setSeed: vi.fn(),
+    },
+    generation: {
+      submit: vi.fn(),
+      canSubmit: true,
+      isRunning: false,
+      label: "Generate",
+      icon: null,
+    },
+    media: {
+      resolveInputFileUrl: vi.fn(async () => null),
+      syncInputFileToGallery: vi.fn(async () => null),
+    },
+    profiles: { options: [], modelDownload: null },
+    music: {
+      settings: DEFAULT_MUSIC_SETTINGS,
+      setSettings: vi.fn(),
+      composeLyrics: vi.fn(async () => null),
+      isComposingLyrics: false,
+    },
+  } satisfies MusicGenPanelController;
+
+  return (
+    <>
+      <MusicGenPanel controller={controller} />
+      <output data-testid="music-prompt-value">{value}</output>
+    </>
+  );
+}
+
 describe("MusicGenPanel", () => {
-  it("switches keyword types and keeps one horizontally scrolling row", async () => {
-    const controller = {
-      prompt: {
-        value: "",
-        setValue: vi.fn(),
-        enhance: vi.fn(),
-        enhanceEnabled: false,
-        isEnhancing: false,
-        seedLocked: false,
-        lockedSeed: 42,
-        setSeed: vi.fn(),
-      },
-      generation: {
-        submit: vi.fn(),
-        canSubmit: true,
-        isRunning: false,
-        label: "Generate",
-        icon: null,
-      },
-      media: {
-        resolveInputFileUrl: vi.fn(async () => null),
-        syncInputFileToGallery: vi.fn(async () => null),
-      },
-      profiles: { options: [], modelDownload: null },
-      music: {
-        settings: DEFAULT_MUSIC_SETTINGS,
-        setSettings: vi.fn(),
-        composeLyrics: vi.fn(async () => null),
-        isComposingLyrics: false,
-      },
-    } satisfies MusicGenPanelController;
+  it("adds multiple popup presets as editable comma-separated prompt text", async () => {
+    render(<MusicPanelHarness />);
 
-    render(<MusicGenPanel controller={controller} />);
-
-    expect(
-      within(screen.getByLabelText("Genre keywords")).getAllByRole("button"),
-    ).toHaveLength(15);
-    const genreKeywords = screen.getByLabelText("Genre keywords");
-    Object.defineProperties(genreKeywords, {
-      clientWidth: { configurable: true, value: 200 },
-      scrollWidth: { configurable: true, value: 500 },
-      scrollLeft: { configurable: true, value: 0, writable: true },
+    expect(screen.queryByRole("tablist", { name: "Keyword type" })).toBeNull();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Add music prompt presets" }),
+    );
+    const popup = screen.getByRole("dialog", {
+      name: "music prompt presets",
     });
-    fireEvent.scroll(genreKeywords);
-    expect(screen.queryByTestId("keyword-fade-left")).toBeNull();
-    expect(screen.getByTestId("keyword-fade-right")).toBeTruthy();
+    expect(within(popup).getByText("Genre")).toBeTruthy();
+    expect(within(popup).getByText("Mood")).toBeTruthy();
+    expect(within(popup).getByText("Vibe")).toBeTruthy();
+    expect(within(popup).getByText("Instruments")).toBeTruthy();
 
-    genreKeywords.scrollLeft = 300;
-    fireEvent.scroll(genreKeywords);
-    expect(screen.getByTestId("keyword-fade-left")).toBeTruthy();
-    expect(screen.queryByTestId("keyword-fade-right")).toBeNull();
+    await userEvent.click(within(popup).getByRole("button", { name: "Ambient" }));
+    await userEvent.click(
+      within(popup).getByRole("button", { name: "Uplifting" }),
+    );
+    await userEvent.click(within(popup).getByRole("button", { name: "Piano" }));
+    expect(screen.getByRole("dialog", { name: "music prompt presets" })).toBeTruthy();
+    expect(screen.getByTestId("music-prompt-value").textContent).toBe(
+      "Ambient, Uplifting, Piano",
+    );
 
-    await userEvent.click(screen.getByRole("tab", { name: "Vibe" }));
-    const vibeKeywords = screen.getByLabelText("Vibe keywords");
+    fireEvent.pointerDown(document.body);
     expect(
-      within(vibeKeywords).getByRole("button", { name: "Modern" }),
-    ).toBeTruthy();
-    expect(vibeKeywords.className).toContain("overflow-x-auto");
-    expect(vibeKeywords.className).toContain("scrollbar-none");
+      screen.queryByRole("dialog", { name: "music prompt presets" }),
+    ).toBeNull();
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        "Warm cinematic ambient music with soft piano and strings…",
+      ),
+      { target: { value: "Warm, custom texture" } },
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Add music prompt presets" }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Modern" }),
+    );
+    expect(screen.getByTestId("music-prompt-value").textContent).toBe(
+      "Warm, custom texture, Modern",
+    );
   });
 });

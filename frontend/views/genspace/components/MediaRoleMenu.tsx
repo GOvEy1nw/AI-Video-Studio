@@ -26,9 +26,9 @@ export function MediaRoleMenu({
   return (
     <div
       data-media-menu
-      className="absolute left-0 top-full z-10000 mt-2 w-64 rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl"
+      className="absolute left-0 text-nowrap top-full z-10000 mt-2 w-fit rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl"
     >
-      <div className="mb-2 text-[10px] uppercase tracking-wider text-zinc-500">
+      <div className="mb-2 text-2xs uppercase tracking-wider text-zinc-500">
         {title}
       </div>
       <div className="space-y-1">
@@ -47,11 +47,6 @@ export function MediaRoleMenu({
             {option.icon}
             <span className="min-w-0">
               <span className="block text-xs font-medium">{option.label}</span>
-              {option.description ? (
-                <span className="mt-0.5 block text-[9px] text-zinc-500">
-                  {option.description}
-                </span>
-              ) : null}
             </span>
           </button>
         ))}

@@ -10,6 +10,12 @@ import type {
   SubmittedMusicRecipe,
 } from "../../types/music";
 import type { ModelDownloadProgress } from "../../types/progress";
+import type { MediaCropRecipe } from "../../types/media-crop";
+import type {
+  ImageEditMaskRecipe,
+  ImageEditOutpaintRecipe,
+} from "../../types/image-edit";
+import type { RegionPromptState } from "./image/region-prompt";
 import type { ReframePanelState } from "./video/ReframePanel";
 import type { GenSpaceSettings } from "./constants";
 
@@ -35,6 +41,7 @@ export interface GenSpaceMediaInput {
   trimStartTime?: number;
   trimDuration?: number;
   mediaDuration?: number;
+  crop?: MediaCropRecipe;
 }
 
 export interface ImageGenSettings {
@@ -125,6 +132,14 @@ export interface GenSpaceVideoToolsController {
 export interface GenSpaceImageToolsController {
   mode: ImageProcessMode;
   setMode: (mode: ImageProcessMode) => void;
+  editImage: GenSpaceMediaInput | null;
+  setEditImage: (image: GenSpaceMediaInput | null) => void;
+  editMask: ImageEditMaskRecipe | null;
+  setEditMask: (mask: ImageEditMaskRecipe | null) => void;
+  editOutpaint: ImageEditOutpaintRecipe | null;
+  setEditOutpaint: (outpaint: ImageEditOutpaintRecipe | null) => void;
+  regionPrompt: RegionPromptState;
+  setRegionPrompt: (value: RegionPromptState) => void;
 }
 
 export interface GenSpaceFramingController {
@@ -181,6 +196,9 @@ export interface ImageSubmissionSnapshot {
   projectId: string;
   submittedAt?: number;
   prompt: string;
+  imageMode?: ImageProcessMode;
+  editMask?: ImageEditMaskRecipe;
+  editOutpaint?: ImageEditOutpaintRecipe;
   settings: GenSpaceSettings;
   inputs: GenSpaceMediaInput[];
   assetPaths: Array<{ url: string; path: string }>;

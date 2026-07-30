@@ -292,7 +292,7 @@ class TestModelProfilesEndpoint:
         assert z_image["capabilities"]["referenceImages"] is False
         assert z_image["capabilities"]["controlImage"] is True
         assert z_image["inputMedia"]["supportsImageInputs"] is True
-        assert z_image["inputMedia"]["tooltipLabel"] == "Control Only"
+        assert z_image["inputMedia"]["tooltipLabel"] == "Control"
         assert z_image["inputMedia"]["maxImages"] == 1
 
         ltx = next(p for p in data["profiles"] if p["id"] == "ltx2_22b_distilled")
@@ -328,7 +328,7 @@ class TestModelProfilesEndpoint:
         assert flux["capabilities"]["referenceImages"] is True
         assert flux["capabilities"]["controlImage"] is True
         assert flux["inputMedia"]["supportsImageInputs"] is True
-        assert flux["inputMedia"]["tooltipLabel"] == "Reference or Control"
+        assert flux["inputMedia"]["tooltipLabel"] == "Ref/Control"
         assert flux["inputMedia"]["maxImages"] == 5
         assert [role["role"] for role in flux["inputMedia"]["roles"]] == [
             "reference_subject",

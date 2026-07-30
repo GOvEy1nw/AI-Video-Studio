@@ -7,6 +7,7 @@ export function GenPanelSection({
   className = "",
   collapsible = true,
   collapsed = false,
+  padding = "px-4 py-3",
 }: {
   title?: string;
   children: ReactNode;
@@ -14,8 +15,9 @@ export function GenPanelSection({
   className?: string;
   collapsible?: boolean;
   collapsed?: boolean;
+  padding?: string;
 }) {
-  const sectionClass = `${borderBottom ? "border-b border-zinc-800/60" : ""} px-4 py-3 ${className}`;
+  const sectionClass = `${borderBottom ? "border-b border-zinc-800/60" : ""} ${padding} ${className}`;
   if (collapsible && title) {
     return (
       <details className={sectionClass} open={!collapsed}>

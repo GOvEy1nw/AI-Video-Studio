@@ -274,6 +274,8 @@ class ModelProfileCapabilities(BaseModel):
     referenceImages: bool
     controlImage: bool
     inpainting: bool
+    outpainting: bool
+    maskedEditReferences: bool
     lora: str
 
 
@@ -510,12 +512,28 @@ class ComposeMusicLyricsRequest(BaseModel):
     seed: int | None = Field(default=None, ge=0, le=999_999_999)
 
 
+class MediaCrop(BaseModel):
+    aspectRatio: Literal["freeform", "1:1", "4:3", "3:4", "16:9", "9:16"]
+    x: float = Field(ge=0, le=1)
+    y: float = Field(ge=0, le=1)
+    width: float = Field(gt=0, le=1)
+    height: float = Field(gt=0, le=1)
+
+    @model_validator(mode="after")
+    def validate_bounds(self) -> "MediaCrop":
+        epsilon = 1e-6
+        if self.x + self.width > 1 + epsilon or self.y + self.height > 1 + epsilon:
+            raise ValueError("crop must stay within normalized media bounds")
+        return self
+
+
 class GenerateVideoInputMedia(BaseModel):
     id: str | None = None
     type: Literal["image", "video", "audio"] = "image"
     path: str
     trimStartTime: float | None = Field(default=None, ge=0)
     trimDuration: float | None = Field(default=None, gt=0)
+    crop: MediaCrop | None = None
     role: Literal[
         "start_image",
         "end_image",
@@ -530,6 +548,12 @@ class GenerateVideoInputMedia(BaseModel):
         "audio_to_video",
         "reference_voice",
     ]
+
+    @model_validator(mode="after")
+    def validate_crop_media_type(self) -> "GenerateVideoInputMedia":
+        if self.type == "audio" and self.crop is not None:
+            raise ValueError("crop is only supported for image and video media")
+        return self
 
 
 def _default_video_input_media() -> list[GenerateVideoInputMedia]:
@@ -665,6 +689,7 @@ class GenerateImageInputMedia(BaseModel):
     id: str | None = None
     type: Literal["image"] = "image"
     path: str
+    crop: MediaCrop | None = None
     role: Literal[
         "reference_subject",
         "reference_people_objects",
@@ -673,6 +698,80 @@ class GenerateImageInputMedia(BaseModel):
         "control_depth",
         "control_canny",
     ]
+
+
+class ImageEditImage(BaseModel):
+    path: str
+
+
+class ImageEditPoint(BaseModel):
+    x: float = Field(ge=0, le=1)
+    y: float = Field(ge=0, le=1)
+
+
+class ImageEditBrushOperation(BaseModel):
+    kind: Literal["brush"]
+    size: float = Field(gt=0, le=0.5)
+    points: list[ImageEditPoint] = Field(min_length=1)
+
+
+class ImageEditRectangleOperation(BaseModel):
+    kind: Literal["rectangle"]
+    x: float = Field(ge=0, le=1)
+    y: float = Field(ge=0, le=1)
+    width: float = Field(gt=0, le=1)
+    height: float = Field(gt=0, le=1)
+
+
+class ImageEditEllipseOperation(BaseModel):
+    kind: Literal["ellipse"]
+    x: float = Field(ge=0, le=1)
+    y: float = Field(ge=0, le=1)
+    width: float = Field(gt=0, le=1)
+    height: float = Field(gt=0, le=1)
+
+
+ImageEditMaskOperation = Annotated[
+    ImageEditBrushOperation
+    | ImageEditRectangleOperation
+    | ImageEditEllipseOperation,
+    Field(discriminator="kind"),
+]
+
+
+class ImageEditMaskRecipe(BaseModel):
+    schemaVersion: Literal[1]
+    operations: list[ImageEditMaskOperation] = Field(min_length=1)
+
+
+class ImageEditOutpaintPadding(BaseModel):
+    top: float = Field(ge=0, le=200)
+    bottom: float = Field(ge=0, le=200)
+    left: float = Field(ge=0, le=200)
+    right: float = Field(ge=0, le=200)
+
+
+class ImageEditOutpaintRecipe(BaseModel):
+    aspectMode: Literal["1:1", "16:9", "9:16"]
+    padding: ImageEditOutpaintPadding
+
+    @model_validator(mode="after")
+    def validate_padding(self) -> ImageEditOutpaintRecipe:
+        if (
+            self.padding.top
+            + self.padding.bottom
+            + self.padding.left
+            + self.padding.right
+            <= 0
+        ):
+            raise ValueError("Outpainting requires padding on at least one edge")
+        return self
+
+
+class GenerateImageEdit(BaseModel):
+    image: ImageEditImage
+    mask: ImageEditMaskRecipe | None = None
+    outpaint: ImageEditOutpaintRecipe | None = None
 
 
 def _default_image_input_media() -> list[GenerateImageInputMedia]:
@@ -694,6 +793,7 @@ class GenerateImageRequest(BaseModel):
     aspectRatio: Literal["1:1", "16:9", "9:16"] | None = None
     resolutionTier: Literal["540p", "720p", "1080p", "1440p", "2160p"] | None = None
     inputMedia: list[GenerateImageInputMedia] = Field(default_factory=_default_image_input_media)
+    edit: GenerateImageEdit | None = None
 
 
 class SuggestGapPromptRequest(BaseModel):

@@ -15,6 +15,7 @@ from handlers.base import StateHandlerBase
 from handlers.generation_handler import GenerationHandler
 from model_profiles import get_video_profile, is_combination_supported, resolve_resolution
 from model_profiles.profiles import AspectRatio, ModelProfile, ResolutionTier
+from services.media_crop import crop_image_media, crop_video_media
 from services.wangp_bridge import WanGPBridge
 from services.reframe_wangp_mapping import ReframePadding, map_reframe_to_wangp
 from services.video_clip import extract_audio_clip, extract_video_clip, probe_video_metadata
@@ -220,37 +221,75 @@ class VideoGenerationHandler(StateHandlerBase):
             )
             resolved_resolution_label = f"{resolved_width}x{resolved_height}"
 
-            trimmed_media_paths: dict[str, str] = {}
+            transformed_media_paths: dict[tuple[str, str], str] = {}
             for media in req.inputMedia:
                 media_path = normalize_optional_path(media.path)
-                if not media_path or media.trimDuration is None:
+                if not media_path:
+                    continue
+                effective_path = media_path
+                if media.crop is not None:
+                    try:
+                        cropped_path = (
+                            crop_video_media(effective_path, media.crop)
+                            if media.type == "video"
+                            else crop_image_media(effective_path, media.crop)
+                        )
+                    except Exception as exc:
+                        raise HTTPError(400, f"MEDIA_CROP_FAILED: {exc}") from exc
+                    temp_media_paths.append(cropped_path)
+                    effective_path = str(cropped_path)
+
+                if media.trimDuration is None:
+                    transformed_media_paths[(media.role, media_path)] = effective_path
                     continue
                 if media.type == "audio":
                     trimmed_path = extract_audio_clip(
-                        media_path,
+                        effective_path,
                         start_time=media.trimStartTime or 0.0,
                         duration=media.trimDuration,
                         output_dir=self._outputs_dir,
                     )
                 else:
                     trimmed_path = extract_video_clip(
-                        media_path,
+                        effective_path,
                         start_time=media.trimStartTime or 0.0,
                         duration=media.trimDuration,
                         output_dir=self._outputs_dir,
                     )
                 temp_media_paths.append(trimmed_path)
-                trimmed_media_paths[media_path] = str(trimmed_path)
+                transformed_media_paths[(media.role, media_path)] = str(trimmed_path)
                 if media.role != "continue_video":
                     input_media_duration = media.trimDuration
 
-            if trimmed_media_paths:
-                if start_image_path in trimmed_media_paths:
-                    start_image_path = trimmed_media_paths[start_image_path]
-                if control_video_path in trimmed_media_paths:
-                    control_video_path = trimmed_media_paths[control_video_path]
-                if audio_path in trimmed_media_paths:
-                    audio_path = trimmed_media_paths[audio_path]
+            for media in req.inputMedia:
+                media_path = normalize_optional_path(media.path)
+                if not media_path:
+                    continue
+                effective_path = transformed_media_paths.get(
+                    (media.role, media_path),
+                    media_path,
+                )
+                if media.role in {"start_image", "continue_video"}:
+                    start_image_path = effective_path
+                elif media.role == "end_image":
+                    end_image_path = effective_path
+                elif media.role in {
+                    "control_video",
+                    "human_motion",
+                    "human_motion_pose",
+                    "depth",
+                    "canny_edges",
+                    "sdr_to_hdr",
+                }:
+                    control_video_path = effective_path
+                    if media.role != "control_video" and req.useAudioTrack:
+                        audio_path = effective_path
+                elif media.role in {
+                    "audio_guide",
+                    "audio_to_video",
+                    "reference_voice",
+                }:
+                    audio_path = effective_path
 
             if input_media_duration is not None and not is_reframe and not req.shotPrompts:
                 duration = max(2, int(math.ceil(input_media_duration)))
@@ -260,8 +299,8 @@ class VideoGenerationHandler(StateHandlerBase):
             if start_image_path:
                 for media in req.inputMedia:
                     original_media_path = normalize_optional_path(media.path)
-                    effective_media_path = trimmed_media_paths.get(
-                        original_media_path or "",
+                    effective_media_path = transformed_media_paths.get(
+                        (media.role, original_media_path or ""),
                         original_media_path,
                     )
                     if media.role == "continue_video" and effective_media_path == start_image_path:
@@ -337,8 +376,8 @@ class VideoGenerationHandler(StateHandlerBase):
                     media.role
                     in {"human_motion", "human_motion_pose", "depth", "canny_edges", "sdr_to_hdr", "control_video"}
                     for media in req.inputMedia
-                    if trimmed_media_paths.get(
-                        normalize_optional_path(media.path) or "",
+                    if transformed_media_paths.get(
+                        (media.role, normalize_optional_path(media.path) or ""),
                         normalize_optional_path(media.path),
                     )
                     == audio_path
@@ -436,7 +475,7 @@ class VideoGenerationHandler(StateHandlerBase):
                 try:
                     media_path.unlink()
                 except OSError:
-                    logger.warning("Could not remove temporary input clip: %s", media_path)
+                    logger.warning("Could not remove temporary input derivative: %s", media_path)
 
     @staticmethod
     def _resolve_video_profile(req: GenerateVideoRequest) -> ModelProfile:

@@ -2,6 +2,12 @@ import type { ReframePanelState } from "../video/ReframePanel";
 import { compileMusicRequest } from "../music/compile-music-request";
 import { fileUrlToPath } from "../../../lib/url-to-path";
 import type { GenerationSettings } from "../../../types/generation";
+import type { MediaCropRecipe } from "../../../types/media-crop";
+import type {
+  ImageEditMaskRecipe,
+  ImageEditOutpaintRecipe,
+  ImageEditRequest,
+} from "../../../types/image-edit";
 import type { ModelProfile } from "../../../types/model-profiles";
 import type { MusicSettings } from "../../../types/music";
 import {
@@ -18,6 +24,7 @@ export interface GenerationInputMedia {
   type?: "image" | "video" | "audio";
   trimStartTime?: number;
   trimDuration?: number;
+  crop?: MediaCropRecipe;
 }
 
 export interface VideoGenerationCommand {
@@ -57,6 +64,7 @@ export function buildGenerationInputMedia(
         ...(item.trimDuration !== undefined
           ? { trimDuration: item.trimDuration }
           : {}),
+        ...(item.crop ? { crop: { ...item.crop } } : {}),
       },
     ];
   });
@@ -66,11 +74,18 @@ export function buildImageGenerationCommand(
   prompt: string,
   settings: GenSpaceSettings,
   imageInputs: GenSpaceMediaInput[],
+  edit?: {
+    image: GenSpaceMediaInput;
+    mask: ImageEditMaskRecipe | null;
+    outpaint: ImageEditOutpaintRecipe | null;
+  },
 ): {
   prompt: string;
   settings: GenerationSettings;
   inputMedia: GenerationInputMedia[];
+  edit: ImageEditRequest | undefined;
 } {
+  const editImagePath = edit ? fileUrlToPath(edit.image.url) : null;
   return {
     prompt,
     settings: {
@@ -81,13 +96,24 @@ export function buildImageGenerationCommand(
       audio: false,
       cameraMotion: "none",
       imageResolution: settings.imageResolution,
-      imageAspectRatio: settings.imageAspectRatio || settings.aspectRatio,
+      imageAspectRatio:
+        edit?.outpaint?.aspectMode ||
+        settings.imageAspectRatio ||
+        settings.aspectRatio,
       imageSteps: settings.imageSteps,
       variations: settings.variations,
       imageProfileId: settings.imageProfileId,
       imageInputRole: settings.imageInputRole,
     },
     inputMedia: buildGenerationInputMedia(imageInputs),
+    edit:
+      edit && editImagePath
+        ? {
+            image: { path: editImagePath },
+            ...(edit.mask ? { mask: edit.mask } : {}),
+            ...(edit.outpaint ? { outpaint: edit.outpaint } : {}),
+          }
+        : undefined,
   };
 }
 

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { getImageProfilesForMode } from "./image-profile-options";
+import {
+  getImageModeForProfileId,
+  getImageProfilesForMode,
+} from "./image-profile-options";
 
 const profiles = [
   { id: "z_image_turbo" },
@@ -41,5 +44,14 @@ describe("getImageProfilesForMode", () => {
       "ideogram4_int8",
       "ideogram4_turbotime_int8",
     ]);
+  });
+
+  it("recovers Region mode from either Ideogram profile", () => {
+    expect(getImageModeForProfileId("ideogram4_int8")).toBe("region");
+    expect(getImageModeForProfileId("ideogram4_turbotime_int8")).toBe(
+      "region",
+    );
+    expect(getImageModeForProfileId("krea2_turbo_edit")).toBe("edit");
+    expect(getImageModeForProfileId("flux2_klein_4b")).toBe("create");
   });
 });

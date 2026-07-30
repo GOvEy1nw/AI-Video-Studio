@@ -15,16 +15,19 @@ import {
 } from "../logic/media-inputs";
 import type { GenSpaceMediaInput } from "../types";
 import { GenPanelSection } from "../components/GenPanelSection";
+import { CroppableMediaInputSlot } from "../components/CroppableMediaInputSlot";
 import { MediaInputSlot } from "../components/MediaInputSlot";
 import { MediaRoleMenu } from "../components/MediaRoleMenu";
 
 export function ImageMediaInputs({
+  title = "Media inputs",
   inputs,
   onChange,
   policy,
   resolveInputFileUrl,
   syncInputFileToGallery,
 }: {
+  title?: string;
   inputs: GenSpaceMediaInput[];
   onChange: Dispatch<SetStateAction<GenSpaceMediaInput[]>>;
   policy: ModelProfileInputMedia | undefined;
@@ -108,12 +111,12 @@ export function ImageMediaInputs({
   if (!policy?.supportsImageInputs) return null;
 
   return (
-    <GenPanelSection title="Media inputs">
+    <GenPanelSection title={title}>
       <div className="relative flex items-center gap-2 overflow-visible">
         {inputs.map((input) => {
           const role = policy.roles.find(({ role }) => role === input.role);
           return (
-            <MediaInputSlot
+            <CroppableMediaInputSlot
               key={input.id}
               item={input}
               kind="image"
@@ -131,6 +134,15 @@ export function ImageMediaInputs({
                 )
               }
               onDrop={handleDrop}
+              onCropChange={(crop) =>
+                onChange((current) =>
+                  current.map((item) =>
+                    item.id === input.id
+                      ? { ...item, crop: crop ?? undefined }
+                      : item,
+                  ),
+                )
+              }
               menu={
                 <MediaRoleMenu
                   title="Image input"

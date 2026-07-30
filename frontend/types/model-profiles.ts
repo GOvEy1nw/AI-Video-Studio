@@ -33,6 +33,8 @@ export interface ModelProfileCapabilities {
   referenceImages: boolean
   controlImage: boolean
   inpainting: boolean
+  outpainting: boolean
+  maskedEditReferences: boolean
   lora: 'supported' | 'unsupported' | 'future' | 'experimental'
 }
 

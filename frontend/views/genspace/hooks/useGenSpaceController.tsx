@@ -20,6 +20,10 @@ import {
   useVideoProfiles,
 } from "../../../hooks/use-image-profiles";
 import type { Asset } from "../../../types/project";
+import type {
+  ImageEditMaskRecipe,
+  ImageEditOutpaintRecipe,
+} from "../../../types/image-edit";
 import type { ImageUseTarget } from "../../../components/UseImageDropdown";
 import { getAssetModelId } from "../logic/generation-assets";
 import {
@@ -46,11 +50,17 @@ import { useGenSpaceGallery } from "./useGenSpaceGallery";
 import { useGenSpaceMediaInputs } from "./useGenSpaceMediaInputs";
 import type {
   FramingSettings,
+  GenSpaceMediaInput,
   GenSpaceSidebarController,
 } from "../types";
 import { useGenSpaceVideoTools } from "./useGenSpaceVideoTools";
 import { useGenSpaceSettingsRestore } from "./useGenSpaceSettingsRestore";
 import { useGenSpaceExternalHandoffs } from "./useGenSpaceExternalHandoffs";
+import {
+  createEmptyRegionPrompt,
+  isRegionPromptReady,
+} from "../image/region-prompt";
+import { getImageProfilesForMode } from "../image/image-profile-options";
 
 export function useGenSpaceController() {
   const {
@@ -114,6 +124,11 @@ export function useGenSpaceController() {
     useState(true);
   const [framingSettings, setFramingSettings] =
     useState<FramingSettings | null>(null);
+  const [regionPrompt, setRegionPrompt] = useState(createEmptyRegionPrompt);
+  const [editImage, setEditImage] = useState<GenSpaceMediaInput | null>(null);
+  const [editMask, setEditMask] = useState<ImageEditMaskRecipe | null>(null);
+  const [editOutpaint, setEditOutpaint] =
+    useState<ImageEditOutpaintRecipe | null>(null);
   const prevProjectIdRef = useRef<string | null>(null);
   const { profiles: imageProfiles } = useImageProfiles();
   const { profiles: videoProfiles } = useVideoProfiles();
@@ -247,12 +262,18 @@ export function useGenSpaceController() {
     if (!currentProjectId) {
       prevProjectIdRef.current = null;
       setFramingSettings(null);
+      setEditImage(null);
+      setEditMask(null);
+      setEditOutpaint(null);
       return;
     }
     if (prevProjectIdRef.current === currentProjectId) return;
 
     prevProjectIdRef.current = currentProjectId;
     setFramingSettings(null);
+    setEditImage(null);
+    setEditMask(null);
+    setEditOutpaint(null);
     const projectSeed = {
       seedLocked: currentProject?.genSpaceSeedLocked ?? false,
       lockedSeed: clampGenSpaceSeed(
@@ -287,6 +308,7 @@ export function useGenSpaceController() {
   } = useGenSpaceGenerationActions({
     mode,
     imageMode,
+    regionPrompt,
     videoMode,
     prompt,
     framingSettings,
@@ -299,6 +321,10 @@ export function useGenSpaceController() {
     musicSettings,
     musicProfiles,
     imageInputs,
+    imageProfiles,
+    editImage,
+    editMask,
+    editOutpaint,
     inputImage,
     inputAudio,
     useAudioTrack,
@@ -345,6 +371,27 @@ export function useGenSpaceController() {
       };
       setInputImage(null);
 
+      if (target === "edit-image") {
+        const editProfiles = getImageProfilesForMode(imageProfiles, "edit");
+        const currentProfile = editProfiles.find(
+          ({ id }) => id === imageSettings.profileId,
+        );
+        const profile = currentProfile ?? editProfiles[0];
+        if (profile && profile.id !== imageSettings.profileId) {
+          patchImageSettings({ profileId: profile.id });
+        }
+        setMode("image");
+        setImageMode("edit");
+        setVideoMode("generate");
+        setInputAudio(null);
+        setImageInputs([]);
+        setEditImage({ ...input, role: "edit_image" });
+        setEditMask(null);
+        setEditOutpaint(null);
+        setPrompt("");
+        return;
+      }
+
       if (target === "image-guide") {
         const currentProfile = imageProfiles.find(
           ({ id }) => id === imageSettings.profileId,
@@ -385,6 +432,10 @@ export function useGenSpaceController() {
       imageSettings.profileId,
       patchImageSettings,
       setImageInputs,
+      setEditImage,
+      setEditMask,
+      setEditOutpaint,
+      setImageMode,
       setInputAudio,
       setInputImage,
       setMode,
@@ -412,11 +463,16 @@ export function useGenSpaceController() {
     imageProfiles,
     videoProfiles,
     setMode,
+    setImageMode,
     setVideoMode,
     setPrompt,
+    setRegionPrompt,
     setSettings,
     setMusicSettings,
     setInputs: setImageInputs,
+    setEditImage,
+    setEditMask,
+    setEditOutpaint,
     setInputImage,
     setInputAudio,
     setReframeSource,
@@ -467,8 +523,12 @@ export function useGenSpaceController() {
     : isRetakeMode
       ? retakeInput.ready && !!retakeInput.videoPath && !isRetaking
       : mode === "music"
-        ? musicCanSubmit
-        : !!prompt.trim();
+      ? musicCanSubmit
+      : mode === "image" && imageMode === "region"
+        ? isRegionPromptReady(regionPrompt)
+        : mode === "image" && imageMode === "edit"
+          ? !!editImage && !!prompt.trim()
+          : !!prompt.trim();
   const promptButtonLabel = isReframeMode
     ? "Reframe"
     : isRetakeMode
@@ -526,6 +586,14 @@ export function useGenSpaceController() {
       imageTools: {
         mode: imageMode,
         setMode: setImageMode,
+        editImage,
+        setEditImage,
+        editMask,
+        setEditMask,
+        editOutpaint,
+        setEditOutpaint,
+        regionPrompt,
+        setRegionPrompt,
       },
       framing: {
         value: framingSettings,

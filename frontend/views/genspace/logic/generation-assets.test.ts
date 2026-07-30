@@ -23,6 +23,13 @@ const input = {
   trimStartTime: 1,
   trimDuration: 4,
   mediaDuration: 9,
+  crop: {
+    aspectRatio: "16:9" as const,
+    x: 0,
+    y: 0.2,
+    width: 1,
+    height: 0.6,
+  },
 };
 
 describe("GenSpace generated asset builders", () => {
@@ -31,6 +38,7 @@ describe("GenSpace generated asset builders", () => {
       projectId: "project-a",
       submittedAt: 1_000,
       prompt: "enhanced portrait",
+      imageMode: "create",
       settings: { ...DEFAULT_VIDEO_SETTINGS },
       inputs: [input],
       assetPaths: [{ url: input.url, path: "C:\\guide.mp4" }],
@@ -51,11 +59,69 @@ describe("GenSpace generated asset builders", () => {
         trimStartTime: 1,
         trimDuration: 4,
         mediaDuration: 9,
+        crop: input.crop,
       },
     ]);
     expect(asset.prompt).toBe("enhanced portrait");
     expect(asset.generationParams?.prompt).toBe("enhanced portrait");
     expect(asset.generationTimeSeconds).toBe(14);
+  });
+
+  it("persists the Edit master, mask, and outpaint recipe", () => {
+    const master = {
+      id: "master",
+      url: "file:///C:/master.png",
+      role: "edit_image",
+      type: "image" as const,
+    };
+    const snapshot: ImageSubmissionSnapshot = {
+      projectId: "project-a",
+      prompt: "replace the sky",
+      imageMode: "edit",
+      editMask: {
+        schemaVersion: 1,
+        operations: [
+          {
+            kind: "rectangle",
+            x: 0,
+            y: 0,
+            width: 1,
+            height: 0.25,
+          },
+        ],
+      },
+      editOutpaint: {
+        aspectMode: "16:9",
+        padding: { top: 0, bottom: 0, left: 25, right: 25 },
+      },
+      settings: { ...DEFAULT_VIDEO_SETTINGS, imageProfileId: "flux2_klein_4b" },
+      inputs: [master],
+      assetPaths: [{ url: master.url, path: "C:\\master.png" }],
+    };
+
+    const asset = buildGeneratedImageAsset({
+      snapshot,
+      finalPath: "C:\\output.png",
+      finalUrl: "file:///C:/output.png",
+      createdAt: 1,
+    });
+
+    expect(asset.generationParams).toMatchObject({
+      imageProcessMode: "edit",
+      imageEditMask: {
+        operations: [{ kind: "rectangle" }],
+      },
+      imageEditOutpaint: {
+        aspectMode: "16:9",
+        padding: { left: 25, right: 25 },
+      },
+      imageInputMedia: [
+        {
+          role: "edit_image",
+          path: "C:\\master.png",
+        },
+      ],
+    });
   });
 
   it("uses the immutable video snapshot for guide metadata", () => {

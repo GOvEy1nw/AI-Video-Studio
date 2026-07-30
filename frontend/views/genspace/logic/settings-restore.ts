@@ -8,6 +8,7 @@ import {
 import type { MusicSettings } from "../../../types/music";
 import type { Asset } from "../../../types/project";
 import type { GenSpaceSettings } from "../constants";
+import { getImageModeForProfileId } from "../image/image-profile-options";
 
 export function buildGenSpaceRestorePlan(
   asset: Asset,
@@ -18,23 +19,40 @@ export function buildGenSpaceRestorePlan(
   const params = asset.generationParams;
   if (!params) return null;
   const mode = genSpaceModeFromParams(params);
-  const imageInputs = buildImageInputsFromParams(params, projectAssets);
+  const restoredImageInputs = buildImageInputsFromParams(
+    params,
+    projectAssets,
+  );
+  const editImage =
+    restoredImageInputs.find(({ role }) => role === "edit_image") ?? null;
+  const imageInputs = restoredImageInputs.filter(
+    ({ role }) => role !== "edit_image",
+  );
   const legacy = resolveLegacyInputMedia(params, imageInputs, projectAssets);
+  const restoredSettings = settingsPatchFromGenerationParams(params, settings);
   return {
     mode:
       mode === "image" ? "image" : mode === "music" ? "music" : "video",
+    imageMode:
+      mode === "image"
+        ? params.imageProcessMode ??
+          getImageModeForProfileId(restoredSettings.imageProfileId)
+        : "create",
     videoMode: mode === "reframe" ? "reframe" : "generate",
     prompt: params.prompt,
-    settings: settingsPatchFromGenerationParams(params, settings),
+    settings: restoredSettings,
     musicSettings:
       mode === "music"
         ? musicSettingsFromGenerationParams(params, musicSettings)
         : null,
     media: {
       imageInputs,
-      inputImage: legacy.inputImage,
+      editImage,
+      inputImage: editImage ? null : legacy.inputImage,
       inputAudio: legacy.inputAudio,
     },
+    editMask: params.imageEditMask ?? null,
+    editOutpaint: params.imageEditOutpaint ?? null,
     reframe:
       mode === "reframe"
         ? {

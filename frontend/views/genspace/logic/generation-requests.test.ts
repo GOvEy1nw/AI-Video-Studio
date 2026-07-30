@@ -26,12 +26,77 @@ describe("GenSpace generation request builders", () => {
           url: "file:///C:/reference.png",
           role: "reference_image",
           type: "image",
+          crop: {
+            aspectRatio: "1:1",
+            x: 0.25,
+            y: 0,
+            width: 0.5,
+            height: 1,
+          },
         },
       ],
     );
 
     expect(command.settings.imageProfileId).toBe("z_image_turbo");
     expect(command.inputMedia[0]?.role).toBe("reference_image");
+    expect(command.inputMedia[0]?.crop).toMatchObject({
+      aspectRatio: "1:1",
+      x: 0.25,
+      width: 0.5,
+    });
+  });
+
+  it("keeps Edit Image separate from reference inputs", () => {
+    const command = buildImageGenerationCommand(
+      "replace the window",
+      DEFAULT_VIDEO_SETTINGS,
+      [
+        {
+          id: "reference",
+          url: "file:///C:/reference.png",
+          role: "reference_people_objects",
+          type: "image",
+        },
+      ],
+      {
+        image: {
+          id: "master",
+          url: "file:///C:/master.png",
+          role: "edit_image",
+          type: "image",
+        },
+        mask: {
+          schemaVersion: 1,
+          operations: [
+            {
+              kind: "ellipse",
+              x: 0.25,
+              y: 0.25,
+              width: 0.5,
+              height: 0.5,
+            },
+          ],
+        },
+        outpaint: {
+          aspectMode: "16:9",
+          padding: { top: 0, bottom: 0, left: 40, right: 40 },
+        },
+      },
+    );
+
+    expect(command.edit).toMatchObject({
+      image: { path: "C:/master.png" },
+      mask: { operations: [{ kind: "ellipse" }] },
+      outpaint: { aspectMode: "16:9" },
+    });
+    expect(command.inputMedia).toEqual([
+      {
+        path: "C:/reference.png",
+        role: "reference_people_objects",
+        type: "image",
+      },
+    ]);
+    expect(command.settings.imageAspectRatio).toBe("16:9");
   });
 
   it("uses trimmed guide duration and Pro mode for guide audio", () => {

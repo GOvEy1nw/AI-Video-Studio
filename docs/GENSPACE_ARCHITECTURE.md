@@ -47,6 +47,7 @@ and shallow rather than adding one-file `views/components/lib` subfolders.
 | Reframe/Retake panel state | `hooks/useGenSpaceVideoTools.tsx` |
 | Image panel UI | `image/` |
 | Video, Reframe, Retake, and trim UI | `video/` |
+| Shared image/video input crop UI and geometry | `components/MediaCropPopover.tsx` and `logic/media-crop.ts` |
 | Music panel, media, lyrics settings, advanced settings, compiler, and keywords | `music/` |
 | Per-mode command construction | `logic/generation-requests.ts` |
 | Submission and immutable snapshots | `hooks/useGenSpaceGenerationActions.ts` |
@@ -62,19 +63,78 @@ Panels receive mode-specific controller contracts. They do not import project
 context, call backend endpoints, persist assets, or instantiate
 `useGeneration`.
 
+## Media input crop contract
+
+- Populated image/video input slots expose a hover crop action. Audio inputs
+  never do.
+- Crop interaction uses a directly movable/resizable crop box with Freeform,
+  1:1, 4:3, 3:4, 16:9, and 9:16 modes. No crop sliders are used.
+- Slots store normalized crop recipes. Generated asset metadata preserves
+  those recipes so Copy Settings restores them.
+- Source assets are immutable. Image/video handlers create temporary cropped
+  derivatives only when generation starts, pass those derivatives to WanGP,
+  and remove them after success, error, or cancellation.
+- Video crop runs before an optional input trim. Source audio remains
+  available on cropped video derivatives.
+
 ## Image contract
 
 - Image mode exposes Create, Edit, and Region as distinct process modes.
-  Edit and Region intentionally reuse the Create controls until their
-  dedicated workflows are implemented.
+  Edit owns a dedicated master-image workflow while reusing the common prompt
+  and output controls. Region owns a dedicated Ideogram 4 structured prompt
+  editor.
 - Model choices are process-specific. Create exposes Flux 2 Klein 4B/9B,
   Krea 2 Turbo, Z-Image Turbo, Qwen Image, and HiDream O1. Edit exposes
   Flux 2 Klein 4B/9B, Krea 2 Edit, Qwen Image Edit, and HiDream O1.
   Region exposes only Ideogram 4 Standard and TurboTime.
-- Framing is available only in Image Create and Video Generate. Applied
-  camera, lens, focal length, aperture, shutter, and ISO stay outside the
-  authored prompt, appear as a compact prompt-area indicator, and compile into
-  the immutable submission prompt as `Shot on ...` at generation time.
+- Edit stores one full-width `Edit Image` master separately from optional
+  reference images. Normal prompt/reference editing sends the master first;
+  additional references follow within the selected profile's total image
+  limit.
+- Mask uses normalized ordered brush, rectangle, and ellipse operations.
+  Outpaint stores a target aspect plus per-edge normalized padding and reuses
+  the proven Reframe geometry/overlay. Both recipes may be active together.
+- Mask and Outpaint appear only for profiles with explicit native
+  capabilities. Flux 2 Klein 4B/9B, Krea 2 Edit, and Qwen Image Edit support
+  both. HiDream O1 remains prompt/reference-only. Only Qwen Image Edit accepts
+  additional reference images while Mask or Outpaint is active.
+- Masked Edit always maps to WanGP native masked denoising with
+  `image_mode=2`, `model_mode=0`, and `VAG` (`VAGI` with supported
+  references). AiVS never selects LanPaint modes `2..5`.
+- Backend rasterizes temporary output-sized guide/mask PNGs, combining
+  inpaint selections with outpaint canvas regions, then removes both files
+  after success, error, or cancellation.
+- Generated Edit assets persist master/reference inputs plus mask/outpaint
+  recipes. Copy Settings restores the separate master, references, tools,
+  model, aspect, and authored prompt.
+- Region renders a box canvas in the selected generation aspect ratio.
+  Movable/resizable boxes store normalized `0..1000` bboxes in Ideogram's
+  `[y_min, x_min, y_max, x_max]` order and support object or exact-text
+  elements.
+- Region presents Global Prompt (collapsed), Region, and Style disclosures in
+  that order. Global Prompt owns high-level/background text; Region owns the
+  canvas and selected element; Style owns medium, editable
+  art/lighting/aesthetic prompts, camera settings, and color swatches.
+- Region exposes 16 optional global color swatches and six per-element
+  swatches progressively, showing one empty slot after the chosen colors plus
+  a used/maximum count. Text elements use exact Text Copy plus separate
+  common-font and custom-font controls; bbox and swatches already express
+  placement, size, and color.
+- Medium uses a curated dropdown plus a custom-only text field. `photograph`
+  replaces the Art Style prompt with the shared Camera Settings popover and
+  compiles its exact recipe into `style_description.photo`; other media expose
+  inline plus popovers for presets and compile editable comma-separated Art
+  Style prompt text into `style_description.art_style`. Lighting and
+  Aesthetics follow the same editable prompt pattern.
+- Submission serializes compact JSON in Ideogram's caption shape and bypasses
+  generic prompt enhancement so the structure is not rewritten.
+- Generated assets persist the submitted JSON through existing prompt
+  metadata. Copy Settings detects Ideogram profiles and reconstructs Region
+  state from that JSON; plain legacy prompts become high-level descriptions.
+- Prompt-prefix framing is available in Image Create and Video Generate.
+  Applied camera, lens, focal length, aperture, shutter, and ISO stay outside
+  the authored prompt, appear as a compact prompt-area indicator, and compile
+  into the immutable submission prompt as `Shot on ...` at generation time.
 - Framing applies after optional prompt enhancement so the camera prefix keeps
   its exact user-selected values. Generated asset prompt metadata stores the
   final effective prompt sent for generation.
@@ -96,6 +156,9 @@ context, call backend endpoints, persist assets, or instantiate
   Think, and lyrics seed; vocal covers still require original custom lyrics.
 - Description enhancement is a green generation-time toggle for WanGP music
   LM Chain Of Thought preprocessing, not an immediate prompt rewrite.
+- Song Prompt keeps presets behind one inline plus popover grouped by Genre,
+  Mood, Vibe, and Instruments. Multiple choices stay open for selection and
+  append as ordinary editable comma-separated prompt text.
 - Duration, BPM, and Variations use native range inputs.
 
 ## Generation lifecycle
@@ -107,10 +170,10 @@ abort controller, 500 ms polling interval, cancellation route, terminal-state
 guard, and unmount cleanup.
 
 Per-mode GenSpace builders run only on submission. Each successful submission
-captures the project ID, prompt, settings, media roles/paths, and trim data
-needed to persist the result. Completion effects consume that snapshot rather
-than live UI state, use idempotency keys, and write to the submission project
-even if the user switches projects.
+captures the project ID, prompt, settings, media roles/paths, crop recipes, and
+trim data needed to persist the result. Completion effects consume that
+snapshot rather than live UI state, use idempotency keys, and write to the
+submission project even if the user switches projects.
 
 ## Compatibility and performance rules
 

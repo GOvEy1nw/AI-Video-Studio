@@ -173,4 +173,111 @@ describe("GenSpace settings restoration", () => {
       coverStrength: 65,
     });
   });
+
+  it("restores Ideogram assets into Region mode with their JSON prompt", () => {
+    const prompt =
+      '{"high_level_description":"Poster","compositional_deconstruction":{"background":"","elements":[{"type":"obj","bbox":[100,200,800,700],"desc":"Robot"}]}}';
+    const plan = buildGenSpaceRestorePlan(
+      asset({
+        mode: "text-to-image",
+        prompt,
+        model: "fast",
+        duration: 5,
+        resolution: "1080p",
+        fps: 24,
+        audio: false,
+        cameraMotion: "none",
+        imageProfileId: "ideogram4_int8",
+        imageAspectRatio: "16:9",
+      }),
+      [],
+      DEFAULT_VIDEO_SETTINGS,
+      musicSettings,
+    );
+
+    expect(plan).toMatchObject({
+      mode: "image",
+      imageMode: "region",
+      prompt,
+      settings: {
+        imageProfileId: "ideogram4_int8",
+        imageAspectRatio: "16:9",
+      },
+    });
+  });
+
+  it("restores Image Edit master, references, mask, and outpaint", () => {
+    const master: Asset = {
+      id: "master",
+      type: "image",
+      path: "C:\\master.png",
+      url: "file:///C:/master.png",
+      prompt: "",
+      resolution: "720p",
+      createdAt: 1,
+    };
+    const plan = buildGenSpaceRestorePlan(
+      asset({
+        mode: "text-to-image",
+        prompt: "replace the sky",
+        model: "flux2_klein_4b",
+        duration: 5,
+        resolution: "720p",
+        fps: 24,
+        audio: false,
+        cameraMotion: "none",
+        imageProfileId: "flux2_klein_4b",
+        imageProcessMode: "edit",
+        imageInputMedia: [
+          {
+            url: "blob:stale",
+            path: master.path,
+            role: "edit_image",
+            type: "image",
+          },
+          {
+            url: "file:///C:/reference.png",
+            role: "reference_people_objects",
+            type: "image",
+          },
+        ],
+        imageEditMask: {
+          schemaVersion: 1,
+          operations: [
+            {
+              kind: "ellipse",
+              x: 0.2,
+              y: 0.2,
+              width: 0.4,
+              height: 0.4,
+            },
+          ],
+        },
+        imageEditOutpaint: {
+          aspectMode: "16:9",
+          padding: { top: 0, bottom: 0, left: 25, right: 25 },
+        },
+      }),
+      [master],
+      DEFAULT_VIDEO_SETTINGS,
+      musicSettings,
+    );
+
+    expect(plan).toMatchObject({
+      mode: "image",
+      imageMode: "edit",
+      media: {
+        editImage: {
+          url: master.url,
+          role: "edit_image",
+        },
+        imageInputs: [{ role: "reference_people_objects" }],
+      },
+      editMask: { operations: [{ kind: "ellipse" }] },
+      editOutpaint: {
+        aspectMode: "16:9",
+        padding: { left: 25, right: 25 },
+      },
+    });
+  });
 });

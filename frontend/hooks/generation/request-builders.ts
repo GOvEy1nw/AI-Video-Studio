@@ -1,5 +1,7 @@
 import type { GenerateDirectorRequest } from "../../types/director";
 import type { GenerationSettings } from "../../types/generation";
+import type { MediaCropRecipe } from "../../types/media-crop";
+import type { ImageEditRequest } from "../../types/image-edit";
 import type { GenerateMusicRequest } from "../../types/music";
 import {
   AUDIO_MEDIA_ROLE_SET,
@@ -12,6 +14,7 @@ export interface GenerationInputMediaRequest {
   type?: "image" | "video" | "audio";
   trimStartTime?: number;
   trimDuration?: number;
+  crop?: MediaCropRecipe;
 }
 
 export interface GenerationReframeOptions {
@@ -97,6 +100,7 @@ export function buildVideoRequestBody({
       role: item.role,
       trimStartTime: item.trimStartTime,
       trimDuration: item.trimDuration,
+      ...(item.crop ? { crop: item.crop } : {}),
     }));
   }
   if (shotPrompts?.length) body.shotPrompts = shotPrompts;
@@ -144,6 +148,7 @@ export function buildImageRequestBody(
   prompt: string,
   settings: GenerationSettings,
   inputMedia?: GenerationInputMediaRequest[],
+  edit?: ImageEditRequest,
 ): Record<string, unknown> {
   const body: Record<string, unknown> = {
     prompt,
@@ -159,8 +164,10 @@ export function buildImageRequestBody(
         type: "image",
         path: item.path,
         role: item.role,
+        ...(item.crop ? { crop: item.crop } : {}),
       }));
     }
+    if (edit) body.edit = edit;
   } else {
     Object.assign(body, getImageDimensions(settings));
   }

@@ -1,13 +1,22 @@
-import { ChevronDown, Image, Play, StepForward } from "lucide-react";
+import { ChevronDown, Image, Pencil, Play, StepForward } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
-export type ImageUseTarget = "image-guide" | "first-frame" | "last-frame";
+export type ImageUseTarget =
+  | "edit-image"
+  | "image-guide"
+  | "first-frame"
+  | "last-frame";
 
 export const IMAGE_USE_OPTIONS: Array<{
   target: ImageUseTarget;
   label: string;
   icon: ReactNode;
 }> = [
+  {
+    target: "edit-image",
+    label: "Edit Image",
+    icon: <Pencil className="h-3.5 w-3.5" />,
+  },
   {
     target: "image-guide",
     label: "Image Guide",

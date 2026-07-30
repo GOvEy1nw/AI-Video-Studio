@@ -186,6 +186,8 @@ class ModelProfile:
     reference_images: bool = False
     control_image: bool = False
     inpainting: bool = False
+    outpainting: bool = False
+    masked_edit_references: bool = False
     lora: LoraSupport = "future"
     input_media: InputMediaPolicy = field(default_factory=InputMediaPolicy)
     default_aspect_ratio: AspectRatio = "1:1"
@@ -784,7 +786,8 @@ IMAGE_PROFILES: tuple[ModelProfile, ...] = (
         text_to_image=True,
         reference_images=True,
         control_image=True,
-        inpainting=False,
+        inpainting=True,
+        outpainting=True,
         lora="future",
         input_media=InputMediaPolicy(
             supports_image_inputs=True,
@@ -898,6 +901,8 @@ IMAGE_PROFILES: tuple[ModelProfile, ...] = (
         text_to_image=True,
         reference_images=True,
         control_image=True,
+        inpainting=True,
+        outpainting=True,
         lora="future",
         input_media=InputMediaPolicy(
             supports_image_inputs=True,
@@ -1125,7 +1130,13 @@ IMAGE_PROFILES: tuple[ModelProfile, ...] = (
             setting_values=_image_setting_values(
                 video_prompt_type={
                     "guide_preprocessing": None,
-                    "mask_preprocessing": None,
+                    "mask_preprocessing": {
+                        "visible": True,
+                        "choices": [
+                            {"label": "None", "value": ""},
+                            {"label": "Native mask", "value": "A"},
+                        ],
+                    },
                     "guide_custom_choices": None,
                     "image_ref_choices": {
                         "default": "KI",
@@ -1190,6 +1201,7 @@ IMAGE_PROFILES: tuple[ModelProfile, ...] = (
         text_to_image=True,
         reference_images=True,
         inpainting=True,
+        outpainting=True,
         lora="future",
         input_media=InputMediaPolicy(
             supports_image_inputs=True,
@@ -1318,6 +1330,8 @@ IMAGE_PROFILES: tuple[ModelProfile, ...] = (
         reference_images=True,
         control_image=True,
         inpainting=True,
+        outpainting=True,
+        masked_edit_references=True,
         lora="future",
         input_media=InputMediaPolicy(
             supports_image_inputs=True,

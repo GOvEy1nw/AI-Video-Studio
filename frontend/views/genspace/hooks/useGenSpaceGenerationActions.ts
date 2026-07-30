@@ -11,6 +11,10 @@ import type { RetakeSubmitParams } from "../../../hooks/use-retake";
 import type { ModelProfile } from "../../../types/model-profiles";
 import type { MusicSettings } from "../../../types/music";
 import type { Asset } from "../../../types/project";
+import type {
+  ImageEditMaskRecipe,
+  ImageEditOutpaintRecipe,
+} from "../../../types/image-edit";
 import type { GenSpaceSettings } from "../constants";
 import type {
   FramingSettings,
@@ -25,6 +29,10 @@ import type {
   VideoProcessMode,
 } from "../types";
 import { applyFramingPrefix } from "../logic/framing";
+import {
+  serializeRegionPrompt,
+  type RegionPromptState,
+} from "../image/region-prompt";
 import {
   buildImageGenerationCommand,
   buildMusicGenerationCommand,
@@ -43,6 +51,7 @@ interface RetakeInput {
 export function useGenSpaceGenerationActions({
   mode,
   imageMode,
+  regionPrompt,
   videoMode,
   prompt,
   framingSettings,
@@ -55,6 +64,10 @@ export function useGenSpaceGenerationActions({
   musicSettings,
   musicProfiles,
   imageInputs,
+  imageProfiles = [],
+  editImage = null,
+  editMask = null,
+  editOutpaint = null,
   inputImage,
   inputAudio,
   useAudioTrack,
@@ -70,6 +83,7 @@ export function useGenSpaceGenerationActions({
 }: {
   mode: GenSpaceMode;
   imageMode: ImageProcessMode;
+  regionPrompt: RegionPromptState;
   videoMode: VideoProcessMode;
   prompt: string;
   framingSettings: FramingSettings | null;
@@ -82,6 +96,10 @@ export function useGenSpaceGenerationActions({
   musicSettings: MusicSettings;
   musicProfiles: ModelProfile[];
   imageInputs: GenSpaceMediaInput[];
+  imageProfiles?: ModelProfile[];
+  editImage?: GenSpaceMediaInput | null;
+  editMask?: ImageEditMaskRecipe | null;
+  editOutpaint?: ImageEditOutpaintRecipe | null;
   inputImage: string | null;
   inputAudio: string | null;
   useAudioTrack: boolean;
@@ -142,7 +160,11 @@ export function useGenSpaceGenerationActions({
       return;
     }
 
-    if (!prompt.trim()) return;
+    const isRegionImage = mode === "image" && imageMode === "region";
+    const authoredPrompt = isRegionImage
+      ? serializeRegionPrompt(regionPrompt)
+      : prompt;
+    if (!authoredPrompt.trim()) return;
 
     if (mode === "music") {
       if (!currentProjectId) return;
@@ -169,9 +191,10 @@ export function useGenSpaceGenerationActions({
       return;
     }
 
-    const resolvedPrompt = promptEnhancementEnabled
-      ? await resolvePromptForGeneration(prompt)
-      : prompt;
+    const resolvedPrompt =
+      promptEnhancementEnabled && !isRegionImage
+        ? await resolvePromptForGeneration(authoredPrompt)
+        : authoredPrompt;
     if (!resolvedPrompt) return;
     const effectivePrompt = applyFramingPrefix(
       resolvedPrompt,
@@ -181,25 +204,81 @@ export function useGenSpaceGenerationActions({
     );
 
     if (mode === "image") {
+      const selectedProfile =
+        imageProfiles.find(({ id }) => id === settings.imageProfileId) ??
+        imageProfiles[0];
+      const isMaskedEdit =
+        imageMode === "edit" && (!!editMask || !!editOutpaint);
+      const submittedImageInputs =
+        imageMode === "region" ||
+        (isMaskedEdit && !selectedProfile?.capabilities.maskedEditReferences)
+          ? []
+          : imageInputs;
+      const effectiveSettings =
+        imageMode === "edit" && editOutpaint
+          ? { ...settings, imageAspectRatio: editOutpaint.aspectMode }
+          : settings;
       const command = buildImageGenerationCommand(
         effectivePrompt,
-        settings,
-        imageInputs,
+        effectiveSettings,
+        submittedImageInputs,
+        imageMode === "edit" && editImage
+          ? {
+              image: editImage,
+              mask: editMask,
+              outpaint: editOutpaint,
+            }
+          : undefined,
       );
+      if (imageMode === "edit" && !command.edit) return;
       if (!currentProjectId) return;
+      if (effectiveSettings !== settings) setSettings(effectiveSettings);
+      const snapshotInputs =
+        imageMode === "edit" && editImage
+          ? [editImage, ...submittedImageInputs]
+          : submittedImageInputs;
       imageSubmissionRef.current = {
         projectId: currentProjectId,
         submittedAt: Date.now(),
         prompt: effectivePrompt,
-        settings: { ...settings },
-        inputs: imageInputs.map((input) => ({ ...input })),
+        imageMode,
+        editMask: editMask
+          ? {
+              schemaVersion: 1,
+              operations: editMask.operations.map((operation) =>
+                operation.kind === "brush"
+                  ? {
+                      ...operation,
+                      points: operation.points.map((point) => ({ ...point })),
+                    }
+                  : { ...operation },
+              ),
+            }
+          : undefined,
+        editOutpaint: editOutpaint
+          ? {
+              ...editOutpaint,
+              padding: { ...editOutpaint.padding },
+            }
+          : undefined,
+        settings: { ...effectiveSettings },
+        inputs: snapshotInputs.map((input) => ({ ...input })),
         assetPaths: projectAssets.map(({ url, path }) => ({ url, path })),
       };
-      await generateImage(
-        command.prompt,
-        command.settings,
-        command.inputMedia,
-      );
+      if (command.edit) {
+        await generateImage(
+          command.prompt,
+          command.settings,
+          command.inputMedia,
+          command.edit,
+        );
+      } else {
+        await generateImage(
+          command.prompt,
+          command.settings,
+          command.inputMedia,
+        );
+      }
       return;
     }
 
@@ -239,7 +318,12 @@ export function useGenSpaceGenerationActions({
     generateImage,
     generateMusic,
     imageInputs,
+    imageProfiles,
     imageMode,
+    editImage,
+    editMask,
+    editOutpaint,
+    regionPrompt,
     inputAudio,
     inputImage,
     mode,

@@ -4,6 +4,7 @@ import type {
   GenerateDirectorResponse,
 } from "../types/director";
 import type { GenerationSettings } from "../types/generation";
+import type { ImageEditRequest } from "../types/image-edit";
 import type {
   ComposeMusicLyricsRequest,
   GenerateMusicRequest,
@@ -52,6 +53,7 @@ export interface UseGenerationReturn extends GenerationState {
     prompt: string,
     settings: GenerationSettings,
     inputMedia?: InputMediaRequest[],
+    edit?: ImageEditRequest,
   ) => Promise<void>;
   generateMusic: (
     request: GenerateMusicRequest,
@@ -193,11 +195,11 @@ export function useGeneration(): UseGenerationReturn {
   );
 
   const generateImage = useCallback<UseGenerationReturn["generateImage"]>(
-    async (prompt, settings, inputMedia) => {
+    async (prompt, settings, inputMedia, edit) => {
       const imageCount = settings.variations || 1;
       await runJob<void>({
         endpoint: "/api/generate-image",
-        body: buildImageRequestBody(prompt, settings, inputMedia),
+        body: buildImageRequestBody(prompt, settings, inputMedia, edit),
         initialStatus:
           imageCount > 1
             ? `Generating ${imageCount} images...`

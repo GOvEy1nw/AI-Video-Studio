@@ -10,12 +10,14 @@ from threading import RLock
 from typing import TYPE_CHECKING, cast
 
 from _routes._errors import HTTPError
-from api_types import GenerateImageRequest, GenerateImageResponse
+from api_types import GenerateImageInputMedia, GenerateImageRequest, GenerateImageResponse
 from handlers.base import StateHandlerBase
 from handlers.generation_handler import GenerationHandler
 from model_profiles import get_image_profile, is_combination_supported, resolve_resolution
 from model_profiles.profiles import ImageInputRole, ModelProfile
 from server_utils.media_validation import validate_image_file
+from services.media_crop import crop_image_media
+from services.image_edit import materialize_image_edit
 from services.wangp_bridge import WanGPBridge
 from state.app_state_types import AppState
 
@@ -41,6 +43,7 @@ _CONTROL_ROLE_VALUES: dict[ImageInputRole, str] = {
 class ResolvedImageInputSettings:
     settings: dict[str, object]
     model_type: str | None = None
+    temporary_paths: tuple[Path, ...] = ()
 
 
 class ImageGenerationHandler(StateHandlerBase):
@@ -91,14 +94,24 @@ class ImageGenerationHandler(StateHandlerBase):
                 "metadata_type": output_settings.metadata_mode,
             }
         )
-        input_settings = self._resolve_input_media_settings(req, profile)
-        if input_settings.model_type is not None:
-            wangp_model_type = input_settings.model_type
-        wangp_default_settings.update(input_settings.settings)
-        num_steps = self._resolve_num_steps(req, wangp_default_settings, wangp_model_type)
-
+        temporary_crop_paths: list[Path] = []
+        generation_started = False
         try:
+            effective_req, temporary_crop_paths = self._apply_input_crops(req)
+            input_settings = self._resolve_input_media_settings(
+                effective_req,
+                profile,
+                width,
+                height,
+            )
+            temporary_crop_paths.extend(input_settings.temporary_paths)
+            if input_settings.model_type is not None:
+                wangp_model_type = input_settings.model_type
+            wangp_default_settings.update(input_settings.settings)
+            num_steps = self._resolve_num_steps(req, wangp_default_settings, wangp_model_type)
+
             self._generation.start_generation_job(generation_id)
+            generation_started = True
             output_paths: list[str] = []
             for offset in range(0, num_images, max_parallel_images):
                 if self._generation.is_generation_cancelled():
@@ -123,14 +136,47 @@ class ImageGenerationHandler(StateHandlerBase):
             return GenerateImageResponse(status="complete", image_paths=output_paths)
         except HTTPError as e:
             # Propagate intentional client-error responses unchanged.
-            self._generation.fail_generation(e.detail)
+            if generation_started:
+                self._generation.fail_generation(e.detail)
             raise
         except Exception as e:
-            self._generation.fail_generation(str(e))
+            if generation_started:
+                self._generation.fail_generation(str(e))
             if "cancelled" in str(e).lower():
                 logger.info("WanGP image generation cancelled by user")
                 return GenerateImageResponse(status="cancelled")
             raise HTTPError(500, str(e)) from e
+        finally:
+            for media_path in temporary_crop_paths:
+                try:
+                    media_path.unlink(missing_ok=True)
+                except OSError:
+                    logger.warning("Could not remove temporary image crop: %s", media_path)
+
+    def _apply_input_crops(
+        self,
+        req: GenerateImageRequest,
+    ) -> tuple[GenerateImageRequest, list[Path]]:
+        temporary_paths: list[Path] = []
+        try:
+            input_media: list[GenerateImageInputMedia] = []
+            for media in req.inputMedia:
+                if media.crop is None:
+                    input_media.append(media)
+                    continue
+                source_path = self._validate_input_image(media.path)
+                cropped_path = crop_image_media(source_path, media.crop)
+                temporary_paths.append(cropped_path)
+                input_media.append(media.model_copy(update={"path": str(cropped_path)}))
+            return req.model_copy(update={"inputMedia": input_media}), temporary_paths
+        except HTTPError:
+            for path in temporary_paths:
+                path.unlink(missing_ok=True)
+            raise
+        except Exception as exc:
+            for path in temporary_paths:
+                path.unlink(missing_ok=True)
+            raise HTTPError(400, f"MEDIA_CROP_FAILED: {exc}") from exc
 
     def _resolve_profile_and_dimensions(
         self, req: GenerateImageRequest
@@ -184,7 +230,11 @@ class ImageGenerationHandler(StateHandlerBase):
         self,
         req: GenerateImageRequest,
         profile: ModelProfile | None,
+        width: int,
+        height: int,
     ) -> ResolvedImageInputSettings:
+        if req.edit is not None:
+            return self._resolve_edit_settings(req, profile, width, height)
         if not req.inputMedia:
             return ResolvedImageInputSettings(settings={})
         if profile is None:
@@ -248,6 +298,125 @@ class ImageGenerationHandler(StateHandlerBase):
             return ResolvedImageInputSettings(settings=settings, model_type=model_type)
 
         return ResolvedImageInputSettings(settings=settings, model_type=model_type)
+
+    def _resolve_edit_settings(
+        self,
+        req: GenerateImageRequest,
+        profile: ModelProfile | None,
+        width: int,
+        height: int,
+    ) -> ResolvedImageInputSettings:
+        edit = req.edit
+        if edit is None:
+            return ResolvedImageInputSettings(settings={})
+        if profile is None:
+            raise HTTPError(
+                400,
+                "IMAGE_EDIT_NOT_SUPPORTED: image Edit requires a curated model profile",
+            )
+
+        policy = profile.input_media
+        if not profile.reference_images:
+            raise HTTPError(
+                400,
+                f"IMAGE_EDIT_NOT_SUPPORTED: {profile.display_name}",
+            )
+        if len(req.inputMedia) + 1 > policy.max_images:
+            raise HTTPError(
+                400,
+                f"TOO_MANY_IMAGE_INPUTS: {profile.display_name} supports "
+                f"{policy.max_images} total Edit image(s)",
+            )
+
+        master_path = self._validate_input_image(edit.image.path)
+        supported_roles = {role.role for role in policy.roles}
+        reference_paths: list[Path] = []
+        for input_media in req.inputMedia:
+            if (
+                input_media.role not in supported_roles
+                or input_media.role not in _REFERENCE_ROLE_VALUES
+            ):
+                raise HTTPError(
+                    400,
+                    f"UNSUPPORTED_IMAGE_EDIT_REFERENCE_ROLE: "
+                    f"{input_media.role} for {profile.display_name}",
+                )
+            reference_paths.append(self._validate_input_image(input_media.path))
+
+        settings = dict(policy.wangp_default_settings)
+        model_type = policy.wangp_model_type
+        masked_edit = edit.mask is not None or edit.outpaint is not None
+        if not masked_edit:
+            self._require_wangp_choice(profile, "image_ref_choices", "KI")
+            settings.update(
+                {
+                    "image_mode": 1,
+                    "video_prompt_type": "KI",
+                    "image_refs": [
+                        str(path.resolve())
+                        for path in [master_path, *reference_paths]
+                    ],
+                }
+            )
+            return ResolvedImageInputSettings(
+                settings=settings,
+                model_type=model_type,
+            )
+
+        if edit.mask is not None and not profile.inpainting:
+            raise HTTPError(
+                400,
+                f"INPAINTING_NOT_SUPPORTED: {profile.display_name}",
+            )
+        if edit.outpaint is not None:
+            if not profile.outpainting:
+                raise HTTPError(
+                    400,
+                    f"OUTPAINTING_NOT_SUPPORTED: {profile.display_name}",
+                )
+            if req.aspectRatio != edit.outpaint.aspectMode:
+                raise HTTPError(
+                    400,
+                    "OUTPAINT_ASPECT_MISMATCH: request aspect ratio must match "
+                    "the outpaint recipe",
+                )
+        if reference_paths and not profile.masked_edit_references:
+            raise HTTPError(
+                400,
+                f"MASKED_EDIT_REFERENCES_NOT_SUPPORTED: {profile.display_name}",
+            )
+
+        self._require_wangp_choice(profile, "mask_preprocessing", "A")
+        if reference_paths:
+            self._require_wangp_choice(profile, "image_ref_choices", "I")
+        guide_path, mask_path = materialize_image_edit(
+            master_path,
+            width=width,
+            height=height,
+            mask_recipe=edit.mask,
+            outpaint=edit.outpaint,
+        )
+        prompt_type = "VAGI" if reference_paths else "VAG"
+        settings.update(
+            {
+                "image_mode": 2,
+                "model_mode": 0,
+                "video_prompt_type": prompt_type,
+                "image_guide": str(guide_path.resolve()),
+                "image_mask": str(mask_path.resolve()),
+                "denoising_strength": 1.0,
+                "masking_strength": 1.0,
+            }
+        )
+        if reference_paths:
+            settings["image_refs"] = [
+                str(path.resolve()) for path in reference_paths
+            ]
+        return ResolvedImageInputSettings(
+            settings=settings,
+            model_type=model_type,
+            temporary_paths=(guide_path, mask_path),
+        )
 
     @staticmethod
     def _validate_input_image(raw_path: str) -> Path:
