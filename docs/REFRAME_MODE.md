@@ -1,13 +1,17 @@
 # Reframe Mode
 
-Reframe is AiVS's video outpainting workflow. It lives under GenSpace video mode as a video process mode, alongside Generate and Retake.
+Reframe is AiVS's shared image/video outpainting workflow. Video Reframe lives
+under GenSpace video mode alongside Generate and Retake. Image Reframe lives
+under Image Edit alongside Edit and Retouch.
 
 ## UI Flow
 
 - `frontend/views/genspace/hooks/useGenSpaceVideoTools.tsx` owns video process mode state: `generate`, `reframe`, or `retake`.
 - `frontend/views/genspace/video/ReframePanel.tsx` renders inside the prompt bar area so the gallery remains visible.
 - `frontend/views/genspace/video/VideoTrimPanel.tsx` is shared by Retake and Reframe for trim selection and seeking.
-- `frontend/views/genspace/video/OutpaintFrameOverlay.tsx` handles aspect, zoom, pan, reset, and padding adjustment.
+- `frontend/views/genspace/components/ReframeEditor.tsx` is the one framing component used by Image and Video. It owns preset/custom aspect controls, zoom, reset, frame layout, pan, and edge dragging.
+- `frontend/views/genspace/video/OutpaintFrameOverlay.tsx` handles frame pan and edge/corner padding adjustment.
+- Image keeps its full-width source-aspect canvas with zero display inset. Video keeps its trim/playback canvas. Both supply media lifecycle state to the shared editor.
 - Reframe shows an optional prompt textarea below the trim panel. Placeholder: `optional text prompt to drive outpainting...`.
 - Blank prompt submits `outpaint`, because WanGP requires a text prompt even for outpainting.
 
@@ -15,6 +19,7 @@ Reframe is AiVS's video outpainting workflow. It lives under GenSpace video mode
 
 - Presets: `1:1`, `16:9`, `9:16`.
 - Custom mode uses mirrored edge expansion.
+- Reframe output aspect comes only from the authored frame. Image Reframe does not show a second aspect selector beside resolution.
 - Preset modes use zoom plus pan.
 - UI expansion/zoom is capped at 100% per edge.
 - Pan redistribution can internally produce up to 200% on one side; backend `ReframePadding` therefore allows 0-200 per edge.

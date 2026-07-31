@@ -99,6 +99,30 @@ describe("GenSpace generation request builders", () => {
     expect(command.settings.imageAspectRatio).toBe("16:9");
   });
 
+  it("keeps a valid resolution-budget aspect for custom Image Reframe", () => {
+    const command = buildImageGenerationCommand(
+      "extend the scene",
+      DEFAULT_VIDEO_SETTINGS,
+      [],
+      {
+        image: {
+          id: "master",
+          url: "file:///C:/master.png",
+          role: "edit_image",
+          type: "image",
+        },
+        mask: null,
+        outpaint: {
+          aspectMode: "custom",
+          padding: { top: 10, bottom: 10, left: 30, right: 30 },
+        },
+      },
+    );
+
+    expect(command.settings.imageAspectRatio).toBe("1:1");
+    expect(command.edit?.outpaint?.aspectMode).toBe("custom");
+  });
+
   it("uses trimmed guide duration and Pro mode for guide audio", () => {
     const command = buildVideoGenerationCommand({
       prompt: "prompt",

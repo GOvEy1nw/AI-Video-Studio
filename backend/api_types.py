@@ -752,7 +752,7 @@ class ImageEditOutpaintPadding(BaseModel):
 
 
 class ImageEditOutpaintRecipe(BaseModel):
-    aspectMode: Literal["1:1", "16:9", "9:16"]
+    aspectMode: Literal["1:1", "16:9", "9:16", "custom"]
     padding: ImageEditOutpaintPadding
 
     @model_validator(mode="after")

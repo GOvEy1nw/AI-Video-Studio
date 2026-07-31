@@ -8,6 +8,7 @@ export function SettingsDropdown({
   title,
   placement = "top",
   variant = "default",
+  disabled = false,
 }: {
   trigger: ReactNode;
   options: {
@@ -23,6 +24,7 @@ export function SettingsDropdown({
   title: string;
   placement?: "top" | "bottom";
   variant?: "default" | "model";
+  disabled?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -40,6 +42,10 @@ export function SettingsDropdown({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
 
+  useEffect(() => {
+    if (disabled) setIsOpen(false);
+  }, [disabled]);
+
   return (
     <div
       ref={dropdownRef}
@@ -48,11 +54,20 @@ export function SettingsDropdown({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
+        disabled={disabled}
         className={`flex shrink-0 text-xs items-center whitespace-nowrap transition-colors ${
           variant === "model"
-            ? "w-full justify-between rounded-xl border border-zinc-700 bg-zinc-800/70 px-3 py-2.5 text-left hover:border-zinc-600 hover:bg-zinc-800"
-            : "gap-1 rounded-md px-2 py-1.5 hover:bg-zinc-800"
-        } ${isOpen ? "border-zinc-600 bg-zinc-700 hover:bg-zinc-700" : ""}`}
+            ? `w-full justify-between rounded-xl border border-zinc-700 bg-zinc-800/70 px-3 py-2.5 text-left ${
+                disabled
+                  ? "cursor-not-allowed opacity-50"
+                  : "hover:border-zinc-600 hover:bg-zinc-800"
+              }`
+            : `gap-1 rounded-md px-2 py-1.5 ${
+                disabled
+                  ? "cursor-not-allowed opacity-50"
+                  : "hover:bg-zinc-800"
+              }`
+        } ${isOpen && !disabled ? "border-zinc-600 bg-zinc-700 hover:bg-zinc-700" : ""}`}
       >
         {trigger}
       </button>

@@ -14,6 +14,7 @@ import type { Asset } from "../../../types/project";
 import type {
   ImageEditMaskRecipe,
   ImageEditOutpaintRecipe,
+  ImageEditToolMode,
 } from "../../../types/image-edit";
 import type { GenSpaceSettings } from "../constants";
 import type {
@@ -64,8 +65,8 @@ export function useGenSpaceGenerationActions({
   musicSettings,
   musicProfiles,
   imageInputs,
-  imageProfiles = [],
   editImage = null,
+  editToolMode = "edit",
   editMask = null,
   editOutpaint = null,
   inputImage,
@@ -96,8 +97,8 @@ export function useGenSpaceGenerationActions({
   musicSettings: MusicSettings;
   musicProfiles: ModelProfile[];
   imageInputs: GenSpaceMediaInput[];
-  imageProfiles?: ModelProfile[];
   editImage?: GenSpaceMediaInput | null;
+  editToolMode?: ImageEditToolMode;
   editMask?: ImageEditMaskRecipe | null;
   editOutpaint?: ImageEditOutpaintRecipe | null;
   inputImage: string | null;
@@ -204,35 +205,31 @@ export function useGenSpaceGenerationActions({
     );
 
     if (mode === "image") {
-      const selectedProfile =
-        imageProfiles.find(({ id }) => id === settings.imageProfileId) ??
-        imageProfiles[0];
-      const isMaskedEdit =
-        imageMode === "edit" && (!!editMask || !!editOutpaint);
+      const activeEditMask =
+        imageMode === "edit" && editToolMode === "retouch" ? editMask : null;
+      const activeEditOutpaint =
+        imageMode === "edit" && editToolMode === "reframe"
+          ? editOutpaint
+          : null;
       const submittedImageInputs =
         imageMode === "region" ||
-        (isMaskedEdit && !selectedProfile?.capabilities.maskedEditReferences)
+        (imageMode === "edit" && editToolMode !== "edit")
           ? []
           : imageInputs;
-      const effectiveSettings =
-        imageMode === "edit" && editOutpaint
-          ? { ...settings, imageAspectRatio: editOutpaint.aspectMode }
-          : settings;
       const command = buildImageGenerationCommand(
         effectivePrompt,
-        effectiveSettings,
+        settings,
         submittedImageInputs,
         imageMode === "edit" && editImage
           ? {
               image: editImage,
-              mask: editMask,
-              outpaint: editOutpaint,
+              mask: activeEditMask,
+              outpaint: activeEditOutpaint,
             }
           : undefined,
       );
       if (imageMode === "edit" && !command.edit) return;
       if (!currentProjectId) return;
-      if (effectiveSettings !== settings) setSettings(effectiveSettings);
       const snapshotInputs =
         imageMode === "edit" && editImage
           ? [editImage, ...submittedImageInputs]
@@ -242,10 +239,10 @@ export function useGenSpaceGenerationActions({
         submittedAt: Date.now(),
         prompt: effectivePrompt,
         imageMode,
-        editMask: editMask
+        editMask: activeEditMask
           ? {
               schemaVersion: 1,
-              operations: editMask.operations.map((operation) =>
+              operations: activeEditMask.operations.map((operation) =>
                 operation.kind === "brush"
                   ? {
                       ...operation,
@@ -255,13 +252,13 @@ export function useGenSpaceGenerationActions({
               ),
             }
           : undefined,
-        editOutpaint: editOutpaint
+        editOutpaint: activeEditOutpaint
           ? {
-              ...editOutpaint,
-              padding: { ...editOutpaint.padding },
+              ...activeEditOutpaint,
+              padding: { ...activeEditOutpaint.padding },
             }
           : undefined,
-        settings: { ...effectiveSettings },
+        settings: { ...settings },
         inputs: snapshotInputs.map((input) => ({ ...input })),
         assetPaths: projectAssets.map(({ url, path }) => ({ url, path })),
       };
@@ -318,9 +315,9 @@ export function useGenSpaceGenerationActions({
     generateImage,
     generateMusic,
     imageInputs,
-    imageProfiles,
     imageMode,
     editImage,
+    editToolMode,
     editMask,
     editOutpaint,
     regionPrompt,

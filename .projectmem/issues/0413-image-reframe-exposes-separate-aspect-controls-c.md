@@ -1,0 +1,13 @@
+# #0413 Image Reframe exposes separate aspect controls/component and lacks Video Reframe custom edge-drag parity
+
+- 2026-07-30T15:11:04Z `issue`: Image Reframe exposes separate aspect controls/component and lacks Video Reframe custom edge-drag parity [frontend/views/genspace image/video Reframe UI]
+- 2026-07-30T15:29:34Z `attempt`: First shared-editor refactor typecheck found three stale effectiveSettings references after deleting redundant aspect override [frontend/views/genspace/hooks/useGenSpaceGenerationActions.ts] (failed)
+- 2026-07-30T15:30:07Z `attempt`: Removed stale snapshot references; shared Image/Video Reframe editor and custom recipe flow pass strict TypeScript [frontend shared Reframe editor] (worked)
+- 2026-07-30T15:30:33Z `attempt`: Frontend suite exposed one stale Image Reframe layout test: shared editor measures getBoundingClientRect like Video, but test only mocked clientWidth/clientHeight [frontend/views/genspace/image/ImageEditMediaInputs.test.tsx] (failed)
+- 2026-07-30T15:30:57Z `attempt`: Updated layout characterization to shared Video-style bounds measurement; 21 focused Reframe/request/output-control tests pass [frontend Reframe tests] (worked)
+- 2026-07-30T15:31:43Z `attempt`: Focused backend tests showed independent 16px snapping distorted one custom frame ratio by 2.17%, narrowly exceeding aspect-preservation tolerance [backend/services/image_edit.py] (failed)
+- 2026-07-30T15:32:12Z `attempt`: Block-aligned dimension search now minimizes authored-ratio error while retaining pixel budget; all 12 Image Edit backend tests pass [backend/services/image_edit.py] (worked)
+- 2026-07-30T15:35:36Z `attempt`: First direct custom-edge test dragged the left handle inward, correctly clamping zero padding; assertion expected outward expansion [frontend/views/genspace/components/ReframeEditor.test.tsx] (failed)
+- 2026-07-30T15:35:55Z `attempt`: Direct shared-editor tests confirm Custom mirrored outward edge dragging and video rendering through the same component [frontend/views/genspace/components/ReframeEditor.test.tsx] (worked)
+- 2026-07-30T15:49:02Z `attempt`: Confirmed by strict TS, 144 frontend tests, frontend build, Pyright, 308 backend tests, diff check, and Electron smoke for Custom controls plus omitted Image output aspect selector [shared Image/Video Reframe workflow] (worked)
+- 2026-07-30T15:49:08Z `fix`: Image Reframe now mirrors Video Reframe aspect behavior through one shared editor, supports custom edge-authored frames, hides separate aspect output control, and preserves custom ratio through WanGP pixel-budget sizing [frontend/views/genspace/components/ReframeEditor.tsx; backend Image Edit outpaint flow]

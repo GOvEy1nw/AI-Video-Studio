@@ -10,6 +10,7 @@ import { ImageModeTabs } from "./ImageModeTabs";
 import { ImageModelControls } from "./ImageModelControls";
 import { RegionPromptEditor } from "./RegionPromptEditor";
 import { getImageProfilesForMode } from "./image-profile-options";
+import { isImageAspectRatioLocked } from "../logic/media-inputs";
 
 export function ImageGenPanel({
   controller,
@@ -25,6 +26,12 @@ export function ImageGenPanel({
   const selectedProfile =
     modeProfiles.find((profile) => profile.id === settings.value.profileId) ??
     modeProfiles[0];
+  const aspectRatioDisabled = isImageAspectRatioLocked(
+    imageTools.mode,
+    imageTools.editToolMode,
+    media.inputs,
+    imageTools.editImage !== null,
+  );
   const promptActions = (
     <PromptActions
       seedLocked={prompt.seedLocked}
@@ -71,14 +78,12 @@ export function ImageGenPanel({
           references={media.inputs}
           onReferencesChange={media.setInputs}
           profile={selectedProfile}
+          toolMode={imageTools.editToolMode}
+          onToolModeChange={imageTools.setEditToolMode}
           mask={imageTools.editMask}
           onMaskChange={imageTools.setEditMask}
           outpaint={imageTools.editOutpaint}
           onOutpaintChange={imageTools.setEditOutpaint}
-          aspectRatio={settings.value.aspectRatio}
-          onAspectRatioChange={(aspectRatio) =>
-            settings.patch({ aspectRatio })
-          }
           disabled={generation.isRunning}
           resolveInputFileUrl={media.resolveInputFileUrl}
           syncInputFileToGallery={media.syncInputFileToGallery}
@@ -118,6 +123,13 @@ export function ImageGenPanel({
           onSettingsChange={settings.patch}
           imageProfiles={modeProfiles}
           section="output"
+          aspectRatioDisabled={aspectRatioDisabled}
+          showAspectRatio={
+            !(
+              imageTools.mode === "edit" &&
+              imageTools.editToolMode === "reframe"
+            )
+          }
         />
         <GenerateButton
           onClick={generation.submit}

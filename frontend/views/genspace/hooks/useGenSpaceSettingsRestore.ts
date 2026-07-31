@@ -12,6 +12,7 @@ import type { Asset } from "../../../types/project";
 import type {
   ImageEditMaskRecipe,
   ImageEditOutpaintRecipe,
+  ImageEditToolMode,
 } from "../../../types/image-edit";
 import type { GenSpaceSettings } from "../constants";
 import { buildGenSpaceRestorePlan } from "../logic/settings-restore";
@@ -41,6 +42,7 @@ export function useGenSpaceSettingsRestore({
   setMusicSettings,
   setInputs,
   setEditImage,
+  setEditToolMode,
   setEditMask,
   setEditOutpaint,
   setInputImage,
@@ -62,6 +64,7 @@ export function useGenSpaceSettingsRestore({
   setMusicSettings: Dispatch<SetStateAction<MusicSettings>>;
   setInputs: Dispatch<SetStateAction<GenSpaceMediaInput[]>>;
   setEditImage: (image: GenSpaceMediaInput | null) => void;
+  setEditToolMode: (mode: ImageEditToolMode) => void;
   setEditMask: (mask: ImageEditMaskRecipe | null) => void;
   setEditOutpaint: (outpaint: ImageEditOutpaintRecipe | null) => void;
   setInputImage: (url: string | null) => void;
@@ -111,6 +114,7 @@ export function useGenSpaceSettingsRestore({
         setPrompt(plan.prompt);
       }
       setVideoMode(plan.videoMode);
+      setEditToolMode(plan.editToolMode);
       setEditMask(plan.editMask);
       setEditOutpaint(plan.editOutpaint);
       setSettings(plan.settings);
@@ -126,6 +130,7 @@ export function useGenSpaceSettingsRestore({
       setInputImage,
       setInputs,
       setEditImage,
+      setEditToolMode,
       setEditMask,
       setEditOutpaint,
       setImageMode,

@@ -3,6 +3,8 @@ import type { ModelProfileInputMedia } from "../../../types/model-profiles";
 import type { GenSpaceMediaInput } from "../types";
 import {
   findGuideInput,
+  isImageAspectRatioLocked,
+  isVideoAspectRatioLocked,
   inferMediaKindForRole,
   normalizeImageInputsForProfile,
   normalizeVideoInputsForProfile,
@@ -75,5 +77,40 @@ describe("GenSpace media input logic", () => {
     expect(inferMediaKindForRole("audio_to_video")).toBe("audio");
     expect(inferMediaKindForRole("continue_video")).toBe("video");
     expect(inferMediaKindForRole("start_image")).toBe("image");
+  });
+
+  it("locks image aspect to visual inputs except Region and Reframe", () => {
+    const reference = input("reference", "reference_subject", "image");
+
+    expect(isImageAspectRatioLocked("create", "edit", [], false)).toBe(false);
+    expect(
+      isImageAspectRatioLocked("create", "edit", [reference], false),
+    ).toBe(true);
+    expect(isImageAspectRatioLocked("edit", "edit", [], true)).toBe(true);
+    expect(isImageAspectRatioLocked("edit", "retouch", [], true)).toBe(true);
+    expect(
+      isImageAspectRatioLocked("edit", "reframe", [reference], true),
+    ).toBe(false);
+    expect(
+      isImageAspectRatioLocked("region", "edit", [reference], true),
+    ).toBe(false);
+  });
+
+  it("locks video aspect to image/video inputs but not audio or Reframe", () => {
+    const audio = input("audio", "audio_to_video", "audio");
+    const video = input("video", "continue_video", "video");
+
+    expect(isVideoAspectRatioLocked("generate", [], false)).toBe(false);
+    expect(isVideoAspectRatioLocked("generate", [audio], false)).toBe(false);
+    expect(isVideoAspectRatioLocked("generate", [video], false)).toBe(true);
+    expect(
+      isVideoAspectRatioLocked(
+        "generate",
+        [input("legacy-image", "start_image")],
+        false,
+      ),
+    ).toBe(true);
+    expect(isVideoAspectRatioLocked("generate", [], true)).toBe(true);
+    expect(isVideoAspectRatioLocked("reframe", [video], true)).toBe(false);
   });
 });

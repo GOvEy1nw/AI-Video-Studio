@@ -266,6 +266,7 @@ describe("GenSpace settings restoration", () => {
     expect(plan).toMatchObject({
       mode: "image",
       imageMode: "edit",
+      editToolMode: "retouch",
       media: {
         editImage: {
           url: master.url,

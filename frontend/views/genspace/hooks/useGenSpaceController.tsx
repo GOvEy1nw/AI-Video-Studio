@@ -23,6 +23,7 @@ import type { Asset } from "../../../types/project";
 import type {
   ImageEditMaskRecipe,
   ImageEditOutpaintRecipe,
+  ImageEditToolMode,
 } from "../../../types/image-edit";
 import type { ImageUseTarget } from "../../../components/UseImageDropdown";
 import { getAssetModelId } from "../logic/generation-assets";
@@ -126,6 +127,8 @@ export function useGenSpaceController() {
     useState<FramingSettings | null>(null);
   const [regionPrompt, setRegionPrompt] = useState(createEmptyRegionPrompt);
   const [editImage, setEditImage] = useState<GenSpaceMediaInput | null>(null);
+  const [editToolMode, setEditToolMode] =
+    useState<ImageEditToolMode>("edit");
   const [editMask, setEditMask] = useState<ImageEditMaskRecipe | null>(null);
   const [editOutpaint, setEditOutpaint] =
     useState<ImageEditOutpaintRecipe | null>(null);
@@ -143,6 +146,26 @@ export function useGenSpaceController() {
     musicSettings,
     setMusicSettings,
   } = useGenSpaceSettingsState(musicProfiles);
+  useEffect(() => {
+    if (imageMode !== "edit" || editToolMode === "edit") return;
+    const editProfiles = getImageProfilesForMode(imageProfiles, "edit");
+    const selectedProfile =
+      editProfiles.find(({ id }) => id === imageSettings.profileId) ??
+      editProfiles[0];
+    if (
+      (editToolMode === "retouch" &&
+        !selectedProfile?.capabilities.inpainting) ||
+      (editToolMode === "reframe" &&
+        !selectedProfile?.capabilities.outpainting)
+    ) {
+      setEditToolMode("edit");
+    }
+  }, [
+    editToolMode,
+    imageMode,
+    imageProfiles,
+    imageSettings.profileId,
+  ]);
   const profileNames = useMemo(
     () =>
       new Map(
@@ -263,6 +286,7 @@ export function useGenSpaceController() {
       prevProjectIdRef.current = null;
       setFramingSettings(null);
       setEditImage(null);
+      setEditToolMode("edit");
       setEditMask(null);
       setEditOutpaint(null);
       return;
@@ -272,6 +296,7 @@ export function useGenSpaceController() {
     prevProjectIdRef.current = currentProjectId;
     setFramingSettings(null);
     setEditImage(null);
+    setEditToolMode("edit");
     setEditMask(null);
     setEditOutpaint(null);
     const projectSeed = {
@@ -321,8 +346,8 @@ export function useGenSpaceController() {
     musicSettings,
     musicProfiles,
     imageInputs,
-    imageProfiles,
     editImage,
+    editToolMode,
     editMask,
     editOutpaint,
     inputImage,
@@ -386,6 +411,7 @@ export function useGenSpaceController() {
         setInputAudio(null);
         setImageInputs([]);
         setEditImage({ ...input, role: "edit_image" });
+        setEditToolMode("edit");
         setEditMask(null);
         setEditOutpaint(null);
         setPrompt("");
@@ -433,6 +459,7 @@ export function useGenSpaceController() {
       patchImageSettings,
       setImageInputs,
       setEditImage,
+      setEditToolMode,
       setEditMask,
       setEditOutpaint,
       setImageMode,
@@ -471,6 +498,7 @@ export function useGenSpaceController() {
     setMusicSettings,
     setInputs: setImageInputs,
     setEditImage,
+    setEditToolMode,
     setEditMask,
     setEditOutpaint,
     setInputImage,
@@ -518,6 +546,23 @@ export function useGenSpaceController() {
   const musicCanSubmit =
     compileMusicRequest(prompt, musicSettings, selectedMusicProfile).ok &&
     !isComposingLyrics;
+  const editProfiles = getImageProfilesForMode(imageProfiles, "edit");
+  const selectedEditProfile =
+    editProfiles.find(({ id }) => id === imageSettings.profileId) ??
+    editProfiles[0];
+  const editWorkflowReady =
+    editToolMode === "retouch"
+      ? !!selectedEditProfile?.capabilities.inpainting &&
+        !!editMask?.operations.length
+      : editToolMode === "reframe"
+        ? !!selectedEditProfile?.capabilities.outpainting &&
+          !!editOutpaint &&
+          editOutpaint.padding.top +
+            editOutpaint.padding.bottom +
+            editOutpaint.padding.left +
+            editOutpaint.padding.right >
+            0
+        : true;
   const canSubmit = isReframeMode
     ? reframeInput.ready && !!reframeInput.videoPath && !isGenerating
     : isRetakeMode
@@ -527,7 +572,7 @@ export function useGenSpaceController() {
       : mode === "image" && imageMode === "region"
         ? isRegionPromptReady(regionPrompt)
         : mode === "image" && imageMode === "edit"
-          ? !!editImage && !!prompt.trim()
+          ? !!editImage && !!prompt.trim() && editWorkflowReady
           : !!prompt.trim();
   const promptButtonLabel = isReframeMode
     ? "Reframe"
@@ -588,6 +633,8 @@ export function useGenSpaceController() {
         setMode: setImageMode,
         editImage,
         setEditImage,
+        editToolMode,
+        setEditToolMode,
         editMask,
         setEditMask,
         editOutpaint,

@@ -14,6 +14,7 @@ import type { MediaCropRecipe } from "../../types/media-crop";
 import type {
   ImageEditMaskRecipe,
   ImageEditOutpaintRecipe,
+  ImageEditToolMode,
 } from "../../types/image-edit";
 import type { RegionPromptState } from "./image/region-prompt";
 import type { ReframePanelState } from "./video/ReframePanel";
@@ -134,6 +135,8 @@ export interface GenSpaceImageToolsController {
   setMode: (mode: ImageProcessMode) => void;
   editImage: GenSpaceMediaInput | null;
   setEditImage: (image: GenSpaceMediaInput | null) => void;
+  editToolMode: ImageEditToolMode;
+  setEditToolMode: (mode: ImageEditToolMode) => void;
   editMask: ImageEditMaskRecipe | null;
   setEditMask: (mask: ImageEditMaskRecipe | null) => void;
   editOutpaint: ImageEditOutpaintRecipe | null;

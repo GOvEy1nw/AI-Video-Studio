@@ -3,6 +3,8 @@ export interface ImageEditPoint {
   y: number;
 }
 
+export type ImageEditToolMode = "edit" | "retouch" | "reframe";
+
 export interface ImageEditBrushOperation {
   kind: "brush";
   size: number;
@@ -26,7 +28,7 @@ export interface ImageEditMaskRecipe {
   operations: ImageEditMaskOperation[];
 }
 
-export type ImageEditAspectMode = "1:1" | "16:9" | "9:16";
+export type ImageEditAspectMode = "1:1" | "16:9" | "9:16" | "custom";
 
 export interface ImageEditOutpaintRecipe {
   aspectMode: ImageEditAspectMode;

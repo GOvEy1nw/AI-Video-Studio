@@ -101,7 +101,7 @@ export function MusicSettings({
         </div>
         {vocalMode === "custom-lyrics" ? (
           <div className="flex items-start rounded-lg border border-zinc-800 bg-zinc-950/35">
-            <div className="flex min-w-0 flex-1 flex-col py-1">
+            <div className="flex min-w-0 flex-1 flex-col">
               <textarea
                 aria-label="Lyrics"
                 value={lyricsValue}
@@ -117,7 +117,7 @@ export function MusicSettings({
                 placeholder="Write lyrics or an idea, then Compose Lyrics…"
                 className="h-32 w-full resize-none overflow-y-auto bg-transparent px-3 py-3 text-sm leading-5 text-white placeholder:text-zinc-500 focus:outline-hidden disabled:opacity-40"
               />
-              <div className="flex items-center justify-end gap-2 px-2 pb-0.5 pt-1">
+              <div className="flex items-center justify-end gap-2 px-2 py-1.5 rounded-b-lg bg-zinc-800/35">
                 <SeedControl
                   seedLocked={settings.lyricsSeedLocked}
                   lockedSeed={settings.lyricsSeed}

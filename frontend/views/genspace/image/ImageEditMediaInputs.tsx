@@ -1,4 +1,4 @@
-import { Expand, Image, Paintbrush, X } from "lucide-react";
+import { Image, X } from "lucide-react";
 import {
   useEffect,
   useRef,
@@ -8,20 +8,27 @@ import {
 } from "react";
 import { detectMediaType } from "../../../lib/media-import";
 import type {
-  ImageEditAspectMode,
   ImageEditMaskRecipe,
   ImageEditOutpaintRecipe,
+  ImageEditToolMode,
 } from "../../../types/image-edit";
 import type { ModelProfile } from "../../../types/model-profiles";
 import { GenPanelSection } from "../components/GenPanelSection";
+import { ReframeEditor } from "../components/ReframeEditor";
 import type { GenSpaceMediaInput } from "../types";
-import { ImageMaskEditorModal } from "./ImageMaskEditorModal";
+import { ImageMaskEditor } from "./ImageMaskEditor";
 import { ImageMediaInputs } from "./ImageMediaInputs";
-import { ImageOutpaintModal } from "./ImageOutpaintModal";
 
-function imageAspectMode(value: string): ImageEditAspectMode {
-  return value === "16:9" || value === "9:16" ? value : "1:1";
-}
+const EDIT_TOOLS: Array<{ id: ImageEditToolMode; label: string }> = [
+  { id: "edit", label: "Edit" },
+  { id: "retouch", label: "Retouch" },
+  { id: "reframe", label: "Reframe" },
+];
+
+const DEFAULT_OUTPAINT: ImageEditOutpaintRecipe = {
+  aspectMode: "16:9",
+  padding: { top: 0, bottom: 0, left: 0, right: 0 },
+};
 
 export function ImageEditMediaInputs({
   image,
@@ -29,12 +36,12 @@ export function ImageEditMediaInputs({
   references,
   onReferencesChange,
   profile,
+  toolMode,
+  onToolModeChange,
   mask,
   onMaskChange,
   outpaint,
   onOutpaintChange,
-  aspectRatio,
-  onAspectRatioChange,
   disabled,
   resolveInputFileUrl,
   syncInputFileToGallery,
@@ -44,12 +51,12 @@ export function ImageEditMediaInputs({
   references: GenSpaceMediaInput[];
   onReferencesChange: Dispatch<SetStateAction<GenSpaceMediaInput[]>>;
   profile: ModelProfile | undefined;
+  toolMode: ImageEditToolMode;
+  onToolModeChange: (mode: ImageEditToolMode) => void;
   mask: ImageEditMaskRecipe | null;
   onMaskChange: (mask: ImageEditMaskRecipe | null) => void;
   outpaint: ImageEditOutpaintRecipe | null;
   onOutpaintChange: (outpaint: ImageEditOutpaintRecipe | null) => void;
-  aspectRatio: string;
-  onAspectRatioChange: (aspectRatio: ImageEditAspectMode) => void;
   disabled: boolean;
   resolveInputFileUrl: (
     file: File,
@@ -59,14 +66,27 @@ export function ImageEditMediaInputs({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
-  const [maskOpen, setMaskOpen] = useState(false);
-  const [outpaintOpen, setOutpaintOpen] = useState(false);
+  const [sourceSize, setSourceSize] = useState({ width: 0, height: 0 });
+  const sourceAspectRatio =
+    sourceSize.width > 0 && sourceSize.height > 0
+      ? sourceSize.width / sourceSize.height
+      : 1;
+  const inpaintingAvailable = !!profile?.capabilities.inpainting;
+  const outpaintingAvailable = !!profile?.capabilities.outpainting;
 
   useEffect(() => {
-    if (!profile) return;
-    if (mask && !profile.capabilities.inpainting) onMaskChange(null);
-    if (outpaint && !profile.capabilities.outpainting) onOutpaintChange(null);
-  }, [mask, onMaskChange, onOutpaintChange, outpaint, profile]);
+    setSourceSize({ width: 0, height: 0 });
+  }, [image?.url]);
+
+  const handleSourceImageLoad = (width: number, height: number) => {
+    if (width > 0 && height > 0) setSourceSize({ width, height });
+  };
+
+  const resetTools = () => {
+    onToolModeChange("edit");
+    onMaskChange(null);
+    onOutpaintChange(null);
+  };
 
   const assignUrl = (url: string) => {
     onImageChange({
@@ -75,8 +95,7 @@ export function ImageEditMediaInputs({
       role: "edit_image",
       type: "image",
     });
-    onMaskChange(null);
-    onOutpaintChange(null);
+    resetTools();
   };
 
   const assignFile = async (file: File) => {
@@ -120,64 +139,157 @@ export function ImageEditMediaInputs({
           roles: referenceRoles,
         }
       : undefined;
-  const maskedEdit = !!mask || !!outpaint;
-  const referencesAvailable =
-    !maskedEdit || !!profile?.capabilities.maskedEditReferences;
+  const referencesDisabled = disabled || toolMode !== "edit";
 
   return (
     <>
-      <GenPanelSection title="Edit image" collapsible={false}>
-        <div
-          className={`group relative aspect-square w-full overflow-hidden rounded-lg border-2 ${
-            dragActive
-              ? "border-blue-500 bg-blue-500/10"
-              : image
-                ? "border-zinc-700 bg-black"
-                : "border-dashed border-zinc-700 bg-zinc-900/50"
-          }`}
-          onDragEnter={() => setDragActive(true)}
-          onDragLeave={() => setDragActive(false)}
-          onDragOver={(event) => {
-            event.preventDefault();
-            event.dataTransfer.dropEffect = "copy";
-          }}
-          onDrop={handleDrop}
-        >
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={() => inputRef.current?.click()}
-            aria-label={image ? "Replace Edit Image" : "Add Edit Image"}
-            className="flex h-full w-full items-center justify-center disabled:cursor-not-allowed"
-          >
-            {image ? (
-              <img
-                src={image.url}
-                alt=""
-                className="h-full w-full object-contain"
+      <GenPanelSection collapsible={false}>
+        {image ? (
+          <div className="relative">
+            {toolMode === "retouch" ? (
+              <ImageMaskEditor
+                imageUrl={image.url}
+                sourceAspectRatio={sourceAspectRatio}
+                onImageLoad={handleSourceImageLoad}
+                value={mask}
+                onChange={onMaskChange}
+                disabled={disabled}
+              />
+            ) : toolMode === "reframe" ? (
+              <ReframeEditor
+                mediaType="image"
+                mediaUrl={image.url}
+                sourceWidth={sourceSize.width}
+                sourceHeight={sourceSize.height}
+                value={outpaint ?? DEFAULT_OUTPAINT}
+                onChange={onOutpaintChange}
+                onSourceDimensionsChange={handleSourceImageLoad}
+                headerLabel="Edit image"
+                headerTestId="image-edit-header"
+                canvasTestId="image-edit-canvas"
+                canvasClassName="w-full border-x border-t border-zinc-700"
+                canvasStyle={{ aspectRatio: sourceAspectRatio }}
+                frameInset={0}
+                initialZoom={20}
+                disabled={disabled}
               />
             ) : (
-              <span className="flex flex-col items-center gap-2 text-xs text-zinc-500">
-                <Image className="h-6 w-6" />
-                Drop or choose Edit Image
-              </span>
+              <>
+                <div
+                  data-testid="image-edit-header"
+                  className="flex h-8 items-center"
+                >
+                  <span className="text-2xs font-medium uppercase tracking-wider text-zinc-500">
+                    Edit image
+                  </span>
+                </div>
+                <div
+                  data-testid="image-edit-canvas"
+                  className="relative w-full overflow-hidden rounded-t-lg border-x border-t border-zinc-700 bg-black"
+                  style={{ aspectRatio: sourceAspectRatio }}
+                >
+                  <img
+                    src={image.url}
+                    alt="Edit source"
+                    draggable={false}
+                    onLoad={(event) =>
+                      handleSourceImageLoad(
+                        event.currentTarget.naturalWidth,
+                        event.currentTarget.naturalHeight,
+                      )
+                    }
+                    className="absolute inset-0 h-full w-full select-none object-contain"
+                  />
+                </div>
+              </>
             )}
-          </button>
-          {image ? (
             <button
               type="button"
+              disabled={disabled}
               aria-label="Remove Edit Image"
               onClick={() => {
                 onImageChange(null);
-                onMaskChange(null);
-                onOutpaintChange(null);
+                resetTools();
               }}
-              className="absolute right-2 top-2 rounded-full bg-black/75 p-1.5 text-zinc-300 opacity-0 transition-opacity hover:bg-red-500 hover:text-white group-hover:opacity-100 focus-visible:opacity-100"
+              className="absolute right-2 top-10 z-20 rounded-full bg-black/80 p-1.5 text-zinc-300 shadow-md hover:bg-red-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
             >
               <X className="h-3.5 w-3.5" />
             </button>
-          ) : null}
-        </div>
+            <div
+              role="tablist"
+              aria-label="Image edit workflow"
+              className="grid grid-cols-3 overflow-hidden rounded-b-lg border border-t-0 border-zinc-700 bg-zinc-950"
+            >
+              {EDIT_TOOLS.map(({ id, label }) => {
+                const supported =
+                  id === "edit" ||
+                  (id === "retouch"
+                    ? inpaintingAvailable
+                    : outpaintingAvailable);
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    role="tab"
+                    aria-selected={toolMode === id}
+                    disabled={disabled || !supported}
+                    title={
+                      supported
+                        ? undefined
+                        : `${label} is not supported by this model`
+                    }
+                    onClick={() => onToolModeChange(id)}
+                    className={`border-r border-zinc-800 px-2 py-2 text-xs font-medium last:border-r-0 ${
+                      toolMode === id
+                        ? "bg-blue-500/15 text-blue-200"
+                        : "text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200"
+                    } disabled:cursor-not-allowed disabled:opacity-35`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <>
+            <div
+              data-testid="image-edit-header"
+              className="flex h-8 items-center"
+            >
+              <span className="text-2xs font-medium uppercase tracking-wider text-zinc-500">
+                Edit image
+              </span>
+            </div>
+            <div
+              className={`aspect-square w-full overflow-hidden rounded-lg border-2 ${
+                dragActive
+                  ? "border-blue-500 bg-blue-500/10"
+                  : "border-dashed border-zinc-700 bg-zinc-900/50"
+              }`}
+              onDragEnter={() => setDragActive(true)}
+              onDragLeave={() => setDragActive(false)}
+              onDragOver={(event) => {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "copy";
+              }}
+              onDrop={handleDrop}
+            >
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={() => inputRef.current?.click()}
+                aria-label="Add Edit Image"
+                className="flex h-full w-full items-center justify-center disabled:cursor-not-allowed"
+              >
+                <span className="flex flex-col items-center gap-2 text-xs text-zinc-500">
+                  <Image className="h-6 w-6" />
+                  Drop or choose Edit Image
+                </span>
+              </button>
+            </div>
+          </>
+        )}
         <input
           ref={inputRef}
           type="file"
@@ -189,100 +301,26 @@ export function ImageEditMediaInputs({
             event.target.value = "";
           }}
         />
-        {image &&
-        (profile?.capabilities.inpainting ||
-          profile?.capabilities.outpainting) ? (
-          <div className="mt-2 flex items-center gap-2">
-            {profile.capabilities.inpainting ? (
-              <button
-                type="button"
-                disabled={disabled}
-                onClick={() => setMaskOpen(true)}
-                className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs ${
-                  mask
-                    ? "border-blue-500 bg-blue-500/15 text-blue-200"
-                    : "border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-                }`}
-              >
-                <Paintbrush className="h-3.5 w-3.5" />
-                Mask
-              </button>
-            ) : null}
-            {profile.capabilities.outpainting ? (
-              <button
-                type="button"
-                disabled={disabled}
-                onClick={() => setOutpaintOpen(true)}
-                className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs ${
-                  outpaint
-                    ? "border-blue-500 bg-blue-500/15 text-blue-200"
-                    : "border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-                }`}
-              >
-                <Expand className="h-3.5 w-3.5" />
-                Outpaint
-              </button>
-            ) : null}
-            {mask ? (
-              <button
-                type="button"
-                onClick={() => onMaskChange(null)}
-                className="ml-auto text-[11px] text-zinc-500 hover:text-zinc-300"
-              >
-                Clear mask
-              </button>
-            ) : null}
-            {outpaint ? (
-              <button
-                type="button"
-                onClick={() => onOutpaintChange(null)}
-                className="text-[11px] text-zinc-500 hover:text-zinc-300"
-              >
-                Clear outpaint
-              </button>
-            ) : null}
-          </div>
-        ) : null}
       </GenPanelSection>
 
-      {referencePolicy && referencesAvailable ? (
-        <ImageMediaInputs
-          title="Reference images"
-          inputs={references}
-          onChange={onReferencesChange}
-          policy={referencePolicy}
-          resolveInputFileUrl={resolveInputFileUrl}
-          syncInputFileToGallery={syncInputFileToGallery}
-        />
-      ) : maskedEdit && references.length > 0 ? (
-        <p className="px-4 py-2 text-xs text-amber-300/80">
-          Selected model cannot combine reference images with Mask or Outpaint.
-        </p>
-      ) : null}
-
-      {image && maskOpen ? (
-        <ImageMaskEditorModal
-          imageUrl={image.url}
-          value={mask}
-          onClose={() => setMaskOpen(false)}
-          onApply={(next) => {
-            onMaskChange(next);
-            setMaskOpen(false);
-          }}
-        />
-      ) : null}
-      {image && outpaintOpen ? (
-        <ImageOutpaintModal
-          imageUrl={image.url}
-          value={outpaint}
-          initialAspectMode={imageAspectMode(aspectRatio)}
-          onClose={() => setOutpaintOpen(false)}
-          onApply={(next) => {
-            onOutpaintChange(next);
-            onAspectRatioChange(next.aspectMode);
-            setOutpaintOpen(false);
-          }}
-        />
+      {referencePolicy ? (
+        <fieldset
+          disabled={referencesDisabled}
+          aria-label="Reference image controls"
+          aria-disabled={referencesDisabled}
+          className={`m-0 min-w-0 border-0 p-0 transition-opacity ${
+            referencesDisabled ? "pointer-events-none opacity-40 grayscale" : ""
+          }`}
+        >
+          <ImageMediaInputs
+            title="Reference images"
+            inputs={references}
+            onChange={onReferencesChange}
+            policy={referencePolicy}
+            resolveInputFileUrl={resolveInputFileUrl}
+            syncInputFileToGallery={syncInputFileToGallery}
+          />
+        </fieldset>
       ) : null}
     </>
   );

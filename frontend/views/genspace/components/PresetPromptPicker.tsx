@@ -131,7 +131,7 @@ export function PresetPromptPicker({
         aria-label={`Add ${label} presets`}
         aria-expanded={open}
         aria-controls={open ? popupId : undefined}
-        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-zinc-700 bg-zinc-950 text-zinc-400 transition-colors hover:border-violet-500 hover:text-violet-300 disabled:opacity-40"
+        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-zinc-700 bg-zinc-950 text-zinc-400 transition-colors hover:border-violet-500 hover:text-violet-300 disabled:opacity-40"
       >
         <Plus className="h-3.5 w-3.5" />
       </button>

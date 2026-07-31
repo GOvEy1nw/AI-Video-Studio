@@ -10,29 +10,17 @@ import {
 } from "lucide-react";
 import { fileUrlToPath } from "../../../lib/url-to-path";
 import { getNativeFilePath } from "../../../lib/native-file-path";
-import { OutpaintFrameOverlay } from "./OutpaintFrameOverlay";
+import { ReframeEditor } from "../components/ReframeEditor";
 import {
   MIN_TRIM_DURATION,
   VideoTrimPanel,
   formatTrimTimecode,
 } from "./VideoTrimPanel";
 import {
-  applyZoomPreservingPan,
-  computeFitPadding,
-  computeFrameLayout,
-  paddingForAspectModeChange,
-  paddingForAspectZoom,
   type ReframeAspectMode,
   type ReframePadding,
   ZERO_PADDING,
 } from "./reframe-outpaint";
-
-const REFRAME_ASPECT_MODES: { id: ReframeAspectMode; label: string }[] = [
-  { id: "1:1", label: "1:1" },
-  { id: "16:9", label: "16:9" },
-  { id: "9:16", label: "9:16" },
-  { id: "custom", label: "Custom" },
-];
 
 export interface ReframePanelState {
   videoUrl: string | null;
@@ -67,15 +55,6 @@ function pathToFileUrl(filePath: string): string {
     : `file:///${normalized}`;
 }
 
-function samePadding(a: ReframePadding, b: ReframePadding): boolean {
-  return (
-    a.top === b.top &&
-    a.bottom === b.bottom &&
-    a.left === b.left &&
-    a.right === b.right
-  );
-}
-
 export function ReframePanel({
   initialVideoUrl,
   initialVideoPath,
@@ -87,7 +66,6 @@ export function ReframePanel({
   onChange,
 }: ReframePanelProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const previewRef = useRef<HTMLDivElement>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(
     initialVideoUrl || null,
   );
@@ -104,57 +82,11 @@ export function ReframePanel({
   const [aspectMode, setAspectMode] =
     useState<ReframeAspectMode>(initialAspectMode);
   const [padding, setPadding] = useState<ReframePadding>(initialPadding);
-  const [zoom, setZoom] = useState(0);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [previewSize, setPreviewSize] = useState({ width: 0, height: 0 });
-
-  useEffect(() => {
-    const node = previewRef.current;
-    if (!node) return;
-
-    const update = () => {
-      const rect = node.getBoundingClientRect();
-      setPreviewSize((current) =>
-        current.width === rect.width && current.height === rect.height
-          ? current
-          : { width: rect.width, height: rect.height },
-      );
-    };
-    update();
-
-    const observer = new ResizeObserver(update);
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [videoUrl]);
-
-  const frameLayout =
-    previewSize.width > 0 &&
-    previewSize.height > 0 &&
-    videoWidth > 0 &&
-    videoHeight > 0
-      ? computeFrameLayout(
-          previewSize.width,
-          previewSize.height,
-          videoWidth,
-          videoHeight,
-          padding,
-        )
-      : null;
-  const zoomDisabled =
-    aspectMode !== "custom" &&
-    videoWidth > 0 &&
-    videoHeight > 0 &&
-    (() => {
-      const fitPadding = computeFitPadding(videoWidth, videoHeight, aspectMode);
-      return (
-        (fitPadding.left >= 100 && fitPadding.right >= 100) ||
-        (fitPadding.top >= 100 && fitPadding.bottom >= 100)
-      );
-    })();
 
   useEffect(() => {
     if (resetKey === undefined) return;
@@ -167,7 +99,6 @@ export function ReframePanel({
     setSelEnd(initialDuration || 0);
     setAspectMode(initialAspectMode);
     setPadding(initialPadding);
-    setZoom(0);
     setVideoWidth(0);
     setVideoHeight(0);
   }, [
@@ -233,86 +164,6 @@ export function ReframePanel({
     };
   }, [videoUrl, initialDuration]);
 
-  useEffect(() => {
-    if (videoWidth <= 0 || videoHeight <= 0 || aspectMode === "custom") return;
-    if (zoom > 0) return;
-    const isZeroPadding =
-      padding.top === 0 &&
-      padding.bottom === 0 &&
-      padding.left === 0 &&
-      padding.right === 0;
-    if (!isZeroPadding) return;
-    setPadding((current) => {
-      const next = computeFitPadding(videoWidth, videoHeight, aspectMode);
-      return samePadding(current, next) ? current : next;
-    });
-  }, [videoWidth, videoHeight, aspectMode, padding, zoom]);
-
-  const handleAspectModeChange = useCallback(
-    (mode: ReframeAspectMode) => {
-      setAspectMode(mode);
-      if (mode !== "custom") {
-        setZoom(0);
-      }
-      setPadding((current) => {
-        const next = paddingForAspectModeChange(
-          videoWidth,
-          videoHeight,
-          mode,
-          current,
-        );
-        return samePadding(current, next) ? current : next;
-      });
-    },
-    [videoHeight, videoWidth],
-  );
-
-  const handleZoomChange = useCallback(
-    (nextZoom: number) => {
-      if (videoWidth <= 0 || videoHeight <= 0) return;
-      if (aspectMode !== "custom" && zoomDisabled) return;
-      setZoom(nextZoom);
-      if (aspectMode === "custom") {
-        const side = Math.max(0, Math.min(100, Math.round(nextZoom)));
-        setPadding((current) => {
-          const next = applyZoomPreservingPan(current, {
-            top: side,
-            bottom: side,
-            left: side,
-            right: side,
-          });
-          return samePadding(current, next) ? current : next;
-        });
-        return;
-      }
-      const zoomBase = paddingForAspectZoom(
-        videoWidth,
-        videoHeight,
-        aspectMode,
-        nextZoom,
-      );
-      setPadding((current) => {
-        const next = applyZoomPreservingPan(current, zoomBase);
-        return samePadding(current, next) ? current : next;
-      });
-    },
-    [aspectMode, videoHeight, videoWidth, zoomDisabled],
-  );
-
-  const handleReset = useCallback(() => {
-    setZoom(0);
-    if (aspectMode === "custom") {
-      setPadding(ZERO_PADDING);
-      return;
-    }
-    if (videoWidth > 0 && videoHeight > 0) {
-      setPadding((current) => {
-        const next = computeFitPadding(videoWidth, videoHeight, aspectMode);
-        return samePadding(current, next) ? current : next;
-      });
-    }
-  }, [aspectMode, videoHeight, videoWidth]);
-
   const togglePlay = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -368,7 +219,6 @@ export function ReframePanel({
     setSelStart(0);
     setSelEnd(0);
     setPadding(ZERO_PADDING);
-    setZoom(0);
   }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -411,63 +261,6 @@ export function ReframePanel({
       className={`bg-zinc-900 overflow-hidden flex flex-col ${fillHeight ? "h-full min-h-0" : ""}`}
     >
       <div>
-        {videoUrl && (
-          <div className="flex min-w-0 items-center justify-center gap-2">
-            <div className="flex items-center gap-1 rounded-lg border border-zinc-700 bg-zinc-950/70 p-1">
-              {REFRAME_ASPECT_MODES.map((mode) => (
-                <button
-                  key={mode.id}
-                  type="button"
-                  onClick={() => handleAspectModeChange(mode.id)}
-                  className={`rounded-md px-2 py-1 text-[10px] font-semibold transition-colors ${
-                    aspectMode === mode.id
-                      ? "bg-blue-600 text-white"
-                      : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
-                  }`}
-                >
-                  {mode.label}
-                </button>
-              ))}
-              <div className="mx-0.5 h-4 w-px bg-zinc-700" aria-hidden />
-              <button
-                type="button"
-                onClick={handleReset}
-                title="Reset frame and zoom"
-                className="rounded-md p-1 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
-              >
-                <RefreshCw className="h-3 w-3" />
-              </button>
-            </div>
-
-            <div
-              className={`flex w-[178px] items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-950/70 px-2.5 py-1.5 ${zoomDisabled ? "opacity-50" : ""}`}
-              title={
-                zoomDisabled
-                  ? "Zoom has no effect for this aspect ratio"
-                  : undefined
-              }
-            >
-              <span className="text-[10px] font-medium text-zinc-400">
-                Zoom
-              </span>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                step={1}
-                value={zoom}
-                disabled={zoomDisabled}
-                onChange={(event) =>
-                  handleZoomChange(Number(event.target.value))
-                }
-                className={`h-1 min-w-0 flex-1 accent-blue-500 ${zoomDisabled ? "cursor-not-allowed" : "cursor-pointer"}`}
-              />
-              <span className="w-8 text-right font-mono text-[10px] text-zinc-300">
-                {zoom}%
-              </span>
-            </div>
-          </div>
-        )}
         {videoUrl && (
           <div className="flex min-w-0 items-center justify-end gap-2">
             <button
@@ -518,36 +311,28 @@ export function ReframePanel({
         </div>
       ) : (
         <div className="flex-1 min-h-0 flex flex-col">
-          <div
-            ref={previewRef}
-            className={`relative bg-black overflow-hidden ${
-              fillHeight ? "flex-1 min-h-0" : "aspect-video max-h-[32vh]"
-            }`}
+          <ReframeEditor
+            mediaType="video"
+            mediaUrl={videoUrl}
+            sourceWidth={videoWidth}
+            sourceHeight={videoHeight}
+            value={{ aspectMode, padding }}
+            onChange={(next) => {
+              setAspectMode(next.aspectMode);
+              setPadding(next.padding);
+            }}
+            onSourceDimensionsChange={(width, height) => {
+              if (width > 0) setVideoWidth(width);
+              if (height > 0) setVideoHeight(height);
+            }}
+            videoRef={videoRef}
+            onVideoEnded={() => setIsPlaying(false)}
+            canvasClassName={
+              fillHeight ? "flex-1" : "aspect-video max-h-[32vh]"
+            }
+            resetKey={resetKey}
+            fillHeight={fillHeight}
           >
-            <video
-              ref={videoRef}
-              src={videoUrl}
-              className="absolute pointer-events-none object-contain"
-              style={
-                frameLayout
-                  ? {
-                      left: frameLayout.inner.x,
-                      top: frameLayout.inner.y,
-                      width: frameLayout.inner.width,
-                      height: frameLayout.inner.height,
-                    }
-                  : { inset: 0, width: "100%", height: "100%" }
-              }
-              onEnded={() => setIsPlaying(false)}
-            />
-            {videoWidth > 0 && videoHeight > 0 && frameLayout && (
-              <OutpaintFrameOverlay
-                frameLayout={frameLayout}
-                aspectMode={aspectMode}
-                padding={padding}
-                onPaddingChange={setPadding}
-              />
-            )}
             <div className="absolute bottom-2 left-2 flex items-center gap-1.5 z-30">
               <button
                 onClick={toggleMute}
@@ -560,7 +345,7 @@ export function ReframePanel({
                 )}
               </button>
             </div>
-          </div>
+          </ReframeEditor>
 
           <div className="shrink-0">
             <div className="flex items-center justify-center gap-3 px-4 py-2 bg-zinc-900 border-b border-zinc-800">

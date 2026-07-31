@@ -51,6 +51,11 @@ export function buildGenSpaceRestorePlan(
       inputImage: editImage ? null : legacy.inputImage,
       inputAudio: legacy.inputAudio,
     },
+    editToolMode: params.imageEditMask
+      ? "retouch"
+      : params.imageEditOutpaint
+        ? "reframe"
+        : "edit",
     editMask: params.imageEditMask ?? null,
     editOutpaint: params.imageEditOutpaint ?? null,
     reframe:

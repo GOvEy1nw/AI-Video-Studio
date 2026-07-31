@@ -22,6 +22,8 @@ export function ImageModelControls({
   section = "all",
   menuPlacement = "top",
   modelDownload,
+  aspectRatioDisabled = false,
+  showAspectRatio = true,
 }: {
   settings: ImageGenSettings;
   onSettingsChange: (patch: Partial<ImageGenSettings>) => void;
@@ -29,6 +31,8 @@ export function ImageModelControls({
   section?: "all" | "model" | "output";
   menuPlacement?: "top" | "bottom";
   modelDownload?: ModelDownloadProgress | null;
+  aspectRatioDisabled?: boolean;
+  showAspectRatio?: boolean;
 }) {
   const selectedProfileId = settings.profileId || "z_image_turbo";
   const selectedProfile =
@@ -118,21 +122,24 @@ export function ImageModelControls({
             }
           />
 
-          <SettingsDropdown
-            title="ASPECT RATIO"
-            value={settings.aspectRatio}
-            onChange={(aspectRatio) => onSettingsChange({ aspectRatio })}
-            options={selectedProfile.ui.allowedAspectRatios.map((ratio) => ({
-              value: ratio,
-              label: ratio,
-            }))}
-            trigger={
-              <>
-                <AspectIcon className="h-3.5 w-3.5" />
-                <span>{settings.aspectRatio}</span>
-              </>
-            }
-          />
+          {showAspectRatio ? (
+            <SettingsDropdown
+              title="ASPECT RATIO"
+              value={settings.aspectRatio}
+              onChange={(aspectRatio) => onSettingsChange({ aspectRatio })}
+              disabled={aspectRatioDisabled}
+              options={selectedProfile.ui.allowedAspectRatios.map((ratio) => ({
+                value: ratio,
+                label: ratio,
+              }))}
+              trigger={
+                <>
+                  <AspectIcon className="h-3.5 w-3.5" />
+                  <span>{settings.aspectRatio}</span>
+                </>
+              }
+            />
+          ) : null}
         </>
       )}
     </>

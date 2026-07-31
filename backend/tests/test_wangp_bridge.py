@@ -560,6 +560,11 @@ def test_preload_session_ensures_runtime_without_direct_model_load(tmp_path: Pat
     output_dir = tmp_path / "outputs"
     shared.mkdir(parents=True)
     (shared / "__init__.py").write_text("", encoding="utf-8")
+    root_config = root / "wgp_config.json"
+    root_config.write_text(
+        json.dumps({"fit_canvas": 2, "enhancer_mode": 1, "existing": "kept"}),
+        encoding="utf-8",
+    )
     (root / "wgp.py").write_text(
         """
 from pathlib import Path
@@ -608,6 +613,10 @@ class WanGPSession:
 
         assert (output_dir / "ensure_ready_called").exists()
         assert not (root / "load_models_called").exists()
+        saved_config = json.loads(root_config.read_text(encoding="utf-8"))
+        assert saved_config["fit_canvas"] == 0
+        assert saved_config["enhancer_mode"] == 0
+        assert saved_config["existing"] == "kept"
     finally:
         sys.path[:] = saved_path
         for name, module in saved_modules.items():

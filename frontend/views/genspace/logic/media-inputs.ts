@@ -9,7 +9,10 @@ import {
 import type {
   GenSpaceMediaInput,
   GenSpaceMediaKind,
+  ImageProcessMode,
+  VideoProcessMode,
 } from "../types";
+import type { ImageEditToolMode } from "../../../types/image-edit";
 
 export function getDefaultImageInputRole(
   policy: ModelProfileInputMedia | undefined,
@@ -83,6 +86,36 @@ export function inferMediaKindForRole(role: string): GenSpaceMediaKind {
   if (AUDIO_MEDIA_ROLE_SET.has(role)) return "audio";
   if (GUIDE_MEDIA_ROLE_SET.has(role)) return "video";
   return "image";
+}
+
+function hasVisualMediaInput(inputs: GenSpaceMediaInput[]): boolean {
+  return inputs.some(({ role, type }) =>
+    type ? type !== "audio" : inferMediaKindForRole(role) !== "audio",
+  );
+}
+
+export function isImageAspectRatioLocked(
+  processMode: ImageProcessMode,
+  editToolMode: ImageEditToolMode,
+  inputs: GenSpaceMediaInput[],
+  hasEditImage: boolean,
+): boolean {
+  if (processMode === "region") return false;
+  if (processMode === "edit" && editToolMode === "reframe") return false;
+  return processMode === "create"
+    ? hasVisualMediaInput(inputs)
+    : hasEditImage || hasVisualMediaInput(inputs);
+}
+
+export function isVideoAspectRatioLocked(
+  processMode: VideoProcessMode,
+  inputs: GenSpaceMediaInput[],
+  hasLegacyImage: boolean,
+): boolean {
+  return (
+    processMode === "generate" &&
+    (hasLegacyImage || hasVisualMediaInput(inputs))
+  );
 }
 
 export function imageRoleOptions(

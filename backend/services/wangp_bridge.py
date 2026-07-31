@@ -647,6 +647,12 @@ class WanGPBridge:
 
         with self._session_lock:
             if self._session is None:
+                self._write_runtime_config(
+                    {
+                        "fit_canvas": 0,
+                        "enhancer_mode": 0,
+                    }
+                )
                 api_module = self._load_api_module()
                 self._session = api_module.WanGPSession(
                     root=status.root,

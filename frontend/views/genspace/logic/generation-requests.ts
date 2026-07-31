@@ -86,6 +86,10 @@ export function buildImageGenerationCommand(
   edit: ImageEditRequest | undefined;
 } {
   const editImagePath = edit ? fileUrlToPath(edit.image.url) : null;
+  const outpaintAspect =
+    edit?.outpaint?.aspectMode === "custom"
+      ? undefined
+      : edit?.outpaint?.aspectMode;
   return {
     prompt,
     settings: {
@@ -97,7 +101,7 @@ export function buildImageGenerationCommand(
       cameraMotion: "none",
       imageResolution: settings.imageResolution,
       imageAspectRatio:
-        edit?.outpaint?.aspectMode ||
+        outpaintAspect ||
         settings.imageAspectRatio ||
         settings.aspectRatio,
       imageSteps: settings.imageSteps,

@@ -147,6 +147,41 @@ def test_mask_and_outpaint_use_native_masked_denoising(
     assert not Path(str(settings["image_mask"])).exists()
 
 
+def test_custom_outpaint_uses_authored_frame_instead_of_request_aspect(
+    client,
+    enable_wangp,
+    tmp_path: Path,
+) -> None:
+    master = _write_image(tmp_path / "custom-master.png", (1600, 900))
+
+    response = client.post(
+        "/api/generate-image",
+        json={
+            "prompt": "Extend the room",
+            "modelProfileId": "qwen_image_edit_plus2_20B",
+            "aspectRatio": "1:1",
+            "resolutionTier": "720p",
+            "edit": {
+                "image": {"path": str(master)},
+                "outpaint": {
+                    "aspectMode": "custom",
+                    "padding": {
+                        "top": 25,
+                        "bottom": 25,
+                        "left": 0,
+                        "right": 0,
+                    },
+                },
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    settings = enable_wangp.image_calls[0].default_settings
+    assert settings["image_mode"] == 2
+    assert settings["video_prompt_type"] == "VAG"
+
+
 @pytest.mark.parametrize(
     "profile_id",
     [
@@ -232,6 +267,41 @@ def test_masked_edit_rejects_non_native_profile(
     assert enable_wangp.image_calls == []
 
 
+def test_retouch_rasterizer_preserves_source_aspect_ratio(
+    tmp_path: Path,
+) -> None:
+    source = _write_image(tmp_path / "wide-master.png", (320, 180))
+    mask_recipe = ImageEditMaskRecipe.model_validate(
+        {
+            "schemaVersion": 1,
+            "operations": [
+                {
+                    "kind": "rectangle",
+                    "x": 0.25,
+                    "y": 0.25,
+                    "width": 0.5,
+                    "height": 0.5,
+                }
+            ],
+        }
+    )
+
+    guide_path, mask_path = materialize_image_edit(
+        source,
+        width=512,
+        height=512,
+        mask_recipe=mask_recipe,
+        outpaint=None,
+    )
+    try:
+        with Image.open(guide_path) as guide, Image.open(mask_path) as mask:
+            assert guide.size == mask.size
+            assert abs(guide.width / guide.height - 16 / 9) < 0.02
+    finally:
+        guide_path.unlink(missing_ok=True)
+        mask_path.unlink(missing_ok=True)
+
+
 def test_mask_rasterizer_combines_outpaint_and_inpaint(
     tmp_path: Path,
 ) -> None:
@@ -276,6 +346,38 @@ def test_mask_rasterizer_combines_outpaint_and_inpaint(
             assert mask.getpixel((5, 45)) == 255
             assert mask.getpixel((45, 10)) == 0
             assert mask.getpixel((80, 45)) == 255
+    finally:
+        guide_path.unlink(missing_ok=True)
+        mask_path.unlink(missing_ok=True)
+
+
+def test_custom_outpaint_reallocates_budget_to_authored_frame(
+    tmp_path: Path,
+) -> None:
+    source = _write_image(tmp_path / "custom-master.png", (1600, 900))
+    outpaint = ImageEditOutpaintRecipe.model_validate(
+        {
+            "aspectMode": "custom",
+            "padding": {
+                "top": 25,
+                "bottom": 25,
+                "left": 0,
+                "right": 0,
+            },
+        }
+    )
+
+    guide_path, mask_path = materialize_image_edit(
+        source,
+        width=512,
+        height=512,
+        mask_recipe=None,
+        outpaint=outpaint,
+    )
+    try:
+        with Image.open(guide_path) as guide, Image.open(mask_path) as mask:
+            assert guide.size == mask.size
+            assert abs(guide.width / guide.height - 1600 / 1350) < 0.02
     finally:
         guide_path.unlink(missing_ok=True)
         mask_path.unlink(missing_ok=True)

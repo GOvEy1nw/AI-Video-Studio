@@ -12,6 +12,7 @@ import { GenPanelSection } from "../components/GenPanelSection";
 import { PromptActions } from "../components/PromptActions";
 import { PromptEditor } from "../components/PromptEditor";
 import type { VideoGenPanelController } from "../types";
+import { isVideoAspectRatioLocked } from "../logic/media-inputs";
 import { formatTrimTimecode } from "./VideoTrimPanel";
 import { VideoMediaInputs } from "./VideoMediaInputs";
 import { VideoModeTabs } from "./VideoModeTabs";
@@ -201,6 +202,11 @@ export function VideoGenPanel({
   const hasAudioInput =
     !!media.inputAudio ||
     media.inputs.some(({ role }) => AUDIO_MEDIA_ROLE_SET.has(role));
+  const aspectRatioDisabled = isVideoAspectRatioLocked(
+    videoTools.mode,
+    media.inputs,
+    media.inputImage !== null,
+  );
   const resolutionOptions = selectedProfile?.ui.allowedResolutionTiers ?? [
     "540p",
     "720p",
@@ -424,6 +430,7 @@ export function VideoGenPanel({
               title="ASPECT RATIO"
               value={videoSettings.aspectRatio}
               onChange={(aspectRatio) => patchVideoSettings({ aspectRatio })}
+              disabled={aspectRatioDisabled}
               options={
                 hasAudioInput
                   ? [{ value: "16:9", label: "16:9" }]

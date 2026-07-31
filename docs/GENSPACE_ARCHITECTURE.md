@@ -47,6 +47,7 @@ and shallow rather than adding one-file `views/components/lib` subfolders.
 | Reframe/Retake panel state | `hooks/useGenSpaceVideoTools.tsx` |
 | Image panel UI | `image/` |
 | Video, Reframe, Retake, and trim UI | `video/` |
+| Shared Image/Video Reframe framing UI | `components/ReframeEditor.tsx` |
 | Shared image/video input crop UI and geometry | `components/MediaCropPopover.tsx` and `logic/media-crop.ts` |
 | Music panel, media, lyrics settings, advanced settings, compiler, and keywords | `music/` |
 | Per-mode command construction | `logic/generation-requests.ts` |
@@ -91,22 +92,42 @@ context, call backend endpoints, persist assets, or instantiate
   reference images. Normal prompt/reference editing sends the master first;
   additional references follow within the selected profile's total image
   limit.
-- Mask uses normalized ordered brush, rectangle, and ellipse operations.
-  Outpaint stores a target aspect plus per-edge normalized padding and reuses
-  the proven Reframe geometry/overlay. Both recipes may be active together.
-- Mask and Outpaint appear only for profiles with explicit native
-  capabilities. Flux 2 Klein 4B/9B, Krea 2 Edit, and Qwen Image Edit support
-  both. HiDream O1 remains prompt/reference-only. Only Qwen Image Edit accepts
-  additional reference images while Mask or Outpaint is active.
+- A populated master is a non-replaceable preview with an explicit remove
+  action. Removing it returns the area to its image drop zone.
+- `Edit`, `Retouch`, and `Reframe` tabs sit directly below the master area.
+  All three workflows use one full-width canvas sized to the source image
+  aspect. Retouch and Reframe place compact controls in the fixed-height
+  `Edit Image` header, so switching workflows does not change panel height.
+  Reframe fits the target frame's longest side to that canvas. Reference
+  inputs remain visible but disabled and dimmed outside Edit.
+- Retouch uses normalized ordered brush, rectangle, and ellipse operations.
+  Reframe stores a preset or custom target aspect plus per-edge normalized
+  padding. Image and Video use the same `ReframeEditor`, including zoom, pan,
+  reset, and custom edge dragging. Only the active workflow's references,
+  mask, or outpaint recipe is submitted; backend combined-recipe support
+  remains for saved-data compatibility.
+- Retouch and Reframe tabs remain visible but disabled unless the selected
+  profile exposes the corresponding native capability. Flux 2 Klein 4B/9B,
+  Krea 2 Edit, and Qwen Image Edit support both. HiDream O1 remains
+  prompt/reference-only.
+- A visual input makes output aspect input-driven in Image Create, Edit,
+  Retouch, and Video Generate. The aspect selector is disabled while
+  resolution remains an editable pixel budget. Audio-only input does not lock
+  aspect. Reframe is the exception: its authored frame remains the output
+  aspect, so Image Reframe omits the separate output aspect selector.
+- AiVS starts WanGP with `fit_canvas=0`, matching WanGP's Resolution Budget
+  behavior. Retouch also reallocates its temporary guide/mask canvas to the
+  master image aspect before native masked denoising; Reframe keeps its
+  authored target canvas.
 - Masked Edit always maps to WanGP native masked denoising with
   `image_mode=2`, `model_mode=0`, and `VAG` (`VAGI` with supported
   references). AiVS never selects LanPaint modes `2..5`.
 - Backend rasterizes temporary output-sized guide/mask PNGs, combining
   inpaint selections with outpaint canvas regions, then removes both files
   after success, error, or cancellation.
-- Generated Edit assets persist master/reference inputs plus mask/outpaint
-  recipes. Copy Settings restores the separate master, references, tools,
-  model, aspect, and authored prompt.
+- Generated Edit assets persist the master plus active references, mask, or
+  outpaint recipe. Copy Settings restores the separate master, active
+  workflow, model, aspect, and authored prompt.
 - Region renders a box canvas in the selected generation aspect ratio.
   Movable/resizable boxes store normalized `0..1000` bboxes in Ideogram's
   `[y_min, x_min, y_max, x_max]` order and support object or exact-text

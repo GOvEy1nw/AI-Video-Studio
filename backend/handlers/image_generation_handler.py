@@ -374,7 +374,10 @@ class ImageGenerationHandler(StateHandlerBase):
                     400,
                     f"OUTPAINTING_NOT_SUPPORTED: {profile.display_name}",
                 )
-            if req.aspectRatio != edit.outpaint.aspectMode:
+            if (
+                edit.outpaint.aspectMode != "custom"
+                and req.aspectRatio != edit.outpaint.aspectMode
+            ):
                 raise HTTPError(
                     400,
                     "OUTPAINT_ASPECT_MISMATCH: request aspect ratio must match "

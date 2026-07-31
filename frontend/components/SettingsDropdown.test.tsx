@@ -5,6 +5,29 @@ import { SettingsDropdown } from "./SettingsDropdown";
 afterEach(cleanup);
 
 describe("SettingsDropdown", () => {
+  it("does not open when disabled", () => {
+    const onChange = vi.fn();
+    render(
+      <SettingsDropdown
+        title="ASPECT RATIO"
+        value="16:9"
+        onChange={onChange}
+        disabled
+        trigger={<span>16:9</span>}
+        options={[
+          { value: "16:9", label: "16:9" },
+          { value: "1:1", label: "1:1" },
+        ]}
+      />,
+    );
+
+    const trigger = screen.getByRole("button", { name: "16:9" });
+    expect((trigger as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(trigger);
+    expect(screen.queryByText("ASPECT RATIO")).toBeNull();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it("renders model readiness and allows selecting a missing model", () => {
     const onChange = vi.fn();
     render(

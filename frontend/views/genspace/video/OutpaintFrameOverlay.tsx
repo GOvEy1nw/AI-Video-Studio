@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   applyMirroredEdgeExpand,
   applyPanPadding,
-  formatPaddingLabel,
   type DragEdge,
   type FrameLayout,
   type ReframeAspectMode,
@@ -314,11 +313,11 @@ export function OutpaintFrameOverlay({
 
   return (
     <div
-      className={`absolute inset-0 z-10 overflow-hidden select-none ${isDragging ? "cursor-grabbing" : ""}`}
+      className={`absolute left-[-1px] top-[-1px] inset-0 z-10 overflow-hidden select-none ${isDragging ? "cursor-grabbing" : ""}`}
       style={{ touchAction: "none" }}
     >
       <div
-        className="absolute bg-black/50 pointer-events-none"
+        className="absolute pointer-events-none"
         style={{
           left: outer.x,
           top: outer.y,
@@ -327,7 +326,7 @@ export function OutpaintFrameOverlay({
         }}
       />
       <div
-        className="absolute bg-black/50 pointer-events-none"
+        className="absolute pointer-events-none"
         style={{
           left: outer.x,
           top: inner.y + inner.height,
@@ -336,7 +335,7 @@ export function OutpaintFrameOverlay({
         }}
       />
       <div
-        className="absolute bg-black/50 pointer-events-none"
+        className="absolute pointer-events-none"
         style={{
           left: outer.x,
           top: inner.y,
@@ -345,7 +344,7 @@ export function OutpaintFrameOverlay({
         }}
       />
       <div
-        className="absolute bg-black/50 pointer-events-none"
+        className="absolute pointer-events-none"
         style={{
           left: inner.x + inner.width,
           top: inner.y,
@@ -355,7 +354,7 @@ export function OutpaintFrameOverlay({
       />
 
       <div
-        className="absolute border-2 border-dashed border-blue-400 pointer-events-none"
+        className="absolute box-border border-2 border-zinc-500 pointer-events-none"
         style={{
           left: outer.x,
           top: outer.y,
@@ -400,16 +399,6 @@ export function OutpaintFrameOverlay({
             onMouseDown={handleMouseDownEdge}
           />
         ))}
-
-      <div
-        className="absolute z-20 text-[10px] font-mono text-blue-200 bg-black/70 px-2 py-1 rounded-sm pointer-events-none"
-        style={{
-          left: outer.x + 8,
-          top: outer.y + 8,
-        }}
-      >
-        {formatPaddingLabel(padding)}
-      </div>
     </div>
   );
 }
