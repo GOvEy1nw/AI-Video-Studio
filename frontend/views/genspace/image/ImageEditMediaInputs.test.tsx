@@ -73,6 +73,11 @@ function TestInputs({
   const [mask, setMask] = useState<ImageEditMaskRecipe | null>(null);
   const [outpaint, setOutpaint] =
     useState<ImageEditOutpaintRecipe | null>(null);
+  const setOutpaintAspect = (aspectMode: ImageEditOutpaintRecipe["aspectMode"]) =>
+    setOutpaint((current) => ({
+      aspectMode,
+      padding: current?.padding ?? { top: 0, bottom: 0, left: 0, right: 0 },
+    }));
 
   return (
     <>
@@ -94,6 +99,12 @@ function TestInputs({
       <output data-testid="outpaint-aspect">
         {outpaint?.aspectMode ?? "none"}
       </output>
+      <button type="button" onClick={() => setOutpaintAspect("16:9")}>
+        Set output 16:9
+      </button>
+      <button type="button" onClick={() => setOutpaintAspect("1:1")}>
+        Set output 1:1
+      </button>
     </>
   );
 }
@@ -188,7 +199,7 @@ describe("ImageEditMediaInputs", () => {
     expect(cursor.style.height).toBe("6px");
   });
 
-  it("replaces the preview with inline reframe controls", () => {
+  it("replaces the preview with inline reframe zoom controls", () => {
     vi.stubGlobal(
       "ResizeObserver",
       class {
@@ -204,16 +215,9 @@ describe("ImageEditMediaInputs", () => {
     const header = screen.getByTestId("image-edit-header");
     expect(within(header).getByText("Edit image")).toBeTruthy();
     expect(
-      within(header).getByRole("button", { name: /Square 1:1/ }),
-    ).toBeTruthy();
-    expect(
-      within(header).getByRole("button", { name: /Landscape 16:9/ }),
-    ).toBeTruthy();
-    fireEvent.click(
-      within(header).getByRole("button", { name: /Custom aspect ratio/ }),
-    );
-    expect(screen.getByTestId("outpaint-aspect").textContent).toBe("custom");
-    expect(within(header).getByLabelText("Outpaint expansion")).toBeTruthy();
+      within(header).queryByRole("button", { name: /aspect ratio/i }),
+    ).toBeNull();
+    expect(within(header).getByLabelText("Reframe zoom")).toBeTruthy();
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(screen.getByText("Reference images")).toBeTruthy();
     expect(
@@ -261,15 +265,13 @@ describe("ImageEditMediaInputs", () => {
       naturalHeight: { configurable: true, value: 900 },
     });
     fireEvent.load(source);
-    fireEvent.change(screen.getByLabelText("Outpaint expansion"), {
-      target: { value: "0" },
+    fireEvent.change(screen.getByLabelText("Reframe zoom"), {
+      target: { value: "100" },
     });
-    fireEvent.click(
-      screen.getByRole("button", { name: /Landscape 16:9/ }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Set output 16:9" }));
 
     const frame = document.querySelector(
-      ".border-dashed.border-blue-400",
+      ".box-border.border-zinc-500",
     ) as HTMLElement | null;
     expect(frame).not.toBeNull();
     const frameRect = () => ({
@@ -286,7 +288,7 @@ describe("ImageEditMediaInputs", () => {
       height: 900,
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /Square 1:1/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Set output 1:1" }));
     const squareFrame = frameRect();
     expect(squareFrame.left).toBeCloseTo(
       (1600 - squareFrame.width) / 2,

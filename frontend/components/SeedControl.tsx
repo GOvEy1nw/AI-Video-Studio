@@ -98,10 +98,10 @@ export function SeedControl({
         type="button"
         onClick={() => setOpen((value) => !value)}
         disabled={disabled}
-        className={`flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] font-medium transition-colors disabled:opacity-40 ${
+        className={`flex items-center gap-1 rounded-md px-1.5 py-1 text-xs font-medium tracking-wider text-zinc-200 leading-none bg-zinc-900 items-center px-3 py-1.5 whitespace-nowrap transition-colors disabled:opacity-40 ${
           seedLocked
             ? "bg-blue-500/20 text-blue-300 hover:bg-blue-500/30"
-            : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+            : "text-zinc-400 hover:text-white hover:bg-blue-500"
         } disabled:hover:bg-transparent disabled:hover:text-zinc-400`}
         aria-expanded={open}
         aria-haspopup="true"

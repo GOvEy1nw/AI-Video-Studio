@@ -569,15 +569,21 @@ def _default_video_shot_prompts() -> list[GenerateVideoShotPrompt]:
     return []
 
 
+VisualAspectRatio = Literal[
+    "1:1", "16:9", "9:16", "21:9", "9:21", "4:3", "3:4", "3:2", "2:3"
+]
+ReframeAspectMode = VisualAspectRatio | Literal["custom"]
+
+
 class ReframePadding(BaseModel):
-    top: int = Field(ge=0, le=200)
-    bottom: int = Field(ge=0, le=200)
-    left: int = Field(ge=0, le=200)
-    right: int = Field(ge=0, le=200)
+    top: int = Field(ge=0)
+    bottom: int = Field(ge=0)
+    left: int = Field(ge=0)
+    right: int = Field(ge=0)
 
 
 class ReframeOptions(BaseModel):
-    aspectMode: Literal["1:1", "16:9", "9:16", "custom"]
+    aspectMode: ReframeAspectMode
     padding: ReframePadding
     controlVideoStartTime: float = Field(ge=0)
     controlVideoDuration: float = Field(gt=0)
@@ -595,7 +601,7 @@ class GenerateVideoRequest(BaseModel):
     audio: str = "false"
     imagePath: str | None = None
     audioPath: str | None = None
-    aspectRatio: Literal["1:1", "16:9", "9:16"] = "16:9"
+    aspectRatio: VisualAspectRatio = "16:9"
     inputMedia: list[GenerateVideoInputMedia] = Field(default_factory=_default_video_input_media)
     videoPromptType: str | None = None
     useAudioTrack: bool = True
@@ -745,14 +751,14 @@ class ImageEditMaskRecipe(BaseModel):
 
 
 class ImageEditOutpaintPadding(BaseModel):
-    top: float = Field(ge=0, le=200)
-    bottom: float = Field(ge=0, le=200)
-    left: float = Field(ge=0, le=200)
-    right: float = Field(ge=0, le=200)
+    top: float = Field(ge=0)
+    bottom: float = Field(ge=0)
+    left: float = Field(ge=0)
+    right: float = Field(ge=0)
 
 
 class ImageEditOutpaintRecipe(BaseModel):
-    aspectMode: Literal["1:1", "16:9", "9:16", "custom"]
+    aspectMode: ReframeAspectMode
     padding: ImageEditOutpaintPadding
 
     @model_validator(mode="after")
@@ -790,7 +796,7 @@ class GenerateImageRequest(BaseModel):
     # backwards compatibility but arbitrary frontend model_type values
     # cannot bypass the curated profile layer.
     modelProfileId: str | None = None
-    aspectRatio: Literal["1:1", "16:9", "9:16"] | None = None
+    aspectRatio: VisualAspectRatio | None = None
     resolutionTier: Literal["540p", "720p", "1080p", "1440p", "2160p"] | None = None
     inputMedia: list[GenerateImageInputMedia] = Field(default_factory=_default_image_input_media)
     edit: GenerateImageEdit | None = None

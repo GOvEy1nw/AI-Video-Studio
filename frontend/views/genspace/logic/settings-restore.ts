@@ -30,6 +30,14 @@ export function buildGenSpaceRestorePlan(
   );
   const legacy = resolveLegacyInputMedia(params, imageInputs, projectAssets);
   const restoredSettings = settingsPatchFromGenerationParams(params, settings);
+  const editOutpaint =
+    params.imageEditOutpaint?.aspectMode === "custom"
+      ? {
+          aspectMode: "16:9" as const,
+          padding: { top: 0, bottom: 0, left: 0, right: 0 },
+        }
+      : (params.imageEditOutpaint ?? null);
+  const reframeWasCustom = params.reframeAspectMode === "custom";
   return {
     mode:
       mode === "image" ? "image" : mode === "music" ? "music" : "video",
@@ -57,15 +65,17 @@ export function buildGenSpaceRestorePlan(
         ? "reframe"
         : "edit",
     editMask: params.imageEditMask ?? null,
-    editOutpaint: params.imageEditOutpaint ?? null,
+    editOutpaint,
     reframe:
       mode === "reframe"
         ? {
             videoUrl: asset.url,
             videoPath: asset.path,
             duration: asset.duration ?? params.reframeDuration,
-            aspectMode: params.reframeAspectMode,
-            padding: params.reframePadding,
+            aspectMode: reframeWasCustom ? "16:9" : params.reframeAspectMode,
+            padding: reframeWasCustom
+              ? { top: 0, bottom: 0, left: 0, right: 0 }
+              : params.reframePadding,
           }
         : null,
   } as const;

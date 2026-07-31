@@ -42,7 +42,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function ImageHarness({ initialZoom = 0 }: { initialZoom?: number }) {
+function ImageHarness({ initialZoom = 100 }: { initialZoom?: number }) {
   const [value, setValue] = useState<ReframeEditorValue>({
     aspectMode: "16:9",
     padding: { top: 0, bottom: 0, left: 0, right: 0 },
@@ -58,58 +58,82 @@ function ImageHarness({ initialZoom = 0 }: { initialZoom?: number }) {
         onChange={setValue}
         canvasStyle={{ width: 640, height: 360 }}
         initialZoom={initialZoom}
+        controls={<span>Output controls</span>}
       />
+      <button
+        type="button"
+        onClick={() =>
+          setValue((current) => ({ ...current, aspectMode: "4:3" }))
+        }
+      >
+        Set 4:3
+      </button>
       <output data-testid="frame-state">{JSON.stringify(value)}</output>
     </>
   );
 }
 
 describe("ReframeEditor", () => {
-  it("keeps matching media fitted when zoom returns to zero", () => {
-    render(<ImageHarness initialZoom={20} />);
+  it("uses 100% for fill, 0% for half-size, and resets to fill", () => {
+    render(<ImageHarness />);
 
-    expect(screen.getByTestId("frame-state").textContent).not.toContain(
+    expect(screen.getByTestId("frame-state").textContent).toContain(
       '"padding":{"top":0,"bottom":0,"left":0,"right":0}',
     );
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "Landscape 16:9" }),
-    );
+    fireEvent.change(screen.getByRole("slider", { name: "Reframe zoom" }), {
+      target: { value: "0" },
+    });
+    const halfSizeState = JSON.parse(
+      screen.getByTestId("frame-state").textContent ?? "{}",
+    ) as ReframeEditorValue;
+    expect(halfSizeState.padding).toEqual({
+      top: 50,
+      bottom: 50,
+      left: 50,
+      right: 50,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset frame and zoom" }));
 
     expect(
       (screen.getByRole("slider", {
-        name: "Outpaint expansion",
+        name: "Reframe zoom",
       }) as HTMLInputElement).value,
-    ).toBe("0");
+    ).toBe("100");
     expect(screen.getByTestId("frame-state").textContent).toContain(
       '"padding":{"top":0,"bottom":0,"left":0,"right":0}',
     );
   });
 
-  it("supports custom mirrored edge dragging", () => {
+  it("places supplied output controls before reset and zoom controls", () => {
     render(<ImageHarness />);
-    const frame = document.querySelector(
-      ".border-dashed.border-blue-400",
-    );
-    expect(frame?.className).toContain("box-border");
+    const header = screen.getByTestId("reframe-editor-header");
+    const outputControls = screen.getByText("Output controls");
+    const reset = screen.getByRole("button", { name: "Reset frame and zoom" });
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "Custom aspect ratio" }),
-    );
+    expect(header.contains(outputControls)).toBe(true);
+    expect(
+      outputControls.compareDocumentPosition(reset) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).not.toBe(0);
+  });
 
-    const edge = document.querySelector(
-      'div[style*="cursor: ew-resize"]',
-    );
-    expect(edge).not.toBeNull();
-    fireEvent.mouseDown(edge as Element, { clientX: 0, clientY: 0 });
-    fireEvent.mouseMove(window, { clientX: -40, clientY: 0 });
-    fireEvent.mouseUp(window);
+  it("applies an external preset and exposes no custom aspect control", () => {
+    render(<ImageHarness />);
+    fireEvent.click(screen.getByRole("button", { name: "Set 4:3" }));
 
     const state = JSON.parse(
       screen.getByTestId("frame-state").textContent ?? "{}",
     ) as ReframeEditorValue;
-    expect(state.aspectMode).toBe("custom");
-    expect(state.padding.left + state.padding.right).toBeGreaterThan(0);
+    expect(state.aspectMode).toBe("4:3");
+    expect(state.padding.top + state.padding.bottom).toBeGreaterThan(0);
+    expect(
+      (screen.getByRole("slider", { name: "Reframe zoom" }) as HTMLInputElement)
+        .disabled,
+    ).toBe(false);
+    expect(
+      screen.queryByRole("button", { name: "Custom aspect ratio" }),
+    ).toBeNull();
   });
 
   it("renders video media through the same editor", () => {

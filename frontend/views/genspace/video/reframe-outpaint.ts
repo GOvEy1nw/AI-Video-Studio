@@ -1,4 +1,14 @@
-export type ReframeAspectMode = '1:1' | '16:9' | '9:16' | 'custom'
+export type ReframeAspectMode =
+  | '1:1'
+  | '16:9'
+  | '9:16'
+  | '21:9'
+  | '9:21'
+  | '4:3'
+  | '3:4'
+  | '3:2'
+  | '2:3'
+  | 'custom'
 
 export type DragEdge = 'top' | 'bottom' | 'left' | 'right'
 
@@ -18,9 +28,7 @@ export const ZERO_PADDING: ReframePadding = {
 
 /** Max per-edge padding when expanding via edge handles (user-facing). */
 export const MAX_PADDING_UI = 100
-/** Max per-edge padding for internal pan compensation (e.g. 0/200 when total is 200). */
-export const MAX_PADDING_INTERNAL = 200
-/** @deprecated Use MAX_PADDING_UI or MAX_PADDING_INTERNAL. */
+/** @deprecated Use MAX_PADDING_UI. */
 export const MAX_PADDING_PCT = MAX_PADDING_UI
 
 export function clampExpandPadding(value: number): number {
@@ -36,11 +44,11 @@ export function clampPaddingToExpandMax(padding: ReframePadding): ReframePadding
   }
 }
 
-export function clampInternalPadding(value: number): number {
-  return Math.max(0, Math.min(MAX_PADDING_INTERNAL, Math.round(value)))
+function normalizePadding(value: number): number {
+  return Math.max(0, value)
 }
 
-/** @deprecated use clampExpandPadding or clampInternalPadding */
+/** @deprecated use clampExpandPadding */
 export function clampPadding(value: number): number {
   return clampExpandPadding(value)
 }
@@ -62,9 +70,8 @@ export interface FrameLayout {
 }
 
 export function aspectRatioValue(mode: Exclude<ReframeAspectMode, 'custom'>): number {
-  if (mode === '1:1') return 1
-  if (mode === '16:9') return 16 / 9
-  return 9 / 16
+  const [width, height] = mode.split(':').map(Number)
+  return width / height
 }
 
 export function sourceCanvasSize(
@@ -197,8 +204,8 @@ export function computeFitPadding(
     const outerHeight = videoWidth / targetRatio
     const padPct = ((outerHeight - videoHeight) / 2 / videoHeight) * 100
     return {
-      top: clampExpandPadding(padPct),
-      bottom: clampExpandPadding(padPct),
+      top: normalizePadding(padPct),
+      bottom: normalizePadding(padPct),
       left: 0,
       right: 0,
     }
@@ -209,8 +216,8 @@ export function computeFitPadding(
   return {
     top: 0,
     bottom: 0,
-    left: clampExpandPadding(padPct),
-    right: clampExpandPadding(padPct),
+    left: normalizePadding(padPct),
+    right: normalizePadding(padPct),
   }
 }
 
@@ -308,12 +315,12 @@ export function applyPanPadding(
       ? (nextGapTop / startInner.height) * 100
       : startPadding.top
 
-  const left = clampInternalPadding(Math.max(0, Math.min(totalHorizontal, nextLeft)))
-  const top = clampInternalPadding(Math.max(0, Math.min(totalVertical, nextTop)))
+  const left = Math.max(0, Math.min(totalHorizontal, nextLeft))
+  const top = Math.max(0, Math.min(totalVertical, nextTop))
 
-  // Opposite sides absorb the remainder — totals stay fixed, one side may reach 200% internally.
-  const right = clampInternalPadding(Math.max(0, totalHorizontal - left))
-  const bottom = clampInternalPadding(Math.max(0, totalVertical - top))
+  // Placement only redistributes each axis total; zoom remains its sole owner.
+  const right = totalHorizontal - left
+  const bottom = totalVertical - top
 
   return { left, right, top, bottom }
 }
@@ -334,76 +341,7 @@ export function paddingForAspectModeChange(
   return computeFitPadding(videoWidth, videoHeight, nextMode)
 }
 
-function symmetricPadding(horizontal: number, vertical: number): ReframePadding {
-  const h = clampExpandPadding(horizontal)
-  const v = clampExpandPadding(vertical)
-  return { left: h, right: h, top: v, bottom: v }
-}
-
-/** Max zoom padding while keeping target aspect and every edge ≤ 100%. */
-export function computeMaxAspectZoomPadding(
-  videoWidth: number,
-  videoHeight: number,
-  aspectMode: Exclude<ReframeAspectMode, 'custom'>,
-): ReframePadding {
-  const W = videoWidth
-  const H = videoHeight
-  if (W <= 0 || H <= 0) return { ...ZERO_PADDING }
-
-  const targetRatio = aspectRatioValue(aspectMode)
-  const fit = computeFitPadding(W, H, aspectMode)
-
-  const verticalForHorizontal = (horizontalPerSide: number): number => {
-    const outerW = W * (1 + (horizontalPerSide * 2) / 100)
-    const outerH = outerW / targetRatio
-    return Math.max(0, ((outerH / H) - 1) / 2 * 100)
-  }
-
-  const horizontalForVertical = (verticalPerSide: number): number => {
-    const outerH = H * (1 + (verticalPerSide * 2) / 100)
-    const outerW = outerH * targetRatio
-    return Math.max(0, ((outerW / W) - 1) / 2 * 100)
-  }
-
-  const isZeroFit =
-    fit.top === 0 && fit.bottom === 0 && fit.left === 0 && fit.right === 0
-
-  if (isZeroFit) {
-    const horizontalAtMax = MAX_PADDING_UI
-    const verticalAtMax = verticalForHorizontal(horizontalAtMax)
-    if (verticalAtMax <= MAX_PADDING_UI) {
-      return symmetricPadding(horizontalAtMax, verticalAtMax)
-    }
-    return symmetricPadding(
-      horizontalForVertical(MAX_PADDING_UI),
-      MAX_PADDING_UI,
-    )
-  }
-
-  if (fit.left > 0 || fit.right > 0) {
-    const horizontalAtMax = MAX_PADDING_UI
-    const verticalAtMax = verticalForHorizontal(horizontalAtMax)
-    if (verticalAtMax <= MAX_PADDING_UI) {
-      return symmetricPadding(horizontalAtMax, verticalAtMax)
-    }
-    return symmetricPadding(
-      horizontalForVertical(MAX_PADDING_UI),
-      MAX_PADDING_UI,
-    )
-  }
-
-  const verticalAtMax = MAX_PADDING_UI
-  const horizontalAtMax = horizontalForVertical(verticalAtMax)
-  if (horizontalAtMax <= MAX_PADDING_UI) {
-    return symmetricPadding(horizontalAtMax, verticalAtMax)
-  }
-  return symmetricPadding(
-    MAX_PADDING_UI,
-    verticalForHorizontal(MAX_PADDING_UI),
-  )
-}
-
-/** Preset aspect zoom: 0 = fit box, 100 = max expansion at target aspect (per-edge ≤ 100%). */
+/** Preset aspect zoom: 100 = target-aspect fill, 0 = media at half that scale. */
 export function paddingForAspectZoom(
   videoWidth: number,
   videoHeight: number,
@@ -411,35 +349,15 @@ export function paddingForAspectZoom(
   zoom: number,
 ): ReframePadding {
   const fit = computeFitPadding(videoWidth, videoHeight, aspectMode)
-  const max = computeMaxAspectZoomPadding(videoWidth, videoHeight, aspectMode)
-  const t = Math.max(0, Math.min(100, zoom)) / 100
-  const lerpSide = (from: number, to: number) =>
-    clampExpandPadding(from + t * (to - from))
+  if (videoWidth <= 0 || videoHeight <= 0) return fit
 
-  const padding: ReframePadding = {
-    top: lerpSide(fit.top, max.top),
-    bottom: lerpSide(fit.bottom, max.bottom),
-    left: lerpSide(fit.left, max.left),
-    right: lerpSide(fit.right, max.right),
-  }
-
-  return clampPaddingToExpandMax(
-    enforceAspectPadding(
-      videoWidth,
-      videoHeight,
-      padding,
-      aspectRatioValue(aspectMode),
-    ),
-  )
-}
-
-function paddingHasInternalPan(padding: ReframePadding): boolean {
-  return (
-    padding.top > MAX_PADDING_UI ||
-    padding.bottom > MAX_PADDING_UI ||
-    padding.left > MAX_PADDING_UI ||
-    padding.right > MAX_PADDING_UI
-  )
+  const fillCanvas = sourceCanvasSize(videoWidth, videoHeight, fit)
+  const scale = 2 - Math.max(0, Math.min(100, zoom)) / 100
+  const horizontal = ((fillCanvas.width * scale) / videoWidth - 1) * 50
+  const vertical = ((fillCanvas.height * scale) / videoHeight - 1) * 50
+  const h = normalizePadding(horizontal)
+  const v = normalizePadding(vertical)
+  return { left: h, right: h, top: v, bottom: v }
 }
 
 /** Keep pan position when zoom totals change. */
@@ -459,19 +377,14 @@ export function applyZoomPreservingPan(
   const leftFraction = oldHorizontal > 0 ? current.left / oldHorizontal : 0.5
   const topFraction = oldVertical > 0 ? current.top / oldVertical : 0.5
 
-  const left = clampInternalPadding(Math.round(newHorizontal * leftFraction))
-  const top = clampInternalPadding(Math.round(newVertical * topFraction))
+  const left = newHorizontal * leftFraction
+  const top = newVertical * topFraction
 
   const next: ReframePadding = {
     left,
-    right: clampInternalPadding(Math.max(0, newHorizontal - left)),
+    right: newHorizontal - left,
     top,
-    bottom: clampInternalPadding(Math.max(0, newVertical - top)),
-  }
-
-  // Zoom never introduces >100% per edge; only prior pan may exceed that.
-  if (!paddingHasInternalPan(current)) {
-    return clampPaddingToExpandMax(next)
+    bottom: newVertical - top,
   }
 
   return next

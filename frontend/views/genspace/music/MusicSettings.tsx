@@ -11,7 +11,7 @@ import { GenPanelSection } from "../components/GenPanelSection";
 import { resolveMusicVocalMode } from "./compile-music-request";
 
 const inputClass =
-  "w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-xs text-zinc-200 focus:border-violet-500 focus:outline-hidden disabled:opacity-40";
+  "w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-xs text-zinc-200 focus:border-emerald-600 focus:outline-hidden disabled:opacity-40";
 
 export function MusicSettings({
   description,
@@ -74,7 +74,7 @@ export function MusicSettings({
         <div
           role="tablist"
           aria-label="Vocal mode"
-          className="grid grid-cols-3 gap-1 rounded-lg p-1"
+          className="flex flex-row w-fit mx-auto justify-center mt-2 overflow-hidden rounded-lg gap-2 bg-zinc-800/35 p-2"
         >
           {(
             [
@@ -91,8 +91,8 @@ export function MusicSettings({
               onClick={() => setVocalMode(value)}
               className={`rounded-md px-1.5 py-1.5 text-xs font-medium ${
                 vocalMode === value
-                  ? "bg-zinc-800 text-white"
-                  : "text-zinc-500 hover:text-zinc-200"
+                  ? "bg-emerald-600 text-white"
+                  : "text-zinc-500 hover:bg-zinc-900 hover:text-white"
               }`}
             >
               {label}
@@ -140,7 +140,6 @@ export function MusicSettings({
                 </button>
                 <button
                   type="button"
-                  role="switch"
                   aria-checked={settings.composeWithThinking}
                   onClick={() =>
                     update({
@@ -148,22 +147,13 @@ export function MusicSettings({
                     })
                   }
                   disabled={disabled || !policy?.supportsComposeThinking}
-                  className="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-[10px] font-medium text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-zinc-400"
+                  className={`flex items-center gap-1.5 rounded-md px-1.5 py-1 text-2xs font-medium transition-colors ${
+                    settings.composeWithThinking
+                      ? "bg-emerald-600 text-white hover:bg-emerald-500 hover:text-emerald-300"
+                      : "bg-zinc-800/35 text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-300"
+                  }`}
                 >
                   Think
-                  <span
-                    className={`relative h-4 w-7 rounded-full transition-colors ${
-                      settings.composeWithThinking
-                        ? "bg-blue-500"
-                        : "bg-zinc-600"
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition-transform ${
-                        settings.composeWithThinking ? "left-3.5" : "left-0.5"
-                      }`}
-                    />
-                  </span>
                 </button>
               </div>
             </div>

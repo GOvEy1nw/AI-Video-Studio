@@ -16,6 +16,7 @@ afterEach(cleanup);
 
 function MusicPanelHarness() {
   const [value, setValue] = useState("");
+  const [settings, setSettings] = useState(DEFAULT_MUSIC_SETTINGS);
   const controller = {
     prompt: {
       value,
@@ -40,8 +41,8 @@ function MusicPanelHarness() {
     },
     profiles: { options: [], modelDownload: null },
     music: {
-      settings: DEFAULT_MUSIC_SETTINGS,
-      setSettings: vi.fn(),
+      settings,
+      setSettings,
       composeLyrics: vi.fn(async () => null),
       isComposingLyrics: false,
     },
@@ -51,6 +52,7 @@ function MusicPanelHarness() {
     <>
       <MusicGenPanel controller={controller} />
       <output data-testid="music-prompt-value">{value}</output>
+      <output data-testid="music-duration-mode">{settings.durationMode}</output>
     </>
   );
 }
@@ -100,5 +102,20 @@ describe("MusicGenPanel", () => {
     expect(screen.getByTestId("music-prompt-value").textContent).toBe(
       "Warm, custom texture, Modern",
     );
+  });
+
+  it("places duration, BPM, key, and time signature popovers in the song prompt footer", () => {
+    render(<MusicPanelHarness />);
+
+    expect(screen.getByRole("button", { name: "Music duration" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Music BPM" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Music key and scale" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Music time signature" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Music duration" }));
+    fireEvent.change(screen.getByRole("slider", { name: "Music duration seconds" }), {
+      target: { value: "90" },
+    });
+    expect(screen.getByTestId("music-duration-mode").textContent).toBe("manual");
   });
 });

@@ -15,6 +15,7 @@ import type {
   ImageEditToolMode,
 } from "../../../types/image-edit";
 import type { GenSpaceSettings } from "../constants";
+import type { ReframeAspectMode } from "../video/reframe-outpaint";
 import { buildGenSpaceRestorePlan } from "../logic/settings-restore";
 import type {
   GenSpaceMediaInput,
@@ -73,7 +74,7 @@ export function useGenSpaceSettingsRestore({
     videoUrl: string;
     videoPath: string;
     duration?: number;
-    aspectMode?: "1:1" | "16:9" | "9:16" | "custom";
+    aspectMode?: ReframeAspectMode;
     padding?: { top: number; bottom: number; left: number; right: number };
   }) => void;
   clearError: () => void;

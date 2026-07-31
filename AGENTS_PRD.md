@@ -262,9 +262,8 @@ Reframe is the working video-outpainting workflow within GenSpace video mode.
 It provides:
 
 - source-video trim selection;
-- preset or custom aspect framing;
+- shared preset aspect framing;
 - zoom and pan;
-- mirrored custom edge expansion;
 - an optional text prompt;
 - WanGP-backed outpainting generation.
 

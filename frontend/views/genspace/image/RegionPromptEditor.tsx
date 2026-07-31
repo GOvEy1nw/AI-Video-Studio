@@ -248,12 +248,14 @@ export function RegionPromptEditor({
   aspectRatio,
   disabled,
   actions,
+  outputControls,
 }: {
   value: RegionPromptState;
   onChange: (value: RegionPromptState) => void;
   aspectRatio: string;
   disabled: boolean;
   actions?: ReactNode;
+  outputControls?: ReactNode;
 }) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const interactionRef = useRef<Interaction | null>(null);
@@ -439,14 +441,14 @@ export function RegionPromptEditor({
           </label>
         </div>
       </GenPanelSection>
-      <GenPanelSection title="Region" collapsed={false}>
+      <GenPanelSection title="" collapsible={false}>
         <div className="space-y-3">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-row w-fit mx-auto justify-center mt-2 items-center overflow-hidden rounded-lg gap-2 bg-zinc-800/35 p-2">
             <button
               type="button"
               onClick={addBox}
               disabled={disabled}
-              className="inline-flex items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-950 px-3 py-1.5 text-xs font-medium text-zinc-200 transition-colors hover:border-zinc-500 hover:text-white disabled:opacity-40"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-200 transition-colors hover:border-zinc-500 hover:bg-blue-500 hover:text-white disabled:opacity-40"
             >
               <Plus className="h-3.5 w-3.5" />
               Add box
@@ -456,12 +458,13 @@ export function RegionPromptEditor({
               onClick={deleteSelected}
               disabled={disabled || !selected}
               aria-label="Delete selected region"
-              className="inline-flex items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-950 px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:border-red-500/60 hover:text-red-300 disabled:opacity-40"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:border-red-500/60 hover:bg-red-500 hover:text-white disabled:opacity-40"
             >
               <Trash2 className="h-3.5 w-3.5" />
               Delete
             </button>
             {actions}
+            {outputControls}
           </div>
 
           <div className="rounded-xl border border-zinc-800 bg-black/40 p-2">
@@ -704,7 +707,7 @@ export function RegionPromptEditor({
           )}
         </div>
       </GenPanelSection>
-      <GenPanelSection title="Style" collapsed={false} borderBottom={false}>
+      <GenPanelSection title="Style" collapsed={true} borderBottom={false}>
         <div className="space-y-3">
           <div>
             <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-zinc-500">

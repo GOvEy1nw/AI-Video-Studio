@@ -1,4 +1,5 @@
 import { FramingControl } from "../components/FramingControl";
+import { AspectRatioDropdown } from "../components/AspectRatioDropdown";
 import { GenerateButton } from "../components/GenerateButton";
 import { GenPanelSection } from "../components/GenPanelSection";
 import { PromptActions } from "../components/PromptActions";
@@ -45,12 +46,59 @@ export function ImageGenPanel({
       isEnhancing={prompt.isEnhancing}
     />
   );
+  const standardOutputControls = (
+    <ImageModelControls
+      settings={settings.value}
+      onSettingsChange={settings.patch}
+      imageProfiles={modeProfiles}
+      section="output"
+      aspectRatioDisabled={aspectRatioDisabled}
+    />
+  );
+  const reframeAspectRatio =
+    imageTools.editOutpaint?.aspectMode === "custom"
+      ? "16:9"
+      : (imageTools.editOutpaint?.aspectMode ?? "16:9");
+  const reframeOutputControls =
+    imageTools.mode === "edit" && imageTools.editToolMode === "reframe" ? (
+      <div className="flex shrink-0 items-center gap-1">
+        <ImageModelControls
+          settings={settings.value}
+          onSettingsChange={settings.patch}
+          imageProfiles={modeProfiles}
+          section="output"
+          showAspectRatio={false}
+          menuPlacement="bottom"
+        />
+        <AspectRatioDropdown
+          value={reframeAspectRatio}
+          allowedAspectRatios={selectedProfile?.ui.allowedAspectRatios}
+          placement="bottom"
+          onChange={(aspectMode) =>
+            imageTools.setEditOutpaint({
+              aspectMode,
+              padding: imageTools.editOutpaint?.padding ?? {
+                top: 0,
+                bottom: 0,
+                left: 0,
+                right: 0,
+              },
+            })
+          }
+        />
+      </div>
+    ) : null;
+  const promptFooterControls =
+    imageTools.mode === "edit" &&
+    imageTools.editToolMode === "reframe" ? null : (
+      <>{standardOutputControls}</>
+    );
 
   return (
     <>
       <ImageModeTabs mode={imageTools.mode} onChange={imageTools.setMode} />
       <GenPanelSection
-        title="Model"
+        title=""
         className="text-xs text-zinc-400"
         collapsible={false}
       >
@@ -87,6 +135,7 @@ export function ImageGenPanel({
           disabled={generation.isRunning}
           resolveInputFileUrl={media.resolveInputFileUrl}
           syncInputFileToGallery={media.syncInputFileToGallery}
+          reframeControls={reframeOutputControls}
         />
       ) : null}
       {imageTools.mode === "region" ? (
@@ -96,6 +145,7 @@ export function ImageGenPanel({
           aspectRatio={settings.value.aspectRatio}
           disabled={generation.isRunning}
           actions={promptActions}
+          outputControls={standardOutputControls}
         />
       ) : (
         <PromptEditor
@@ -106,31 +156,21 @@ export function ImageGenPanel({
           disabled={generation.isRunning}
           placeholder="A close-up of a woman talking on the phone..."
           bottomRight={
-            imageTools.mode === "create" ? (
-              <FramingControl
-                value={framing.value}
-                onChange={framing.setValue}
-                disabled={generation.isRunning}
-              />
-            ) : undefined
+            <div className="flex flex-wrap items-center justify-end gap-1">
+              {promptFooterControls}
+              {imageTools.mode === "create" ? (
+                <FramingControl
+                  value={framing.value}
+                  onChange={framing.setValue}
+                  disabled={generation.isRunning}
+                />
+              ) : null}
+            </div>
           }
           actions={promptActions}
         />
       )}
       <div className="flex flex-wrap items-center gap-1.5 border-t border-zinc-800/60 px-4 py-3 text-xs text-zinc-400">
-        <ImageModelControls
-          settings={settings.value}
-          onSettingsChange={settings.patch}
-          imageProfiles={modeProfiles}
-          section="output"
-          aspectRatioDisabled={aspectRatioDisabled}
-          showAspectRatio={
-            !(
-              imageTools.mode === "edit" &&
-              imageTools.editToolMode === "reframe"
-            )
-          }
-        />
         <GenerateButton
           onClick={generation.submit}
           disabled={!generation.canSubmit}

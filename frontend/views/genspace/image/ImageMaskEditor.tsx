@@ -119,80 +119,84 @@ export function ImageMaskEditor({
     >
       <div
         data-testid="image-edit-header"
-        className="flex h-8 min-w-0 items-center gap-1"
+        className="flex h-8 min-w-0 items-center gap-1 mb-2"
       >
         <span className="mr-auto shrink-0 text-2xs font-medium uppercase tracking-wider text-zinc-500">
-          Edit image
+          Retouch
         </span>
-        {(
-          [
-            ["brush", "Brush", Paintbrush],
-            ["rectangle", "Box", Square],
-            ["ellipse", "Circle", Circle],
-          ] as const
-        ).map(([id, label, Icon]) => (
-          <button
-            key={id}
-            type="button"
-            disabled={disabled}
-            aria-pressed={tool === id}
-            aria-label={label}
-            title={label}
-            onClick={() => {
-              setTool(id);
-              if (id !== "brush") setBrushCursor(null);
-            }}
-            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md border ${
-              tool === id
-                ? "border-blue-500 bg-blue-500/15 text-blue-200"
-                : "border-zinc-700 text-zinc-400 hover:text-white"
-            }`}
-          >
-            <Icon className="h-3.5 w-3.5" />
-          </button>
-        ))}
-        {tool === "brush" ? (
-          <label className="flex min-w-0 items-center gap-1 text-[9px] uppercase tracking-wider text-zinc-500">
-            <span className="shrink-0">Size</span>
+        <div className="flex items-center gap-2 bg-zinc-800/35 p-1 rounded-lg">
+          {(
+            [
+              ["brush", "Brush", Paintbrush],
+              ["rectangle", "Box", Square],
+              ["ellipse", "Circle", Circle],
+            ] as const
+          ).map(([id, label, Icon]) => (
+            <button
+              key={id}
+              type="button"
+              disabled={disabled}
+              aria-pressed={tool === id}
+              aria-label={label}
+              title={label}
+              onClick={() => {
+                setTool(id);
+                if (id !== "brush") setBrushCursor(null);
+              }}
+              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md border ${
+                tool === id
+                  ? "border-blue-500 bg-blue-500 text-blue-200"
+                  : "border-zinc-950 bg-zinc-950 text-zinc-400 hover:text-white"
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+            </button>
+          ))}
+          <label className="flex min-w-0 items-center gap-1 text-2xs font-medium uppercase tracking-wider text-zinc-500">
+            <span className="shrink-0">Brush Size</span>
             <input
               aria-label="Brush size"
               type="range"
               min={2}
               max={24}
               value={Math.round(brushSize * 100)}
-              disabled={disabled}
+              disabled={disabled || tool !== "brush"}
               onChange={(event) =>
                 setBrushSize(Number(event.target.value) / 100)
               }
-              className="h-4 min-w-10 w-16 accent-blue-500"
+              className={`h-4 min-w-16 w-24 accent-blue-500 ${
+                disabled || tool !== "brush"
+                  ? "cursor-not-allowed opacity-40"
+                  : "cursor-pointer"
+              }`}
             />
           </label>
-        ) : null}
-        <div className="ml-auto flex items-center gap-1">
-          <button
-            type="button"
-            disabled={disabled || operations.length === 0}
-            onClick={() => commitOperations(operations.slice(0, -1))}
-            className="flex h-6 w-6 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-800 hover:text-white disabled:opacity-30"
-            aria-label="Undo last mask operation"
-          >
-            <Redo2 className="h-3.5 w-3.5 -scale-x-100" />
-          </button>
-          <button
-            type="button"
-            disabled={disabled || operations.length === 0}
-            onClick={() => commitOperations([])}
-            className="flex h-6 w-6 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-800 hover:text-red-300 disabled:opacity-30"
-            aria-label="Clear mask"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
+          <div className="ml-auto flex items-center gap-1">
+            <button
+              type="button"
+              disabled={disabled || operations.length === 0}
+              onClick={() => commitOperations(operations.slice(0, -1))}
+              className="flex h-6 w-6 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-800 hover:text-white disabled:opacity-30"
+              aria-label="Undo last mask operation"
+            >
+              <Redo2 className="h-3.5 w-3.5 -scale-x-100" />
+            </button>
+            <button
+              type="button"
+              disabled={disabled || operations.length === 0}
+              onClick={() => commitOperations([])}
+              className="flex h-6 w-6 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-800 hover:text-red-300 disabled:opacity-30"
+              aria-label="Clear mask"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
       </div>
 
       <div
         data-testid="image-edit-canvas"
-        className="relative w-full overflow-hidden border-x border-t border-zinc-700 bg-zinc-950/35"
+        className="relative w-full overflow-hidden rounded-lg"
         style={{ aspectRatio: sourceAspectRatio }}
       >
         <img

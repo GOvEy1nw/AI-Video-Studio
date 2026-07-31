@@ -28,7 +28,17 @@ export interface ImageEditMaskRecipe {
   operations: ImageEditMaskOperation[];
 }
 
-export type ImageEditAspectMode = "1:1" | "16:9" | "9:16" | "custom";
+export type ImageEditAspectMode =
+  | "1:1"
+  | "16:9"
+  | "9:16"
+  | "21:9"
+  | "9:21"
+  | "4:3"
+  | "3:4"
+  | "3:2"
+  | "2:3"
+  | "custom";
 
 export interface ImageEditOutpaintRecipe {
   aspectMode: ImageEditAspectMode;

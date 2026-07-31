@@ -20,17 +20,6 @@ import {
   ZERO_PADDING,
 } from "../video/reframe-outpaint";
 
-const ASPECT_MODES: Array<{
-  id: ReframeAspectMode;
-  label: string;
-  ariaLabel: string;
-}> = [
-  { id: "1:1", label: "1:1", ariaLabel: "Square 1:1" },
-  { id: "16:9", label: "16:9", ariaLabel: "Landscape 16:9" },
-  { id: "9:16", label: "9:16", ariaLabel: "Portrait 9:16" },
-  { id: "custom", label: "Custom", ariaLabel: "Custom aspect ratio" },
-];
-
 export interface ReframeEditorValue {
   aspectMode: ReframeAspectMode;
   padding: ReframePadding;
@@ -53,6 +42,7 @@ interface ReframeEditorProps {
   canvasTestId?: string;
   frameInset?: number;
   initialZoom?: number;
+  controls?: ReactNode;
   resetKey?: string | number;
   fillHeight?: boolean;
   disabled?: boolean;
@@ -84,17 +74,19 @@ export function ReframeEditor({
   canvasStyle,
   canvasTestId,
   frameInset = 8,
-  initialZoom = 0,
+  initialZoom = 100,
+  controls,
   resetKey,
   fillHeight = false,
   disabled = false,
   children,
 }: ReframeEditorProps) {
+  const { aspectMode, padding } = value;
   const previewRef = useRef<HTMLDivElement>(null);
   const initializedZoomKeyRef = useRef<string | null>(null);
+  const previousAspectModeRef = useRef(aspectMode);
   const [previewSize, setPreviewSize] = useState({ width: 0, height: 0 });
   const [zoom, setZoom] = useState(initialZoom);
-  const { aspectMode, padding } = value;
   const initializedZoomKey = `${mediaUrl}\0${String(resetKey ?? "")}\0${initialZoom}`;
 
   useEffect(() => {
@@ -132,22 +124,6 @@ export function ReframeEditor({
           frameInset,
         )
       : null;
-  const zoomDisabled =
-    aspectMode !== "custom" &&
-    sourceWidth > 0 &&
-    sourceHeight > 0 &&
-    (() => {
-      const fitPadding = computeFitPadding(
-        sourceWidth,
-        sourceHeight,
-        aspectMode,
-      );
-      return (
-        (fitPadding.left >= 100 && fitPadding.right >= 100) ||
-        (fitPadding.top >= 100 && fitPadding.bottom >= 100)
-      );
-    })();
-
   useEffect(() => {
     if (
       sourceWidth <= 0 ||
@@ -166,15 +142,12 @@ export function ReframeEditor({
     ) {
       return;
     }
-    const next =
-      initialZoom > 0
-        ? paddingForAspectZoom(
-            sourceWidth,
-            sourceHeight,
-            aspectMode,
-            initialZoom,
-          )
-        : computeFitPadding(sourceWidth, sourceHeight, aspectMode);
+    const next = paddingForAspectZoom(
+      sourceWidth,
+      sourceHeight,
+      aspectMode,
+      initialZoom,
+    );
     if (!samePadding(padding, next)) {
       onChange({ aspectMode, padding: next });
     }
@@ -188,26 +161,24 @@ export function ReframeEditor({
     sourceWidth,
   ]);
 
-  const handleAspectModeChange = useCallback(
-    (mode: ReframeAspectMode) => {
-      setZoom(0);
-      onChange({
-        aspectMode: mode,
-        padding: paddingForAspectModeChange(
-          sourceWidth,
-          sourceHeight,
-          mode,
-          padding,
-        ),
-      });
-    },
-    [onChange, padding, sourceHeight, sourceWidth],
-  );
+  useEffect(() => {
+    if (previousAspectModeRef.current === aspectMode) return;
+    previousAspectModeRef.current = aspectMode;
+    setZoom(100);
+    onChange({
+      aspectMode,
+      padding: paddingForAspectModeChange(
+        sourceWidth,
+        sourceHeight,
+        aspectMode,
+        padding,
+      ),
+    });
+  }, [aspectMode, onChange, padding, sourceHeight, sourceWidth]);
 
   const handleZoomChange = useCallback(
     (nextZoom: number) => {
       if (sourceWidth <= 0 || sourceHeight <= 0) return;
-      if (aspectMode !== "custom" && zoomDisabled) return;
       setZoom(nextZoom);
       const zoomBase =
         aspectMode === "custom"
@@ -228,11 +199,11 @@ export function ReframeEditor({
         padding: applyZoomPreservingPan(padding, zoomBase),
       });
     },
-    [aspectMode, onChange, padding, sourceHeight, sourceWidth, zoomDisabled],
+    [aspectMode, onChange, padding, sourceHeight, sourceWidth],
   );
 
   const handleReset = useCallback(() => {
-    setZoom(0);
+    setZoom(100);
     onChange({
       aspectMode,
       padding:
@@ -244,8 +215,8 @@ export function ReframeEditor({
 
   const mediaStyle: CSSProperties = frameLayout
     ? {
-        left: frameLayout.inner.x - 1,
-        top: frameLayout.inner.y - 1,
+        left: frameLayout.inner.x,
+        top: frameLayout.inner.y,
         width: frameLayout.inner.width,
         height: frameLayout.inner.height,
       }
@@ -258,30 +229,15 @@ export function ReframeEditor({
     >
       <div
         data-testid={headerTestId ?? "reframe-editor-header"}
-        className="flex h-8 min-w-0 items-center gap-1.5"
+        className="flex h-8 min-w-0 items-center gap-1.5 mb-2"
       >
         {headerLabel ? (
           <span className="mr-auto text-2xs font-medium uppercase tracking-wider text-zinc-500">
             {headerLabel}
           </span>
         ) : null}
-        <div className="flex shrink-0 items-center gap-0.5 rounded-md border border-zinc-700 bg-zinc-950/70 p-0.5">
-          {ASPECT_MODES.map((mode) => (
-            <button
-              key={mode.id}
-              type="button"
-              aria-label={mode.ariaLabel}
-              disabled={disabled}
-              onClick={() => handleAspectModeChange(mode.id)}
-              className={`rounded px-1.5 py-1 text-[9px] font-semibold transition-colors ${
-                aspectMode === mode.id
-                  ? "bg-blue-600 text-white"
-                  : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
-              } disabled:cursor-not-allowed disabled:opacity-40`}
-            >
-              {mode.label}
-            </button>
-          ))}
+        <div className="flex shrink-0 items-center rounded-lg p-1 gap-1 bg-zinc-800/35">
+          {controls}
           <button
             type="button"
             disabled={disabled}
@@ -292,41 +248,33 @@ export function ReframeEditor({
           >
             <RefreshCw className="h-3 w-3" />
           </button>
+          <label className="flex min-w-0 items-center gap-1 rounded-md px-1.5 py-1">
+            <span className="text-2xs leading-none font-medium text-zinc-400">
+              Zoom
+            </span>
+            <input
+              type="range"
+              aria-label="Reframe zoom"
+              min={0}
+              max={100}
+              step={1}
+              value={zoom}
+              disabled={disabled}
+              onChange={(event) =>
+                handleZoomChange(Number(event.currentTarget.value))
+              }
+              className={`h-1 min-w-0 flex-1 accent-blue-500 ${
+                disabled ? "cursor-not-allowed" : "cursor-pointer"
+              }`}
+            />
+          </label>
         </div>
-        <label
-          className={`flex min-w-0 flex-1 items-center gap-1 rounded-md border border-zinc-700 bg-zinc-950/70 px-1.5 py-1 ${zoomDisabled ? "opacity-50" : ""}`}
-          title={
-            zoomDisabled
-              ? "Zoom has no effect for this aspect ratio"
-              : undefined
-          }
-        >
-          <span className="text-[9px] font-medium text-zinc-400">Zoom</span>
-          <input
-            type="range"
-            aria-label="Outpaint expansion"
-            min={0}
-            max={100}
-            step={1}
-            value={zoom}
-            disabled={disabled || zoomDisabled}
-            onChange={(event) =>
-              handleZoomChange(Number(event.currentTarget.value))
-            }
-            className={`h-1 min-w-0 flex-1 accent-blue-500 ${
-              disabled || zoomDisabled ? "cursor-not-allowed" : "cursor-pointer"
-            }`}
-          />
-          <span className="w-6 text-right font-mono text-[9px] text-zinc-300">
-            {zoom}%
-          </span>
-        </label>
       </div>
 
       <div
         ref={previewRef}
         data-testid={canvasTestId}
-        className={`relative min-h-0 overflow-hidden bg-zinc-950/35 ${canvasClassName}`}
+        className={`relative min-h-0 overflow-hidden ${canvasClassName}`}
         style={canvasStyle}
       >
         {mediaType === "image" ? (

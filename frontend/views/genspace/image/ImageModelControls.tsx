@@ -5,7 +5,7 @@ import { SettingsDropdown } from "../../../components/SettingsDropdown";
 import { getModelDropdownAvailability } from "../../../lib/model-profile-availability";
 import type { ModelProfile } from "../../../types/model-profiles";
 import type { ModelDownloadProgress } from "../../../types/progress";
-import { AspectIcon } from "../components/AspectIcon";
+import { AspectRatioDropdown } from "../components/AspectRatioDropdown";
 import type { ImageGenSettings } from "../types";
 
 // Profile-driven image-mode controls. Reads the curated profile list
@@ -114,6 +114,7 @@ export function ImageModelControls({
               value: tier,
               label: tier,
             }))}
+            placement={menuPlacement}
             trigger={
               <>
                 <Monitor className="h-3.5 w-3.5" />
@@ -123,21 +124,12 @@ export function ImageModelControls({
           />
 
           {showAspectRatio ? (
-            <SettingsDropdown
-              title="ASPECT RATIO"
+            <AspectRatioDropdown
               value={settings.aspectRatio}
               onChange={(aspectRatio) => onSettingsChange({ aspectRatio })}
               disabled={aspectRatioDisabled}
-              options={selectedProfile.ui.allowedAspectRatios.map((ratio) => ({
-                value: ratio,
-                label: ratio,
-              }))}
-              trigger={
-                <>
-                  <AspectIcon className="h-3.5 w-3.5" />
-                  <span>{settings.aspectRatio}</span>
-                </>
-              }
+              allowedAspectRatios={selectedProfile.ui.allowedAspectRatios}
+              placement={menuPlacement}
             />
           ) : null}
         </>

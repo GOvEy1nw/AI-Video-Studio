@@ -44,6 +44,10 @@ _QWEN_IMAGE_RESOLUTIONS: tuple[tuple[int, int], ...] = (
     (928, 1664),
     (1472, 1140),
     (1140, 1472),
+    (1536, 1024),
+    (1024, 1536),
+    (1920, 832),
+    (832, 1920),
 )
 _TQDM_PROGRESS_RE = re.compile(r"(?:(?P<label>.*?):\s+)?(?P<percent>\d{1,3})%\|[^|]*\|\s*(?P<current>\d+)/(?P<total>\d+)")
 _SECTION_RE = re.compile(r"(?:sliding\s+window|window|section)\D+(?P<current>\d+)\D+(?:of|/)\D*(?P<total>\d+)", re.IGNORECASE)

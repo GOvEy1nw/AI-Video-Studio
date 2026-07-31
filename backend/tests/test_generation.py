@@ -566,7 +566,7 @@ class TestGenerate:
         assert call.video_guide_outpainting == "35 70 40 30"
         assert call.video_guide_outpainting_ratio == ""
 
-    def test_reframe_internal_padding_up_to_200(
+    def test_reframe_accepts_unbounded_placement_padding(
         self, client, enable_wangp: FakeWanGPBridge, tmp_path: Path, monkeypatch
     ):
         video = tmp_path / "video.mp4"
@@ -592,8 +592,8 @@ class TestGenerate:
                     {"role": "control_video", "path": str(video), "type": "video"},
                 ],
                 "reframe": {
-                    "aspectMode": "custom",
-                    "padding": {"top": 0, "bottom": 0, "left": 0, "right": 200},
+                    "aspectMode": "9:21",
+                    "padding": {"top": 0, "bottom": 0, "left": 0, "right": 875},
                     "controlVideoStartTime": 0,
                     "controlVideoDuration": 5,
                 },
@@ -602,7 +602,7 @@ class TestGenerate:
 
         assert r.status_code == 200
         call = enable_wangp.video_calls[0]
-        assert call.video_guide_outpainting == "0 0 0 200"
+        assert call.video_guide_outpainting == "0 0 0 875"
         assert call.video_guide_outpainting_ratio == ""
 
     def test_reframe_requires_options_payload(

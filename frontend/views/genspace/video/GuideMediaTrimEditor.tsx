@@ -168,7 +168,7 @@ export function GuideMediaTrimEditor({
         <button
           type="button"
           onClick={onConfirm}
-          className="inline-flex items-center gap-1 rounded-sm bg-blue-600 px-2 py-1 text-[10px] font-medium text-white transition-colors hover:bg-blue-500 w-full justify-center"
+          className="inline-flex items-center gap-1 rounded-sm bg-violet-500 px-2 py-1 text-[10px] font-medium text-white transition-colors hover:bg-violet-600 w-full justify-center"
         >
           <Check className="h-3 w-3" />
           Confirm

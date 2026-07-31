@@ -17,7 +17,28 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 MediaType = Literal["image", "video", "audio", "tts"]
-AspectRatio = Literal["1:1", "16:9", "9:16"]
+AspectRatio = Literal[
+    "1:1",
+    "16:9",
+    "9:16",
+    "21:9",
+    "9:21",
+    "4:3",
+    "3:4",
+    "3:2",
+    "2:3",
+]
+CURATED_ASPECT_RATIOS: tuple[AspectRatio, ...] = (
+    "1:1",
+    "16:9",
+    "9:16",
+    "21:9",
+    "9:21",
+    "4:3",
+    "3:4",
+    "3:2",
+    "2:3",
+)
 ResolutionTier = Literal["540p", "720p", "1080p", "1440p", "2160p"]
 ProfileStatus = Literal["stable", "experimental", "hidden"]
 LoraSupport = Literal["supported", "unsupported", "future", "experimental"]
@@ -192,7 +213,7 @@ class ModelProfile:
     input_media: InputMediaPolicy = field(default_factory=InputMediaPolicy)
     default_aspect_ratio: AspectRatio = "1:1"
     default_resolution_tier: ResolutionTier = "720p"
-    allowed_aspect_ratios: tuple[AspectRatio, ...] = ("1:1", "16:9", "9:16")
+    allowed_aspect_ratios: tuple[AspectRatio, ...] = CURATED_ASPECT_RATIOS
     allowed_resolution_tiers: tuple[ResolutionTier, ...] = (
         "540p",
         "720p",
@@ -533,7 +554,7 @@ IMAGE_PROFILES: tuple[ModelProfile, ...] = (
         ),
         default_aspect_ratio="1:1",
         default_resolution_tier="720p",
-        allowed_aspect_ratios=("1:1", "16:9", "9:16"),
+        allowed_aspect_ratios=CURATED_ASPECT_RATIOS,
         allowed_resolution_tiers=("540p", "720p", "1080p"),
     ),
     ModelProfile(
@@ -644,7 +665,7 @@ IMAGE_PROFILES: tuple[ModelProfile, ...] = (
         lora="future",
         default_aspect_ratio="1:1",
         default_resolution_tier="720p",
-        allowed_aspect_ratios=("1:1", "16:9", "9:16"),
+        allowed_aspect_ratios=CURATED_ASPECT_RATIOS,
         allowed_resolution_tiers=("540p", "720p", "1080p", "1440p"),
         min_resolution_tier="540p",
         max_resolution_tier="1440p",
@@ -802,7 +823,7 @@ IMAGE_PROFILES: tuple[ModelProfile, ...] = (
         ),
         default_aspect_ratio="1:1",
         default_resolution_tier="720p",
-        allowed_aspect_ratios=("1:1", "16:9", "9:16"),
+        allowed_aspect_ratios=CURATED_ASPECT_RATIOS,
         allowed_resolution_tiers=("540p", "720p", "1080p", "1440p"),
         min_resolution_tier="540p",
         max_resolution_tier="1440p",
@@ -917,7 +938,7 @@ IMAGE_PROFILES: tuple[ModelProfile, ...] = (
         ),
         default_aspect_ratio="1:1",
         default_resolution_tier="720p",
-        allowed_aspect_ratios=("1:1", "16:9", "9:16"),
+        allowed_aspect_ratios=CURATED_ASPECT_RATIOS,
         allowed_resolution_tiers=("540p", "720p", "1080p", "1440p"),
         min_resolution_tier="540p",
         max_resolution_tier="1440p",
@@ -973,7 +994,7 @@ IMAGE_PROFILES: tuple[ModelProfile, ...] = (
         lora="future",
         default_aspect_ratio="1:1",
         default_resolution_tier="720p",
-        allowed_aspect_ratios=("1:1", "16:9", "9:16"),
+        allowed_aspect_ratios=CURATED_ASPECT_RATIOS,
         allowed_resolution_tiers=("540p", "720p", "1080p", "1440p"),
         min_resolution_tier="540p",
         max_resolution_tier="1440p",
@@ -1103,7 +1124,7 @@ IMAGE_PROFILES: tuple[ModelProfile, ...] = (
         ),
         default_aspect_ratio="1:1",
         default_resolution_tier="720p",
-        allowed_aspect_ratios=("1:1", "16:9", "9:16"),
+        allowed_aspect_ratios=CURATED_ASPECT_RATIOS,
         allowed_resolution_tiers=("540p", "720p", "1080p", "1440p"),
         min_resolution_tier="540p",
         max_resolution_tier="1440p",
@@ -1215,7 +1236,7 @@ IMAGE_PROFILES: tuple[ModelProfile, ...] = (
         ),
         default_aspect_ratio="1:1",
         default_resolution_tier="720p",
-        allowed_aspect_ratios=("1:1", "16:9", "9:16"),
+        allowed_aspect_ratios=CURATED_ASPECT_RATIOS,
         allowed_resolution_tiers=("540p", "720p", "1080p", "1440p"),
         min_resolution_tier="540p",
         max_resolution_tier="1440p",
@@ -1348,7 +1369,7 @@ IMAGE_PROFILES: tuple[ModelProfile, ...] = (
         ),
         default_aspect_ratio="1:1",
         default_resolution_tier="720p",
-        allowed_aspect_ratios=("1:1", "16:9", "9:16"),
+        allowed_aspect_ratios=CURATED_ASPECT_RATIOS,
         allowed_resolution_tiers=("540p", "720p", "1080p", "1440p"),
         min_resolution_tier="540p",
         max_resolution_tier="1440p",
@@ -1397,7 +1418,7 @@ IMAGE_PROFILES: tuple[ModelProfile, ...] = (
         lora="future",
         default_aspect_ratio="1:1",
         default_resolution_tier="720p",
-        allowed_aspect_ratios=("1:1", "16:9", "9:16"),
+        allowed_aspect_ratios=CURATED_ASPECT_RATIOS,
         allowed_resolution_tiers=("540p", "720p", "1080p", "1440p"),
         min_resolution_tier="540p",
         max_resolution_tier="1440p",
@@ -1445,7 +1466,7 @@ IMAGE_PROFILES: tuple[ModelProfile, ...] = (
         lora="future",
         default_aspect_ratio="1:1",
         default_resolution_tier="720p",
-        allowed_aspect_ratios=("1:1", "16:9", "9:16"),
+        allowed_aspect_ratios=CURATED_ASPECT_RATIOS,
         allowed_resolution_tiers=("540p", "720p", "1080p", "1440p"),
         min_resolution_tier="540p",
         max_resolution_tier="1440p",
@@ -1617,7 +1638,7 @@ VIDEO_PROFILES: tuple[ModelProfile, ...] = (
         ),
         default_aspect_ratio="16:9",
         default_resolution_tier="540p",
-        allowed_aspect_ratios=("1:1", "16:9", "9:16"),
+        allowed_aspect_ratios=CURATED_ASPECT_RATIOS,
         allowed_resolution_tiers=("540p", "720p", "1080p"),
         director=DirectorPolicy(
             enabled=True,

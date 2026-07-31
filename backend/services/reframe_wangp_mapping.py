@@ -5,7 +5,18 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-ReframeAspectMode = Literal["1:1", "16:9", "9:16", "custom"]
+ReframeAspectMode = Literal[
+    "1:1",
+    "16:9",
+    "9:16",
+    "21:9",
+    "9:21",
+    "4:3",
+    "3:4",
+    "3:2",
+    "2:3",
+    "custom",
+]
 
 
 @dataclass(frozen=True)

@@ -9,7 +9,7 @@ under Image Edit alongside Edit and Retouch.
 - `frontend/views/genspace/hooks/useGenSpaceVideoTools.tsx` owns video process mode state: `generate`, `reframe`, or `retake`.
 - `frontend/views/genspace/video/ReframePanel.tsx` renders inside the prompt bar area so the gallery remains visible.
 - `frontend/views/genspace/video/VideoTrimPanel.tsx` is shared by Retake and Reframe for trim selection and seeking.
-- `frontend/views/genspace/components/ReframeEditor.tsx` is the one framing component used by Image and Video. It owns preset/custom aspect controls, zoom, reset, frame layout, pan, and edge dragging.
+- `frontend/views/genspace/components/ReframeEditor.tsx` is the one framing component used by Image and Video. It owns zoom, reset, frame layout, and pan. Resolution and the shared aspect-ratio dropdown are injected into its control row before reset and zoom.
 - `frontend/views/genspace/video/OutpaintFrameOverlay.tsx` handles frame pan and edge/corner padding adjustment.
 - Image keeps its full-width source-aspect canvas with zero display inset. Video keeps its trim/playback canvas. Both supply media lifecycle state to the shared editor.
 - Reframe shows an optional prompt textarea below the trim panel. Placeholder: `optional text prompt to drive outpainting...`.
@@ -17,12 +17,11 @@ under Image Edit alongside Edit and Retouch.
 
 ## Aspect And Padding
 
-- Presets: `1:1`, `16:9`, `9:16`.
-- Custom mode uses mirrored edge expansion.
-- Reframe output aspect comes only from the authored frame. Image Reframe does not show a second aspect selector beside resolution.
-- Preset modes use zoom plus pan.
-- UI expansion/zoom is capped at 100% per edge.
-- Pan redistribution can internally produce up to 200% on one side; backend `ReframePadding` therefore allows 0-200 per edge.
+- Presets: `1:1`, `16:9`, `9:16`, `21:9`, `9:21`, `4:3`, `3:4`, `3:2`, and `2:3`.
+- Custom framing and mirrored edge expansion are not exposed.
+- Reframe output aspect comes only from the shared control-row selector; neither editor shows a second aspect control.
+- Preset modes use zoom plus pan. `100%` is minimum target-aspect fill; `0%` renders the source at half that scale.
+- Zoom stays enabled for every preset. Zoom owns total horizontal and vertical padding; pan only redistributes each total between opposite sides. No finite per-edge cap is applied.
 - `frontend/views/genspace/video/reframe-outpaint.ts` owns the padding/layout math.
 
 ## Backend Flow

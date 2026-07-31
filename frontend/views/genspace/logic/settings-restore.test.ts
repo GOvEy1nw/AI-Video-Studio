@@ -174,6 +174,54 @@ describe("GenSpace settings restoration", () => {
     });
   });
 
+  it("normalizes legacy custom Image and Video Reframe recipes", () => {
+    const legacyVideo = buildGenSpaceRestorePlan(
+      asset({
+        mode: "reframe",
+        prompt: "extend",
+        model: "fast",
+        duration: 3,
+        resolution: "720p",
+        fps: 24,
+        audio: false,
+        cameraMotion: "none",
+        reframeAspectMode: "custom",
+        reframePadding: { top: 12, bottom: 12, left: 30, right: 30 },
+      }),
+      [],
+      DEFAULT_VIDEO_SETTINGS,
+      musicSettings,
+    );
+    const legacyImage = buildGenSpaceRestorePlan(
+      asset({
+        mode: "text-to-image",
+        prompt: "extend",
+        model: "fast",
+        duration: 5,
+        resolution: "720p",
+        fps: 24,
+        audio: false,
+        cameraMotion: "none",
+        imageEditOutpaint: {
+          aspectMode: "custom",
+          padding: { top: 12, bottom: 12, left: 30, right: 30 },
+        },
+      }),
+      [],
+      DEFAULT_VIDEO_SETTINGS,
+      musicSettings,
+    );
+
+    expect(legacyVideo?.reframe).toMatchObject({
+      aspectMode: "16:9",
+      padding: { top: 0, bottom: 0, left: 0, right: 0 },
+    });
+    expect(legacyImage?.editOutpaint).toEqual({
+      aspectMode: "16:9",
+      padding: { top: 0, bottom: 0, left: 0, right: 0 },
+    });
+  });
+
   it("restores Ideogram assets into Region mode with their JSON prompt", () => {
     const prompt =
       '{"high_level_description":"Poster","compositional_deconstruction":{"background":"","elements":[{"type":"obj","bbox":[100,200,800,700],"desc":"Robot"}]}}';

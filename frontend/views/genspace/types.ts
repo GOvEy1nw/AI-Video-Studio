@@ -18,6 +18,7 @@ import type {
 } from "../../types/image-edit";
 import type { RegionPromptState } from "./image/region-prompt";
 import type { ReframePanelState } from "./video/ReframePanel";
+import type { ReframeAspectMode } from "./video/reframe-outpaint";
 import type { GenSpaceSettings } from "./constants";
 
 export type GenSpaceMode = "image" | "video" | "music";
@@ -126,8 +127,10 @@ export interface GenSpaceMusicController {
 export interface GenSpaceVideoToolsController {
   mode: VideoProcessMode;
   setMode: (mode: VideoProcessMode) => void;
-  panel: ReactNode;
+  panel: (controls?: ReactNode) => ReactNode;
   reframeDurationSeconds: number;
+  reframeAspectMode: ReframeAspectMode;
+  setReframeAspectMode: (aspectMode: ReframeAspectMode) => void;
 }
 
 export interface GenSpaceImageToolsController {

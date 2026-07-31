@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, type ReactNode } from "react";
 import { ReframePanel, type ReframePanelState } from "../video/ReframePanel";
 import { RetakePanel } from "../video/RetakePanel";
 import type {
@@ -7,6 +7,7 @@ import type {
   RetakeSubmissionSnapshot,
   VideoProcessMode,
 } from "../types";
+import type { ReframeAspectMode } from "../video/reframe-outpaint";
 
 export interface GenSpaceRetakeInput {
   videoUrl: string | null;
@@ -106,38 +107,51 @@ export function useGenSpaceVideoTools({
       aspectMode?: ReframePanelState["aspectMode"];
       padding?: ReframePanelState["padding"];
     }) => {
+      setReframeInput((current) => ({
+        ...current,
+        aspectMode:
+          source.aspectMode && source.aspectMode !== "custom"
+            ? source.aspectMode
+            : "16:9",
+      }));
       setReframeInitial(source);
       setReframePanelKey((current) => current + 1);
     },
     [],
   );
 
-  const panel = isRetakeMode ? (
-    <div className="max-h-[52vh] overflow-y-auto">
-      <RetakePanel
-        initialVideoUrl={null}
-        initialVideoPath={null}
-        resetKey={0}
-        isProcessing={isRetaking}
-        processingStatus={retakeStatus}
-        onChange={handleRetakePanelChange}
-      />
-    </div>
-  ) : isReframeMode ? (
-    <div className="max-h-[52vh] overflow-y-auto">
-      <ReframePanel
-        initialVideoUrl={reframeInitial.videoUrl}
-        initialVideoPath={reframeInitial.videoPath}
-        initialDuration={reframeInitial.duration}
-        initialAspectMode={reframeInitial.aspectMode}
-        initialPadding={reframeInitial.padding}
-        resetKey={reframePanelKey}
-        isProcessing={isGenerating}
-        processingStatus={generationStatus}
-        onChange={handleReframePanelChange}
-      />
-    </div>
-  ) : null;
+  const setReframeAspectMode = useCallback((aspectMode: ReframeAspectMode) => {
+    setReframeInput((current) => ({ ...current, aspectMode }));
+  }, []);
+
+  const panel = (controls?: ReactNode) =>
+    isRetakeMode ? (
+      <div className="max-h-[52vh] overflow-y-auto">
+        <RetakePanel
+          initialVideoUrl={null}
+          initialVideoPath={null}
+          resetKey={0}
+          isProcessing={isRetaking}
+          processingStatus={retakeStatus}
+          onChange={handleRetakePanelChange}
+        />
+      </div>
+    ) : isReframeMode ? (
+      <div className="max-h-[52vh] overflow-y-auto">
+        <ReframePanel
+          initialVideoUrl={reframeInitial.videoUrl}
+          initialVideoPath={reframeInitial.videoPath}
+          initialDuration={reframeInitial.duration}
+          aspectMode={reframeInput.aspectMode}
+          initialPadding={reframeInitial.padding}
+          resetKey={reframePanelKey}
+          isProcessing={isGenerating}
+          processingStatus={generationStatus}
+          controls={controls}
+          onChange={handleReframePanelChange}
+        />
+      </div>
+    ) : null;
 
   return {
     retakeInput,
@@ -148,5 +162,6 @@ export function useGenSpaceVideoTools({
     isReframeMode,
     panel,
     setReframeSource,
+    setReframeAspectMode,
   };
 }

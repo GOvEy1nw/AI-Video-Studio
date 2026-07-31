@@ -18,7 +18,17 @@ export interface GenerationInputMediaRequest {
 }
 
 export interface GenerationReframeOptions {
-  aspectMode: "1:1" | "16:9" | "9:16" | "custom";
+  aspectMode:
+    | "1:1"
+    | "16:9"
+    | "9:16"
+    | "21:9"
+    | "9:21"
+    | "4:3"
+    | "3:4"
+    | "3:2"
+    | "2:3"
+    | "custom";
   padding: { top: number; bottom: number; left: number; right: number };
   controlVideoStartTime: number;
   controlVideoDuration: number;
@@ -36,18 +46,18 @@ export function buildMusicRequestBody(
   return { endpoint: "/api/generate-music", body: request };
 }
 
-function clampApiPadding(value: number): number {
-  return Math.max(0, Math.min(200, Math.round(value)));
+function normalizeApiPadding(value: number): number {
+  return Math.max(0, Math.round(value));
 }
 
 function normalizeReframeForApi(options: GenerationReframeOptions) {
   return {
     aspectMode: options.aspectMode,
     padding: {
-      top: clampApiPadding(options.padding.top),
-      bottom: clampApiPadding(options.padding.bottom),
-      left: clampApiPadding(options.padding.left),
-      right: clampApiPadding(options.padding.right),
+      top: normalizeApiPadding(options.padding.top),
+      bottom: normalizeApiPadding(options.padding.bottom),
+      left: normalizeApiPadding(options.padding.left),
+      right: normalizeApiPadding(options.padding.right),
     },
     controlVideoStartTime: options.controlVideoStartTime,
     controlVideoDuration: options.controlVideoDuration,

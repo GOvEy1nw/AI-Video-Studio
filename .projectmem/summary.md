@@ -1,6 +1,6 @@
 # projectmem - AI-Video-Studio
 
-_Last updated: 2026-07-30_
+_Last updated: 2026-07-31_
 
 ## Project purpose
 AI Video Studio (AiVS) is a local-first, community-focused desktop app for AI image, video, and music generation. It is built on `deepbeepmeep/LTX-Desktop-WanGP`, uses a bundled WanGP / Wan2GP runtime, and does not expose cloud generation providers or require API keys.
@@ -16,6 +16,53 @@ Product principles:
 Current integration baseline: `dev`.
 
 ## Recent issues
+- [DONE] #0445 Video Reframe uses detached trash/replace controls and lacks Image Reframe header, overlay close affordance, and aligned panel spacing [frontend/views/genspace/video/ReframePanel.tsx] -> Video Reframe now mirrors Image Reframe control composition with shared header controls, overlay X removal, no Replace action, and aligned spacing [frontend/views/genspace/video/ReframePanel.tsx] (fixed)
+  - Partial attempt: Moved Video Reframe output controls into shared labeled header, removed detached Replace/trash row, added canvas-overlay X, and aligned canvas/transport spacing [frontend/views/genspace/video/ReframePanel.tsx]
+- [DONE] #0444 Video Reframe request serializer still caps each padding edge at legacy 200% [frontend/hooks/generation/request-builders.ts] -> Video Reframe serializer now rounds precise UI padding without imposing a finite per-edge cap [frontend/hooks/generation/request-builders.ts] (fixed)
+- [DONE] #0443 Reframe frame border wiggles and subtly changes aspect while zoom slider moves [frontend/views/genspace/video/reframe-outpaint.ts; frontend/views/genspace/components/ReframeEditor.tsx] -> Removed per-step padding rounding from Reframe editor so zoom no longer oscillates frame aspect [frontend/views/genspace/video/reframe-outpaint.ts] (fixed)
+  - Partial attempt: Kept full-precision Reframe padding through UI geometry and moved integer rounding to uncapped Video API serialization [frontend/views/genspace/video/reframe-outpaint.ts; frontend/hooks/generation/request-builders.ts]
+- [DONE] #0442 Per-edge Reframe padding caps distort zoom/pan totals and cause placement glitches [frontend/views/genspace/video/reframe-outpaint.ts] -> Removed active per-edge Reframe caps; zoom sets axis totals and placement redistributes exact remainders [frontend/views/genspace/video/reframe-outpaint.ts] (fixed)
+  - Partial attempt: Removed active Reframe per-edge caps; zoom now sets axis totals and pan/zoom placement derives exact opposite-side remainders [frontend/views/genspace/video/reframe-outpaint.ts]
+  - Partial attempt: Updated backend API and integration coverage to accept and forward active preset placement padding above prior 500 cap [backend/tests/test_generation.py]
+- [OPEN] #0441 PowerShell mangled quoted rg regex while inspecting ImageModelControls menu placement [frontend/views/genspace/image/ImageModelControls.tsx search tooling] (open)
+  - Failed attempt: Combined quoted rg alternation became malformed in PowerShell [frontend/views/genspace/image/ImageModelControls.tsx search tooling]
+- [OPEN] #0440 Reframe control-row aspect popup opens upward into panel overflow boundary and is invisible [frontend/views/genspace/components/AspectRatioDropdown.tsx; frontend/views/genspace/video/VideoGenPanel.tsx] (open)
+- [OPEN] #0439 Backend model-profile test still expects newly curated 21:9 image aspect to be rejected [backend/tests/test_model_profiles.py] (open)
+  - Failed attempt: Full backend suite found stale unsupported-aspect assertion for 21:9 after API contract expansion [backend/tests/test_model_profiles.py]
+- [DONE] #0438 Image Reframe tests still query removed Outpaint expansion label after zoom contract rename [frontend/views/genspace/image/ImageEditMediaInputs.test.tsx] -> Image Reframe tests now reflect inverted 0-100 zoom semantics; full frontend suite passes [frontend/views/genspace/image/ImageEditMediaInputs.test.tsx] (fixed)
+  - Failed attempt: Full frontend suite found two stale Image Reframe queries for Outpaint expansion [frontend/views/genspace/image/ImageEditMediaInputs.test.tsx]
+- [DONE] #0437 Backend Pyright blocked by managed sandbox denying uv cache .git access [backend validation tooling] -> Approved existing uv-cache read access restores backend validation; Pyright and focused tests pass [backend validation tooling] (fixed)
+  - Failed attempt: Ran uv Pyright in sandbox; uv could not read existing user cache sdists-v9/.git [backend validation tooling]
+- [DONE] #0436 Reframe control prop was attached to Create ImageMediaInputs instead of ImageEditMediaInputs [frontend/views/genspace/image/ImageGenPanel.tsx] -> Image Reframe controls now pass through ImageEditMediaInputs only [frontend/views/genspace/image/ImageGenPanel.tsx] (fixed)
+  - Failed attempt: Strict TypeScript identified misplaced reframeControls prop on Create ImageMediaInputs [frontend/views/genspace/image/ImageGenPanel.tsx]
+- [DONE] #0435 Pinned pnpm shim again blocked offline TypeScript validation on registry signature verification [frontend validation tooling] -> Cached pinned pnpm bypasses offline shim signature verification; strict TypeScript passes [frontend validation tooling] (fixed)
+  - Failed attempt: Ran repository pnpm typecheck:ts; package-manager shim could not verify registry signatures offline [frontend validation tooling]
+- [DONE] #0434 Combined backend aspect/padding patch missed current ReframePadding class context [backend/api_types.py] -> Completed backend Reframe aspect and padding validation changes; Pyright and full backend suite pass [backend/api_types.py] (fixed)
+  - Failed attempt: Applied multi-hunk alias/padding patch using earlier rendered context; first ReframePadding hunk did not match current file [backend/api_types.py]
+  - Partial attempt: Inspection showed api_types hunks applied before later patch failure; mapping and tests remain pending [backend/api_types.py]
+- [OPEN] #0433 PowerShell mangled quoted rg regex while searching backend aspect literals [backend/api_types.py search tooling] (open)
+  - Failed attempt: Combined quoted alternation reached rg as malformed unclosed regex [backend/api_types.py search tooling]
+- [DONE] #0432 Image Reframe backend recipe still rejects six newly curated aspect modes and padding above 200% [backend/api_types.py] -> Image Reframe API accepts all curated aspect ratios and uncapped non-negative padding [backend/api_types.py] (fixed)
+- [DONE] #0431 Expected focused reframe-outpaint test file does not exist; geometry helpers only covered indirectly [frontend/views/genspace/video/reframe-outpaint.test.ts] -> Added focused Reframe geometry coverage for inverted zoom, extreme ratios, uncapped pan, and zoom placement preservation [frontend/views/genspace/video/reframe-outpaint.test.ts] (fixed)
+- [DONE] #0430 Video Reframe backend request still rejects six newly curated aspect modes despite frontend selector support [backend/api_types.py; backend/services/reframe_wangp_mapping.py] -> Video Reframe API now accepts all curated shared aspect ratios [backend/api_types.py] (fixed)
+- [DONE] #0429 Reframe fit padding clamps extreme curated ratios to 100%, so 16:9 input cannot reach 9:21 or 9:16 target geometry [frontend/views/genspace/video/reframe-outpaint.ts] -> Extreme curated Reframe ratios now compute uncapped fit and half-scale padding; geometry test passes [frontend/views/genspace/video/reframe-outpaint.ts] (fixed)
+  - Partial attempt: Focused Reframe tests exercised new 50-100% scale; implementation geometry passed structurally, but assertions assumed JSON key order and tighter precision than integer percentage padding permits [frontend/views/genspace/components/ReframeEditor.test.tsx; frontend/views/genspace/video/reframe-outpaint.test.ts]
+- [DONE] #0428 PowerShell rg cannot expand wildcard embedded in lucide-react node_modules path [frontend icon discovery tooling] -> Use Get-ChildItem to resolve pnpm package directory before passing exact Windows path to rg [frontend icon discovery tooling] (fixed)
+  - Failed attempt: Tried rg against node_modules path containing embedded wildcard; Windows treated it as invalid literal path [frontend icon discovery tooling]
+- [OPEN] #0427 Disabled media-derived aspect control shows stale ratio instead of Auto [frontend/views/genspace/components/AspectRatioDropdown.tsx] (open)
+- [OPEN] #0426 Shared aspect-ratio popup is clipped at GenSpace sidebar boundary by middle panel [frontend/views/genspace/components/AspectRatioDropdown.tsx] (open)
+- [DONE] #0425 New Qwen aspect options would map 3:2 and 21:9 requests to older nearest presets [backend/services/wangp_bridge.py] -> Qwen mapping preserves new 3:2 and ultrawide curated aspect choices; focused backend tests pass [backend/services/wangp_bridge.py; backend/tests/test_wangp_bridge.py] (fixed)
+  - Partial attempt: Added Qwen 3:2, 2:3, 21:9, and 9:21 resolution buckets with bridge coverage [backend/services/wangp_bridge.py; backend/tests/test_wangp_bridge.py]
+- [DONE] #0424 Shared Video resolution footer would clamp saved Generate duration while user is in Reframe [frontend/views/genspace/video/VideoGenPanel.tsx] -> Reframe resolution changes preserve saved Generate duration [frontend/views/genspace/video/VideoGenPanel.tsx] (fixed)
+  - Partial attempt: Kept Reframe resolution changes from mutating saved Generate duration [frontend/views/genspace/video/VideoGenPanel.tsx]
+- [DONE] #0423 Backend validation blocked by managed sandbox denying uv cache .git access [backend validation tooling] -> Backend validation succeeds with approved read access to existing uv cache [backend validation tooling] (fixed)
+  - Failed attempt: Ran uv Pyright; sandbox denied read access to user uv cache sdists-v9/.git [backend validation tooling]
+- [DONE] #0422 Focused Reframe tests still query removed inline aspect buttons and stale frame-border classes [frontend/views/genspace/components/ReframeEditor.test.tsx; frontend/views/genspace/image/ImageEditMediaInputs.test.tsx] -> Reframe tests now reflect external shared aspect selection; focused suites pass [frontend/views/genspace/components/ReframeEditor.test.tsx; frontend/views/genspace/image/ImageEditMediaInputs.test.tsx] (fixed)
+  - Partial attempt: Updated Reframe component tests to drive aspect changes externally and target current frame border [frontend/views/genspace/components/ReframeEditor.test.tsx; frontend/views/genspace/image/ImageEditMediaInputs.test.tsx]
+- [DONE] #0421 Strict TypeScript finds GenerationReframeOptions still narrows aspectMode to old presets [frontend/hooks/use-generation.ts] -> Generation Reframe request contract now accepts every curated aspect ratio; strict TypeScript passes [frontend/hooks/generation/request-builders.ts] (fixed)
+  - Partial attempt: Expanded shared generation Reframe request type to all curated aspect ratios [frontend/hooks/generation/request-builders.ts]
+- [DONE] #0420 PowerShell mangled combined quoted rg pattern while auditing removed aspect controls [aspect-control follow-up search] -> Fixed-string rg completed removed-aspect audit without PowerShell regex mangling [aspect-control follow-up search] (fixed)
+- [DONE] #0419 ReframeEditor previous-aspect ref initializes before aspectMode is declared [frontend/views/genspace/components/ReframeEditor.tsx] -> ReframeEditor previous-aspect ref initializes after value destructuring; strict TypeScript passes [frontend/views/genspace/components/ReframeEditor.tsx] (fixed)
 - [DONE] #0418 Backend validation blocked because uv cannot read its user cache .git directory under managed filesystem permissions [backend validation tooling] -> Backend validation succeeds when uv commands receive approved read access to the existing user cache [backend validation tooling] (fixed)
   - Failed attempt: Ran Pyright and focused WanGP bridge pytest through uv; both failed before execution on access denied for uv cache sdists-v9/.git [backend validation tooling]
   - Failed attempt: Tried backend .venv executables directly; Windows launchers still reference uv-managed Python outside readable sandbox and could not create process [backend validation tooling]
@@ -947,9 +994,12 @@ Current integration baseline: `dev`.
 - AiVS forces WanGP `fit_canvas=0`: visual-input generations treat selected resolution as pixel budget and preserve input aspect; Reframe’s authored canvas stays authoritative [GenSpace output sizing; backend/services/wangp_bridge.py]
 - Image and Video Reframe share one controlled ReframeEditor for preset/custom aspect, zoom, pan, reset, edge dragging, media placement, and frame layout; callers retain media-specific lifecycle UI [frontend/views/genspace/components/ReframeEditor.tsx]
 - AiVS forces WanGP enhancer_mode=0 when creating the shared session, making Prompt Enhancer Usage globally Automatic on Generation while preserving each model/request's enhancer selection [backend/services/wangp_bridge.py; backend/tests/test_wangp_bridge.py]
+- All Image/Video output and Reframe workflows use one paired-grid aspect dropdown with nine curated ratios; legacy custom Reframe recipes normalize to 16:9 on restore. [frontend/views/genspace/components/AspectRatioDropdown.tsx; frontend/views/genspace/logic/settings-restore.ts]
+- Reframe zoom exclusively owns horizontal and vertical padding totals; pan redistributes each total between opposite sides without a finite per-edge cap [frontend/views/genspace/video/reframe-outpaint.ts]
+- Reframe keeps the 50%-to-100% source-scale contract, but has no finite internal per-edge padding cap; zoom owns axis totals and pan only redistributes them [frontend/views/genspace/video/reframe-outpaint.ts; backend/api_types.py]
+- Reframe editor geometry retains floating-point padding for stable frame aspect; Video transport rounds padding to non-negative integers only when serializing the API request [frontend/views/genspace/video/reframe-outpaint.ts; frontend/hooks/generation/request-builders.ts]
 
 ## Notes
-- Image mode/framing validation: strict TypeScript, 6 focused tests, production frontend build, diff check, and Electron modal/tabs visual QA passed; full suite 89/92 with three known unrelated stale expectations. [frontend/views/genspace/]
 - ACE-Step Fast/XL now render as one Model Manager card with per-variant missing/selected/downloading/ready/error chips and per-variant delete; focused test, strict TS, production build, and native Electron visual QA passed. [frontend/components/ModelPackManager.tsx; electron/python-setup.ts]
 - Supersedes prior ACE-Step UI note: chips/cards now use per-pack selection dots and legend colors; inline Ready labels and per-pack trash/delete controls were removed in favor of footer actions. [frontend/components/ModelPackManager.tsx]
 - Added Ideogram 4 Model Manager group: Standard (ideogram4_int8, 26.4 GB) and TurboTime (ideogram4_turbotime_int8, 18.3 GB) chips; backend mapping, focused tests, TS/Pyright, build, and WanGP resolution scan pass. [electron/python-setup.ts; backend/wangp_model_packs.py; frontend/components/ModelPackManager.test.tsx]
@@ -959,6 +1009,7 @@ Current integration baseline: `dev`.
 - Region UX refinement complete: ordered disclosures, 16/6 color pickers, font text regions, medium combobox, active/custom style chips, camera-to-photo JSON, dynamic selected outlines; focused/full tests, TS, build, and diff checks pass. [frontend/views/genspace/image/]
 - Region/Music preset prompt UX complete: select+custom medium/font, comma-text preset popovers, progressive 16/6 swatches; 124 frontend tests, strict TS, production build, and diff check pass. [frontend/views/genspace/components/PresetPromptPicker.tsx; frontend/views/genspace/image/; frontend/views/genspace/music/]
 - Image Edit shipped across ImageEditMediaInputs/Mask/Outpaint modals, generation request/persistence flow, and backend services/image_edit.py; validation: TS, 132 frontend tests, frontend build, Pyright, 305 backend tests [Image Edit mode]
+- Native Electron QA confirmed Image Create/Edit/Region and Video Generate/Reframe control placement; running pre-change backend showed stale profile aspect options, while fresh-profile coverage passed automated tests. [frontend/views/genspace]
 
 ## Key files
 - `LTX-2.3_Cinematic_hardcut.safetensors`

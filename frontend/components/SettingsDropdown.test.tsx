@@ -60,4 +60,24 @@ describe("SettingsDropdown", () => {
     fireEvent.click(missing);
     expect(onChange).toHaveBeenCalledWith("missing");
   });
+
+  it("aligns menus to the trigger edge and renders custom controls", () => {
+    render(
+      <SettingsDropdown
+        title="DURATION"
+        value="5"
+        onChange={() => undefined}
+        options={[]}
+        align="right"
+        content={<input aria-label="Duration seconds" type="range" />}
+        triggerLabel="Video duration"
+        trigger={<span>5s</span>}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Video duration" }));
+    const menu = screen.getByText("DURATION").parentElement;
+    expect(menu?.classList.contains("right-0")).toBe(true);
+    expect(screen.getByRole("slider", { name: "Duration seconds" })).toBeTruthy();
+  });
 });

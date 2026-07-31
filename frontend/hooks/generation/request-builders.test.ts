@@ -63,6 +63,32 @@ describe("generation transport request builders", () => {
     ]);
   });
 
+  it("quantizes precise Reframe geometry only at the Video API boundary", () => {
+    const request = buildVideoRequestBody({
+      prompt: "",
+      imagePath: null,
+      settings,
+      reframe: {
+        aspectMode: "9:21",
+        padding: {
+          top: 875.49,
+          bottom: 0,
+          left: 12.51,
+          right: 0,
+        },
+        controlVideoStartTime: 0,
+        controlVideoDuration: 5,
+      },
+    });
+
+    expect(request.body.reframe).toEqual({
+      aspectMode: "9:21",
+      padding: { top: 875, bottom: 0, left: 13, right: 0 },
+      controlVideoStartTime: 0,
+      controlVideoDuration: 5,
+    });
+  });
+
   it("preserves curated image profile payloads", () => {
     expect(
       buildImageRequestBody("prompt", settings, [

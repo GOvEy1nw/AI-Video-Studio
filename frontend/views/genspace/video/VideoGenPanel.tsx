@@ -5,7 +5,7 @@ import { SettingsDropdown } from "../../../components/SettingsDropdown";
 import { getModelDropdownAvailability } from "../../../lib/model-profile-availability";
 import { detectMediaType } from "../../../lib/media-import";
 import { AUDIO_MEDIA_ROLE_SET, GUIDE_MEDIA_ROLE_SET } from "../constants";
-import { AspectIcon } from "../components/AspectIcon";
+import { AspectRatioDropdown } from "../components/AspectRatioDropdown";
 import { FramingControl } from "../components/FramingControl";
 import { GenerateButton } from "../components/GenerateButton";
 import { GenPanelSection } from "../components/GenPanelSection";
@@ -16,12 +16,6 @@ import { isVideoAspectRatioLocked } from "../logic/media-inputs";
 import { formatTrimTimecode } from "./VideoTrimPanel";
 import { VideoMediaInputs } from "./VideoMediaInputs";
 import { VideoModeTabs } from "./VideoModeTabs";
-
-const MAX_DURATION: Record<string, number> = {
-  "540p": 20,
-  "720p": 10,
-  "1080p": 5,
-};
 
 function LightricksIcon({ className }: { className?: string }) {
   return (
@@ -86,7 +80,7 @@ function LegacyPromptMedia({
       <div
         className={`relative mx-2 mt-2 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed transition-colors ${
           imageDrag
-            ? "border-blue-500 bg-blue-500/10"
+            ? "border-violet-500 bg-violet-500/10"
             : "border-zinc-700 hover:border-zinc-500"
         }`}
         onDragOver={(event) => {
@@ -212,10 +206,6 @@ export function VideoGenPanel({
     "720p",
     "1080p",
   ];
-  const durationOptions = [5, 6, 8, 10, 20].filter(
-    (duration) => duration <= (MAX_DURATION[videoSettings.resolution] ?? 20),
-  );
-
   useEffect(() => {
     if (!selectedProfile) return;
     const aspect = selectedProfile.ui.allowedAspectRatios.includes(
@@ -248,12 +238,111 @@ export function VideoGenPanel({
       (profile.status === "experimental" ? " (experimental)" : ""),
     ...getModelDropdownAvailability(profile.availability),
   }));
+  const aspectRatioValue = isReframe
+    ? videoTools.reframeAspectMode === "custom"
+      ? "16:9"
+      : videoTools.reframeAspectMode
+    : videoSettings.aspectRatio;
+  const allowedAspectRatios = hasAudioInput
+    ? ["16:9"]
+    : (selectedProfile?.ui.allowedAspectRatios ?? ["16:9", "9:16"]);
+  const durationControl = isReframe ? (
+    <div className="flex items-center gap-1.5 rounded-md bg-zinc-800/40 px-2 py-1 text-zinc-400">
+      <Clock className="h-3.5 w-3.5" />
+      <span>{videoTools.reframeDurationSeconds.toFixed(1)}s auto</span>
+    </div>
+  ) : durationFollowsGuide ? (
+    <button
+      type="button"
+      disabled
+      className="flex cursor-not-allowed items-center gap-1.5 rounded-md bg-zinc-800/40 px-2 py-1 text-zinc-500"
+    >
+      <Clock className="h-3.5 w-3.5" />
+      <span>auto</span>
+      {autoDuration > 0 ? (
+        <span className="text-zinc-600">
+          {formatTrimTimecode(autoDuration)}
+        </span>
+      ) : null}
+    </button>
+  ) : (
+    <SettingsDropdown
+      title={isContinueVideo ? "EXTEND BY" : "DURATION"}
+      value={String(videoSettings.duration)}
+      onChange={() => undefined}
+      options={[]}
+      align="right"
+      triggerLabel="Video duration"
+      content={
+        <label className="block w-48 text-2xs text-zinc-400">
+          <span className="mb-2 flex items-center justify-between gap-4">
+            <span>{isContinueVideo ? "Extend by" : "Duration"}</span>
+            <span className="font-mono text-zinc-200">
+              {isContinueVideo ? "+" : ""}
+              {videoSettings.duration}s
+            </span>
+          </span>
+          <input
+            type="range"
+            aria-label="Video duration seconds"
+            min={2}
+            max={20}
+            step={1}
+            value={videoSettings.duration}
+            onChange={(event) =>
+              patchVideoSettings({
+                duration: Number(event.currentTarget.value),
+              })
+            }
+            className="w-full cursor-pointer accent-violet-500"
+          />
+        </label>
+      }
+      trigger={
+        <>
+          <Clock className="h-3.5 w-3.5" />
+          <span>
+            {isContinueVideo ? "+" : ""}
+            {videoSettings.duration}s
+          </span>
+        </>
+      }
+    />
+  );
+  const resolutionControl = (
+    <SettingsDropdown
+      title="RESOLUTION"
+      value={videoSettings.resolution}
+      onChange={(resolution) => patchVideoSettings({ resolution })}
+      options={resolutionOptions.map((value) => ({ value, label: value }))}
+      placement={isReframe ? "bottom" : "top"}
+      trigger={
+        <>
+          <Monitor className="h-3.5 w-3.5" />
+          <span>{videoSettings.resolution.replace("p", "")}</span>
+        </>
+      }
+    />
+  );
+  const aspectRatioControl = (
+    <AspectRatioDropdown
+      value={aspectRatioValue}
+      allowedAspectRatios={allowedAspectRatios}
+      disabled={!isReframe && aspectRatioDisabled}
+      placement={isReframe ? "bottom" : "top"}
+      onChange={(aspectRatio) =>
+        isReframe
+          ? videoTools.setReframeAspectMode(aspectRatio)
+          : patchVideoSettings({ aspectRatio })
+      }
+    />
+  );
 
   return (
     <>
       <VideoModeTabs mode={videoTools.mode} onChange={videoTools.setMode} />
       <GenPanelSection
-        title="Model"
+        title=""
         className="text-xs text-zinc-400"
         collapsible={false}
       >
@@ -291,9 +380,16 @@ export function VideoGenPanel({
           syncInputFileToGallery={media.syncInputFileToGallery}
         />
       ) : null}
-      {isPanelMode && videoTools.panel ? (
+      {isPanelMode ? (
         <div className="border-b border-zinc-800/60 bg-zinc-950/20">
-          {videoTools.panel}
+          {videoTools.panel(
+            isReframe ? (
+              <div className="flex shrink-0 items-center gap-1">
+                {resolutionControl}
+                {aspectRatioControl}
+              </div>
+            ) : undefined,
+          )}
         </div>
       ) : null}
       <PromptEditor
@@ -315,12 +411,19 @@ export function VideoGenPanel({
           ) : undefined
         }
         bottomRight={
-          !isPanelMode ? (
-            <FramingControl
-              value={framing.value}
-              onChange={framing.setValue}
-              disabled={generation.isRunning}
-            />
+          !isRetake ? (
+            <div className="flex flex-wrap items-center justify-end gap-1">
+              {durationControl}
+              {!isReframe ? resolutionControl : null}
+              {!isReframe ? aspectRatioControl : null}
+              {!isPanelMode ? (
+                <FramingControl
+                  value={framing.value}
+                  onChange={framing.setValue}
+                  disabled={generation.isRunning}
+                />
+              ) : null}
+            </div>
           ) : undefined
         }
         actions={
@@ -343,113 +446,7 @@ export function VideoGenPanel({
           <div className="pr-2 text-2xs text-zinc-500">
             Trim in the panel above, then retake
           </div>
-        ) : isReframe ? (
-          <div className="flex items-center gap-2">
-            <SettingsDropdown
-              title="RESOLUTION"
-              value={videoSettings.resolution}
-              onChange={(resolution) => patchVideoSettings({ resolution })}
-              options={resolutionOptions.map((value) => ({
-                value,
-                label: value,
-              }))}
-              trigger={
-                <>
-                  <Monitor className="h-3.5 w-3.5" />
-                  <span>{videoSettings.resolution.replace("p", "")}</span>
-                </>
-              }
-            />
-            <div className="flex items-center gap-1.5 rounded-md bg-zinc-800/40 px-2 py-1 text-zinc-400">
-              <Clock className="h-3.5 w-3.5" />
-              <span>{videoTools.reframeDurationSeconds.toFixed(1)}s auto</span>
-            </div>
-          </div>
-        ) : (
-          <>
-            {durationFollowsGuide ? (
-              <button
-                type="button"
-                disabled
-                className="flex cursor-not-allowed items-center gap-1.5 rounded-md bg-zinc-800/40 px-2 py-1 text-zinc-500"
-              >
-                <Clock className="h-3.5 w-3.5" />
-                <span>auto</span>
-                {autoDuration > 0 ? (
-                  <span className="text-zinc-600">
-                    {formatTrimTimecode(autoDuration)}
-                  </span>
-                ) : null}
-              </button>
-            ) : (
-              <SettingsDropdown
-                title={isContinueVideo ? "EXTEND BY" : "DURATION"}
-                value={String(videoSettings.duration)}
-                onChange={(value) =>
-                  patchVideoSettings({ duration: Number(value) })
-                }
-                options={durationOptions.map((value) => ({
-                  value: String(value),
-                  label: `${isContinueVideo ? "+" : ""}${value} Sec`,
-                }))}
-                trigger={
-                  <>
-                    <Clock className="h-3.5 w-3.5" />
-                    <span>
-                      {isContinueVideo ? "+" : ""}
-                      {videoSettings.duration}s
-                    </span>
-                  </>
-                }
-              />
-            )}
-            <SettingsDropdown
-              title="RESOLUTION"
-              value={videoSettings.resolution}
-              onChange={(resolution) =>
-                patchVideoSettings({
-                  resolution,
-                  duration: Math.min(
-                    videoSettings.duration,
-                    MAX_DURATION[resolution] ?? 20,
-                  ),
-                })
-              }
-              options={resolutionOptions.map((value) => ({
-                value,
-                label: value,
-              }))}
-              trigger={
-                <>
-                  <Monitor className="h-3.5 w-3.5" />
-                  <span>{videoSettings.resolution.replace("p", "")}</span>
-                </>
-              }
-            />
-            <SettingsDropdown
-              title="ASPECT RATIO"
-              value={videoSettings.aspectRatio}
-              onChange={(aspectRatio) => patchVideoSettings({ aspectRatio })}
-              disabled={aspectRatioDisabled}
-              options={
-                hasAudioInput
-                  ? [{ value: "16:9", label: "16:9" }]
-                  : (
-                      selectedProfile?.ui.allowedAspectRatios ?? [
-                        "16:9",
-                        "9:16",
-                      ]
-                    ).map((value) => ({ value, label: value }))
-              }
-              trigger={
-                <>
-                  <AspectIcon className="h-3.5 w-3.5" />
-                  <span>{videoSettings.aspectRatio}</span>
-                </>
-              }
-            />
-          </>
-        )}
+        ) : null}
         <GenerateButton
           onClick={generation.submit}
           disabled={!generation.canSubmit}

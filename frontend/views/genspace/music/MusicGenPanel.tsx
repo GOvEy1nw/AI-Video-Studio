@@ -11,6 +11,7 @@ import type { MusicGenPanelController } from "../types";
 import { MUSIC_KEYWORDS } from "./music-keywords";
 import { MusicAdvancedSettings } from "./MusicAdvancedSettings";
 import { MusicMediaInputs } from "./MusicMediaInputs";
+import { MusicPromptControls } from "./MusicPromptControls";
 import { MusicSettings } from "./MusicSettings";
 
 const MUSIC_PRESET_GROUPS = Object.entries(MUSIC_KEYWORDS).map(
@@ -80,7 +81,7 @@ export function MusicGenPanel({
       />
       <PromptEditor
         title="Song Prompt"
-        height="h-12"
+        height="h-18"
         value={prompt.value}
         onChange={(value) => prompt.setValue(value.slice(0, 512))}
         onSubmit={generation.submit}
@@ -106,14 +107,22 @@ export function MusicGenPanel({
           />
         }
         bottomRight={
-          <PresetPromptPicker
-            label="music prompt"
-            groups={MUSIC_PRESET_GROUPS}
-            value={prompt.value}
-            onChange={prompt.setValue}
-            disabled={generation.isRunning}
-            maxLength={512}
-          />
+          <div className="flex items-center gap-1">
+            <MusicPromptControls
+              settings={music.settings}
+              onChange={music.setSettings}
+              profile={selectedProfile}
+              disabled={generation.isRunning}
+            />
+            <PresetPromptPicker
+              label="music prompt"
+              groups={MUSIC_PRESET_GROUPS}
+              value={prompt.value}
+              onChange={prompt.setValue}
+              disabled={generation.isRunning}
+              maxLength={512}
+            />
+          </div>
         }
       />
       <MusicSettings

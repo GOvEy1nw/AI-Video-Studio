@@ -149,16 +149,16 @@ export function MusicMediaInputs({
     role: MusicAudioRole,
     inputRef: RefObject<HTMLInputElement | null>,
   ) => (
-      <input
-        ref={inputRef}
-        type="file"
-        accept=".mp3,.wav,.ogg,.aac,.flac,.m4a"
-        className="hidden"
-        onChange={(event) => {
-          void importFile(event.target.files?.[0], role);
-          event.target.value = "";
-        }}
-      />
+    <input
+      ref={inputRef}
+      type="file"
+      accept=".mp3,.wav,.ogg,.aac,.flac,.m4a"
+      className="hidden"
+      onChange={(event) => {
+        void importFile(event.target.files?.[0], role);
+        event.target.value = "";
+      }}
+    />
   );
 
   return (
@@ -188,7 +188,7 @@ export function MusicMediaInputs({
             onChange={(event) =>
               onCoverStrengthChange(Number(event.target.value))
             }
-            className="mt-1 w-full accent-violet-500"
+            className="mt-1 w-full accent-emerald-400"
           />
         </label>
       ) : null}

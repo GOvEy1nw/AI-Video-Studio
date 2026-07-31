@@ -18,7 +18,7 @@ from model_profiles.profiles import AspectRatio, ModelProfile, ResolutionTier
 
 # Curated (profile_id, tier, aspect) -> (width, height) table.
 # Built from WanGP's DEFAULT_RESOLUTION_CHOICES, filtered to AiVS's
-# supported aspect ratios (1:1, 16:9, 9:16) and minimum 540p tier,
+# supported aspect ratios and minimum 540p tier,
 # then collapsed to one best value per (tier, aspect) preferring the
 # smaller pixel count when multiple candidates exist.
 _RESOLUTION_TABLE: dict[tuple[str, ResolutionTier, AspectRatio], tuple[int, int]] = {
@@ -94,6 +94,69 @@ _SHARED_IMAGE_RESOLUTION_PROFILE_IDS = (
 for profile_id in _SHARED_IMAGE_RESOLUTION_PROFILE_IDS:
     for (source_id, tier, aspect), dimensions in tuple(_RESOLUTION_TABLE.items()):
         if source_id == "flux2_klein_4b":
+            _RESOLUTION_TABLE[(profile_id, tier, aspect)] = dimensions
+
+# WanGP's built-in list does not contain every requested ratio at every tier.
+# These curated 16-aligned sizes use built-in choices where available and
+# preserve each tier's established pixel budget elsewhere.
+_ADDITIONAL_ASPECT_RESOLUTIONS: dict[
+    ResolutionTier, dict[AspectRatio, tuple[int, int]]
+] = {
+    "540p": {
+        "21:9": (1280, 544),
+        "9:21": (544, 1280),
+        "4:3": (832, 624),
+        "3:4": (624, 832),
+        "3:2": (864, 576),
+        "2:3": (576, 864),
+    },
+    "720p": {
+        "21:9": (1280, 544),
+        "9:21": (544, 1280),
+        "4:3": (1104, 832),
+        "3:4": (832, 1104),
+        "3:2": (1248, 832),
+        "2:3": (832, 1248),
+    },
+    "1080p": {
+        "21:9": (1920, 832),
+        "9:21": (832, 1920),
+        "4:3": (1664, 1248),
+        "3:4": (1248, 1664),
+        "3:2": (1536, 1024),
+        "2:3": (1024, 1536),
+    },
+    "1440p": {
+        "21:9": (2688, 1152),
+        "9:21": (1152, 2688),
+        "4:3": (1920, 1440),
+        "3:4": (1440, 1920),
+        "3:2": (2160, 1440),
+        "2:3": (1440, 2160),
+    },
+}
+
+_PROFILE_RESOLUTION_TIERS: dict[str, tuple[ResolutionTier, ...]] = {
+    "z_image_turbo": ("540p", "720p", "1080p"),
+    "ltx2_22b_distilled": ("540p", "720p", "1080p"),
+    **{
+        profile_id: ("540p", "720p", "1080p", "1440p")
+        for profile_id in (
+            "krea2_turbo",
+            "flux2_klein_4b",
+            "flux2_klein_9b",
+            "qwen_image_2512_20B",
+            "hidream_o1_dev",
+            "krea2_turbo_edit",
+            "qwen_image_edit_plus2_20B",
+            "ideogram4_int8",
+            "ideogram4_turbotime_int8",
+        )
+    },
+}
+for profile_id, tiers in _PROFILE_RESOLUTION_TIERS.items():
+    for tier in tiers:
+        for aspect, dimensions in _ADDITIONAL_ASPECT_RESOLUTIONS[tier].items():
             _RESOLUTION_TABLE[(profile_id, tier, aspect)] = dimensions
 
 

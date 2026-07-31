@@ -313,7 +313,7 @@ export function OutpaintFrameOverlay({
 
   return (
     <div
-      className={`absolute left-[-1px] top-[-1px] inset-0 z-10 overflow-hidden select-none ${isDragging ? "cursor-grabbing" : ""}`}
+      className={`absolute left-0 top-0 inset-0 z-10 overflow-hidden select-none ${isDragging ? "cursor-grabbing" : ""}`}
       style={{ touchAction: "none" }}
     >
       <div
@@ -354,7 +354,7 @@ export function OutpaintFrameOverlay({
       />
 
       <div
-        className="absolute box-border border-2 border-zinc-500 pointer-events-none"
+        className="absolute rounded-lg box-border border-2 border-zinc-500 pointer-events-none"
         style={{
           left: outer.x,
           top: outer.y,

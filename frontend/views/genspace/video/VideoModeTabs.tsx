@@ -10,14 +10,11 @@ export function VideoModeTabs({
   onChange: (mode: VideoProcessMode) => void;
 }) {
   return (
-    <div className="border-b border-zinc-800/60 px-4 py-3">
-      <div className="mb-1 text-2xs font-medium uppercase tracking-wider text-zinc-500">
-        Mode
-      </div>
+    <div className="px-4 py-3">
       <div
         role="tablist"
         aria-label="Video mode"
-        className="grid grid-cols-3 gap-1 rounded-lg p-1"
+        className="flex flex-row w-fit mx-auto justify-center mt-2 overflow-hidden rounded-lg gap-2 bg-zinc-800/35 p-2"
       >
         {(
           [
@@ -36,10 +33,10 @@ export function VideoModeTabs({
             onClick={() => onChange(value)}
             className={`flex items-center justify-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
               mode === value
-                ? "bg-zinc-800 text-white shadow-xs"
+                ? "bg-violet-500 text-white shadow-sm"
                 : disabled
                   ? "cursor-not-allowed text-zinc-700"
-                  : "text-zinc-500 hover:bg-zinc-800/60 hover:text-zinc-200"
+                  : "text-zinc-500 hover:bg-zinc-900 hover:text-white"
             }`}
           >
             <Icon className="h-3.5 w-3.5" />

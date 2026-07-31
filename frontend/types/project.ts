@@ -123,7 +123,17 @@ export interface GenerationParams {
   retakeStartTime?: number
   retakeDuration?: number
   retakeMode?: string
-  reframeAspectMode?: '1:1' | '16:9' | '9:16' | 'custom'
+  reframeAspectMode?:
+    | '1:1'
+    | '16:9'
+    | '9:16'
+    | '21:9'
+    | '9:21'
+    | '4:3'
+    | '3:4'
+    | '3:2'
+    | '2:3'
+    | 'custom'
   reframePadding?: { top: number; bottom: number; left: number; right: number }
   reframeStartTime?: number
   reframeDuration?: number

@@ -101,9 +101,9 @@ context, call backend endpoints, persist assets, or instantiate
   Reframe fits the target frame's longest side to that canvas. Reference
   inputs remain visible but disabled and dimmed outside Edit.
 - Retouch uses normalized ordered brush, rectangle, and ellipse operations.
-  Reframe stores a preset or custom target aspect plus per-edge normalized
-  padding. Image and Video use the same `ReframeEditor`, including zoom, pan,
-  reset, and custom edge dragging. Only the active workflow's references,
+  Reframe stores a preset target aspect plus normalized padding. Image and
+  Video use the same `ReframeEditor` for zoom, pan, reset, and frame layout.
+  Resolution and the shared aspect-ratio dropdown live in that editor's control row. Only the active workflow's references,
   mask, or outpaint recipe is submitted; backend combined-recipe support
   remains for saved-data compatibility.
 - Retouch and Reframe tabs remain visible but disabled unless the selected
@@ -134,7 +134,7 @@ context, call backend endpoints, persist assets, or instantiate
   elements.
 - Region presents Global Prompt (collapsed), Region, and Style disclosures in
   that order. Global Prompt owns high-level/background text; Region owns the
-  canvas and selected element; Style owns medium, editable
+  canvas, selected element, Seed, Resolution, and Aspect Ratio controls; Style owns medium, editable
   art/lighting/aesthetic prompts, camera settings, and color swatches.
 - Region exposes 16 optional global color swatches and six per-element
   swatches progressively, showing one empty slot after the chosen colors plus
@@ -159,6 +159,13 @@ context, call backend endpoints, persist assets, or instantiate
 - Framing applies after optional prompt enhancement so the camera prefix keeps
   its exact user-selected values. Generated asset prompt metadata stores the
   final effective prompt sent for generation.
+- Image Create/Edit and Video Generate keep their output Duration, Resolution,
+  and Aspect Ratio controls in the prompt editor footer. Reframe moves
+  Resolution and Aspect Ratio into its editor control row. Media-owned disabled
+  aspect controls display `Auto`. Aspect
+  choices use one icon-labelled grid ordered as `1:1`, then paired
+  landscape/portrait rows for `16:9`, `21:9`, `4:3`, and `3:2`.
+  Video Generate duration uses a continuous 2-20 second slider.
 
 ## Music contract
 
@@ -180,7 +187,8 @@ context, call backend endpoints, persist assets, or instantiate
 - Song Prompt keeps presets behind one inline plus popover grouped by Genre,
   Mood, Vibe, and Instruments. Multiple choices stay open for selection and
   append as ordinary editable comma-separated prompt text.
-- Duration, BPM, and Variations use native range inputs.
+- Duration, BPM, Key & Scale, and Time Signature use icon popovers in the Song
+  Prompt footer. Variations remains in Advanced Settings.
 
 ## Generation lifecycle
 

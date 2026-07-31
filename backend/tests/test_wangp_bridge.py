@@ -154,10 +154,16 @@ def test_qwen_image_resolution_uses_native_16_9_preset() -> None:
     assert bridge._map_image_resolution(1920, 1072) == (1664, 928)
 
 
-def test_qwen_image_resolution_falls_back_to_nearest_supported_aspect() -> None:
+def test_qwen_image_resolution_supports_ultrawide_aspect() -> None:
     bridge = _make_bridge(image_model_type="qwen_image_20B")
 
-    assert bridge._map_image_resolution(2520, 1080) == (1664, 928)
+    assert bridge._map_image_resolution(2520, 1080) == (1920, 832)
+
+
+def test_qwen_image_resolution_supports_three_two_aspect() -> None:
+    bridge = _make_bridge(image_model_type="qwen_image_20B")
+
+    assert bridge._map_image_resolution(1536, 1024) == (1536, 1024)
 
 
 def test_non_qwen_image_resolution_is_left_unchanged() -> None:

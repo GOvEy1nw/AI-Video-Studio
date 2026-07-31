@@ -233,6 +233,7 @@ export function useGenSpaceController() {
     isReframeMode,
     panel: videoToolPanel,
     setReframeSource,
+    setReframeAspectMode,
   } = useGenSpaceVideoTools({
     mode,
     videoMode,
@@ -675,6 +676,8 @@ export function useGenSpaceController() {
         setMode: handleVideoModeChange,
         panel: videoToolPanel,
         reframeDurationSeconds: reframeInput.duration,
+        reframeAspectMode: reframeInput.aspectMode,
+        setReframeAspectMode,
       },
       framing: {
         value: framingSettings,

@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
   type Dispatch,
+  type ReactNode,
   type SetStateAction,
 } from "react";
 import { detectMediaType } from "../../../lib/media-import";
@@ -45,6 +46,7 @@ export function ImageEditMediaInputs({
   disabled,
   resolveInputFileUrl,
   syncInputFileToGallery,
+  reframeControls,
 }: {
   image: GenSpaceMediaInput | null;
   onImageChange: (image: GenSpaceMediaInput | null) => void;
@@ -63,6 +65,7 @@ export function ImageEditMediaInputs({
     sync?: (file: File) => Promise<string | null>,
   ) => Promise<string | null>;
   syncInputFileToGallery?: (file: File) => Promise<string | null>;
+  reframeControls?: ReactNode;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -164,20 +167,21 @@ export function ImageEditMediaInputs({
                 value={outpaint ?? DEFAULT_OUTPAINT}
                 onChange={onOutpaintChange}
                 onSourceDimensionsChange={handleSourceImageLoad}
-                headerLabel="Edit image"
+                headerLabel="Reframe"
                 headerTestId="image-edit-header"
                 canvasTestId="image-edit-canvas"
-                canvasClassName="w-full border-x border-t border-zinc-700"
+                canvasClassName="w-full rounded-lg"
                 canvasStyle={{ aspectRatio: sourceAspectRatio }}
                 frameInset={0}
-                initialZoom={20}
+                initialZoom={100}
+                controls={reframeControls}
                 disabled={disabled}
               />
             ) : (
               <>
                 <div
                   data-testid="image-edit-header"
-                  className="flex h-8 items-center"
+                  className="flex h-8 items-center mb-2"
                 >
                   <span className="text-2xs font-medium uppercase tracking-wider text-zinc-500">
                     Edit image
@@ -185,7 +189,7 @@ export function ImageEditMediaInputs({
                 </div>
                 <div
                   data-testid="image-edit-canvas"
-                  className="relative w-full overflow-hidden rounded-t-lg border-x border-t border-zinc-700 bg-black"
+                  className="relative w-full overflow-hidden rounded-lg"
                   style={{ aspectRatio: sourceAspectRatio }}
                 >
                   <img
@@ -211,14 +215,14 @@ export function ImageEditMediaInputs({
                 onImageChange(null);
                 resetTools();
               }}
-              className="absolute right-2 top-10 z-20 rounded-full bg-black/80 p-1.5 text-zinc-300 shadow-md hover:bg-red-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+              className="absolute right-2 top-12 z-20 rounded-full bg-black/80 p-1.5 text-zinc-300 shadow-md hover:bg-red-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
             >
               <X className="h-3.5 w-3.5" />
             </button>
             <div
               role="tablist"
               aria-label="Image edit workflow"
-              className="grid grid-cols-3 overflow-hidden rounded-b-lg border border-t-0 border-zinc-700 bg-zinc-950"
+              className="flex flex-row w-fit mx-auto justify-center mt-2 overflow-hidden rounded-lg gap-2 bg-zinc-800/35 p-2"
             >
               {EDIT_TOOLS.map(({ id, label }) => {
                 const supported =
@@ -239,10 +243,10 @@ export function ImageEditMediaInputs({
                         : `${label} is not supported by this model`
                     }
                     onClick={() => onToolModeChange(id)}
-                    className={`border-r border-zinc-800 px-2 py-2 text-xs font-medium last:border-r-0 ${
+                    className={`flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
                       toolMode === id
-                        ? "bg-blue-500/15 text-blue-200"
-                        : "text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200"
+                        ? "bg-blue-500 text-white shadow-sm"
+                        : "text-zinc-500 hover:bg-zinc-900 hover:text-zinc-300"
                     } disabled:cursor-not-allowed disabled:opacity-35`}
                   >
                     {label}
@@ -255,14 +259,14 @@ export function ImageEditMediaInputs({
           <>
             <div
               data-testid="image-edit-header"
-              className="flex h-8 items-center"
+              className="flex h-8 items-center mb-2"
             >
               <span className="text-2xs font-medium uppercase tracking-wider text-zinc-500">
                 Edit image
               </span>
             </div>
             <div
-              className={`aspect-square w-full overflow-hidden rounded-lg border-2 ${
+              className={`py-6 w-full overflow-hidden rounded-lg border-2 ${
                 dragActive
                   ? "border-blue-500 bg-blue-500/10"
                   : "border-dashed border-zinc-700 bg-zinc-900/50"

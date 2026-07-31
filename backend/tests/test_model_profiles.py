@@ -16,7 +16,11 @@ from model_profiles import (
     is_combination_supported,
     resolve_resolution,
 )
-from model_profiles.profiles import IMAGE_PROFILES, VIDEO_PROFILES
+from model_profiles.profiles import (
+    CURATED_ASPECT_RATIOS,
+    IMAGE_PROFILES,
+    VIDEO_PROFILES,
+)
 
 
 def _write_test_image(path: Path) -> Path:
@@ -157,7 +161,7 @@ class TestCuratedProfiles:
         assert profile.control_video is True
         assert profile.sliding_window is True
         assert profile.default_resolution_tier == "540p"
-        assert profile.allowed_aspect_ratios == ("1:1", "16:9", "9:16")
+        assert profile.allowed_aspect_ratios == CURATED_ASPECT_RATIOS
 
     def test_no_krea2_raw_exposed(self) -> None:
         # Phase 4 brief: do not expose Krea 2 Raw in this phase.
@@ -165,10 +169,9 @@ class TestCuratedProfiles:
         assert "krea2_raw" not in ids
         assert "krea2_turbo" in ids
 
-    def test_curated_aspect_ratios_only(self) -> None:
-        # Phase 4 brief: only 1:1, 16:9, 9:16.
+    def test_curated_aspect_ratios_are_shared(self) -> None:
         for profile in IMAGE_PROFILES:
-            assert set(profile.allowed_aspect_ratios) <= {"1:1", "16:9", "9:16"}
+            assert profile.allowed_aspect_ratios == CURATED_ASPECT_RATIOS
 
     def test_no_4k_tier_by_default(self) -> None:
         # Phase 4 brief: no 4K/2160p by default.
@@ -201,6 +204,14 @@ class TestResolutionResolver:
         profile = get_image_profile("z_image_turbo")
         assert profile is not None
         assert resolve_resolution(profile, "1080p", "9:16") == (1088, 1920)
+
+    def test_additional_landscape_and_portrait_pairs_are_curated(self) -> None:
+        profile = get_image_profile("z_image_turbo")
+        assert profile is not None
+        assert resolve_resolution(profile, "1080p", "4:3") == (1664, 1248)
+        assert resolve_resolution(profile, "1080p", "3:4") == (1248, 1664)
+        assert resolve_resolution(profile, "1080p", "21:9") == (1920, 832)
+        assert resolve_resolution(profile, "1080p", "9:21") == (832, 1920)
 
     def test_1080p_square_picks_lower_pixel_count(self) -> None:
         # Phase 4 brief: 1080p 1:1 -> 1088x1088, not 1440x1440.
@@ -286,7 +297,7 @@ class TestModelProfilesEndpoint:
         assert krea["inputMedia"]["roles"] == []
         assert krea["ui"]["defaultAspectRatio"] == "1:1"
         assert krea["ui"]["defaultResolutionTier"] == "720p"
-        assert set(krea["ui"]["allowedAspectRatios"]) == {"1:1", "16:9", "9:16"}
+        assert krea["ui"]["allowedAspectRatios"] == list(CURATED_ASPECT_RATIOS)
         assert "1440p" in krea["ui"]["allowedResolutionTiers"]
         z_image = next(p for p in data["profiles"] if p["id"] == "z_image_turbo")
         assert z_image["capabilities"]["referenceImages"] is False
@@ -307,7 +318,7 @@ class TestModelProfilesEndpoint:
         assert ltx["capabilities"]["controlVideo"] is True
         assert ltx["capabilities"]["slidingWindow"] is True
         assert ltx["wangpMetadata"]["mediaInputs"]["video"]["control"] is True
-        assert ltx["ui"]["allowedAspectRatios"] == ["1:1", "16:9", "9:16"]
+        assert ltx["ui"]["allowedAspectRatios"] == list(CURATED_ASPECT_RATIOS)
 
     def test_ltx2_video_square_resolution_supported(self) -> None:
         profile = get_video_profile("ltx2_22b_distilled")
@@ -747,11 +758,11 @@ class TestImageGenerationProfileRouting:
             json={
                 "prompt": "test",
                 "modelProfileId": "z_image_turbo",
-                "aspectRatio": "21:9",
+                "aspectRatio": "5:4",
                 "resolutionTier": "1080p",
             },
         )
-        # 21:9 is not in the Literal at all — pydantic rejects with 422.
+        # Arbitrary ratios outside the curated set are rejected by Pydantic.
         assert r.status_code == 422
 
     def test_backwards_compatible_raw_dimensions_still_work(

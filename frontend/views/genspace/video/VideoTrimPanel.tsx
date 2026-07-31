@@ -82,7 +82,13 @@ export function VideoTrimPanel({
     setSelStart(start);
     setSelEnd(Math.max(start, end));
     initialSelectionAppliedRef.current = true;
-  }, [videoDuration, videoUrl, defaultToFullClip, initialStartTime, initialDuration]);
+  }, [
+    videoDuration,
+    videoUrl,
+    defaultToFullClip,
+    initialStartTime,
+    initialDuration,
+  ]);
 
   useEffect(() => {
     onSelectionChange?.(selStart, selEnd);
@@ -317,7 +323,7 @@ export function VideoTrimPanel({
           />
 
           <div
-            className="absolute top-0 bottom-0 bg-blue-600/50 pointer-events-none"
+            className="absolute top-0 bottom-0 bg-violet-500/50 pointer-events-none"
             style={{
               left: `${selStartFrac * 100}%`,
               width: `${(selEndFrac - selStartFrac) * 100}%`,
@@ -334,7 +340,7 @@ export function VideoTrimPanel({
           />
 
           <div
-            className="absolute top-0 bottom-0 border-2 border-blue-500 pointer-events-none"
+            className="absolute top-0 bottom-0 border-2 border-violet-500 pointer-events-none"
             style={{
               left: `${selStartFrac * 100}%`,
               width: `${(selEndFrac - selStartFrac) * 100}%`,
@@ -350,7 +356,7 @@ export function VideoTrimPanel({
             onMouseDown={(e) => handleFilmstripMouseDown(e, "start")}
           >
             <div
-              className="absolute top-0 bottom-0 bg-blue-500 group-hover:bg-blue-400 transition-colors"
+              className="absolute top-0 bottom-0 bg-violet-500 group-hover:bg-violet-400 transition-colors"
               style={{ left: "5px", width: "4px", borderRadius: "2px 0 0 2px" }}
             />
           </div>
@@ -361,7 +367,7 @@ export function VideoTrimPanel({
             onMouseDown={(e) => handleFilmstripMouseDown(e, "end")}
           >
             <div
-              className="absolute top-0 bottom-0 bg-blue-500 group-hover:bg-blue-400 transition-colors"
+              className="absolute top-0 bottom-0 bg-violet-500 group-hover:bg-violet-400 transition-colors"
               style={{
                 right: "5px",
                 width: "4px",
@@ -372,13 +378,13 @@ export function VideoTrimPanel({
         </div>
 
         <div className="flex justify-between mt-1.5">
-          <span className="text-[10px] font-mono text-blue-400">
+          <span className="text-[10px] font-mono text-violet-400">
             {formatTimecode(selStart)}
           </span>
           <span className="text-[10px] font-mono text-zinc-200">
             Duration: {formatTimecode(selDuration)}
           </span>
-          <span className="text-[10px] font-mono text-blue-400">
+          <span className="text-[10px] font-mono text-violet-400">
             {formatTimecode(selEnd)}
           </span>
         </div>
