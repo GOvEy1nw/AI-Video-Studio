@@ -16,6 +16,34 @@ describe("GenSpace mode tabs", () => {
     expect(onChange).toHaveBeenCalledWith("music");
   });
 
+  it("assigns each mode its accent and selected state", () => {
+    render(<GenSpaceModeTabs mode="video" onChange={vi.fn()} />);
+
+    const image = screen.getByRole("tab", { name: "Image" });
+    const video = screen.getByRole("tab", { name: "Video" });
+    const music = screen.getByRole("tab", { name: "Music" });
+
+    expect(image.style.getPropertyValue("--genspace-mode-accent")).toBe(
+      "var(--color-blue-500)",
+    );
+    expect(
+      image.style.getPropertyValue("--genspace-mode-accent-hover"),
+    ).toBe("var(--color-blue-400)");
+    expect(video.style.getPropertyValue("--genspace-mode-accent")).toBe(
+      "var(--color-violet-500)",
+    );
+    expect(
+      video.style.getPropertyValue("--genspace-mode-accent-hover"),
+    ).toBe("var(--color-violet-400)");
+    expect(music.style.getPropertyValue("--genspace-mode-accent")).toBe(
+      "var(--color-emerald-600)",
+    );
+    expect(
+      music.style.getPropertyValue("--genspace-mode-accent-hover"),
+    ).toBe("var(--color-emerald-500)");
+    expect(video.getAttribute("aria-selected")).toBe("true");
+  });
+
   it("keeps unavailable Retake disabled", () => {
     render(<VideoModeTabs mode="generate" onChange={vi.fn()} />);
 

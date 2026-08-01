@@ -49,4 +49,8 @@ wgp_config.json
 plugins_local.json
 loras_url_cache.json
 loras_url_cache_v2.json
+.projectmem/events.jsonl
+.projectmem/watch.pid
+.projectmem/watch.log
+.projectmem/structure.json
 CLAUDE.md

@@ -1,6 +1,6 @@
 # projectmem - AI-Video-Studio
 
-_Last updated: 2026-07-31_
+_Last updated: 2026-08-01_
 
 ## Project purpose
 AI Video Studio (AiVS) is a local-first, community-focused desktop app for AI image, video, and music generation. It is built on `deepbeepmeep/LTX-Desktop-WanGP`, uses a bundled WanGP / Wan2GP runtime, and does not expose cloud generation providers or require API keys.
@@ -16,6 +16,27 @@ Product principles:
 Current integration baseline: `dev`.
 
 ## Recent issues
+- [DONE] #0454 PowerShell parsed multi-model rg alternation as commands while inspecting profile metadata. [backend/model_profiles/profiles.py search tooling] -> Use single-quoted fixed-string rg patterns for multi-name PowerShell source inspection. [backend/model_profiles/profiles.py search tooling] (fixed)
+  - Failed attempt: Tried one alternation regex for six display names; PowerShell stripped quoting and executed Flux as a command. [backend/model_profiles/profiles.py search tooling]
+- [OPEN] #0453 Backlog task list attempted remote fetch and failed because managed workspace cannot write .git/FETCH_HEAD. [Backlog CLI task listing] (open)
+- [OPEN] #0452 GenSpaceModeTabs accent test now expects one-step-lighter hover tokens, but current on-disk mode-accent mapping supplies base tokens for hover after out-of-band user edits. [frontend/views/genspace/mode-accent.ts; frontend/views/genspace/GenSpaceModeTabs.test.tsx:31] (open)
+  - Partial attempt: Ran theme-ignore focused tests with mode-accent regression coverage; SettingsDropdown and ignore-hook tests passed, while pre-existing hover-token assertion failed because current mapping uses base token. [frontend focused validation]
+  - Partial attempt: Full frontend suite after AIVS-004 still fails only the known GenSpace mode hover-token expectation; model-picker focused tests pass. [frontend/views/genspace/GenSpaceModeTabs.test.tsx:31]
+  - Partial attempt: AIVS-004 family-label follow-up full frontend suite still fails known GenSpace mode hover-token expectation; model-picker focused tests pass. [frontend/views/genspace/GenSpaceModeTabs.test.tsx:31]
+- [DONE] #0451 Cached pnpm exec does not resolve the local Vitest binary on Windows even though package scripts invoke it successfully. [frontend focused validation tooling] -> Use node node_modules/vitest/vitest.mjs run <files> for exact focused Vitest validation when cached pnpm exec cannot resolve vitest. [frontend focused validation tooling] (fixed)
+  - Failed attempt: Tried cached pnpm exec vitest for exact focused files; Windows command resolution reported vitest not recognized. [frontend focused validation tooling]
+- [DONE] #0450 New GenSpace accent hook test accesses disabled on HTMLElement returned by Testing Library role query, failing strict TypeScript. [frontend/views/genspace/GenSpaceModeAccent.test.tsx:45] -> GenSpace accent hook test now uses DOM attributes compatible with strict HTMLElement typing; TypeScript passes. [frontend/views/genspace/GenSpaceModeAccent.test.tsx] (fixed)
+  - Failed attempt: Ran focused GenSpace accent tests and TypeScript in parallel; strict TypeScript rejected direct HTMLElement.disabled access in new test. [frontend/views/genspace/GenSpaceModeAccent.test.tsx:45]
+- [DONE] #0449 PowerShell passed double-quoted multi-word Backlog edit values as extra positional arguments; use single-quoted field values for this CLI invocation. [Backlog CLI task editing] -> Use single-quoted field values when invoking Backlog edits from PowerShell. [Backlog CLI task editing] (fixed)
+  - Failed attempt: Backlog edit with double-quoted multi-word fields was parsed as extra positional arguments. [Backlog CLI task editing]
+- [OPEN] #0448 Full frontend suite still has four unrelated stale UI assertions in RegionPromptEditor, MusicSettings, and ImageEditMediaInputs. [frontend/views/genspace] (open)
+  - Partial attempt: Added bounded responsive GenSpace sidebar widths and pointer/keyboard resize handles; strict TypeScript passes. [frontend/views/genspace/GenSpaceWorkspace.tsx]
+  - Partial attempt: Full frontend suite after AIVS-004: 163 tests pass; four known stale assertions remain in RegionPromptEditor, MusicSettings, and ImageEditMediaInputs. [frontend focused validation]
+  - Partial attempt: AIVS-004 family-label follow-up full frontend suite: 164 tests pass; four known stale assertions remain in RegionPromptEditor, MusicSettings, and ImageEditMediaInputs. [frontend full validation]
+- [DONE] #0447 Full frontend suite has four stale UI assertions in RegionPromptEditor, MusicSettings, and ImageEditMediaInputs unrelated to AIVS-001. [frontend/views/genspace] -> Model pickers now hide missing profiles, surface Model Manager recovery actions, and Model Manager filters curated pack tags. [frontend/components/ModelDownloadButton.tsx] (fixed)
+- [DONE] #0446 Model pickers list missing model packs instead of installed-only choices and lack Model Manager recovery action. [frontend/components/SettingsDropdown.tsx] -> Model pickers now hide missing profiles, surface Model Manager recovery actions, and Model Manager filters curated pack tags. [frontend/components/ModelDownloadButton.tsx] (fixed)
+  - Partial attempt: Implemented installed-only picker options, Model Manager recovery actions, and pack media/workflow filter metadata; validation pending. [frontend/components/ModelPackManager.tsx]
+  - Failed attempt: Focused tests failed: case-sensitive filter assertion and ImageModelControls rendered loading state instead of recovery button when profiles were present but all missing. [frontend/views/genspace/image/ImageModelControls.tsx]
 - [DONE] #0445 Video Reframe uses detached trash/replace controls and lacks Image Reframe header, overlay close affordance, and aligned panel spacing [frontend/views/genspace/video/ReframePanel.tsx] -> Video Reframe now mirrors Image Reframe control composition with shared header controls, overlay X removal, no Replace action, and aligned spacing [frontend/views/genspace/video/ReframePanel.tsx] (fixed)
   - Partial attempt: Moved Video Reframe output controls into shared labeled header, removed detached Replace/trash row, added canvas-overlay X, and aligned canvas/transport spacing [frontend/views/genspace/video/ReframePanel.tsx]
 - [DONE] #0444 Video Reframe request serializer still caps each padding edge at legacy 200% [frontend/hooks/generation/request-builders.ts] -> Video Reframe serializer now rounds precise UI padding without imposing a finite per-edge cap [frontend/hooks/generation/request-builders.ts] (fixed)
@@ -998,18 +1019,23 @@ Current integration baseline: `dev`.
 - Reframe zoom exclusively owns horizontal and vertical padding totals; pan redistributes each total between opposite sides without a finite per-edge cap [frontend/views/genspace/video/reframe-outpaint.ts]
 - Reframe keeps the 50%-to-100% source-scale contract, but has no finite internal per-edge padding cap; zoom owns axis totals and pan only redistributes them [frontend/views/genspace/video/reframe-outpaint.ts; backend/api_types.py]
 - Reframe editor geometry retains floating-point padding for stable frame aspect; Video transport rounds padding to non-negative integers only when serializing the API request [frontend/views/genspace/video/reframe-outpaint.ts; frontend/hooks/generation/request-builders.ts]
+- Model-pack declarations expose explicit mediaTypes and workflow features; Model Manager filters use these curated tags rather than infer raw WanGP metadata. [electron/python-setup.ts]
+- GenSpace mode color ownership lives at GenSpaceSidebar as inherited --genspace-mode-accent CSS variable. Shared controls expose semantic state attributes; scoped CSS consumes them. This avoids threading color props through image/video/music panels and keeps disabled/status behavior local. [frontend/views/genspace/GenSpaceSidebar.tsx]
+- GenSpace mode theme exposes separate base and hover tokens: blue-500/blue-400, violet-500/violet-400, emerald-600/emerald-500. Selected/focus states use base; enabled hover uses lighter token. Drop-zone pointer/drag hover deliberately uses base border plus 10% base background instead of generic button hover fill. [frontend/views/genspace/mode-accent.ts]
+- GenSpace mode theme supports reusable subtree opt-out via data-genspace-theme-ignore. Every scoped selector excludes the marked element and descendants; SettingsDropdown variant=model opts out automatically while default dropdowns remain themed. [frontend/index.css; frontend/components/SettingsDropdown.tsx]
+- Model variant grouping uses existing wangpMetadata.family only within each caller's already mode-filtered installed profile list; no new backend grouping schema. [frontend/components/ModelPicker.tsx]
 
 ## Notes
-- ACE-Step Fast/XL now render as one Model Manager card with per-variant missing/selected/downloading/ready/error chips and per-variant delete; focused test, strict TS, production build, and native Electron visual QA passed. [frontend/components/ModelPackManager.tsx; electron/python-setup.ts]
-- Supersedes prior ACE-Step UI note: chips/cards now use per-pack selection dots and legend colors; inline Ready labels and per-pack trash/delete controls were removed in favor of footer actions. [frontend/components/ModelPackManager.tsx]
-- Added Ideogram 4 Model Manager group: Standard (ideogram4_int8, 26.4 GB) and TurboTime (ideogram4_turbotime_int8, 18.3 GB) chips; backend mapping, focused tests, TS/Pyright, build, and WanGP resolution scan pass. [electron/python-setup.ts; backend/wangp_model_packs.py; frontend/components/ModelPackManager.test.tsx]
-- gotcha: `rtk pnpm` may fail offline while verifying pnpm@10.30.3 registry signatures; run cached Corepack pnpm via `rtk err node C:\Users\rais\AppData\Local\node\corepack\v1\pnpm\10.30.3\bin\pnpm.cjs <script>`. [Windows validation tooling]
-- Media-input crop complete: native Electron smoke passed; TS typecheck, 115 frontend tests, frontend build, Pyright, 5 crop backend tests, and diff check pass. Full backend reached 294 passed/1 skipped with only pre-existing #0392 failures. [frontend/views/genspace; backend/services/media_crop.py]
 - Ideogram Region editor shipped locally: aspect-ratio box canvas, object/text captions, style/color JSON, stale-media exclusion, JSON Copy Settings restore; focused/full frontend tests, strict TS, build, and diff checks pass. [frontend/views/genspace/image/]
 - Region UX refinement complete: ordered disclosures, 16/6 color pickers, font text regions, medium combobox, active/custom style chips, camera-to-photo JSON, dynamic selected outlines; focused/full tests, TS, build, and diff checks pass. [frontend/views/genspace/image/]
 - Region/Music preset prompt UX complete: select+custom medium/font, comma-text preset popovers, progressive 16/6 swatches; 124 frontend tests, strict TS, production build, and diff check pass. [frontend/views/genspace/components/PresetPromptPicker.tsx; frontend/views/genspace/image/; frontend/views/genspace/music/]
 - Image Edit shipped across ImageEditMediaInputs/Mask/Outpaint modals, generation request/persistence flow, and backend services/image_edit.py; validation: TS, 132 frontend tests, frontend build, Pyright, 305 backend tests [Image Edit mode]
 - Native Electron QA confirmed Image Create/Edit/Region and Video Generate/Reframe control placement; running pre-change backend showed stale profile aspect options, while fresh-profile coverage passed automated tests. [frontend/views/genspace]
+- Correction: #0447 was closed against picker work by mistake; identical unrelated full-suite failures are tracked as #0448. [frontend/views/genspace]
+- Managed desktop environment terminates detached Vite child processes after shell completion, and in-app Browser cannot reach the transient localhost renderer; GenSpace mode-accent visual QA must be completed in native Electron despite successful production build. [frontend visual validation tooling]
+- AIVS-003 GenSpace mode colors reached Human Review: inherited Image blue-500, Video violet-500, Music emerald-600 accents cover tabs, enabled hover/selected controls, seed, form controls, generate CTA, and media drop-active states. Focused 14 tests, TypeScript, frontend build, and diff check pass; full suite retains four unrelated stale assertions. [frontend/views/genspace]
+- AIVS-004 model variant chips reached Human Review: shared ModelPicker groups current mode-filtered installed profiles by family; focused 13 tests, TypeScript, build, and diff check pass; full suite retains known #0448/#0452 failures. [frontend/components/ModelPicker.tsx]
+- AIVS-004 follow-up: grouped dropdown family label now selects first displayed variant and closes menu; focused model-picker/panel coverage increased to 14 passing tests. [frontend/components/SettingsDropdown.tsx; frontend/components/ModelPicker.test.tsx]
 
 ## Key files
 - `LTX-2.3_Cinematic_hardcut.safetensors`

@@ -16,6 +16,8 @@ interface ModelPack {
   groupId?: string;
   groupName?: string;
   variantName?: string;
+  mediaTypes?: Array<"image" | "video" | "audio">;
+  features?: string[];
 }
 
 interface ModelPackManagerProps {
@@ -61,6 +63,10 @@ export function ModelPackManager({
   const [checking, setChecking] = useState(false);
   const [operationActive, setOperationActive] = useState(false);
   const [failedPackId, setFailedPackId] = useState<string | null>(null);
+  const [mediaFilter, setMediaFilter] = useState<
+    "all" | "image" | "video" | "audio"
+  >("all");
+  const [featureFilters, setFeatureFilters] = useState<string[]>([]);
   const downloading =
     progress?.status === "preparing" || progress?.status === "downloading";
   const busy = operationActive || downloading || deleting !== null || checking;
@@ -244,7 +250,13 @@ export function ModelPackManager({
       statusName,
     };
   };
-  const packGroups = groupModelPacks(packs);
+  const filteredPacks = packs.filter(
+    (pack) =>
+      (mediaFilter === "all" || pack.mediaTypes?.includes(mediaFilter)) &&
+      (featureFilters.length === 0 ||
+        featureFilters.some((feature) => pack.features?.includes(feature))),
+  );
+  const packGroups = groupModelPacks(filteredPacks);
 
   return (
     <div className={firstRun ? "w-full max-w-3xl" : "space-y-4"}>
@@ -305,6 +317,48 @@ export function ModelPackManager({
               {label}
             </span>
           ))}
+        </div>
+        <div className="mt-3 space-y-2 border-t border-zinc-800 pt-3" aria-label="Model filters">
+          <div className="flex flex-wrap gap-1.5">
+            {(["all", "image", "video", "audio"] as const).map((filter) => (
+              <button
+                key={filter}
+                type="button"
+                aria-pressed={mediaFilter === filter}
+                onClick={() => setMediaFilter(filter)}
+                className={`rounded-full border px-2.5 py-1 text-2xs capitalize transition-colors ${
+                  mediaFilter === filter
+                    ? "border-blue-400 bg-blue-500/20 text-blue-100"
+                    : "border-zinc-700 text-zinc-400 hover:border-zinc-500"
+                }`}
+              >
+                {filter === "all" ? "All models" : `${filter} models`}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {["generate", "edit", "reframe", "region"].map((feature) => (
+              <button
+                key={feature}
+                type="button"
+                aria-pressed={featureFilters.includes(feature)}
+                onClick={() =>
+                  setFeatureFilters((current) =>
+                    current.includes(feature)
+                      ? current.filter((value) => value !== feature)
+                      : [...current, feature],
+                  )
+                }
+                className={`rounded-full border px-2.5 py-1 text-2xs capitalize transition-colors ${
+                  featureFilters.includes(feature)
+                    ? "border-violet-400 bg-violet-500/20 text-violet-100"
+                    : "border-zinc-700 text-zinc-400 hover:border-zinc-500"
+                }`}
+              >
+                {feature}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -490,6 +544,9 @@ export function ModelPackManager({
           );
         })}
       </div>
+      {packGroups.length === 0 && (
+        <p className="text-sm text-zinc-400">No models match these filters.</p>
+      )}
 
       {progress?.status === "cancelled" && (
         <p className="mt-3 text-xs text-zinc-400">

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { memo, type HTMLAttributes, type RefObject } from "react";
 import { DownloadProgressView } from "../../components/DownloadProgressView";
+import { GenSpaceResizeHandle } from "./GenSpaceResizeHandle";
 import {
   AssetLibraryImportButton,
   GalleryAssetLibrary,
@@ -17,6 +18,9 @@ import {
 import type { ModelDownloadProgress } from "../../types/progress";
 
 export interface GenSpaceGalleryProps {
+  width?: number;
+  style?: React.CSSProperties;
+  onResize?: (delta: number) => void;
   dropZoneProps: Pick<
     HTMLAttributes<HTMLDivElement>,
     "onDragEnter" | "onDragOver" | "onDragLeave" | "onDrop"
@@ -49,6 +53,8 @@ export interface GenSpaceGalleryProps {
 }
 
 function GenSpaceGalleryView({
+  style,
+  onResize,
   dropZoneProps,
   library,
   fileInputRef,
@@ -65,8 +71,16 @@ function GenSpaceGalleryView({
     <div
       {...dropZoneProps}
       data-testid="genspace-gallery-dropzone"
-      className="absolute inset-y-0 right-0 w-[480px] border-l border-zinc-800 bg-zinc-900"
+      className="absolute inset-y-0 right-0 border-l border-zinc-800 bg-zinc-900"
+      style={style}
     >
+      {onResize && (
+        <GenSpaceResizeHandle
+          label="Resize Asset Library sidebar"
+          side="right"
+          onResize={onResize}
+        />
+      )}
       {toast ? (
         <div className="absolute left-1/2 top-6 z-30 -translate-x-1/2 rounded-lg border border-zinc-700 bg-zinc-900/95 px-4 py-2 text-sm text-zinc-200 shadow-xl">
           {toast}

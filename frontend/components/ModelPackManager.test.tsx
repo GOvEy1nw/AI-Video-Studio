@@ -31,6 +31,8 @@ const packs = [
     groupId: "ace_step_15",
     groupName: "ACE-Step 1.5",
     variantName: "Fast",
+    mediaTypes: ["audio"],
+    features: ["generate"],
   },
   {
     id: "ace_step_15_xl_turbo",
@@ -40,12 +42,16 @@ const packs = [
     groupId: "ace_step_15",
     groupName: "ACE-Step 1.5",
     variantName: "XL",
+    mediaTypes: ["audio"],
+    features: ["generate"],
   },
   {
     id: "ltx2_turbo",
     name: "LTX 2.3 Turbo 1.1",
     estimatedSize: "42.8 GB",
     installed: false,
+    mediaTypes: ["video"],
+    features: ["generate", "reframe"],
   },
   {
     id: "ideogram4_int8",
@@ -55,6 +61,8 @@ const packs = [
     groupId: "ideogram4",
     groupName: "Ideogram 4",
     variantName: "Standard",
+    mediaTypes: ["image"],
+    features: ["region"],
   },
   {
     id: "ideogram4_turbotime_int8",
@@ -64,6 +72,8 @@ const packs = [
     groupId: "ideogram4",
     groupName: "Ideogram 4",
     variantName: "TurboTime",
+    mediaTypes: ["image"],
+    features: ["region"],
   },
 ];
 
@@ -252,5 +262,21 @@ describe("ModelPackManager", () => {
         "ideogram4_turbotime_int8",
       ]);
     });
+  });
+
+  it("filters model packs by media and workflow feature", async () => {
+    render(<ModelPackManager />);
+
+    await waitFor(() => {
+      expect(screen.getByText("LTX 2.3 Turbo 1.1")).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "image models" }));
+    expect(screen.queryByText("LTX 2.3 Turbo 1.1")).toBeNull();
+    expect(screen.getByText("Ideogram 4")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "region" }));
+    expect(screen.getByText("Ideogram 4")).toBeTruthy();
+    expect(screen.queryByText("ACE-Step 1.5")).toBeNull();
   });
 });

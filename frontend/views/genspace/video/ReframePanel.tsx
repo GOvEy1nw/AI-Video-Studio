@@ -252,11 +252,9 @@ export function ReframePanel({
     >
       {!videoUrl ? (
         <div
-          className={`p-8 flex flex-col items-center justify-center gap-3 border-2 border-dashed rounded-xl m-4 transition-colors ${
-            isDragOver
-              ? "border-violet-500 bg-violet-500/10"
-              : "border-zinc-700"
-          }`}
+          data-genspace-dropzone
+          data-drag-active={isDragOver || undefined}
+          className="m-4 flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-zinc-700 p-8 transition-colors"
           onDragOver={(e) => {
             e.preventDefault();
             setIsDragOver(true);

@@ -1,8 +1,9 @@
 import { useEffect } from "react";
 import { AlertCircle, Monitor, Sparkles } from "lucide-react";
-import { ModelDropdownTrigger } from "../../../components/ModelDropdownTrigger";
+import { ModelDownloadButton } from "../../../components/ModelDownloadButton";
+import { ModelPicker } from "../../../components/ModelPicker";
 import { SettingsDropdown } from "../../../components/SettingsDropdown";
-import { getModelDropdownAvailability } from "../../../lib/model-profile-availability";
+import { isModelProfileInstalled } from "../../../lib/model-profile-availability";
 import type { ModelProfile } from "../../../types/model-profiles";
 import type { ModelDownloadProgress } from "../../../types/progress";
 import { AspectRatioDropdown } from "../components/AspectRatioDropdown";
@@ -34,9 +35,13 @@ export function ImageModelControls({
   aspectRatioDisabled?: boolean;
   showAspectRatio?: boolean;
 }) {
+  const installedProfiles = imageProfiles.filter((profile) =>
+    isModelProfileInstalled(profile.availability),
+  );
   const selectedProfileId = settings.profileId || "z_image_turbo";
   const selectedProfile =
-    imageProfiles.find((p) => p.id === selectedProfileId) || imageProfiles[0];
+    installedProfiles.find((p) => p.id === selectedProfileId) ||
+    installedProfiles[0];
 
   // If the selected profile doesn't support the current aspect ratio or
   // resolution tier, fall back to the profile's defaults. This runs on
@@ -60,6 +65,8 @@ export function ImageModelControls({
   }, [section, selectedProfile, settings, onSettingsChange]);
 
   if (!selectedProfile) {
+    if (imageProfiles.length) return <ModelDownloadButton />;
+
     // Profiles not loaded yet — show a placeholder.
     return (
       <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-zinc-800/50 text-zinc-500 text-xs">
@@ -69,38 +76,22 @@ export function ImageModelControls({
     );
   }
 
-  const modelOptions = imageProfiles.map((p) => ({
-    value: p.id,
-    label:
-      p.displayName + (p.status === "experimental" ? " (experimental)" : ""),
-    ...getModelDropdownAvailability(p.availability),
-    tooltip:
-      p.availability === "missing_model_files"
-        ? `${p.displayName} is supported by AiVS, but the required WanGP model files are not installed yet.`
-        : p.status === "experimental"
-          ? "Experimental — may be less stable."
-          : undefined,
-  }));
-
   return (
     <>
       {section !== "output" && (
         <>
-          <SettingsDropdown
-            title="IMAGE MODEL"
-            value={selectedProfile.id}
-            onChange={(profileId) => onSettingsChange({ profileId })}
-            options={modelOptions}
-            placement={menuPlacement}
-            variant="model"
-            trigger={
-              <ModelDropdownTrigger
-                profile={selectedProfile}
-                modelDownload={modelDownload}
-                icon={<Sparkles className="h-5 w-5" />}
-              />
-            }
-          />
+          {selectedProfile ? (
+            <ModelPicker
+              profiles={installedProfiles}
+              value={selectedProfile.id}
+              onChange={(profileId) => onSettingsChange({ profileId })}
+              placement={menuPlacement}
+              modelDownload={modelDownload}
+              icon={<Sparkles className="h-5 w-5" />}
+            />
+          ) : (
+            <ModelDownloadButton />
+          )}
         </>
       )}
 

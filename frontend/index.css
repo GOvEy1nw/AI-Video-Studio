@@ -161,3 +161,100 @@ body {
   border-color: rgb(var(--accent)) !important;
   background-color: rgb(var(--accent) / 0.1) !important;
 }
+
+/* GenSpace controls inherit one accent from active media mode. */
+.genspace-mode-theme
+  button:not(:disabled)[aria-pressed="true"]:not(
+    [data-genspace-theme-ignore],
+    [data-genspace-theme-ignore] *
+  ),
+.genspace-mode-theme
+  button:not(:disabled)[aria-selected="true"]:not(
+    [data-genspace-theme-ignore],
+    [data-genspace-theme-ignore] *
+  ),
+.genspace-mode-theme
+  button:not(:disabled)[aria-checked="true"]:not(
+    [data-genspace-theme-ignore],
+    [data-genspace-theme-ignore] *
+  ) {
+  background-color: var(--genspace-mode-accent);
+  color: white;
+}
+
+.genspace-mode-theme
+  button.genspace-mode-tab[aria-selected="true"]:not(
+    [data-genspace-theme-ignore],
+    [data-genspace-theme-ignore] *
+  ) {
+  background-color: var(--genspace-mode-accent);
+  color: white;
+}
+
+.genspace-mode-theme
+  button:not(:disabled):not(.genspace-mode-tab):not(
+    [data-genspace-dropzone]
+  ):not([data-genspace-theme-ignore], [data-genspace-theme-ignore] *):hover,
+.genspace-mode-theme
+  button.genspace-mode-tab:not(
+    [data-genspace-theme-ignore],
+    [data-genspace-theme-ignore] *
+  ):hover {
+  background-color: var(--genspace-mode-accent-hover);
+  color: white;
+}
+
+.genspace-mode-theme
+  [data-genspace-generate]:not(:disabled):not(
+    [data-genspace-theme-ignore],
+    [data-genspace-theme-ignore] *
+  ) {
+  background-color: var(--genspace-mode-accent);
+  color: white;
+}
+
+.genspace-mode-theme
+  [data-genspace-generate]:not(:disabled):not(
+    [data-genspace-theme-ignore],
+    [data-genspace-theme-ignore] *
+  ):hover {
+  background-color: var(--genspace-mode-accent-hover);
+  color: white;
+}
+
+.genspace-mode-theme
+  :is(input, select, textarea):not(
+    [data-genspace-theme-ignore],
+    [data-genspace-theme-ignore] *
+  ):focus {
+  border-color: var(--genspace-mode-accent);
+  color: white;
+}
+
+.genspace-mode-theme
+  :is(input[type="checkbox"], input[type="radio"], input[type="range"]):not(
+    [data-genspace-theme-ignore],
+    [data-genspace-theme-ignore] *
+  ) {
+  accent-color: var(--genspace-mode-accent);
+  color: white;
+}
+
+.genspace-mode-theme
+  [data-genspace-dropzone]:not(
+    [data-genspace-theme-ignore],
+    [data-genspace-theme-ignore] *
+  ):hover,
+.genspace-mode-theme
+  [data-drag-active="true"]:not(
+    [data-genspace-theme-ignore],
+    [data-genspace-theme-ignore] *
+  ) {
+  border-color: var(--genspace-mode-accent);
+  background-color: color-mix(
+    in srgb,
+    var(--genspace-mode-accent) 20%,
+    transparent
+  );
+  color: white;
+}

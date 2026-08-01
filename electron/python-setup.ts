@@ -26,6 +26,8 @@ export interface ModelPack {
   groupId?: string
   groupName?: string
   variantName?: string
+  mediaTypes?: Array<'image' | 'video' | 'audio'>
+  features?: string[]
 }
 
 export interface ModelPackProgress {
@@ -53,7 +55,7 @@ export interface ModelPackProgress {
 
 const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
   { id: 'utility', name: 'Utility Models', estimatedSize: '2.3 GB' },
-  { id: 'z_image_turbo', name: 'Z-Image Turbo', estimatedSize: '14.3 GB', modelType: 'z_image' },
+  { id: 'z_image_turbo', name: 'Z-Image Turbo', estimatedSize: '14.3 GB', modelType: 'z_image', mediaTypes: ['image'], features: ['generate'] },
   {
     id: 'flux2_klein_4b',
     name: 'Flux 2 Klein 4B',
@@ -62,6 +64,8 @@ const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
     groupId: 'flux2_klein',
     groupName: 'Flux 2 Klein',
     variantName: '4B',
+    mediaTypes: ['image'],
+    features: ['generate', 'edit'],
   },
   {
     id: 'flux2_klein_9b',
@@ -71,6 +75,8 @@ const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
     groupId: 'flux2_klein',
     groupName: 'Flux 2 Klein',
     variantName: '9B',
+    mediaTypes: ['image'],
+    features: ['generate', 'edit'],
   },
   {
     id: 'krea2_turbo',
@@ -80,6 +86,8 @@ const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
     groupId: 'krea2',
     groupName: 'Krea 2',
     variantName: 'Create',
+    mediaTypes: ['image'],
+    features: ['generate'],
   },
   {
     id: 'krea2_turbo_edit',
@@ -89,6 +97,8 @@ const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
     groupId: 'krea2',
     groupName: 'Krea 2',
     variantName: 'Edit',
+    mediaTypes: ['image'],
+    features: ['edit'],
   },
   {
     id: 'qwen_image_2512_20B',
@@ -98,6 +108,8 @@ const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
     groupId: 'qwen_image',
     groupName: 'Qwen Image',
     variantName: 'Create',
+    mediaTypes: ['image'],
+    features: ['generate'],
   },
   {
     id: 'qwen_image_edit_plus2_20B',
@@ -107,12 +119,16 @@ const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
     groupId: 'qwen_image',
     groupName: 'Qwen Image',
     variantName: 'Edit',
+    mediaTypes: ['image'],
+    features: ['edit'],
   },
   {
     id: 'hidream_o1',
     name: 'HiDream O1',
     estimatedSize: '15.4 GB',
     modelType: 'hidream_o1_dev',
+    mediaTypes: ['image'],
+    features: ['generate', 'edit'],
   },
   {
     id: 'ideogram4_int8',
@@ -122,6 +138,8 @@ const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
     groupId: 'ideogram4',
     groupName: 'Ideogram 4',
     variantName: 'Standard',
+    mediaTypes: ['image'],
+    features: ['region'],
   },
   {
     id: 'ideogram4_turbotime_int8',
@@ -131,12 +149,16 @@ const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
     groupId: 'ideogram4',
     groupName: 'Ideogram 4',
     variantName: 'TurboTime',
+    mediaTypes: ['image'],
+    features: ['region'],
   },
   {
     id: 'ltx2_turbo',
     name: 'LTX 2.3 Turbo 1.1',
     estimatedSize: '42.8 GB',
     modelType: 'ltx2_22B_distilled_1_1',
+    mediaTypes: ['video'],
+    features: ['generate', 'reframe'],
   },
   {
     id: 'ace_step_15_turbo',
@@ -146,6 +168,8 @@ const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
     groupId: 'ace_step_15',
     groupName: 'ACE-Step 1.5',
     variantName: 'Fast',
+    mediaTypes: ['audio'],
+    features: ['generate'],
   },
   {
     id: 'ace_step_15_xl_turbo',
@@ -155,6 +179,8 @@ const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
     groupId: 'ace_step_15',
     groupName: 'ACE-Step 1.5',
     variantName: 'XL',
+    mediaTypes: ['audio'],
+    features: ['generate'],
   },
   { id: 'prompt_enhancer', name: 'Prompt Enhancer', estimatedSize: '36.0 GB' },
 ]

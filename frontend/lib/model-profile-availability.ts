@@ -5,6 +5,12 @@ interface ProfileAvailability {
   wangpModelType: string;
 }
 
+export function isModelProfileInstalled(
+  availability: ModelProfileAvailability,
+): boolean {
+  return availability === "available" || availability === "experimental";
+}
+
 export function applyModelPackAvailability<T extends ProfileAvailability>(
   profiles: readonly T[],
   packs: readonly unknown[],

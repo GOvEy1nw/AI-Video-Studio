@@ -1,8 +1,9 @@
 import { AlertCircle, Clock, Image, Monitor, Music, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { ModelDropdownTrigger } from "../../../components/ModelDropdownTrigger";
+import { ModelDownloadButton } from "../../../components/ModelDownloadButton";
+import { ModelPicker } from "../../../components/ModelPicker";
 import { SettingsDropdown } from "../../../components/SettingsDropdown";
-import { getModelDropdownAvailability } from "../../../lib/model-profile-availability";
+import { isModelProfileInstalled } from "../../../lib/model-profile-availability";
 import { detectMediaType } from "../../../lib/media-import";
 import { AUDIO_MEDIA_ROLE_SET, GUIDE_MEDIA_ROLE_SET } from "../constants";
 import { AspectRatioDropdown } from "../components/AspectRatioDropdown";
@@ -78,10 +79,10 @@ function LegacyPromptMedia({
   return (
     <>
       <div
+        data-genspace-dropzone
+        data-drag-active={imageDrag || undefined}
         className={`relative mx-2 mt-2 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed transition-colors ${
-          imageDrag
-            ? "border-violet-500 bg-violet-500/10"
-            : "border-zinc-700 hover:border-zinc-500"
+          imageDrag ? "" : "border-zinc-700 hover:border-zinc-500"
         }`}
         onDragOver={(event) => {
           event.preventDefault();
@@ -125,9 +126,11 @@ function LegacyPromptMedia({
         />
       </div>
       <div
+        data-genspace-dropzone
+        data-drag-active={audioDrag || undefined}
         className={`relative mt-2 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed transition-colors ${
           audioDrag
-            ? "border-emerald-500 bg-emerald-500/10"
+            ? ""
             : media.inputAudio
               ? "border-emerald-600"
               : "border-zinc-700 hover:border-zinc-500"
@@ -182,10 +185,13 @@ export function VideoGenPanel({
     controller;
   const videoSettings = settings.value;
   const patchVideoSettings = settings.patch;
+  const installedProfiles = profiles.options.filter((profile) =>
+    isModelProfileInstalled(profile.availability),
+  );
   const selectedProfile =
-    profiles.options.find(
+    installedProfiles.find(
       (profile) => profile.id === videoSettings.profileId,
-    ) ?? profiles.options[0];
+    ) ?? installedProfiles[0];
   const isRetake = videoTools.mode === "retake";
   const isReframe = videoTools.mode === "reframe";
   const isPanelMode = isRetake || isReframe;
@@ -231,13 +237,6 @@ export function VideoGenPanel({
     }
   }, [patchVideoSettings, selectedProfile, videoSettings]);
 
-  const modelOptions = profiles.options.map((profile) => ({
-    value: profile.id,
-    label:
-      profile.displayName +
-      (profile.status === "experimental" ? " (experimental)" : ""),
-    ...getModelDropdownAvailability(profile.availability),
-  }));
   const aspectRatioValue = isReframe
     ? videoTools.reframeAspectMode === "custom"
       ? "16:9"
@@ -347,21 +346,16 @@ export function VideoGenPanel({
         collapsible={false}
       >
         {selectedProfile ? (
-          <SettingsDropdown
-            title="VIDEO MODEL"
+          <ModelPicker
+            profiles={installedProfiles}
             value={selectedProfile.id}
             onChange={(profileId) => patchVideoSettings({ profileId })}
-            options={modelOptions}
             placement="bottom"
-            variant="model"
-            trigger={
-              <ModelDropdownTrigger
-                profile={selectedProfile}
-                modelDownload={profiles.modelDownload}
-                icon={<LightricksIcon className="h-5 w-5" />}
-              />
-            }
+            modelDownload={profiles.modelDownload}
+            icon={<LightricksIcon className="h-5 w-5" />}
           />
+        ) : profiles.options.length ? (
+          <ModelDownloadButton />
         ) : (
           <div className="flex items-center gap-1.5 rounded-md bg-zinc-800/50 px-2 py-1.5 text-zinc-500">
             <AlertCircle className="h-3.5 w-3.5" />

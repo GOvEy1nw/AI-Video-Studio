@@ -22,6 +22,7 @@ describe("SettingsDropdown", () => {
     );
 
     const trigger = screen.getByRole("button", { name: "16:9" });
+    expect(trigger.closest("[data-genspace-theme-ignore]")).toBeNull();
     expect((trigger as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(trigger);
     expect(screen.queryByText("ASPECT RATIO")).toBeNull();
@@ -44,7 +45,14 @@ describe("SettingsDropdown", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Choose model" }));
+    const trigger = screen.getByRole("button", { name: "Choose model" });
+    const themeSelector = `:not(
+      [data-genspace-theme-ignore],
+      [data-genspace-theme-ignore] *
+    )`;
+    expect(trigger.closest("[data-genspace-theme-ignore]")).toBeTruthy();
+    expect(trigger.matches(themeSelector)).toBe(false);
+    fireEvent.click(trigger);
 
     expect(screen.getByText("Ready").classList.contains("text-emerald-400")).toBe(
       true,

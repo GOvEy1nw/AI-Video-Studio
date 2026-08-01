@@ -66,11 +66,13 @@ export function MediaInputSlot({
         onClick={open}
         title={title}
         aria-label={ariaLabel}
+        data-genspace-dropzone
+        data-drag-active={dragActive || undefined}
         className={`relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-lg ${
           item
             ? "border bg-zinc-800"
             : "flex-col border-2 border-dashed transition-colors hover:border-zinc-500"
-        } ${dragActive ? "border-blue-500 bg-blue-500/10" : "border-zinc-700"}`}
+        } border-zinc-700`}
       >
         {item ? (
           <>

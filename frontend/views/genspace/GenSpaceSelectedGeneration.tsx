@@ -33,6 +33,7 @@ import type { Asset } from "../../types/project";
 import type { GenSpaceGalleryProps } from "./GenSpaceGallery";
 
 export interface GenSpaceSelectedGenerationProps {
+  style?: React.CSSProperties;
   asset: Asset | null;
   modelName?: string;
   generation: GenSpaceGalleryProps["generation"];
@@ -279,11 +280,7 @@ function PlayableAssetPreview({ asset }: { asset: Asset }) {
         event.key === " " ||
         event.key === "Spacebar" ||
         event.key === "Space";
-      if (
-        !isSpace ||
-        event.repeat ||
-        event.defaultPrevented
-      ) {
+      if (!isSpace || event.repeat || event.defaultPrevented) {
         return;
       }
       const target = event.target;
@@ -432,6 +429,7 @@ function AssetPreview({ asset }: { asset: Asset }) {
 
 export function GenSpaceSelectedGeneration({
   asset,
+  style,
   modelName,
   generation,
   selectedIndex,
@@ -476,7 +474,8 @@ export function GenSpaceSelectedGeneration({
   return (
     <section
       data-testid="selected-generation-panel"
-      className="absolute inset-y-0 left-[480px] right-[480px] flex min-w-0 flex-col bg-zinc-950"
+      className="absolute inset-y-0 flex min-w-0 flex-col bg-zinc-950"
+      style={style}
     >
       <header className="flex h-30 shrink-0 items-center justify-between gap-4 border-b bg-zinc-900 border-zinc-800 px-5">
         <div className="min-w-0 flex-1">

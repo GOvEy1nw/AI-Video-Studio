@@ -1,4 +1,5 @@
 import { Image, Music, Video } from "lucide-react";
+import { getGenSpaceModeAccentStyle } from "./mode-accent";
 import type { GenSpaceMode } from "./types";
 
 export function GenSpaceModeTabs({
@@ -27,10 +28,12 @@ export function GenSpaceModeTabs({
             type="button"
             role="tab"
             aria-selected={mode === value}
+            data-genspace-mode={value}
             onClick={() => onChange(value)}
-            className={`flex items-center justify-center gap-1.5 rounded-md px-2 py-2 text-xs font-medium transition-colors ${
+            style={getGenSpaceModeAccentStyle(value)}
+            className={`genspace-mode-tab flex items-center justify-center gap-1.5 rounded-md px-2 py-2 text-xs font-medium transition-colors ${
               mode === value
-                ? "bg-zinc-800 text-white shadow-xs"
+                ? "text-white shadow-xs"
                 : "text-zinc-500 hover:bg-zinc-800/60 hover:text-zinc-200"
             }`}
           >

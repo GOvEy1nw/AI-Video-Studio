@@ -1,7 +1,7 @@
 import { Music } from "lucide-react";
-import { ModelDropdownTrigger } from "../../../components/ModelDropdownTrigger";
-import { SettingsDropdown } from "../../../components/SettingsDropdown";
-import { getModelDropdownAvailability } from "../../../lib/model-profile-availability";
+import { ModelDownloadButton } from "../../../components/ModelDownloadButton";
+import { ModelPicker } from "../../../components/ModelPicker";
+import { isModelProfileInstalled } from "../../../lib/model-profile-availability";
 import { GenerateButton } from "../components/GenerateButton";
 import { GenPanelSection } from "../components/GenPanelSection";
 import { PresetPromptPicker } from "../components/PresetPromptPicker";
@@ -24,10 +24,13 @@ export function MusicGenPanel({
   controller: MusicGenPanelController;
 }) {
   const { prompt, generation, profiles, music, media } = controller;
+  const installedProfiles = profiles.options.filter((profile) =>
+    isModelProfileInstalled(profile.availability),
+  );
   const selectedProfile =
-    profiles.options.find(
+    installedProfiles.find(
       (profile) => profile.id === music.settings.profileId,
-    ) ?? profiles.options[0];
+    ) ?? installedProfiles[0];
   return (
     <>
       <GenPanelSection
@@ -35,31 +38,20 @@ export function MusicGenPanel({
         className="text-xs text-zinc-400"
         collapsible={false}
       >
-        <SettingsDropdown
-          title="MUSIC MODEL"
-          value={selectedProfile?.id ?? ""}
-          onChange={(profileId) =>
-            music.setSettings({ ...music.settings, profileId })
-          }
-          options={profiles.options.map((profile) => ({
-            value: profile.id,
-            label: profile.displayName,
-            ...getModelDropdownAvailability(profile.availability),
-          }))}
-          placement="bottom"
-          variant="model"
-          trigger={
-            selectedProfile ? (
-              <ModelDropdownTrigger
-                profile={selectedProfile}
-                modelDownload={profiles.modelDownload}
-                icon={<Music className="h-5 w-5" />}
-              />
-            ) : (
-              <span className="text-zinc-500">Loading models…</span>
-            )
-          }
-        />
+        {selectedProfile ? (
+          <ModelPicker
+            profiles={installedProfiles}
+            value={selectedProfile?.id ?? ""}
+            onChange={(profileId) =>
+              music.setSettings({ ...music.settings, profileId })
+            }
+            placement="bottom"
+            modelDownload={profiles.modelDownload}
+            icon={<Music className="h-5 w-5" />}
+          />
+        ) : (
+          <ModelDownloadButton />
+        )}
       </GenPanelSection>
       <MusicMediaInputs
         coverInput={music.settings.coverAudioInput}

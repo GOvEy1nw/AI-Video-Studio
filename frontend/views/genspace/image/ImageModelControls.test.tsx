@@ -1,5 +1,5 @@
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ModelProfile } from "../../../types/model-profiles";
 import { ImageModelControls } from "./ImageModelControls";
 
@@ -19,6 +19,60 @@ const profile = {
 } as ModelProfile;
 
 describe("ImageModelControls", () => {
+  it("shows installed models only and opens Model Manager for missing packs", () => {
+    const openSettings = vi.fn();
+    window.addEventListener("open-settings", openSettings);
+    const missingProfile = { ...profile, id: "missing", availability: "missing_model_files" as const };
+    render(
+      <ImageModelControls
+        settings={{
+          profileId: missingProfile.id,
+          resolution: "1024p",
+          aspectRatio: "1:1",
+          steps: 4,
+          variations: 1,
+        }}
+        onSettingsChange={() => undefined}
+        imageProfiles={[missingProfile]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Download models" }));
+    expect(openSettings).toHaveBeenCalledTimes(1);
+    window.removeEventListener("open-settings", openSettings);
+  });
+
+  it("keeps missing models out of the picker and provides its recovery action", () => {
+    const openSettings = vi.fn();
+    window.addEventListener("open-settings", openSettings);
+    const installedProfile = { ...profile, displayName: "Ready image" };
+    const missingProfile = {
+      ...profile,
+      id: "missing",
+      displayName: "Missing image",
+      availability: "missing_model_files" as const,
+    };
+    render(
+      <ImageModelControls
+        settings={{
+          profileId: installedProfile.id,
+          resolution: "1024p",
+          aspectRatio: "1:1",
+          steps: 4,
+          variations: 1,
+        }}
+        onSettingsChange={() => undefined}
+        imageProfiles={[installedProfile, missingProfile]}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("Ready image").closest("button")!);
+    expect(screen.queryByText("Missing image")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Download models" }));
+    expect(openSettings).toHaveBeenCalledTimes(1);
+    window.removeEventListener("open-settings", openSettings);
+  });
+
   it("can omit aspect ratio while keeping resolution", () => {
     render(
       <ImageModelControls

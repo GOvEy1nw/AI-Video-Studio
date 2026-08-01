@@ -266,11 +266,9 @@ export function ImageEditMediaInputs({
               </span>
             </div>
             <div
-              className={`py-6 w-full overflow-hidden rounded-lg border-2 ${
-                dragActive
-                  ? "border-blue-500 bg-blue-500/10"
-                  : "border-dashed border-zinc-700 bg-zinc-900/50"
-              }`}
+              data-genspace-dropzone
+              data-drag-active={dragActive || undefined}
+              className="flex items-center justify-center w-full overflow-hidden rounded-lg border-2 border-dashed border-zinc-700 bg-zinc-900/50 min-h-20"
               onDragEnter={() => setDragActive(true)}
               onDragLeave={() => setDragActive(false)}
               onDragOver={(event) => {
@@ -280,6 +278,7 @@ export function ImageEditMediaInputs({
               onDrop={handleDrop}
             >
               <button
+                data-genspace-theme-ignore
                 type="button"
                 disabled={disabled}
                 onClick={() => inputRef.current?.click()}
