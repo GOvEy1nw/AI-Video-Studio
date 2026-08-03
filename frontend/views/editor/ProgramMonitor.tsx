@@ -5,6 +5,7 @@ import {
   Expand, Shrink,
 } from 'lucide-react'
 import { Button } from '../../components/ui/button'
+import { FloatingMenu } from '../../components/FloatingMenu'
 import { Tooltip } from '../../components/ui/tooltip'
 import { AudioWaveform } from '../../components/AudioWaveform'
 import { DEFAULT_SUBTITLE_STYLE } from '../../types/project'
@@ -153,6 +154,8 @@ export function ProgramMonitor({
   // when the user clicked on a text overlay (mousedown fires first on the overlay,
   // but click may bubble up to the wrapper if the mouse moved slightly).
   const clickedTextOverlayRef = React.useRef(false)
+  const previewZoomTriggerRef = React.useRef<HTMLButtonElement>(null)
+  const playbackResolutionTriggerRef = React.useRef<HTMLButtonElement>(null)
 
   // Sync mask video elements to the pool video's currentTime on every time update
   React.useEffect(() => {
@@ -733,6 +736,7 @@ export function ProgramMonitor({
           {/* Fit / Zoom dropdown */}
           <div className="relative shrink-0">
             <button
+              ref={previewZoomTriggerRef}
               onClick={(e) => { e.stopPropagation(); setPreviewZoomOpen(prev => !prev) }}
               className={`h-6 px-2 rounded text-[11px] font-medium tabular-nums flex items-center gap-1 transition-colors border ${
                 previewZoomOpen
@@ -744,7 +748,12 @@ export function ProgramMonitor({
               <ChevronDown className="h-3 w-3" />
             </button>
             {previewZoomOpen && (
-              <div className="absolute bottom-full left-0 mb-1 bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl py-1 min-w-[100px] z-50">
+              <FloatingMenu
+                anchorRef={previewZoomTriggerRef}
+                placement="top-start"
+                role="menu"
+                className="min-w-[100px] overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-900 py-1 shadow-2xl"
+              >
                 {[
                   { label: 'Fit', value: 'fit' as const },
                   { label: '10%', value: 10 },
@@ -770,7 +779,7 @@ export function ProgramMonitor({
                     <span className={previewZoom === opt.value ? '' : 'ml-5'}>{opt.label}</span>
                   </button>
                 ))}
-              </div>
+              </FloatingMenu>
             )}
           </div>
 
@@ -889,6 +898,7 @@ export function ProgramMonitor({
           {/* Resolution dropdown */}
           <div className="relative shrink-0">
             <button
+              ref={playbackResolutionTriggerRef}
               onClick={(e) => { e.stopPropagation(); setPlaybackResOpen(prev => !prev) }}
               className={`h-6 px-2 rounded text-[11px] font-medium flex items-center gap-1 transition-colors border ${
                 playbackResolution === 1
@@ -903,7 +913,12 @@ export function ProgramMonitor({
               <ChevronDown className="h-3 w-3" />
             </button>
             {playbackResOpen && (
-              <div className="absolute bottom-full right-0 mb-1 bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl py-1 min-w-[120px] z-50">
+              <FloatingMenu
+                anchorRef={playbackResolutionTriggerRef}
+                placement="top-end"
+                role="menu"
+                className="min-w-[120px] overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-900 py-1 shadow-2xl"
+              >
                 {([
                   { label: 'Full (1:1)', value: 1 as const, desc: 'Highest quality' },
                   { label: 'Half (1/2)', value: 0.5 as const, desc: 'Balanced' },
@@ -925,7 +940,7 @@ export function ProgramMonitor({
                     <span className={`text-[10px] ${playbackResolution === opt.value ? 'text-blue-400/60' : 'text-zinc-500'} ml-5`}>{opt.desc}</span>
                   </button>
                 ))}
-              </div>
+              </FloatingMenu>
             )}
           </div>
 

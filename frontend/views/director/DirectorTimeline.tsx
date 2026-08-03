@@ -23,6 +23,7 @@ import {
   splitPromptSegment,
 } from "@/lib/director-timeline";
 import { generateThumbnail } from "@/lib/thumbnails";
+import { FloatingMenu } from "../../components/FloatingMenu";
 import {
   TimelinePlayhead,
   TimelineRuler,
@@ -1120,15 +1121,16 @@ export function DirectorTimeline({
         />
       </div>
       {contextMenu && (
-        <div
+        <FloatingMenu
+          anchorPoint={contextMenu}
+          gap={0}
           role="menu"
           aria-label={
             contextMenu.kind === "generated"
               ? "Generated segment actions"
               : "Prompt segment actions"
           }
-          className="fixed z-100 w-36 overflow-hidden rounded-sm border border-zinc-700 bg-zinc-900 py-1 text-xs shadow-2xl"
-          style={{ left: contextMenu.x, top: contextMenu.y }}
+          className="w-36 overflow-y-auto rounded-sm border border-zinc-700 bg-zinc-900 py-1 text-xs shadow-2xl"
           onMouseDown={(event) => event.stopPropagation()}
         >
           {contextMenu.kind === "prompt" && (
@@ -1157,7 +1159,7 @@ export function DirectorTimeline({
           >
             Delete
           </button>
-        </div>
+        </FloatingMenu>
       )}
     </TimelineViewport>
   );

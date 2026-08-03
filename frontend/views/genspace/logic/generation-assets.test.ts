@@ -132,6 +132,7 @@ describe("GenSpace generated asset builders", () => {
       inputs: [input],
       inputImage: null,
       inputAudio: null,
+      videoTool: "relight",
       assetPaths: [{ url: input.url, path: "C:\\guide.mp4" }],
     };
     const asset = buildGeneratedVideoAsset({
@@ -143,6 +144,7 @@ describe("GenSpace generated asset builders", () => {
 
     expect(asset.generationParams).toMatchObject({
       prompt: "animate",
+      videoTool: "relight",
       duration: 4,
       imageInputMedia: [
         {

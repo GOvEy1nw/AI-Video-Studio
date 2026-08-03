@@ -25,9 +25,12 @@ export function buildGenSpaceRestorePlan(
   );
   const editImage =
     restoredImageInputs.find(({ role }) => role === "edit_image") ?? null;
-  const imageInputs = restoredImageInputs.filter(
-    ({ role }) => role !== "edit_image",
-  );
+  const videoToolInput = params.videoTool
+    ? (restoredImageInputs.find(({ type }) => type === "video") ?? null)
+    : null;
+  const imageInputs = params.videoTool
+    ? []
+    : restoredImageInputs.filter(({ role }) => role !== "edit_image");
   const legacy = resolveLegacyInputMedia(params, imageInputs, projectAssets);
   const restoredSettings = settingsPatchFromGenerationParams(params, settings);
   const editOutpaint =
@@ -46,7 +49,8 @@ export function buildGenSpaceRestorePlan(
         ? params.imageProcessMode ??
           getImageModeForProfileId(restoredSettings.imageProfileId)
         : "create",
-    videoMode: mode === "reframe" ? "reframe" : "generate",
+    videoMode: mode === "reframe" || params.videoTool ? "reframe" : "generate",
+    videoTool: params.videoTool ?? "reframe",
     prompt: params.prompt,
     settings: restoredSettings,
     musicSettings:
@@ -58,6 +62,7 @@ export function buildGenSpaceRestorePlan(
       editImage,
       inputImage: editImage ? null : legacy.inputImage,
       inputAudio: legacy.inputAudio,
+      videoToolInput,
     },
     editToolMode: params.imageEditMask
       ? "retouch"

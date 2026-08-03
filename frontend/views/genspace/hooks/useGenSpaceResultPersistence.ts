@@ -14,6 +14,7 @@ import {
 import type { RetakeResult } from "../../../hooks/use-retake";
 import { copyToAssetFolder } from "../../../lib/asset-copy";
 import { logger } from "../../../lib/logger";
+import type { Asset } from "../../../types/project";
 import {
   buildGeneratedImageAsset,
   buildGeneratedMusicAsset,
@@ -53,6 +54,7 @@ export function useGenSpaceResultPersistence({
   imageSubmissionRef,
   musicResult,
   musicSubmissionRef,
+  onAssetAdded,
 }: {
   videoUrl: string | null;
   videoPath: string | null;
@@ -75,6 +77,7 @@ export function useGenSpaceResultPersistence({
   imageSubmissionRef: MutableRefObject<ImageSubmissionSnapshot | null>;
   musicResult: GenerateMusicResult | null;
   musicSubmissionRef: MutableRefObject<MusicSubmissionSnapshot | null>;
+  onAssetAdded?: (asset: Asset) => void;
 }) {
   const persistedVideoKey = useRef<string | null>(null);
   const persistedImageKey = useRef<string | null>(null);
@@ -96,7 +99,7 @@ export function useGenSpaceResultPersistence({
         const finalPath = copied?.path ?? videoPath;
         const finalUrl = copied?.url ?? videoUrl;
         const createdAt = Date.now();
-        addAsset(
+        const asset = addAsset(
           snapshot.projectId,
           reframe
             ? buildReframeAsset({
@@ -110,8 +113,9 @@ export function useGenSpaceResultPersistence({
                 finalPath,
                 finalUrl,
                 createdAt,
-              }),
+            }),
         );
+        onAssetAdded?.(asset);
         if (reframe) reframeSubmissionRef.current = null;
         else videoSubmissionRef.current = null;
         reset();
@@ -123,6 +127,7 @@ export function useGenSpaceResultPersistence({
   }, [
     addAsset,
     isGenerating,
+    onAssetAdded,
     reframeSubmissionRef,
     reset,
     videoPath,
@@ -148,15 +153,16 @@ export function useGenSpaceResultPersistence({
             : null;
           const finalPath = copied?.path ?? sourcePath ?? imageUrl;
           const finalUrl = copied?.url ?? imageUrl;
-          addAsset(
+          const asset = addAsset(
             snapshot.projectId,
             buildGeneratedImageAsset({
               snapshot,
               finalPath,
               finalUrl,
               createdAt: Date.now(),
-            }),
+              }),
           );
+          if (index === 0) onAssetAdded?.(asset);
         }
         imageSubmissionRef.current = null;
         reset();
@@ -171,6 +177,7 @@ export function useGenSpaceResultPersistence({
     imageSubmissionRef,
     imageUrls,
     isGenerating,
+    onAssetAdded,
     reset,
   ]);
 
@@ -205,7 +212,10 @@ export function useGenSpaceResultPersistence({
           result: musicResult,
           takes,
         });
-        if (asset) addAsset(snapshot.projectId, asset);
+        if (asset) {
+          const addedAsset = addAsset(snapshot.projectId, asset);
+          onAssetAdded?.(addedAsset);
+        }
         musicSubmissionRef.current = null;
         reset();
       } catch (error) {
@@ -213,7 +223,14 @@ export function useGenSpaceResultPersistence({
         logger.error(`Failed to persist generated music asset: ${error}`);
       }
     })();
-  }, [addAsset, isGenerating, musicResult, musicSubmissionRef, reset]);
+  }, [
+    addAsset,
+    isGenerating,
+    musicResult,
+    musicSubmissionRef,
+    onAssetAdded,
+    reset,
+  ]);
 
   useEffect(() => {
     if (!retakeResult || isRetaking) return;
@@ -250,7 +267,7 @@ export function useGenSpaceResultPersistence({
             });
           }
         } else {
-          addAsset(
+          const asset = addAsset(
             submission.projectId,
             buildRetakeAsset({
               prompt: submission.prompt,
@@ -261,6 +278,7 @@ export function useGenSpaceResultPersistence({
               createdAt: Date.now(),
             }),
           );
+          onAssetAdded?.(asset);
         }
         setActiveRetakeSource(null);
         resetRetake();
@@ -274,6 +292,7 @@ export function useGenSpaceResultPersistence({
     addAsset,
     addTakeToAsset,
     isRetaking,
+    onAssetAdded,
     projects,
     resetRetake,
     retakeResult,

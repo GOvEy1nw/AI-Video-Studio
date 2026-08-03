@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   ChevronLeft,
   X,
@@ -17,6 +17,7 @@ import {
 } from "../../components/GalleryAssetLibrary";
 import type { GalleryGridColumns } from "../../components/GalleryViewControls";
 import type { GalleryFilterState } from "../../lib/gallery-filters";
+import { FloatingMenu } from "../../components/FloatingMenu";
 
 export interface LeftPanelProps {
   leftPanelWidth: number;
@@ -199,8 +200,9 @@ export function LeftPanel(props: LeftPanelProps) {
   } = props;
 
   const [assetViewMode, setAssetViewMode] = useState<"grid" | "list">("grid");
+  const timelineAddTriggerRef = useRef<HTMLButtonElement>(null);
   const [assetGridColumns, setAssetGridColumns] =
-    useState<GalleryGridColumns>(3);
+    useState<GalleryGridColumns>(2);
   const [showFavorites, setShowFavorites] = useState(false);
   const takesAsset = takesViewAssetId
     ? assets.find((asset) => asset.id === takesViewAssetId)
@@ -498,6 +500,7 @@ export function LeftPanel(props: LeftPanelProps) {
           <div className="relative">
             <Tooltip content="Add timeline" side="right">
               <button
+                ref={timelineAddTriggerRef}
                 onClick={() => setTimelineAddMenuOpen((prev) => !prev)}
                 className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors"
               >
@@ -505,7 +508,12 @@ export function LeftPanel(props: LeftPanelProps) {
               </button>
             </Tooltip>
             {timelineAddMenuOpen && (
-              <div className="absolute right-0 top-full mt-1 w-48 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl z-50 py-1 overflow-hidden">
+              <FloatingMenu
+                anchorRef={timelineAddTriggerRef}
+                placement="bottom-end"
+                role="menu"
+                className="w-48 overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-800 py-1 shadow-xl"
+              >
                 <button
                   onClick={() => {
                     handleAddTimeline();
@@ -526,7 +534,7 @@ export function LeftPanel(props: LeftPanelProps) {
                   <FileUp className="h-3.5 w-3.5" />
                   Import from XML
                 </button>
-              </div>
+              </FloatingMenu>
             )}
           </div>
         </div>

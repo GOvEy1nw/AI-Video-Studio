@@ -589,8 +589,22 @@ class ReframeOptions(BaseModel):
     controlVideoDuration: float = Field(gt=0)
 
 
+VideoToolId = Literal[
+    "extend",
+    "relight",
+    "colorize",
+    "clean_plate",
+    "lip_dub",
+    "decompression",
+    "sdr_to_hdr",
+    "remove_glare",
+    "deblur",
+]
+
+
 class GenerateVideoRequest(BaseModel):
     prompt: str = ""
+    enhancePrompt: bool = False
     resolution: str = "540p"
     model: str = "fast"
     modelProfileId: str | None = None
@@ -607,6 +621,7 @@ class GenerateVideoRequest(BaseModel):
     useAudioTrack: bool = True
     shotPrompts: list[GenerateVideoShotPrompt] = Field(default_factory=_default_video_shot_prompts)
     reframe: ReframeOptions | None = None
+    videoTool: VideoToolId | None = None
 
     @model_validator(mode="after")
     def validate_prompt_or_shots(self) -> "GenerateVideoRequest":
@@ -786,6 +801,7 @@ def _default_image_input_media() -> list[GenerateImageInputMedia]:
 
 class GenerateImageRequest(BaseModel):
     prompt: NonEmptyPrompt
+    enhancePrompt: bool = False
     width: int = 1024
     height: int = 1024
     numSteps: int = 4

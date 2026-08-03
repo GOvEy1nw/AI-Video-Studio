@@ -85,7 +85,8 @@ describe("SettingsDropdown", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Video duration" }));
     const menu = screen.getByText("DURATION").parentElement;
-    expect(menu?.classList.contains("right-0")).toBe(true);
+    expect(menu?.dataset.preferredPlacement).toBe("top-end");
+    expect(menu?.parentElement).toBe(document.body);
     expect(screen.getByRole("slider", { name: "Duration seconds" })).toBeTruthy();
   });
 });

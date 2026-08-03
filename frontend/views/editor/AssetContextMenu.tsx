@@ -10,14 +10,18 @@ import {
   Trash2,
   FolderOpen,
   Heart,
-  Expand,
   ClipboardPaste,
 } from "lucide-react";
 import type { Asset } from "../../types/project";
 import {
-  IMAGE_USE_OPTIONS,
+  UseImageDropdown,
   type ImageUseTarget,
 } from "../../components/UseImageDropdown";
+import {
+  UseVideoDropdown,
+  type VideoUseTarget,
+} from "../../components/UseVideoDropdown";
+import { FloatingMenu } from "../../components/FloatingMenu";
 import { getColorLabel } from "./video-editor-utils";
 
 export interface AssetContextMenuProps {
@@ -39,7 +43,7 @@ export interface AssetContextMenuProps {
   ) => void;
   onToggleFavorite?: (asset: Asset) => void;
   onUseImage?: (asset: Asset, target: ImageUseTarget) => void;
-  onReframe?: (asset: Asset) => void;
+  onUseVideo?: (asset: Asset, target: VideoUseTarget) => void;
   onCopySettings?: (asset: Asset) => void;
   handleRegenerate?: (assetId: string) => void;
   handleCancelRegeneration?: () => void;
@@ -86,7 +90,7 @@ export function AssetContextMenu({
   addClipToTimeline,
   onToggleFavorite,
   onUseImage,
-  onReframe,
+  onUseVideo,
   onCopySettings,
   handleRegenerate,
   handleCancelRegeneration,
@@ -103,10 +107,12 @@ export function AssetContextMenu({
   const isMulti = targetIds.length > 1;
 
   return (
-    <div
+    <FloatingMenu
       ref={assetContextMenuRef}
-      className="fixed bg-zinc-800 border border-zinc-700 rounded-xl shadow-2xl py-1.5 z-60 min-w-[180px] text-xs"
-      style={{ left: assetContextMenu.x, top: assetContextMenu.y }}
+      anchorPoint={assetContextMenu}
+      gap={0}
+      role="menu"
+      className="min-w-[180px] overflow-y-auto rounded-xl border border-zinc-700 bg-zinc-800 py-1.5 text-xs shadow-2xl"
       onClick={(e) => e.stopPropagation()}
     >
       {isMulti && (
@@ -157,38 +163,24 @@ export function AssetContextMenu({
       )}
 
       {!isMulti && asset.type === "image" && onUseImage ? (
-        <>
-          <div className="px-3 pb-0.5 pt-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-            Use image
-          </div>
-          {IMAGE_USE_OPTIONS.map((option) => (
-            <button
-              key={option.target}
-              onClick={() => {
-                onUseImage(asset, option.target);
-                setAssetContextMenu(null);
-              }}
-              className="flex w-full items-center gap-3 px-3 py-1.5 text-left text-zinc-300 hover:bg-zinc-700"
-            >
-              <span className="text-zinc-500">{option.icon}</span>
-              <span>{option.label}</span>
-            </button>
-          ))}
-        </>
-      ) : null}
-
-      {!isMulti && asset.type === "video" && onReframe && (
-        <button
-          onClick={() => {
-            onReframe(asset);
+        <UseImageDropdown
+          onSelect={(target) => {
+            onUseImage(asset, target);
             setAssetContextMenu(null);
           }}
-          className="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-700 flex items-center gap-3"
-        >
-          <Expand className="h-3.5 w-3.5 text-zinc-500" />
-          <span>Reframe</span>
-        </button>
-      )}
+          variant="context"
+        />
+      ) : null}
+
+      {!isMulti && asset.type === "video" && onUseVideo ? (
+        <UseVideoDropdown
+          onSelect={(target) => {
+            onUseVideo(asset, target);
+            setAssetContextMenu(null);
+          }}
+          variant="context"
+        />
+      ) : null}
 
       {!isMulti && asset.generationParams && onCopySettings && (
         <button
@@ -446,6 +438,6 @@ export function AssetContextMenu({
           {isMulti ? `Delete ${targetIds.length} Assets` : "Delete Asset"}
         </span>
       </button>
-    </div>
+    </FloatingMenu>
   );
 }

@@ -34,6 +34,16 @@ logger = logging.getLogger(__name__)
 
 MULTI_SHOT_LORA_FILENAME = "LTX-2.3_Cinematic_hardcut.safetensors"
 MULTI_SHOT_LORA_STRENGTH = "1.0"
+VIDEO_TOOL_LORA_URLS = {
+    "relight": "https://huggingface.co/buckets/retIbedi/LTX-Loras/resolve/black-magic-ic-lora-450.safetensors",
+    "colorize": "https://huggingface.co/buckets/retIbedi/LTX-Loras/resolve/ltx-2.3-22b-ic-lora-colorization-0.9.safetensors",
+    "clean_plate": "https://huggingface.co/buckets/retIbedi/LTX-Loras/resolve/ltx-2.3-22b-ic-lora-clean-plate-1.0.safetensors",
+    "lip_dub": "https://huggingface.co/buckets/retIbedi/LTX-Loras/resolve/ltx-2.3-22b-ic-lora-lipdub-0.9.safetensors",
+    "decompression": "https://huggingface.co/buckets/retIbedi/LTX-Loras/resolve/ltx-2.3-22b-ic-lora-decompression-0.9.safetensors",
+    "sdr_to_hdr": "https://huggingface.co/buckets/retIbedi/LTX-Loras/resolve/ltx-2.3-22b-ic-lora-hdr-0.9.safetensors",
+    "remove_glare": "https://huggingface.co/buckets/retIbedi/LTX-Loras/resolve/lens-remover-ltx23-ic-lora.safetensors",
+    "deblur": "https://huggingface.co/buckets/retIbedi/LTX-Loras/resolve/ltx-2.3-22b-ic-lora-deblur-0.9.safetensors",
+}
 
 
 class VideoGenerationHandler(StateHandlerBase):
@@ -79,6 +89,7 @@ class VideoGenerationHandler(StateHandlerBase):
         duration = self._parse_forced_numeric_field(req.duration, "INVALID_DURATION")
         fps = self._parse_forced_numeric_field(req.fps, "INVALID_FPS")
         is_reframe = req.reframe is not None
+        is_lora_tool = req.videoTool is not None and req.videoTool != "extend"
         looks_like_reframe = (
             req.prompt.strip().lower() == "outpaint" and any(
                 media.role == "control_video" for media in req.inputMedia
@@ -101,9 +112,9 @@ class VideoGenerationHandler(StateHandlerBase):
         control_video_path = None
         audio_path = normalize_optional_path(req.audioPath)
 
-        video_prompt_type = "VG" if is_reframe else req.videoPromptType
+        video_prompt_type = "VG" if is_reframe or is_lora_tool else req.videoPromptType
         image_prompt_type = None
-        audio_prompt_type = "K" if is_reframe else None
+        audio_prompt_type = "K" if is_reframe or is_lora_tool else None
 
         legacy_image = normalize_optional_path(req.imagePath)
         if legacy_image:
@@ -170,6 +181,11 @@ class VideoGenerationHandler(StateHandlerBase):
             elif media.role == "reference_voice":
                 audio_path = media_path
                 audio_prompt_type = "A1OF"
+
+        if req.videoTool == "extend" and not start_image_path:
+            raise HTTPError(400, "VIDEO_TOOL_SOURCE_REQUIRED")
+        if is_lora_tool and not control_video_path:
+            raise HTTPError(400, "VIDEO_TOOL_SOURCE_REQUIRED")
 
         if is_reframe:
             reframe = req.reframe
@@ -415,9 +431,30 @@ class VideoGenerationHandler(StateHandlerBase):
                     else 0,
                 }
             )
+            enhancer_has_image = image_prompt_type != "V" and bool(
+                validated_start_image_path or validated_end_image_path
+            )
+            if req.enhancePrompt:
+                default_settings["prompt_enhancer"] = (
+                    "TI" if enhancer_has_image else "T"
+                ) + ("1" if req.shotPrompts else "")
+            else:
+                default_settings["prompt_enhancer"] = ""
             if req.shotPrompts:
                 default_settings["activated_loras"] = [MULTI_SHOT_LORA_FILENAME]
                 default_settings["loras_multipliers"] = MULTI_SHOT_LORA_STRENGTH
+            if is_lora_tool:
+                assert req.videoTool is not None
+                default_settings.update(
+                    {
+                        "activated_loras": [VIDEO_TOOL_LORA_URLS[req.videoTool]],
+                        "loras_multipliers": "",
+                        "force_fps": "control",
+                        "sliding_window_size": 481,
+                        "guidance_phases": 2,
+                        "denoising_strength": 1,
+                    }
+                )
             if is_reframe:
                 default_settings["force_fps"] = "auto"
                 default_settings["sliding_window_overlap"] = 33

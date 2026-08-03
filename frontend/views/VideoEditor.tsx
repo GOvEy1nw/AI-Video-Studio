@@ -108,6 +108,10 @@ import { usePlaybackEngine } from "./editor/usePlaybackEngine";
 import { GapGenerationModal } from "./editor/GapGenerationModal";
 import { GenerationErrorDialog } from "../components/GenerationErrorDialog";
 import { DeleteAssetDialog } from "../components/DeleteAssetDialog";
+import {
+  FloatingMenu,
+  FloatingSubmenu,
+} from "../components/FloatingMenu";
 import { useAssetDeletion } from "../hooks/use-asset-deletion";
 import { I2vGenerationModal } from "./editor/I2vGenerationModal";
 import { SubtitleTrackStyleEditor } from "./editor/SubtitleTrackStyleEditor";
@@ -284,6 +288,7 @@ export function VideoEditor() {
   const [savingPresetName, setSavingPresetName] = useState<string | null>(null);
   const presetNameInputRef = useRef<HTMLInputElement>(null);
   const layoutMenuRef = useRef<HTMLDivElement>(null);
+  const layoutMenuSurfaceRef = useRef<HTMLDivElement>(null);
 
   // Editable timecode state
   const [editingTimecode, setEditingTimecode] = useState(false);
@@ -618,7 +623,8 @@ export function VideoEditor() {
     const handleClick = (e: MouseEvent) => {
       if (
         layoutMenuRef.current &&
-        !layoutMenuRef.current.contains(e.target as Node)
+        !layoutMenuRef.current.contains(e.target as Node) &&
+        !layoutMenuSurfaceRef.current?.contains(e.target as Node)
       ) {
         setShowLayoutMenu(false);
       }
@@ -2525,7 +2531,13 @@ export function VideoEditor() {
                     Layout
                   </button>
                   {showLayoutMenu && (
-                    <div className="absolute top-full right-0 mt-1 w-56 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl shadow-black/50 py-1 z-60">
+                    <FloatingMenu
+                      ref={layoutMenuSurfaceRef}
+                      anchorRef={layoutMenuRef}
+                      placement="bottom-end"
+                      role="menu"
+                      className="w-56 overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-900 py-1 shadow-xl shadow-black/50"
+                    >
                       {savingPresetName !== null ? (
                         <div className="px-2 py-1.5">
                           <div className="text-[11px] text-zinc-400 mb-1.5 px-1">
@@ -2636,7 +2648,7 @@ export function VideoEditor() {
                           )}
                         </>
                       )}
-                    </div>
+                    </FloatingMenu>
                   )}
                 </div>
               </div>
@@ -2846,13 +2858,12 @@ export function VideoEditor() {
 
             {/* Context menu */}
             {timelineContextMenu && (
-              <div
+              <FloatingMenu
                 ref={timelineContextMenuRef}
-                className="fixed bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl py-1 z-50 min-w-[140px]"
-                style={{
-                  left: timelineContextMenu.x,
-                  top: timelineContextMenu.y,
-                }}
+                anchorPoint={timelineContextMenu}
+                gap={0}
+                role="menu"
+                className="min-w-[140px] rounded-lg border border-zinc-700 bg-zinc-800 py-1 shadow-xl"
                 onClick={(e) => e.stopPropagation()}
               >
                 <button
@@ -2896,36 +2907,41 @@ export function VideoEditor() {
                   <FileUp className="h-3 w-3" />
                   Import XML Timeline
                 </button>
-                <div className="relative group/export">
+                <FloatingSubmenu
+                  className="relative"
+                  menuClassName="min-w-[160px] rounded-lg border border-zinc-700 bg-zinc-800 py-1 shadow-xl"
+                  menuContent={
+                    <>
+                      <button
+                        onClick={() => {
+                          setShowExportModal(true);
+                          setTimelineContextMenu(null);
+                        }}
+                        className="w-full text-left px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-700 flex items-center gap-2"
+                      >
+                        <Upload className="h-3 w-3" />
+                        Export Timeline...
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleExportTimelineXml();
+                          setTimelineContextMenu(null);
+                        }}
+                        disabled={clips.length === 0}
+                        className="w-full text-left px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-700 flex items-center gap-2 disabled:opacity-40"
+                      >
+                        <FileDown className="h-3 w-3" />
+                        Export as FCP 7 XML
+                      </button>
+                    </>
+                  }
+                >
                   <button className="w-full text-left px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-700 flex items-center gap-2">
                     <Upload className="h-3 w-3" />
                     Export
                     <ChevronRight className="h-3 w-3 ml-auto text-zinc-500" />
                   </button>
-                  <div className="absolute left-full top-0 ml-0.5 min-w-[160px] bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl py-1 z-50 hidden group-hover/export:block">
-                    <button
-                      onClick={() => {
-                        setShowExportModal(true);
-                        setTimelineContextMenu(null);
-                      }}
-                      className="w-full text-left px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-700 flex items-center gap-2"
-                    >
-                      <Upload className="h-3 w-3" />
-                      Export Timeline...
-                    </button>
-                    <button
-                      onClick={() => {
-                        handleExportTimelineXml();
-                        setTimelineContextMenu(null);
-                      }}
-                      disabled={clips.length === 0}
-                      className="w-full text-left px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-700 flex items-center gap-2 disabled:opacity-40"
-                    >
-                      <FileDown className="h-3 w-3" />
-                      Export as FCP 7 XML
-                    </button>
-                  </div>
-                </div>
+                </FloatingSubmenu>
                 <div className="h-px bg-zinc-700 my-0.5" />
                 <button
                   onClick={() => {
@@ -2950,7 +2966,7 @@ export function VideoEditor() {
                     </button>
                   </>
                 )}
-              </div>
+              </FloatingMenu>
             )}
           </div>
           {/* Timeline with Tools */}
@@ -3098,12 +3114,14 @@ export function VideoEditor() {
                                 setShowTrimFlyout(false);
                               }}
                             />
-                            <div
-                              className="fixed bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl py-1 z-9999 min-w-[160px]"
-                              style={{
-                                top: rect?.top ?? 0,
-                                left: (rect?.right ?? 44) + 4,
+                            <FloatingMenu
+                              anchorPoint={{
+                                x: (rect?.right ?? 44) + 4,
+                                y: rect?.top ?? 0,
                               }}
+                              gap={0}
+                              role="menu"
+                              className="min-w-[160px] overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-800 py-1 shadow-xl"
                             >
                               {TRIM_TOOLS.map((t) => (
                                 <button
@@ -3126,7 +3144,7 @@ export function VideoEditor() {
                                   </span>
                                 </button>
                               ))}
-                            </div>
+                            </FloatingMenu>
                           </>
                         );
                       })()}
@@ -5558,10 +5576,12 @@ export function VideoEditor() {
 
         {/* Bin right-click context menu */}
         {binContextMenu && (
-          <div
+          <FloatingMenu
             ref={binContextMenuRef}
-            className="fixed bg-zinc-800 border border-zinc-700 rounded-xl shadow-2xl py-1.5 z-60 min-w-[160px] text-xs"
-            style={{ left: binContextMenu.x, top: binContextMenu.y }}
+            anchorPoint={binContextMenu}
+            gap={0}
+            role="menu"
+            className="min-w-[160px] overflow-y-auto rounded-xl border border-zinc-700 bg-zinc-800 py-1.5 text-xs shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -5602,7 +5622,7 @@ export function VideoEditor() {
               <Trash2 className="h-3.5 w-3.5" />
               <span>Delete Bin</span>
             </button>
-          </div>
+          </FloatingMenu>
         )}
 
         {/* Clip right-click context menu */}

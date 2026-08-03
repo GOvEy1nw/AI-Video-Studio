@@ -404,6 +404,46 @@ def test_generate_video_forwards_default_lora_settings() -> None:
     assert captured["settings"]["loras_multipliers"] == "1.0"
 
 
+def test_generate_video_maps_ic_lora_guide_only() -> None:
+    bridge = _make_bridge()
+    captured: dict[str, object] = {}
+
+    def fake_run_manifest(*, manifest, media_suffixes, on_progress, is_cancelled):  # type: ignore[no-untyped-def]
+        captured["settings"] = manifest[0]["params"]
+        return ["E:/tmp/out.mp4"]
+
+    bridge._run_manifest = fake_run_manifest  # type: ignore[method-assign]
+    source_path = "E:/tmp/source_trimmed.mp4"
+
+    bridge.generate_video(
+        prompt="Relight this clip",
+        resolution_label="540p",
+        aspect_ratio="16:9",
+        duration_seconds=4,
+        fps=24,
+        steps=8,
+        seed=123,
+        camera_motion="none",
+        negative_prompt="",
+        image_path=None,
+        audio_path=None,
+        on_progress=lambda *_args: None,
+        is_cancelled=lambda: False,
+        start_image_path=None,
+        control_video_path=source_path,
+        image_prompt_type=None,
+        video_prompt_type="VG",
+    )
+
+    settings = captured["settings"]
+    resolved_source = str(Path(source_path).resolve())
+    assert "video_source" not in settings
+    assert settings["video_guide"] == resolved_source
+    assert "image_prompt_type" not in settings
+    assert settings["video_prompt_type"] == "VG"
+    assert settings["config"] == "PrunaAI VAE"
+
+
 def test_generate_video_forwards_outpainting_settings() -> None:
     bridge = _make_bridge()
     captured: dict[str, object] = {}
@@ -505,7 +545,13 @@ def test_generate_director_video_submits_exact_backend_settings() -> None:
     )
 
     assert output == "E:/tmp/director.mp4"
-    assert captured["manifest"] == [{"id": 1, "params": settings, "plugin_data": {}}]
+    assert captured["manifest"] == [
+        {
+            "id": 1,
+            "params": {**settings, "config": "PrunaAI VAE"},
+            "plugin_data": {},
+        }
+    ]
 
 
 def test_select_final_output_prefers_newest_combined_file(tmp_path: Path) -> None:

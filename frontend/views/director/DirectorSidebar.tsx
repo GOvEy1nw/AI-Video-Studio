@@ -25,6 +25,7 @@ import type { GalleryGridColumns } from "@/components/GalleryViewControls";
 import { DeleteAssetDialog } from "@/components/DeleteAssetDialog";
 import { useAssetDeletion } from "@/hooks/use-asset-deletion";
 import { Tooltip } from "@/components/ui/tooltip";
+import { FloatingMenu } from "../../components/FloatingMenu";
 import {
   buildUploadedAssetFromImport,
   findAssetByPath,
@@ -109,7 +110,7 @@ export function DirectorSidebar(props: Props) {
   const [takesViewAssetId, setTakesViewAssetId] = useState<string | null>(null);
   const [assetViewMode, setAssetViewMode] = useState<"grid" | "list">("grid");
   const [assetGridColumns, setAssetGridColumns] =
-    useState<GalleryGridColumns>(3);
+    useState<GalleryGridColumns>(2);
   const [showFavorites, setShowFavorites] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [timelineContextMenu, setTimelineContextMenu] = useState<{
@@ -519,10 +520,12 @@ export function DirectorSidebar(props: Props) {
       </div>
 
       {timelineContextMenu && (
-        <div
+        <FloatingMenu
           ref={timelineContextMenuRef}
-          className="fixed z-60 min-w-[140px] rounded-lg border border-zinc-700 bg-zinc-800 py-1 shadow-xl"
-          style={{ left: timelineContextMenu.x, top: timelineContextMenu.y }}
+          anchorPoint={timelineContextMenu}
+          gap={0}
+          role="menu"
+          className="min-w-[140px] overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-800 py-1 shadow-xl"
           onMouseDown={(event) => event.stopPropagation()}
         >
           <button
@@ -572,7 +575,7 @@ export function DirectorSidebar(props: Props) {
               Delete
             </button>
           )}
-        </div>
+        </FloatingMenu>
       )}
 
       {assetContextMenu && contextAsset && (

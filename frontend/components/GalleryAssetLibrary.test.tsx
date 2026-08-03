@@ -3,10 +3,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_GALLERY_FILTER,
   filterGalleryAssets,
+  toggleGalleryFilterValue,
 } from "../lib/gallery-filters";
 import type { Asset } from "../types/project";
 import { GalleryFilters } from "./GalleryFilters";
-import { GalleryAssetCard } from "./GalleryAssetLibrary";
+import {
+  GalleryAssetCard,
+  GalleryAssetLibrary,
+  type GalleryAssetLibraryProps,
+} from "./GalleryAssetLibrary";
 import { GalleryViewControls } from "./GalleryViewControls";
 
 vi.mock("./AudioWaveform", () => ({
@@ -36,7 +41,7 @@ const makeAsset = (
 });
 
 describe("Asset Library controls", () => {
-  it("shows everything with no filters and applies selected filters inclusively", () => {
+  it("shows everything with no filters and combines selected filters", () => {
     const assets = [
       makeAsset("generated-image", "image", "generated"),
       makeAsset("uploaded-video", "video", "uploaded"),
@@ -46,10 +51,10 @@ describe("Asset Library controls", () => {
     expect(filterGalleryAssets(assets, DEFAULT_GALLERY_FILTER)).toEqual(assets);
     expect(
       filterGalleryAssets(assets, {
-        types: ["image", "audio"],
-        sources: [],
+        types: ["image"],
+        sources: ["generated"],
       }).map(({ id }) => id),
-    ).toEqual(["generated-image", "generated-audio"]);
+    ).toEqual(["generated-image"]);
     expect(
       filterGalleryAssets(assets, {
         types: [],
@@ -64,19 +69,92 @@ describe("Asset Library controls", () => {
     ).toEqual([]);
   });
 
-  it("allows the final active filter to turn off", () => {
+  it("renders icon-only filters with accessible labels and exclusive selection", () => {
     const onChange = vi.fn();
     render(
       <GalleryFilters
-        filter={{ types: ["image"], sources: [] }}
+        filter={{ types: ["image"], sources: ["generated"] }}
         onChange={onChange}
       />,
     );
 
     const imageFilter = screen.getByRole("button", { name: "Image" });
+    const videoFilter = screen.getByRole("button", { name: "Video" });
+    const generatedFilter = screen.getByRole("button", { name: "Generated" });
+    const uploadedFilter = screen.getByRole("button", { name: "Uploaded" });
+
+    expect(imageFilter.textContent).toBe("");
+    expect(imageFilter.querySelector("svg")).toBeTruthy();
+    expect(imageFilter.getAttribute("title")).toBe("Image");
     expect(imageFilter.getAttribute("aria-pressed")).toBe("true");
+
+    fireEvent.click(videoFilter);
+    expect(onChange).toHaveBeenLastCalledWith({
+      types: ["video"],
+      sources: ["generated"],
+    });
+
+    fireEvent.click(uploadedFilter);
+    expect(onChange).toHaveBeenLastCalledWith({
+      types: ["image"],
+      sources: ["uploaded"],
+    });
+
     fireEvent.click(imageFilter);
-    expect(onChange).toHaveBeenCalledWith({ types: [], sources: [] });
+    expect(onChange).toHaveBeenLastCalledWith({
+      types: [],
+      sources: ["generated"],
+    });
+
+    fireEvent.click(generatedFilter);
+    expect(onChange).toHaveBeenLastCalledWith({
+      types: ["image"],
+      sources: [],
+    });
+  });
+
+  it("normalizes filter toggles to one value per group", () => {
+    expect(toggleGalleryFilterValue(["image", "audio"], "video")).toEqual([
+      "video",
+    ]);
+    expect(toggleGalleryFilterValue(["image", "audio"], "image")).toEqual([]);
+  });
+
+  it("uses hover-only scrollbar styling on the gallery scroll area", () => {
+    const props: GalleryAssetLibraryProps = {
+      assets: [],
+      visibleAssets: [],
+      bins: [],
+      binColors: {},
+      filter: DEFAULT_GALLERY_FILTER,
+      onFilterChange: vi.fn(),
+      selectedBin: null,
+      onSelectedBinChange: vi.fn(),
+      creatingBin: false,
+      onCreatingBinChange: vi.fn(),
+      newBinName: "",
+      onNewBinNameChange: vi.fn(),
+      onCommitNewBin: vi.fn(),
+      onAssignAssetToBin: vi.fn(),
+      onRenameBin: vi.fn(),
+      onDeleteBin: vi.fn(),
+      onSetBinColor: vi.fn(),
+      binContextMenu: null,
+      onBinContextMenuChange: vi.fn(),
+      viewMode: "grid",
+      onViewModeChange: vi.fn(),
+      gridColumns: 2,
+      onGridColumnsChange: vi.fn(),
+      showFavorites: false,
+      onShowFavoritesChange: vi.fn(),
+      getThumbnailUrl: () => undefined,
+      previewEnabled: false,
+      onAssetDragStart: vi.fn(),
+      onAssetContextMenu: vi.fn(),
+    };
+
+    const { container } = render(<GalleryAssetLibrary {...props} />);
+    expect(container.querySelector(".gallery-scrollbar")).toBeTruthy();
   });
 
   it("snaps the grid slider between column counts", () => {
@@ -85,7 +163,7 @@ describe("Asset Library controls", () => {
       <GalleryViewControls
         viewMode="grid"
         onViewModeChange={vi.fn()}
-        gridColumns={3}
+        gridColumns={2}
         onGridColumnsChange={onGridColumnsChange}
       />,
     );
@@ -231,6 +309,8 @@ describe("GalleryAssetCard", () => {
     expect(card).toBeTruthy();
     fireEvent.mouseEnter(card!);
     expect(play).not.toHaveBeenCalled();
-    expect(container.querySelector("video")?.className).toContain("object-cover");
+    expect(container.querySelector("video")?.className).toContain(
+      "object-cover",
+    );
   });
 });

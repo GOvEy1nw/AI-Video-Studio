@@ -1,0 +1,12 @@
+# #0474 Reframe and non-Reframe Video Tools own separate source states, so switching across Reframe discards the loaded video
+
+- 2026-08-02T11:55:42Z `issue`: Reframe and non-Reframe Video Tools own separate source states, so switching across Reframe discards the loaded video [frontend/views/genspace/hooks/useGenSpaceVideoTools.tsx]
+- 2026-08-02T12:00:13Z `attempt`: Made toolInput canonical across Reframe/non-Reframe, synchronized Reframe panel changes into it, and seeded Reframe URL/path/trim from it on switch; pending tests. [frontend/views/genspace/hooks/useGenSpaceVideoTools.tsx] (partial)
+- 2026-08-02T12:01:31Z `attempt`: Source handoff hook tests and TypeScript pass; two UI assertions failed only from unsupported toHaveAttribute matcher and over-escaped Windows path fixture. [frontend Video Tools tests] (partial)
+- 2026-08-02T12:01:52Z `attempt`: Corrected chip attribute assertions for local Vitest matchers and fixed Windows path fixture escaping; pending focused rerun. [frontend Video Tools tests] (partial)
+- 2026-08-02T12:02:20Z `attempt`: Chip UI and hook tests now pass; remaining Reframe trim assertion has one incorrectly escaped expected Windows path. [frontend/views/genspace/video/ReframePanel.test.tsx] (partial)
+- 2026-08-02T12:02:50Z `attempt`: Remaining fixture mismatch came from JSX text attributes treating backslashes literally; switch initialVideoPath to a JavaScript expression. [frontend/views/genspace/video/ReframePanel.test.tsx] (partial)
+- 2026-08-02T12:03:28Z `attempt`: Reframe trim behavior is correct; remove redundant path assertion because native-path preservation is already covered by hook test and JSX literal escaping obscures this trim-only check. [frontend/views/genspace/video/ReframePanel.test.tsx] (partial)
+- 2026-08-02T12:04:01Z `attempt`: Focused tests pass, but strict TypeScript found an existing Generate-only VideoModeTabs fixture; make Tool props optional with safe defaults outside Tools mode. [frontend/views/genspace/video/VideoModeTabs.tsx] (partial)
+- 2026-08-02T12:04:36Z `attempt`: Focused chip/source/trim tests pass (10/10) and strict TypeScript is clean; Reframe and every other Tool now share URL, native path, and trim. [frontend/views/genspace/hooks/useGenSpaceVideoTools.tsx] (worked)
+- 2026-08-02T12:09:14Z `fix`: Confirmed canonical Tool source handoff preserves URL, native path, and trim across Reframe and all other Tools; focused tests, TypeScript, build, and diff checks pass. [frontend/views/genspace/hooks/useGenSpaceVideoTools.tsx]

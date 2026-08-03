@@ -46,6 +46,7 @@ interface ReframeEditorProps {
   resetKey?: string | number;
   fillHeight?: boolean;
   disabled?: boolean;
+  framingEnabled?: boolean;
   children?: ReactNode;
 }
 
@@ -79,6 +80,7 @@ export function ReframeEditor({
   resetKey,
   fillHeight = false,
   disabled = false,
+  framingEnabled = true,
   children,
 }: ReframeEditorProps) {
   const { aspectMode, padding } = value;
@@ -111,6 +113,7 @@ export function ReframeEditor({
   }, [mediaUrl]);
 
   const frameLayout =
+    framingEnabled &&
     previewSize.width > 0 &&
     previewSize.height > 0 &&
     sourceWidth > 0 &&
@@ -126,6 +129,7 @@ export function ReframeEditor({
       : null;
   useEffect(() => {
     if (
+      !framingEnabled ||
       sourceWidth <= 0 ||
       sourceHeight <= 0 ||
       initializedZoomKeyRef.current === initializedZoomKey
@@ -153,6 +157,7 @@ export function ReframeEditor({
     }
   }, [
     aspectMode,
+    framingEnabled,
     initialZoom,
     initializedZoomKey,
     onChange,
@@ -162,6 +167,7 @@ export function ReframeEditor({
   ]);
 
   useEffect(() => {
+    if (!framingEnabled) return;
     if (previousAspectModeRef.current === aspectMode) return;
     previousAspectModeRef.current = aspectMode;
     setZoom(100);
@@ -174,7 +180,14 @@ export function ReframeEditor({
         padding,
       ),
     });
-  }, [aspectMode, onChange, padding, sourceHeight, sourceWidth]);
+  }, [
+    aspectMode,
+    framingEnabled,
+    onChange,
+    padding,
+    sourceHeight,
+    sourceWidth,
+  ]);
 
   const handleZoomChange = useCallback(
     (nextZoom: number) => {
@@ -225,7 +238,7 @@ export function ReframeEditor({
   return (
     <div
       className={`flex min-h-0 flex-col ${fillHeight ? "flex-1" : ""}`}
-      aria-label={`Reframe ${mediaType}`}
+      aria-label={`${framingEnabled ? "Reframe" : "Source"} ${mediaType}`}
     >
       <div
         data-testid={headerTestId ?? "reframe-editor-header"}
@@ -236,45 +249,51 @@ export function ReframeEditor({
             {headerLabel}
           </span>
         ) : null}
-        <div className="flex shrink-0 items-center rounded-lg p-1 gap-1 bg-zinc-800/35">
-          {controls}
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={handleReset}
-            title="Reset frame and zoom"
-            aria-label="Reset frame and zoom"
-            className="rounded p-1 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <RefreshCw className="h-3 w-3" />
-          </button>
-          <label className="flex min-w-0 items-center gap-1 rounded-md px-1.5 py-1">
-            <span className="text-2xs leading-none font-medium text-zinc-400">
-              Zoom
-            </span>
-            <input
-              type="range"
-              aria-label="Reframe zoom"
-              min={0}
-              max={100}
-              step={1}
-              value={zoom}
-              disabled={disabled}
-              onChange={(event) =>
-                handleZoomChange(Number(event.currentTarget.value))
-              }
-              className={`h-1 min-w-0 flex-1 accent-blue-500 ${
-                disabled ? "cursor-not-allowed" : "cursor-pointer"
-              }`}
-            />
-          </label>
-        </div>
+        {controls || framingEnabled ? (
+          <div className="flex shrink-0 items-center rounded-lg p-1 gap-1 bg-zinc-800/35">
+            {controls}
+            {framingEnabled ? (
+              <>
+                <button
+                  type="button"
+                  disabled={disabled}
+                  onClick={handleReset}
+                  title="Reset frame and zoom"
+                  aria-label="Reset frame and zoom"
+                  className="rounded p-1 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                </button>
+                <label className="flex min-w-0 items-center gap-1 rounded-md px-1.5 py-1">
+                  <span className="text-2xs leading-none font-medium text-zinc-400">
+                    Zoom
+                  </span>
+                  <input
+                    type="range"
+                    aria-label="Reframe zoom"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={zoom}
+                    disabled={disabled}
+                    onChange={(event) =>
+                      handleZoomChange(Number(event.currentTarget.value))
+                    }
+                    className={`h-1 min-w-0 flex-1 accent-blue-500 ${
+                      disabled ? "cursor-not-allowed" : "cursor-pointer"
+                    }`}
+                  />
+                </label>
+              </>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <div
         ref={previewRef}
         data-testid={canvasTestId}
-        className={`relative min-h-0 overflow-hidden ${canvasClassName}`}
+        className={`relative min-h-0 overflow-hidden rounded-lg ${canvasClassName}`}
         style={canvasStyle}
       >
         {mediaType === "image" ? (

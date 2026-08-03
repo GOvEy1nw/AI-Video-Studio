@@ -45,6 +45,7 @@ describe("generation transport request builders", () => {
     });
 
     expect(request.body.duration).toBe("5");
+    expect(request.body.enhancePrompt).toBe(false);
     expect(request.body.inputMedia).toEqual([
       {
         type: "video",
@@ -89,6 +90,19 @@ describe("generation transport request builders", () => {
     });
   });
 
+  it("serializes the curated Video Tool ID", () => {
+    const request = buildVideoRequestBody({
+      prompt: "Relight at sunset",
+      imagePath: null,
+      settings: { ...settings, enhancePrompt: true },
+      inputMedia: [{ path: "clip.mp4", role: "control_video", type: "video" }],
+      videoTool: "relight",
+    });
+
+    expect(request.body.videoTool).toBe("relight");
+    expect(request.body.enhancePrompt).toBe(true);
+  });
+
   it("preserves curated image profile payloads", () => {
     expect(
       buildImageRequestBody("prompt", settings, [
@@ -111,6 +125,7 @@ describe("generation transport request builders", () => {
       resolutionTier: "1080p",
       numSteps: 8,
       numImages: 2,
+      enhancePrompt: false,
       inputMedia: [
         {
           path: "image.png",

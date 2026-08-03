@@ -13,4 +13,5 @@ export interface GenerationSettings {
   variations?: number;
   imageInputRole?: string;
   imageProfileId?: string;
+  enhancePrompt?: boolean;
 }

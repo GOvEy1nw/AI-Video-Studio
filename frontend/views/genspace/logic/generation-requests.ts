@@ -17,6 +17,7 @@ import {
 } from "../constants";
 import type { GenSpaceSettings } from "../constants";
 import type { GenSpaceMediaInput } from "../types";
+import type { SubmittedVideoToolId } from "../../../types/video-tools";
 
 export interface GenerationInputMedia {
   path: string;
@@ -36,6 +37,7 @@ export interface VideoGenerationCommand {
   useAudioTrack: boolean;
   normalizedSettings: GenSpaceSettings;
   persistNormalizedSettings: boolean;
+  videoTool?: SubmittedVideoToolId;
 }
 
 export interface ReframeGenerationCommand extends VideoGenerationCommand {
@@ -51,7 +53,7 @@ export function buildGenerationInputMedia(
   inputs: GenSpaceMediaInput[],
 ): GenerationInputMedia[] {
   return inputs.flatMap((item) => {
-    const path = fileUrlToPath(item.url);
+    const path = item.path ?? fileUrlToPath(item.url);
     if (!path) return [];
     return [
       {
@@ -74,6 +76,7 @@ export function buildImageGenerationCommand(
   prompt: string,
   settings: GenSpaceSettings,
   imageInputs: GenSpaceMediaInput[],
+  enhancePrompt: boolean,
   edit?: {
     image: GenSpaceMediaInput;
     mask: ImageEditMaskRecipe | null;
@@ -108,6 +111,7 @@ export function buildImageGenerationCommand(
       variations: settings.variations,
       imageProfileId: settings.imageProfileId,
       imageInputRole: settings.imageInputRole,
+      enhancePrompt,
     },
     inputMedia: buildGenerationInputMedia(imageInputs),
     edit:
@@ -128,6 +132,7 @@ export function buildVideoGenerationCommand({
   inputImage,
   inputAudio,
   useAudioTrack,
+  enhancePrompt,
 }: {
   prompt: string;
   settings: GenSpaceSettings;
@@ -135,6 +140,7 @@ export function buildVideoGenerationCommand({
   inputImage: string | null;
   inputAudio: string | null;
   useAudioTrack: boolean;
+  enhancePrompt: boolean;
 }): VideoGenerationCommand {
   const startImage = imageInputs.find((item) => item.role === "start_image");
   const audio = imageInputs.find((item) =>
@@ -178,6 +184,7 @@ export function buildVideoGenerationCommand({
       imageResolution: normalizedSettings.imageResolution,
       imageAspectRatio: normalizedSettings.aspectRatio,
       imageSteps: normalizedSettings.imageSteps,
+      enhancePrompt,
     },
     audioPath,
     inputMedia: buildGenerationInputMedia(imageInputs),
@@ -187,10 +194,48 @@ export function buildVideoGenerationCommand({
   };
 }
 
+export function buildVideoToolGenerationCommand({
+  tool,
+  prompt,
+  settings,
+  input,
+  enhancePrompt,
+}: {
+  tool: SubmittedVideoToolId;
+  prompt: string;
+  settings: GenSpaceSettings;
+  input: GenSpaceMediaInput | null;
+  enhancePrompt: boolean;
+}): VideoGenerationCommand | null {
+  if (!prompt.trim() || !input) return null;
+  const role = tool === "extend" ? "continue_video" : "control_video";
+  const command = buildVideoGenerationCommand({
+    prompt,
+    settings,
+    imageInputs: [{ ...input, role, type: "video" }],
+    inputImage: null,
+    inputAudio: null,
+    useAudioTrack: false,
+    enhancePrompt,
+  });
+  if (tool !== "extend") return { ...command, videoTool: tool };
+  return {
+    ...command,
+    settings: { ...command.settings, duration: settings.duration },
+    normalizedSettings: {
+      ...command.normalizedSettings,
+      duration: settings.duration,
+    },
+    persistNormalizedSettings: false,
+    videoTool: tool,
+  };
+}
+
 export function buildReframeGenerationCommand(
   prompt: string,
   settings: GenSpaceSettings,
   input: ReframePanelState,
+  enhancePrompt: boolean,
 ): ReframeGenerationCommand | null {
   if (!input.videoPath || input.duration < 2) return null;
   const normalizedSettings = {
@@ -212,6 +257,7 @@ export function buildReframeGenerationCommand(
       imageResolution: normalizedSettings.imageResolution,
       imageAspectRatio: normalizedSettings.aspectRatio,
       imageSteps: normalizedSettings.imageSteps,
+      enhancePrompt,
     },
     audioPath: null,
     inputMedia: [{ path: input.videoPath, role: "control_video" }],

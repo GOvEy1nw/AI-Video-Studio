@@ -31,6 +31,10 @@ import type {
   TextOverlayStyle,
 } from "../../types/project";
 import { TEXT_PRESETS } from "../../types/project";
+import {
+  FloatingMenu,
+  FloatingSubmenu,
+} from "../../components/FloatingMenu";
 import { COLOR_LABELS } from "./video-editor-utils";
 
 export interface ClipContextMenuProps {
@@ -226,10 +230,12 @@ export function ClipContextMenu({
   })();
 
   return (
-    <div
+    <FloatingMenu
       ref={clipContextMenuRef}
-      className="fixed bg-zinc-800 border border-zinc-700 rounded-xl shadow-2xl py-1.5 z-60 min-w-[220px] max-w-[280px] text-xs"
-      style={{ left: clipContextMenu.x, top: clipContextMenu.y }}
+      anchorPoint={clipContextMenu}
+      gap={0}
+      role="menu"
+      className="min-w-[220px] max-w-[280px] overflow-y-auto rounded-xl border border-zinc-700 bg-zinc-800 py-1.5 text-xs shadow-2xl"
       onClick={(e) => e.stopPropagation()}
     >
       {/* ════════════════════════════════════════════════
@@ -355,7 +361,7 @@ export function ClipContextMenu({
           close={close}
         />
       ) : null}
-    </div>
+    </FloatingMenu>
   );
 }
 
@@ -844,39 +850,46 @@ function SingleClipMenu({
                   close();
                 }}
               />
-            )}
+          )}
           {(isVideo || isImage) && (
-            <div className="relative group/capture">
+            <FloatingSubmenu
+              className="relative"
+              menuClassName="min-w-[200px] rounded-lg border border-zinc-700 bg-zinc-800 py-1 shadow-xl"
+              menuContent={
+                <>
+                  <MenuItem
+                    icon={Video}
+                    iconClass="text-blue-400"
+                    label="Generate Video in Gen Space"
+                    onClick={() => {
+                      onCaptureFrameForVideo(contextClip);
+                      close();
+                    }}
+                  />
+                  {isImage && (
+                    <MenuItem
+                      icon={Film}
+                      iconClass="text-blue-400"
+                      label="Image to Video (I2V)"
+                      disabled={
+                        isRegenerating && i2vClipId === contextClip.id
+                      }
+                      onClick={() => {
+                        setI2vClipId(contextClip.id);
+                        setI2vPrompt(contextClip.asset?.prompt || "");
+                        close();
+                      }}
+                    />
+                  )}
+                </>
+              }
+            >
               <button className="w-full text-left px-3 py-1.5 flex items-center gap-3 transition-colors hover:bg-zinc-700 text-zinc-300">
                 <Camera className="h-3.5 w-3.5 shrink-0 text-amber-400" />
                 <span className="flex-1 truncate">Use Frame As...</span>
                 <ChevronRight className="h-3 w-3 text-zinc-500" />
               </button>
-              <div className="absolute left-full top-0 ml-0.5 min-w-[200px] bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl py-1 z-70 hidden group-hover/capture:block">
-                <MenuItem
-                  icon={Video}
-                  iconClass="text-blue-400"
-                  label="Generate Video in Gen Space"
-                  onClick={() => {
-                    onCaptureFrameForVideo(contextClip);
-                    close();
-                  }}
-                />
-                {isImage && (
-                  <MenuItem
-                    icon={Film}
-                    iconClass="text-blue-400"
-                    label="Image to Video (I2V)"
-                    disabled={isRegenerating && i2vClipId === contextClip.id}
-                    onClick={() => {
-                      setI2vClipId(contextClip.id);
-                      setI2vPrompt(contextClip.asset?.prompt || "");
-                      close();
-                    }}
-                  />
-                )}
-              </div>
-            </div>
+            </FloatingSubmenu>
           )}
         </>
       )}

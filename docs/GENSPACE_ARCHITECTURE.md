@@ -29,8 +29,19 @@ above the panels, so tab switches do not reset settings or create hidden media
 elements.
 
 The center detail header uses the selected asset prompt and keeps Copy Settings
-beside it. Asset Library grid cards are square, crop image/video media with
-`object-cover`, and never autoplay audio or video on hover.
+beside it. While an active generation is selected, that header instead shows
+the normalized lifecycle detail, model, step/phase detail, one persistent
+progress bar, and cancel action. Its body contains only the current preview;
+spinners and download overlays do not render there. Asset Library grid cards
+are square, crop image/video media with `object-cover`, and never autoplay
+audio or video on hover.
+
+The transient generation card stays intentionally minimal: mode-themed
+background, progress bar, and cancel action only. Starting a job selects that
+card and keeps detailed lifecycle status, model loading, phases, steps, and
+preview in the center detail area. Completion persistence selects the returned
+asset so the finished result replaces the transient detail without another
+gallery click.
 
 Mode-owned UI and helpers live under `image/`, `video/`, or `music/`.
 Cross-mode controls remain in `components/`; cross-mode state, effects, and
@@ -44,7 +55,7 @@ and shallow rather than adding one-file `views/components/lib` subfolders.
 | Main/image/video mode transitions | `hooks/useGenSpaceModeState.ts` |
 | Typed image/video/music settings | `hooks/useGenSpaceSettingsState.ts` |
 | Prompt and attached media | `hooks/useGenSpaceMediaInputs.ts` |
-| Reframe/Retake panel state | `hooks/useGenSpaceVideoTools.tsx` |
+| Video Tools/Retake panel state | `hooks/useGenSpaceVideoTools.tsx` |
 | Image panel UI | `image/` |
 | Video, Reframe, Retake, and trim UI | `video/` |
 | Shared Image/Video Reframe framing UI | `components/ReframeEditor.tsx` |
@@ -147,8 +158,8 @@ context, call backend endpoints, persist assets, or instantiate
   inline plus popovers for presets and compile editable comma-separated Art
   Style prompt text into `style_description.art_style`. Lighting and
   Aesthetics follow the same editable prompt pattern.
-- Submission serializes compact JSON in Ideogram's caption shape and bypasses
-  generic prompt enhancement so the structure is not rewritten.
+- Submission serializes compact JSON in Ideogram's caption shape and forces
+  WanGP prompt enhancement off so the structure is not rewritten.
 - Generated assets persist the submitted JSON through existing prompt
   metadata. Copy Settings detects Ideogram profiles and reconstructs Region
   state from that JSON; plain legacy prompts become high-level descriptions.
@@ -156,9 +167,11 @@ context, call backend endpoints, persist assets, or instantiate
   Applied camera, lens, focal length, aperture, shutter, and ISO stay outside
   the authored prompt, appear as a compact prompt-area indicator, and compile
   into the immutable submission prompt as `Shot on ...` at generation time.
-- Framing applies after optional prompt enhancement so the camera prefix keeps
-  its exact user-selected values. Generated asset prompt metadata stores the
-  final effective prompt sent for generation.
+- Framing compiles into the authored prompt before submission. Image/video
+  enhancement remains a semantic request flag; AiVS does not rewrite the
+  prompt before generation. Generated asset prompt metadata therefore stores
+  the authored submission prompt, while WanGP output metadata may also record
+  its runtime `enhanced_prompt`.
 - Image Create/Edit and Video Generate keep their output Duration, Resolution,
   and Aspect Ratio controls in the prompt editor footer. Reframe moves
   Resolution and Aspect Ratio into its editor control row. Media-owned disabled
@@ -167,6 +180,37 @@ context, call backend endpoints, persist assets, or instantiate
   landscape/portrait rows for `16:9`, `21:9`, `4:3`, and `3:2`.
   Video Generate duration uses a continuous 2-20 second slider.
 
+## Video contract
+
+- Video exposes Generate, Tools, and Retake process tabs. The internal
+  `reframe` process value remains for saved-state compatibility but is labelled
+  `Tools` in the UI.
+- Tools contains Reframe, Extend, Relight, Colorize, Clean Plate, Lip Dub,
+  Decompression, SDR to HDR, Remove Glare, and Deblur. A wrapped chip group
+  directly below the process tabs selects the active Tool; no separate
+  dropdown is used.
+- Generate's standard video media-role menu omits SDR to HDR and Continue
+  Video. Users select those workflows through Video Tools; legacy role
+  identifiers remain accepted for saved-data compatibility.
+- All Tools share one canonical source video, native path, and trim range, so
+  switching to or from Reframe preserves the loaded source. Reframe retains
+  its aspect, zoom, and pan state independently; other Tools use the same
+  source editor without framing controls. `VideoToolInput` keeps that editor
+  mounted at one stable tree position for every Tool, so Tool switches update
+  framing and controls without remounting the video element.
+- Extend submits the source as `continue_video` and preserves existing WanGP
+  continuation behavior. Curated IC-LoRA tools submit it as `control_video`
+  plus a typed `videoTool`; backend owns the exact LoRA URL and fixed tool
+  settings. No user-facing generic LoRA contract is exposed.
+- Non-Reframe tools require a source and authored prompt. Prompt enhancement
+  defaults off for every Tool selection and, when enabled, is delegated to
+  WanGP during generation. Trim duration normalizes output duration;
+  Extend adds that duration after the source while IC-LoRA tools retain
+  source-length output behavior.
+- Generated Tool assets persist selected tool, normalized settings, and source
+  trim. Copy Settings restores Tools mode, selected item, prompt/settings, and
+  its source without adding that source to generic Video Generate inputs.
+
 ## Music contract
 
 - Music has one full settings mode. `experienceMode: "advanced"` remains only
@@ -174,14 +218,18 @@ context, call backend endpoints, persist assets, or instantiate
 - `MusicMediaInputs` owns independent Cover Song and Transfer Timbre slots.
   The backend maps none/Cover/Timbre/both to WanGP audio tasks `""`, `A`, `B`,
   and `AB`.
-- Instrumental, Auto Lyrics, and Custom Lyrics share one three-way tab.
-  Custom Lyrics shows the lyrics editor, seed, Compose Lyrics, Think, and vocal
-  controls. Auto Lyrics hides the editor but keeps vocal controls.
-  Instrumental hides both the editor and vocal controls. Compose treats the
-  current text as an idea and replaces it with the composed lyrics.
-- Auto Lyrics composes hidden lyrics from the song description during
-  generation. Empty Custom Lyrics does the same with its optional idea,
-  Think, and lyrics seed; vocal covers still require original custom lyrics.
+- Instrumental, Auto Lyrics, and Custom Lyrics share one three-way tab directly
+  below the model picker. Custom Lyrics shows the lyrics editor, seed, Compose
+  Lyrics, and Think below Song Prompt. Auto Lyrics hides the editor but keeps
+  vocal controls. Instrumental hides both the editor and vocal controls.
+  Language and vocal character use icon popovers in the Song Prompt footer.
+  Compose treats the current text as an idea and replaces it with the composed
+  lyrics.
+- Auto Lyrics delegates lyric composition to WanGP during generation with
+  `prompt_enhancer="T"`. Custom Lyrics must contain editable lyrics before
+  generation; Compose Lyrics remains the explicit operation that fills the
+  editor from its optional idea, Think setting, and lyrics seed. Instrumental
+  generation explicitly disables prompt enhancement.
 - Description enhancement is a green generation-time toggle for WanGP music
   LM Chain Of Thought preprocessing, not an immediate prompt rewrite.
 - Song Prompt keeps presets behind one inline plus popover grouped by Genre,

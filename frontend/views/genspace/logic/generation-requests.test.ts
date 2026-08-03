@@ -8,6 +8,7 @@ import {
   buildReframeGenerationCommand,
   buildRetakeGenerationCommand,
   buildVideoGenerationCommand,
+  buildVideoToolGenerationCommand,
 } from "./generation-requests";
 
 const musicProfile = {
@@ -35,9 +36,11 @@ describe("GenSpace generation request builders", () => {
           },
         },
       ],
+      true,
     );
 
     expect(command.settings.imageProfileId).toBe("z_image_turbo");
+    expect(command.settings.enhancePrompt).toBe(true);
     expect(command.inputMedia[0]?.role).toBe("reference_image");
     expect(command.inputMedia[0]?.crop).toMatchObject({
       aspectRatio: "1:1",
@@ -58,6 +61,7 @@ describe("GenSpace generation request builders", () => {
           type: "image",
         },
       ],
+      true,
       {
         image: {
           id: "master",
@@ -104,6 +108,7 @@ describe("GenSpace generation request builders", () => {
       "extend the scene",
       DEFAULT_VIDEO_SETTINGS,
       [],
+      false,
       {
         image: {
           id: "master",
@@ -140,10 +145,12 @@ describe("GenSpace generation request builders", () => {
       inputImage: null,
       inputAudio: null,
       useAudioTrack: true,
+      enhancePrompt: true,
     });
 
     expect(command.normalizedSettings.duration).toBe(7);
     expect(command.settings.model).toBe("pro");
+    expect(command.settings.enhancePrompt).toBe(true);
     expect(command.inputMedia[0]?.trimStartTime).toBe(1);
   });
 
@@ -163,12 +170,54 @@ describe("GenSpace generation request builders", () => {
         padding: { top: 0, bottom: 0, left: 10, right: 10 },
         ready: true,
       },
+      true,
     );
 
     expect(command?.prompt).toBe("outpaint");
     expect(command?.settings.duration).toBe(3);
+    expect(command?.settings.enhancePrompt).toBe(true);
     expect(command?.reframe.controlVideoStartTime).toBe(1);
   });
+
+  it.each([
+    ["extend", "continue_video", 12, false],
+    ["relight", "control_video", 5, true],
+  ] as const)(
+    "builds %s with one video input and the correct duration contract",
+    (tool, role, expectedDuration, persistNormalizedSettings) => {
+      const command = buildVideoToolGenerationCommand({
+        tool,
+        prompt: "Improve this clip",
+        settings: { ...DEFAULT_VIDEO_SETTINGS, duration: 12 },
+        input: {
+          id: "source",
+          url: "app-media://clip.mp4",
+          path: "C:/clip.mp4",
+          role,
+          type: "video",
+          trimStartTime: 1,
+          trimDuration: 4.2,
+        },
+        enhancePrompt: true,
+      });
+
+      expect(command?.videoTool).toBe(tool);
+      expect(command?.inputMedia).toEqual([
+        expect.objectContaining({
+          path: "C:/clip.mp4",
+          role,
+          type: "video",
+          trimDuration: 4.2,
+        }),
+      ]);
+      expect(command?.settings.duration).toBe(expectedDuration);
+      expect(command?.normalizedSettings.duration).toBe(expectedDuration);
+      expect(command?.persistNormalizedSettings).toBe(
+        persistNormalizedSettings,
+      );
+      expect(command?.settings.enhancePrompt).toBe(true);
+    },
+  );
 
   it("keeps Retake blocked while its availability gate is disabled", () => {
     expect(
@@ -218,7 +267,7 @@ describe("GenSpace generation request builders", () => {
     expect(command.request.lyrics).toBe(lyrics);
   });
 
-  it("composes empty custom lyrics at generation time with its own seed", () => {
+  it("requires Compose Lyrics to populate custom lyrics before generation", () => {
     const command = buildMusicGenerationCommand(
       "song",
       {
@@ -233,15 +282,10 @@ describe("GenSpace generation request builders", () => {
       musicProfile,
     );
 
-    expect(command.ok).toBe(true);
-    if (!command.ok) return;
-    expect(command.request).toMatchObject({
-      vocalMode: "custom-lyrics",
-      lyricsPrompt: "a midnight reunion",
-      lyricsThink: true,
-      lyricsSeed: 123,
+    expect(command).toEqual({
+      ok: false,
+      message: "Write or compose lyrics before generating.",
     });
-    expect(command.request.lyrics).toBeUndefined();
   });
 
   it("maps Cover Song and Transfer Timbre independently", () => {

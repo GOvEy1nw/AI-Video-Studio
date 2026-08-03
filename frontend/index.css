@@ -156,6 +156,30 @@ body {
   background: #555;
 }
 
+.gallery-scrollbar {
+  scrollbar-color: transparent transparent;
+}
+
+.gallery-scrollbar:hover {
+  scrollbar-color: #444 #1a1a1a;
+}
+
+.gallery-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.gallery-scrollbar::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+
+.gallery-scrollbar:hover::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+.gallery-scrollbar:hover::-webkit-scrollbar-thumb {
+  background: #444;
+}
+
 /* Drag and drop styling */
 .dropzone-active {
   border-color: rgb(var(--accent)) !important;

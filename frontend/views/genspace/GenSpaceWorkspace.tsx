@@ -14,27 +14,27 @@ export function GenSpaceWorkspace() {
     setWidth: (value: number) => void,
     current: number | undefined,
     delta: number,
-  ) => setWidth(Math.min(25, Math.max(20, (current ?? 25) + delta / 4)));
+  ) => setWidth(Math.min(25, Math.max(15, (current ?? 25) + delta / 4)));
   return (
     <div {...controller.rootProps}>
       <GenSpaceGallery
         {...controller.gallery}
         style={{
-          width: rightWidth ? rightWidth + "vw" : "clamp(20vw, 20vw, 25vw)",
+          width: rightWidth ? rightWidth + "vw" : "clamp(15vw, 15vw, 25vw)",
         }}
         onResize={(delta) => resize(setRightWidth, rightWidth, delta / 4)}
       />
       <GenSpaceSelectedGeneration
         {...controller.selectedGeneration}
         style={{
-          left: leftWidth ? leftWidth + "vw" : "clamp(20vw, 20vw, 25vw)",
-          right: rightWidth ? rightWidth + "vw" : "clamp(20vw, 20vw, 25vw)",
+          left: leftWidth ? leftWidth + "vw" : "clamp(20vw, 25vw, 25vw)",
+          right: rightWidth ? rightWidth + "vw" : "clamp(15vw, 15vw, 25vw)",
         }}
       />
       <aside
         className="absolute inset-y-0 left-0 z-20"
         style={{
-          width: leftWidth ? leftWidth + "vw" : "clamp(20vw, 20vw, 25vw)",
+          width: leftWidth ? leftWidth + "vw" : "clamp(20vw, 25vw, 25vw)",
         }}
       >
         <GenSpaceSidebar controller={controller.sidebar} />

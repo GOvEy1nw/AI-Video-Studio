@@ -65,14 +65,8 @@ class MusicGenerationHandler(StateHandlerBase):
 
         try:
             audio_task, effective_duration, warnings = self._resolve_input_audio(req, profile)
-            needs_lyrics_composition = req.vocalMode == "auto-lyrics" or (
-                req.vocalMode == "custom-lyrics" and req.lyrics is None
-            )
-            resolved_lyrics, response_lyrics = self._resolve_lyrics(
-                req, profile, effective_duration
-            )
-            if not needs_lyrics_composition:
-                self._generation.update_progress("preparing_music", 0)
+            resolved_lyrics, response_lyrics = self._resolve_lyrics(req)
+            self._generation.update_progress("preparing_music", 0)
             try:
                 key_scale = normalize_music_key_scale(req.keyScale)
                 language = resolve_vocal_language(
@@ -119,6 +113,10 @@ class MusicGenerationHandler(StateHandlerBase):
                         ),
                     )
 
+                default_settings = dict(profile.wangp_default_settings)
+                default_settings["prompt_enhancer"] = (
+                    "T" if req.vocalMode == "auto-lyrics" else ""
+                )
                 path = self._wangp_bridge.generate_music(
                     description=description,
                     lyrics=resolved_lyrics,
@@ -138,7 +136,7 @@ class MusicGenerationHandler(StateHandlerBase):
                     cover_strength=audio_task.cover_strength,
                     seed=seed,
                     model_type=profile.wangp_model_type,
-                    default_settings=dict(profile.wangp_default_settings),
+                    default_settings=default_settings,
                     on_progress=on_progress,
                     is_cancelled=self._generation.is_generation_cancelled,
                 )
@@ -223,6 +221,8 @@ class MusicGenerationHandler(StateHandlerBase):
         }
         if not supported_modes[req.vocalMode]:
             raise HTTPError(400, "MUSIC_MODE_UNSUPPORTED: Vocal mode is unsupported.")
+        if req.vocalMode == "custom-lyrics" and req.lyrics is None:
+            raise HTTPError(400, "MUSIC_CUSTOM_LYRICS_REQUIRED: Write or compose lyrics before generating.")
         if not policy.duration_min_seconds <= req.durationSeconds <= policy.duration_max_seconds:
             raise HTTPError(400, "MUSIC_DURATION_OUT_OF_RANGE: Duration is outside profile bounds.")
         if req.variations > policy.max_variations:
@@ -262,27 +262,12 @@ class MusicGenerationHandler(StateHandlerBase):
     def _resolve_lyrics(
         self,
         req: GenerateMusicRequest,
-        profile: ModelProfile,
-        duration_seconds: int,
     ) -> tuple[str, str | None]:
         if req.vocalMode == "instrumental":
             return "[Instrumental]", None
         if req.vocalMode == "custom-lyrics" and req.lyrics is not None:
             return req.lyrics, req.lyrics
-        lyrics = self._compose_text(
-            profile=profile,
-            description=req.description,
-            lyrics_prompt=(
-                req.lyricsPrompt if req.vocalMode == "custom-lyrics" else None
-            ),
-            language=req.vocalLanguage,
-            duration_seconds=duration_seconds,
-            think=req.lyricsThink if req.vocalMode == "custom-lyrics" else False,
-            seed=req.lyricsSeed if req.vocalMode == "custom-lyrics" else None,
-            error_prefix="AUTO_LYRICS_UNAVAILABLE",
-        )
-        self._generation.update_progress("preparing_music", 5)
-        return lyrics, lyrics
+        return req.description, None
 
     def compose_lyrics(
         self, req: ComposeMusicLyricsRequest

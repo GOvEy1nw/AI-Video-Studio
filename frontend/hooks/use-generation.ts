@@ -30,6 +30,7 @@ import type {
   MusicOutput,
 } from "./generation/types";
 import { useGenerationJob } from "./generation/useGenerationJob";
+import type { SubmittedVideoToolId } from "../types/video-tools";
 
 export type { GenerateMusicResult, MusicOutput };
 
@@ -47,6 +48,7 @@ export interface UseGenerationReturn extends GenerationState {
     useAudioTrack?: boolean,
     shotPrompts?: { seconds: number; prompt: string }[],
     reframe?: ReframeGenerateOptions,
+    videoTool?: SubmittedVideoToolId,
   ) => Promise<void>;
   generateDirector: (request: GenerateDirectorRequest) => Promise<void>;
   generateImage: (
@@ -86,6 +88,7 @@ export function useGeneration(): UseGenerationReturn {
       useAudioTrack,
       shotPrompts,
       reframe,
+      videoTool,
       directorRequest,
     }: {
       prompt: string;
@@ -96,6 +99,7 @@ export function useGeneration(): UseGenerationReturn {
       useAudioTrack?: boolean;
       shotPrompts?: { seconds: number; prompt: string }[];
       reframe?: ReframeGenerateOptions;
+      videoTool?: SubmittedVideoToolId;
       directorRequest?: GenerateDirectorRequest;
     }) => {
       const request = directorRequest
@@ -109,6 +113,7 @@ export function useGeneration(): UseGenerationReturn {
             useAudioTrack,
             shotPrompts,
             reframe,
+            videoTool,
           });
       await runJob<GenerateDirectorResponse | null>({
         endpoint: request.endpoint,
@@ -167,6 +172,7 @@ export function useGeneration(): UseGenerationReturn {
       useAudioTrack,
       shotPrompts,
       reframe,
+      videoTool,
     ) => {
       await runVideoRequest({
         prompt,
@@ -177,6 +183,7 @@ export function useGeneration(): UseGenerationReturn {
         useAudioTrack,
         shotPrompts,
         reframe,
+        videoTool,
       });
     },
     [runVideoRequest],

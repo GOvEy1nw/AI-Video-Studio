@@ -1,13 +1,15 @@
-import { useCallback, useRef, useState, type ReactNode } from "react";
-import { ReframePanel, type ReframePanelState } from "../video/ReframePanel";
+import { useCallback, useRef, useState } from "react";
+import type { ReframePanelState } from "../video/ReframePanel";
 import { RetakePanel } from "../video/RetakePanel";
 import type {
   GenSpaceMode,
   ReframeSubmissionSnapshot,
   RetakeSubmissionSnapshot,
+  GenSpaceMediaInput,
   VideoProcessMode,
 } from "../types";
 import type { ReframeAspectMode } from "../video/reframe-outpaint";
+import type { VideoToolId } from "../../../types/video-tools";
 
 export interface GenSpaceRetakeInput {
   videoUrl: string | null;
@@ -21,15 +23,11 @@ export interface GenSpaceRetakeInput {
 export function useGenSpaceVideoTools({
   mode,
   videoMode,
-  isGenerating,
-  generationStatus,
   isRetaking,
   retakeStatus,
 }: {
   mode: GenSpaceMode;
   videoMode: VideoProcessMode;
-  isGenerating: boolean;
-  generationStatus: string;
   isRetaking: boolean;
   retakeStatus: string;
 }) {
@@ -41,6 +39,8 @@ export function useGenSpaceVideoTools({
     videoDuration: 0,
     ready: false,
   });
+  const [selectedTool, setSelectedToolState] = useState<VideoToolId>("reframe");
+  const [toolInput, setToolInput] = useState<GenSpaceMediaInput | null>(null);
   const [reframeInput, setReframeInput] = useState<ReframePanelState>({
     videoUrl: null,
     videoPath: null,
@@ -54,17 +54,11 @@ export function useGenSpaceVideoTools({
     ready: false,
   });
   const [reframePanelKey, setReframePanelKey] = useState(0);
-  const [reframeInitial, setReframeInitial] = useState<{
-    videoUrl: string | null;
-    videoPath: string | null;
-    duration?: number;
-    aspectMode?: ReframePanelState["aspectMode"];
-    padding?: ReframePanelState["padding"];
-  }>({ videoUrl: null, videoPath: null });
   const reframeSubmissionRef = useRef<ReframeSubmissionSnapshot | null>(null);
   const retakeSubmissionRef = useRef<RetakeSubmissionSnapshot | null>(null);
   const isRetakeMode = mode === "video" && videoMode === "retake";
-  const isReframeMode = mode === "video" && videoMode === "reframe";
+  const isToolsMode = mode === "video" && videoMode === "reframe";
+  const isReframeMode = isToolsMode && selectedTool === "reframe";
 
   const handleRetakePanelChange = useCallback((next: GenSpaceRetakeInput) => {
     setRetakeInput((current) =>
@@ -97,6 +91,34 @@ export function useGenSpaceVideoTools({
         ? current
         : next,
     );
+    setToolInput((current) => {
+      if (!next.videoUrl) return current ? null : current;
+      const path = next.videoPath ?? current?.path;
+      const trimDuration = next.duration > 0 ? next.duration : undefined;
+      const mediaDuration =
+        next.videoDuration > 0 ? next.videoDuration : undefined;
+      if (
+        current?.url === next.videoUrl &&
+        current.path === path &&
+        current.role === "control_video" &&
+        current.trimStartTime === next.startTime &&
+        current.trimDuration === trimDuration &&
+        current.mediaDuration === mediaDuration
+      ) {
+        return current;
+      }
+      return {
+        id:
+          current?.url === next.videoUrl ? current.id : crypto.randomUUID(),
+        url: next.videoUrl,
+        path,
+        role: "control_video",
+        type: "video",
+        trimStartTime: next.startTime,
+        trimDuration,
+        mediaDuration,
+      };
+    });
   }, []);
 
   const setReframeSource = useCallback(
@@ -104,17 +126,40 @@ export function useGenSpaceVideoTools({
       videoUrl: string;
       videoPath: string;
       duration?: number;
+      startTime?: number;
+      trimDuration?: number;
       aspectMode?: ReframePanelState["aspectMode"];
       padding?: ReframePanelState["padding"];
     }) => {
+      const aspectMode =
+        source.aspectMode && source.aspectMode !== "custom"
+          ? source.aspectMode
+          : "16:9";
+      const startTime = source.startTime ?? 0;
+      const trimDuration = source.trimDuration ?? source.duration ?? 0;
       setReframeInput((current) => ({
         ...current,
-        aspectMode:
-          source.aspectMode && source.aspectMode !== "custom"
-            ? source.aspectMode
-            : "16:9",
+        videoUrl: source.videoUrl,
+        videoPath: source.videoPath,
+        startTime,
+        duration: trimDuration,
+        videoDuration: source.duration ?? 0,
+        aspectMode,
+        ready: false,
       }));
-      setReframeInitial(source);
+      setToolInput((current) => ({
+        id:
+          current?.url === source.videoUrl
+            ? current.id
+            : crypto.randomUUID(),
+        url: source.videoUrl,
+        path: source.videoPath,
+        role: "control_video",
+        type: "video",
+        trimStartTime: startTime,
+        trimDuration: trimDuration || undefined,
+        mediaDuration: source.duration,
+      }));
       setReframePanelKey((current) => current + 1);
     },
     [],
@@ -124,7 +169,33 @@ export function useGenSpaceVideoTools({
     setReframeInput((current) => ({ ...current, aspectMode }));
   }, []);
 
-  const panel = (controls?: ReactNode) =>
+  const setSelectedTool = useCallback(
+    (nextTool: VideoToolId) => {
+      if (nextTool === "reframe" && selectedTool !== "reframe") {
+        const videoUrl = toolInput?.url ?? null;
+        const videoPath = toolInput?.path ?? null;
+        const startTime = toolInput?.trimStartTime ?? 0;
+        const trimDuration = toolInput?.trimDuration;
+        const videoDuration = toolInput?.mediaDuration;
+        setReframeInput((current) => ({
+          ...current,
+          videoUrl,
+          videoPath,
+          startTime,
+          duration: trimDuration ?? videoDuration ?? 0,
+          videoDuration: videoDuration ?? 0,
+          videoWidth: 0,
+          videoHeight: 0,
+          ready: false,
+        }));
+        setReframePanelKey((current) => current + 1);
+      }
+      setSelectedToolState(nextTool);
+    },
+    [selectedTool, toolInput],
+  );
+
+  const panel = () =>
     isRetakeMode ? (
       <div className="max-h-[52vh] overflow-y-auto">
         <RetakePanel
@@ -136,21 +207,6 @@ export function useGenSpaceVideoTools({
           onChange={handleRetakePanelChange}
         />
       </div>
-    ) : isReframeMode ? (
-      <div className="max-h-[52vh] overflow-y-auto">
-        <ReframePanel
-          initialVideoUrl={reframeInitial.videoUrl}
-          initialVideoPath={reframeInitial.videoPath}
-          initialDuration={reframeInitial.duration}
-          aspectMode={reframeInput.aspectMode}
-          initialPadding={reframeInitial.padding}
-          resetKey={reframePanelKey}
-          isProcessing={isGenerating}
-          processingStatus={generationStatus}
-          controls={controls}
-          onChange={handleReframePanelChange}
-        />
-      </div>
     ) : null;
 
   return {
@@ -159,9 +215,16 @@ export function useGenSpaceVideoTools({
     reframeSubmissionRef,
     retakeSubmissionRef,
     isRetakeMode,
+    isToolsMode,
     isReframeMode,
     panel,
+    reframePanelKey,
+    handleReframePanelChange,
     setReframeSource,
     setReframeAspectMode,
+    selectedTool,
+    setSelectedTool,
+    toolInput,
+    setToolInput,
   };
 }

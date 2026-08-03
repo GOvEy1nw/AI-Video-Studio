@@ -296,21 +296,6 @@ export function GalleryAssetCard({
           </div>
         </div>
         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1">
-          {(modelName || asset.generationTimeSeconds !== undefined) && (
-            <div className="flex min-w-0 w-full items-center gap-1 rounded-full bg-black/80 px-2 py-1 text-2xs font-medium text-white shadow-xs backdrop-blur-sm">
-              {modelName ? (
-                <span className="truncate" title={modelName}>
-                  {modelName}
-                </span>
-              ) : null}
-              {asset.generationTimeSeconds !== undefined ? (
-                <span className="flex shrink-0 items-center gap-0.5 text-zinc-300">
-                  <Clock3 className="h-2.5 w-2.5" />
-                  {asset.generationTimeSeconds}s
-                </span>
-              ) : null}
-            </div>
-          )}
           {asset.type !== "audio" && asset.takes && asset.takes.length > 1 && (
             <div className="flex items-center gap-0.5 rounded-full bg-black/80">
               <button
@@ -357,74 +342,7 @@ export function GalleryAssetCard({
 
         <div
           className={`pointer-events-none absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-black/30 transition-opacity duration-200 ${isHovered ? "opacity-100" : "opacity-0"}`}
-        >
-          {hasActions && (
-            <div className="asset-card-hover-actions pointer-events-auto absolute right-2 top-2 z-30 flex flex-col items-end gap-1.5">
-              {onToggleFavorite && (
-                <AssetCardActionButton
-                  label={
-                    asset.favorite ? "Remove favorite" : "Add to favorites"
-                  }
-                  active={asset.favorite}
-                  icon={
-                    <Heart
-                      className={`h-4 w-4 ${asset.favorite ? "fill-current" : ""}`}
-                    />
-                  }
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onToggleFavorite();
-                  }}
-                />
-              )}
-              <AssetCardActionButton
-                label="Open"
-                icon={<FolderOpen className="h-4 w-4" />}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  void window.electronAPI?.showItemInFolder(asset.path);
-                }}
-              />
-              {asset.type === "image" && onUseImage && (
-                <UseImageDropdown
-                  variant="card"
-                  onSelect={(target) => onUseImage(asset, target)}
-                />
-              )}
-              {asset.type === "video" && onReframe && (
-                <AssetCardActionButton
-                  label="Reframe"
-                  icon={<Expand className="h-4 w-4" />}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onReframe(asset);
-                  }}
-                />
-              )}
-              {canCopySettings && (
-                <AssetCardActionButton
-                  label="Copy settings"
-                  icon={<ClipboardPaste className="h-4 w-4" />}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onCopySettings(asset);
-                  }}
-                />
-              )}
-              {onDelete && (
-                <AssetCardActionButton
-                  label="Remove"
-                  danger
-                  icon={<Trash2 className="h-4 w-4" />}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onDelete();
-                  }}
-                />
-              )}
-            </div>
-          )}
-        </div>
+        ></div>
       </div>
     </div>
   );
@@ -503,7 +421,7 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
 
   return (
     <div className={`flex min-h-0 flex-col ${props.className ?? ""}`}>
-      <div className="flex shrink-0 flex-col gap-2 pb-2">
+      <div className="flex shrink-0 flex-col gap-2 pb-2 pr-2">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-1">
             <span className="text-sm font-semibold text-white">Assets</span>
@@ -563,7 +481,7 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
       </div>
 
       <div
-        className={`min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-gutter-stable ${props.scrollClassName ?? ""}`}
+        className={`gallery-scrollbar min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-gutter-stable ${props.scrollClassName ?? ""}`}
         style={props.scrollStyle}
       >
         <div

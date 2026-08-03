@@ -25,6 +25,7 @@ import {
   findConflicts,
   ActionDefinition,
 } from "../lib/keyboard-shortcuts";
+import { FloatingMenu } from "./FloatingMenu";
 
 // ── Visual keyboard layout (US QWERTY) ──
 // Each key: { id: lowercase key id matching KeyCombo.key, label: display text, w: width units (1 = standard key) }
@@ -191,6 +192,8 @@ export function KeyboardShortcutsModal() {
   const [recordingAction, setRecordingAction] = useState<ActionId | null>(null);
   const [showPresetDropdown, setShowPresetDropdown] = useState(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const presetTriggerRef = useRef<HTMLButtonElement>(null);
+  const saveTriggerRef = useRef<HTMLButtonElement>(null);
   const [savePresetName, setSavePresetName] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const recordRef = useRef<HTMLDivElement>(null);
@@ -456,6 +459,7 @@ export function KeyboardShortcutsModal() {
           {/* Preset dropdown */}
           <div className="relative">
             <button
+              ref={presetTriggerRef}
               onClick={() => setShowPresetDropdown(!showPresetDropdown)}
               className="flex items-center gap-2 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-md border border-zinc-700/60 text-[11px] text-zinc-300 transition-colors"
             >
@@ -465,7 +469,12 @@ export function KeyboardShortcutsModal() {
               <ChevronDown className="h-3 w-3 text-zinc-500" />
             </button>
             {showPresetDropdown && (
-              <div className="absolute top-full left-0 mt-1 w-64 bg-zinc-800 rounded-lg border border-zinc-700 shadow-xl z-50 overflow-hidden">
+              <FloatingMenu
+                anchorRef={presetTriggerRef}
+                placement="bottom-start"
+                role="menu"
+                className="w-64 overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-800 shadow-xl"
+              >
                 {presets.map((p) => (
                   <div
                     key={p.id}
@@ -513,7 +522,7 @@ export function KeyboardShortcutsModal() {
                     )}
                   </div>
                 ))}
-              </div>
+              </FloatingMenu>
             )}
           </div>
 
@@ -542,6 +551,7 @@ export function KeyboardShortcutsModal() {
           {/* Save as custom */}
           <div className="relative">
             <button
+              ref={saveTriggerRef}
               onClick={() => setShowSaveDialog(!showSaveDialog)}
               className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-md transition-colors"
               title="Save current layout as a custom preset"
@@ -550,7 +560,12 @@ export function KeyboardShortcutsModal() {
               Save As
             </button>
             {showSaveDialog && (
-              <div className="absolute top-full right-0 mt-1 w-52 bg-zinc-800 rounded-lg border border-zinc-700 shadow-xl z-50 p-3">
+              <FloatingMenu
+                anchorRef={saveTriggerRef}
+                placement="bottom-end"
+                role="dialog"
+                className="w-52 overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-800 p-3 shadow-xl"
+              >
                 <p className="text-[10px] text-zinc-400 mb-2">
                   Save as custom preset:
                 </p>
@@ -582,7 +597,7 @@ export function KeyboardShortcutsModal() {
                 >
                   Save Preset
                 </button>
-              </div>
+              </FloatingMenu>
             )}
           </div>
         </div>

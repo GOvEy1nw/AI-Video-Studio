@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Plus,
   Folder,
@@ -9,6 +9,7 @@ import {
 import { useProjects } from "../contexts/ProjectContext";
 import { AivsLogo } from "../components/AivsLogo";
 import { Button } from "../components/ui/button";
+import { FloatingMenu } from "../components/FloatingMenu";
 import type { Project } from "../types/project";
 
 function formatDate(timestamp: number): string {
@@ -35,6 +36,7 @@ function ProjectCard({
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
 
   // Get thumbnail: use stored thumbnail, or first asset's URL as fallback
   const thumbnailUrl =
@@ -87,6 +89,7 @@ function ProjectCard({
 
       {/* Menu button */}
       <button
+        ref={menuTriggerRef}
         onClick={(e) => {
           e.stopPropagation();
           setShowMenu(!showMenu);
@@ -98,8 +101,11 @@ function ProjectCard({
 
       {/* Dropdown menu */}
       {showMenu && (
-        <div
-          className="absolute top-10 right-2 bg-zinc-800 rounded-lg shadow-lg border border-zinc-700 py-1 z-10 min-w-[120px]"
+        <FloatingMenu
+          anchorRef={menuTriggerRef}
+          placement="bottom-end"
+          role="menu"
+          className="min-w-[120px] overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-800 py-1 shadow-lg"
           onClick={(e) => e.stopPropagation()}
         >
           <button
@@ -122,7 +128,7 @@ function ProjectCard({
             <Trash2 className="h-4 w-4" />
             Delete
           </button>
-        </div>
+        </FloatingMenu>
       )}
     </div>
   );

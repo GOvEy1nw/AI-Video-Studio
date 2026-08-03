@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Search } from "lucide-react";
+import { FloatingMenu } from "./FloatingMenu";
 
 // --- Types ---
 
@@ -35,6 +36,8 @@ export function MenuBar({ menus, rightContent }: MenuBarProps) {
   >([]);
   const [highlightedResult, setHighlightedResult] = useState(0);
   const menuBarRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const triggerRefs = useRef(new Map<string, HTMLButtonElement>());
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // The active open menu (follow hover once a menu is open)
@@ -45,7 +48,8 @@ export function MenuBar({ menus, rightContent }: MenuBarProps) {
     const handleClickOutside = (e: MouseEvent) => {
       if (
         menuBarRef.current &&
-        !menuBarRef.current.contains(e.target as Node)
+        !menuBarRef.current.contains(e.target as Node) &&
+        !dropdownRef.current?.contains(e.target as Node)
       ) {
         setOpenMenuId(null);
         setHoverMenuId(null);
@@ -182,6 +186,10 @@ export function MenuBar({ menus, rightContent }: MenuBarProps) {
           return (
             <div key={menu.id} className="relative">
               <button
+                ref={(node) => {
+                  if (node) triggerRefs.current.set(menu.id, node);
+                  else triggerRefs.current.delete(menu.id);
+                }}
                 onMouseDown={() => {
                   if (openMenuId === menu.id) {
                     setOpenMenuId(null);
@@ -208,7 +216,16 @@ export function MenuBar({ menus, rightContent }: MenuBarProps) {
 
               {/* Dropdown */}
               {isActive && (
-                <div className="absolute top-full left-0 min-w-[240px] bg-zinc-900 border border-zinc-700 rounded-b-lg shadow-xl shadow-black/50 py-1 z-60">
+                <FloatingMenu
+                  ref={dropdownRef}
+                  anchorRef={{
+                    current: triggerRefs.current.get(menu.id) ?? null,
+                  }}
+                  placement="bottom-start"
+                  gap={0}
+                  role="menu"
+                  className="min-w-[240px] overflow-y-auto rounded-b-lg border border-zinc-700 bg-zinc-900 py-1 shadow-xl shadow-black/50"
+                >
                   {/* Help menu has search */}
                   {isHelpMenu && (
                     <div className="px-2 py-1.5 border-b border-zinc-700">
@@ -266,7 +283,7 @@ export function MenuBar({ menus, rightContent }: MenuBarProps) {
 
                   {/* Regular menu items */}
                   {menu.items.map((item, i) => renderMenuItem(item, i))}
-                </div>
+                </FloatingMenu>
               )}
             </div>
           );

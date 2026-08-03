@@ -1,0 +1,10 @@
+# #0490 Gallery filters use text buttons and allow multiple selections per group; gallery scrollbar stays visible instead of appearing on hover.
+
+- 2026-08-02T17:59:36Z `issue`: Gallery filters use text buttons and allow multiple selections per group; gallery scrollbar stays visible instead of appearing on hover. [frontend/components/GalleryFilters.tsx]
+- 2026-08-02T18:00:47Z `attempt`: Applied icon-only filter buttons, exclusive per-group toggle semantics, scoped hover-only gallery scrollbar CSS, and focused tests; validation pending. [frontend/components/GalleryFilters.tsx] (partial)
+- 2026-08-02T18:02:18Z `attempt`: Focused Vitest command was blocked before test execution by pnpm 10.30.3 offline registry signature verification. [frontend validation tooling] (failed)
+- 2026-08-02T18:02:31Z `attempt`: Direct focused Vitest ran 9 tests; 7 new/control tests passed, 2 pre-existing GalleryAssetCard tests failed because dirty worktree removed Use image and metadata markup. [frontend/components/GalleryAssetLibrary.test.tsx] (failed)
+- 2026-08-02T18:03:12Z `attempt`: Direct TypeScript checked current worktree; no diagnostics in GalleryFilters, gallery-filters, index.css, or tests, but existing unused symbols remain in GalleryAssetLibrary.tsx, ReframePanel.tsx, and VideoGenPanel.tsx. [frontend validation tooling] (failed)
+- 2026-08-02T18:03:33Z `attempt`: Direct Vitest controls suite passed 5 tests; Vite production build passed renderer, Electron main, and preload bundles. [frontend/components/GalleryFilters.tsx] (worked)
+- 2026-08-02T18:03:57Z `attempt`: Full direct Vitest suite ran 48 files / 190 tests: 180 passed, 10 pre-existing failures across GalleryAssetCard, GenSpace mode accent, Image Edit, Region Prompt, Music Settings, Reframe, and Video Tools. [frontend validation tooling] (failed)
+- 2026-08-02T18:05:37Z `fix`: Confirmed icon-only accessible filters, one-at-a-time media/source toggles, AND filtering, and hover-only gallery scrollbar styling with focused controls tests and production build. [frontend/components/GalleryFilters.tsx]

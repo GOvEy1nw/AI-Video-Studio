@@ -40,11 +40,11 @@ interface UseContextMenuEffectsParams {
 
 export function useContextMenuEffects(params: UseContextMenuEffectsParams) {
   const {
-    timelineContextMenu, setTimelineContextMenu, timelineContextMenuRef,
-    clipContextMenu, setClipContextMenu, clipContextMenuRef,
-    assetContextMenu, setAssetContextMenu, assetContextMenuRef,
-    takeContextMenu, setTakeContextMenu, takeContextMenuRef,
-    binContextMenu, setBinContextMenu, binContextMenuRef,
+    timelineContextMenu, setTimelineContextMenu,
+    clipContextMenu, setClipContextMenu,
+    assetContextMenu, setAssetContextMenu,
+    takeContextMenu, setTakeContextMenu,
+    binContextMenu, setBinContextMenu,
     previewZoomOpen, setPreviewZoomOpen,
     playbackResOpen, setPlaybackResOpen,
     previewZoom, setPreviewZoom, setPreviewPan,
@@ -61,61 +61,12 @@ export function useContextMenuEffects(params: UseContextMenuEffectsParams) {
     return () => window.removeEventListener('click', handler)
   }, [timelineContextMenu])
   
-  // Adjust timeline context menu position to stay within viewport
-  useEffect(() => {
-    if (!timelineContextMenu || !timelineContextMenuRef.current) return
-    const el = timelineContextMenuRef.current
-    const rect = el.getBoundingClientRect()
-    const vw = window.innerWidth
-    const vh = window.innerHeight
-    let { x, y } = timelineContextMenu
-    let adjusted = false
-    
-    if (rect.right > vw - 8) { x = vw - rect.width - 8; adjusted = true }
-    if (rect.bottom > vh - 8) { y = vh - rect.height - 8; adjusted = true }
-    if (x < 8) { x = 8; adjusted = true }
-    if (y < 8) { y = 8; adjusted = true }
-    
-    if (adjusted) {
-      el.style.left = `${x}px`
-      el.style.top = `${y}px`
-    }
-  }, [timelineContextMenu])
-  
-  
   // Close clip context menu on click elsewhere
   useEffect(() => {
     if (!clipContextMenu) return
     const handler = () => setClipContextMenu(null)
     window.addEventListener('click', handler)
     return () => window.removeEventListener('click', handler)
-  }, [clipContextMenu])
-  
-  // Adjust context menu position to stay within viewport
-  useEffect(() => {
-    if (!clipContextMenu || !clipContextMenuRef.current) return
-    const el = clipContextMenuRef.current
-    const rect = el.getBoundingClientRect()
-    const vw = window.innerWidth
-    const vh = window.innerHeight
-    let { x, y } = clipContextMenu
-    let adjusted = false
-    
-    if (rect.right > vw - 8) {
-      x = vw - rect.width - 8
-      adjusted = true
-    }
-    if (rect.bottom > vh - 8) {
-      y = vh - rect.height - 8
-      adjusted = true
-    }
-    if (x < 8) { x = 8; adjusted = true }
-    if (y < 8) { y = 8; adjusted = true }
-    
-    if (adjusted) {
-      el.style.left = `${x}px`
-      el.style.top = `${y}px`
-    }
   }, [clipContextMenu])
   
   // Close zoom dropdown on click outside
@@ -225,25 +176,6 @@ export function useContextMenuEffects(params: UseContextMenuEffectsParams) {
     return () => { clearTimeout(timer); window.removeEventListener('click', handler) }
   }, [timelineAddMenuOpen])
   
-  // Adjust asset context menu position to stay within viewport
-  useEffect(() => {
-    if (!assetContextMenu || !assetContextMenuRef.current) return
-    const el = assetContextMenuRef.current
-    const rect = el.getBoundingClientRect()
-    const vw = window.innerWidth
-    const vh = window.innerHeight
-    let { x, y } = assetContextMenu
-    let adjusted = false
-    if (rect.right > vw - 8) { x = vw - rect.width - 8; adjusted = true }
-    if (rect.bottom > vh - 8) { y = vh - rect.height - 8; adjusted = true }
-    if (x < 8) { x = 8; adjusted = true }
-    if (y < 8) { y = 8; adjusted = true }
-    if (adjusted) {
-      el.style.left = `${x}px`
-      el.style.top = `${y}px`
-    }
-  }, [assetContextMenu])
-  
   // Close take context menu on click elsewhere
   useEffect(() => {
     if (!takeContextMenu) return
@@ -252,50 +184,12 @@ export function useContextMenuEffects(params: UseContextMenuEffectsParams) {
     return () => window.removeEventListener('click', handler)
   }, [takeContextMenu])
   
-  // Adjust take context menu position
-  useEffect(() => {
-    if (!takeContextMenu || !takeContextMenuRef.current) return
-    const el = takeContextMenuRef.current
-    const rect = el.getBoundingClientRect()
-    const vw = window.innerWidth
-    const vh = window.innerHeight
-    let { x, y } = takeContextMenu
-    let adjusted = false
-    if (rect.right > vw - 8) { x = vw - rect.width - 8; adjusted = true }
-    if (rect.bottom > vh - 8) { y = vh - rect.height - 8; adjusted = true }
-    if (x < 8) { x = 8; adjusted = true }
-    if (y < 8) { y = 8; adjusted = true }
-    if (adjusted) {
-      el.style.left = `${x}px`
-      el.style.top = `${y}px`
-    }
-  }, [takeContextMenu])
-  
   // Close bin context menu on click elsewhere
   useEffect(() => {
     if (!binContextMenu) return
     const handler = () => setBinContextMenu(null)
     window.addEventListener('click', handler)
     return () => window.removeEventListener('click', handler)
-  }, [binContextMenu])
-  
-  // Adjust bin context menu position to stay within viewport
-  useEffect(() => {
-    if (!binContextMenu || !binContextMenuRef.current) return
-    const el = binContextMenuRef.current
-    const rect = el.getBoundingClientRect()
-    const vw = window.innerWidth
-    const vh = window.innerHeight
-    let { x, y } = binContextMenu
-    let adjusted = false
-    if (rect.right > vw - 8) { x = vw - rect.width - 8; adjusted = true }
-    if (rect.bottom > vh - 8) { y = vh - rect.height - 8; adjusted = true }
-    if (x < 8) { x = 8; adjusted = true }
-    if (y < 8) { y = 8; adjusted = true }
-    if (adjusted) {
-      el.style.left = `${x}px`
-      el.style.top = `${y}px`
-    }
   }, [binContextMenu])
   
   // Focus new bin input when creating

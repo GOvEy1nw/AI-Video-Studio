@@ -12,6 +12,7 @@ import {
 import { SettingsPanel } from "../../components/SettingsPanel";
 import type { GenerationSettings } from "../../types/generation";
 import type { GenerationMode } from "../../components/ModeTabs";
+import { FloatingMenu } from "../../components/FloatingMenu";
 
 interface TimelineGap {
   trackIndex: number;
@@ -606,34 +607,12 @@ export function GapGenerationModal({
       {/* Gap action bar - shown when gap is selected but no generate mode yet */}
       {!gapGenerateMode &&
         (() => {
-          // Smart positioning: anchor to the clicked gap, with edge-case clamping
           const POPOVER_W = 200;
-          const POPOVER_H = 136;
-          const GAP_PX = 4;
-          const MARGIN = 8;
           const vw = typeof window !== "undefined" ? window.innerWidth : 1280;
           const vh = typeof window !== "undefined" ? window.innerHeight : 800;
-
           const cx = anchorPosition?.x ?? vw / 2;
           const gapTop = anchorPosition?.gapTop ?? vh - 220 - 52;
           const gapBottom = anchorPosition?.gapBottom ?? vh - 220;
-
-          // Horizontal: center on gap, clamped so popover stays in viewport
-          const left = Math.max(
-            MARGIN,
-            Math.min(cx - POPOVER_W / 2, vw - POPOVER_W - MARGIN),
-          );
-
-          // Vertical: prefer below gap, flip above if not enough space below
-          const spaceBelow = vh - gapBottom - GAP_PX;
-          const openAbove = spaceBelow < POPOVER_H + MARGIN;
-          const rawTop = openAbove
-            ? gapTop - GAP_PX - POPOVER_H
-            : gapBottom + GAP_PX;
-          const top = Math.max(
-            MARGIN,
-            Math.min(rawTop, vh - POPOVER_H - MARGIN),
-          );
 
           return (
             <>
@@ -641,9 +620,19 @@ export function GapGenerationModal({
                 className="fixed inset-0 z-90"
                 onClick={() => setSelectedGap(null)}
               />
-              <div
-                className="fixed z-100 bg-zinc-950 border border-zinc-800 rounded-lg shadow-2xl overflow-hidden py-1"
-                style={{ left, top, width: POPOVER_W }}
+              <FloatingMenu
+                anchorRect={{
+                  bottom: gapBottom,
+                  height: gapBottom - gapTop,
+                  left: cx - POPOVER_W / 2,
+                  right: cx + POPOVER_W / 2,
+                  top: gapTop,
+                  width: POPOVER_W,
+                }}
+                placement="bottom-start"
+                gap={4}
+                role="menu"
+                className="w-[200px] overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-950 py-1 shadow-2xl"
               >
                 {/* Title */}
                 <p className="text-2xs text-zinc-500 font-medium px-3 pt-1.5 pb-1.5">
@@ -674,7 +663,7 @@ export function GapGenerationModal({
                     Del
                   </kbd>
                 </button>
-              </div>
+              </FloatingMenu>
             </>
           );
         })()}

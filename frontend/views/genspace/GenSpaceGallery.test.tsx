@@ -9,11 +9,9 @@ vi.mock("../../components/DownloadProgressView", () => ({
 }));
 vi.mock("../../components/GalleryAssetLibrary", () => ({
   AssetLibraryImportButton: () => null,
-  GalleryAssetLibrary: ({
-    leadingContent,
-  }: {
-    leadingContent?: ReactNode;
-  }) => <>{leadingContent}</>,
+  GalleryAssetLibrary: ({ leadingContent }: { leadingContent?: ReactNode }) => (
+    <>{leadingContent}</>
+  ),
 }));
 
 const noop = () => undefined;
@@ -23,6 +21,7 @@ describe("GenSpace gallery dropzone", () => {
     const onDragEnter = vi.fn();
     const onDrop = vi.fn();
     const onSelectGeneration = vi.fn();
+    const cancelGeneration = vi.fn();
 
     render(
       <div data-testid="workspace">
@@ -50,7 +49,7 @@ describe("GenSpace gallery dropzone", () => {
             onBinContextMenuChange: noop,
             viewMode: "grid",
             onViewModeChange: noop,
-            gridColumns: 3,
+            gridColumns: 2,
             onGridColumnsChange: noop,
             showFavorites: false,
             onShowFavoritesChange: noop,
@@ -67,18 +66,19 @@ describe("GenSpace gallery dropzone", () => {
           filterActive={false}
           isPanelMode={false}
           generation={{
+            mode: "image",
             isRunning: true,
             isSelected: false,
             isCancelling: false,
-            previewUrl: null,
+            previewUrl: "data:image/png;base64,preview",
             modelDownload: null,
             modelLifecycleActive: false,
-            statusMessage: "",
-            progress: 0,
-            badges: [],
+            statusMessage: "Loading model",
+            progress: 48,
+            badges: ["Phase 1/2"],
             modelName: "Test model",
             onSelect: onSelectGeneration,
-            cancel: noop,
+            cancel: cancelGeneration,
           }}
         />
       </div>,
@@ -93,6 +93,16 @@ describe("GenSpace gallery dropzone", () => {
     fireEvent.drop(dropzone);
     expect(onDragEnter).toHaveBeenCalledOnce();
     expect(onDrop).toHaveBeenCalledOnce();
+    expect(screen.getByTestId("active-generation-card")).toBeTruthy();
+    expect(
+      screen.getByRole("progressbar", { name: "Generation progress" }),
+    ).toBeTruthy();
+    expect(screen.queryByText("Test model")).toBeNull();
+    expect(screen.queryByText("Loading model")).toBeNull();
+    expect(screen.queryByText("Phase 1/2")).toBeNull();
+    expect(screen.queryByRole("img")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(cancelGeneration).toHaveBeenCalledOnce();
     fireEvent.click(
       screen.getByRole("button", { name: "Select active generation" }),
     );

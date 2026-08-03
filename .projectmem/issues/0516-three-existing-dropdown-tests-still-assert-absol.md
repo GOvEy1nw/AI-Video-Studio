@@ -1,0 +1,6 @@
+# #0516 Three existing dropdown tests still assert absolute-position DOM classes after FloatingMenu portal migration
+
+- 2026-08-03T14:38:46Z `issue`: Three existing dropdown tests still assert absolute-position DOM classes after FloatingMenu portal migration [frontend/components/SettingsDropdown.test.tsx; frontend/views/genspace/components/AspectRatioDropdown.test.tsx; frontend/views/genspace/music/MusicGenPanel.test.tsx]
+- 2026-08-03T14:40:51Z `attempt`: Updated dropdown tests to assert portal ownership and preferred smart placement instead of removed absolute classes [frontend/components/SettingsDropdown.test.tsx; frontend/views/genspace/components/AspectRatioDropdown.test.tsx; frontend/views/genspace/music/MusicGenPanel.test.tsx] (partial)
+- 2026-08-03T14:41:10Z `attempt`: Focused migrated dropdown tests pass with portal and preferred-placement assertions [frontend/components/SettingsDropdown.test.tsx; frontend/views/genspace/components/AspectRatioDropdown.test.tsx; frontend/views/genspace/music/MusicGenPanel.test.tsx] (worked)
+- 2026-08-03T14:41:14Z `fix`: Dropdown tests now validate shared FloatingMenu contract instead of obsolete local positioning classes [frontend/components/SettingsDropdown.test.tsx; frontend/views/genspace/components/AspectRatioDropdown.test.tsx; frontend/views/genspace/music/MusicGenPanel.test.tsx]

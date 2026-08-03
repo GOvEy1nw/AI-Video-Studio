@@ -5,6 +5,7 @@ import {
   DEFAULT_GENSPACE_LOCKED_SEED,
   MAX_GENSPACE_SEED,
 } from "../types/project";
+import { FloatingMenu } from "./FloatingMenu";
 
 interface SeedControlProps {
   seedLocked: boolean;
@@ -78,11 +79,15 @@ export function SeedControl({
   menuAlign = "right",
 }: SeedControlProps) {
   const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      if (
+        !rootRef.current?.contains(event.target as Node) &&
+        !menuRef.current?.contains(event.target as Node)
+      ) {
         setOpen(false);
       }
     };
@@ -93,7 +98,7 @@ export function SeedControl({
   }, [open]);
 
   return (
-    <div ref={menuRef} className="relative">
+    <div ref={rootRef} className="relative">
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
@@ -116,10 +121,12 @@ export function SeedControl({
       </button>
 
       {open && (
-        <div
-          className={`absolute bottom-full z-50 mb-2 min-w-[220px] rounded-md border border-zinc-700 bg-zinc-800 p-3 shadow-xl ${
-            menuAlign === "left" ? "left-0" : "right-0"
-          }`}
+        <FloatingMenu
+          ref={menuRef}
+          anchorRef={rootRef}
+          placement={menuAlign === "left" ? "top-start" : "top-end"}
+          gap={8}
+          className="min-w-[220px] overflow-y-auto rounded-md border border-zinc-700 bg-zinc-800 p-3 shadow-xl"
         >
           <SeedSettings
             seedLocked={seedLocked}
@@ -127,7 +134,7 @@ export function SeedControl({
             onChange={onChange}
             disabled={disabled}
           />
-        </div>
+        </FloatingMenu>
       )}
     </div>
   );

@@ -60,6 +60,7 @@ class TestGenerate:
         assert call.default_settings["num_inference_steps"] == 8
         assert call.default_settings["video_output_codec"] == "libx264_8"
         assert call.default_settings["video_container"] == "mp4"
+        assert call.default_settings["prompt_enhancer"] == ""
 
     def test_video_profile_request_routes_to_ltx2(
         self, client, enable_wangp: FakeWanGPBridge
@@ -73,6 +74,7 @@ class TestGenerate:
                 "duration": "5",
                 "fps": "24",
                 "aspectRatio": "9:16",
+                "enhancePrompt": True,
             },
         )
 
@@ -82,6 +84,7 @@ class TestGenerate:
         assert call.resolution_label == "720x1280"
         assert call.aspect_ratio == "9:16"
         assert call.steps == 8
+        assert call.default_settings["prompt_enhancer"] == "T"
 
     def test_video_profile_square_aspect_routes_to_ltx2(
         self, client, enable_wangp: FakeWanGPBridge
@@ -114,6 +117,7 @@ class TestGenerate:
                 "modelProfileId": "ltx2_22b_distilled",
                 "duration": "5",
                 "fps": "24",
+                "enhancePrompt": True,
                 "shotPrompts": [
                     {"seconds": 4, "prompt": "The knight raises a shield."},
                     {"seconds": 5, "prompt": "The dragon breathes fire."},
@@ -131,6 +135,33 @@ class TestGenerate:
         )
         assert call.default_settings["activated_loras"] == ["LTX-2.3_Cinematic_hardcut.safetensors"]
         assert call.default_settings["loras_multipliers"] == "1.0"
+        assert call.default_settings["prompt_enhancer"] == "T1"
+
+    def test_multi_shot_with_start_image_uses_text_image_relay_enhancer(
+        self, client, enable_wangp: FakeWanGPBridge, tmp_path: Path
+    ):
+        from PIL import Image
+
+        start_image = tmp_path / "relay-start.png"
+        Image.new("RGB", (16, 16), color="red").save(start_image)
+        response = client.post(
+            "/api/generate",
+            json={
+                "prompt": "Global style",
+                "resolution": "540p",
+                "modelProfileId": "ltx2_22b_distilled",
+                "duration": "2",
+                "fps": "24",
+                "enhancePrompt": True,
+                "inputMedia": [
+                    {"role": "start_image", "path": str(start_image), "type": "image"}
+                ],
+                "shotPrompts": [{"seconds": 2, "prompt": "Walk forward."}],
+            },
+        )
+
+        assert response.status_code == 200
+        assert enable_wangp.video_calls[0].default_settings["prompt_enhancer"] == "TI1"
 
     def test_multi_shot_allows_empty_global_prompt(
         self, client, enable_wangp: FakeWanGPBridge
@@ -254,6 +285,7 @@ class TestGenerate:
                 "fps": "24",
                 "cameraMotion": "none",
                 "videoPromptType": "VG",
+                "enhancePrompt": True,
                 "inputMedia": [
                     {"role": "start_image", "path": str(start_img), "type": "image"},
                     {"role": "end_image", "path": str(end_img), "type": "image"},
@@ -274,6 +306,7 @@ class TestGenerate:
         assert call.control_video_path == str(video)
         assert call.audio_path == str(audio)
         assert call.video_prompt_type == "VG"
+        assert call.default_settings["prompt_enhancer"] == "TI"
 
     def test_video_input_trim_passes_clipped_path_and_frame_count(
         self, client, enable_wangp: FakeWanGPBridge, tmp_path: Path, monkeypatch
@@ -354,11 +387,13 @@ class TestGenerate:
             "/api/generate",
             json={
                 "prompt": "Keep walking",
+                "videoTool": "extend",
                 "resolution": "540p",
                 "modelProfileId": "ltx2_22b_distilled",
                 "duration": "5",
                 "fps": "24",
                 "cameraMotion": "none",
+                "enhancePrompt": True,
                 "inputMedia": [
                     {
                         "role": "continue_video",
@@ -377,6 +412,100 @@ class TestGenerate:
         assert call.start_image_path == str(clipped)
         assert call.image_prompt_type == "V"
         assert call.video_length_frames == 217
+        assert "activated_loras" not in call.default_settings
+        assert call.default_settings["prompt_enhancer"] == "T"
+
+    def test_curated_video_tools_activate_exact_lora(
+        self, client, enable_wangp: FakeWanGPBridge, tmp_path: Path, monkeypatch
+    ):
+        video = tmp_path / "source.mp4"
+        video.write_bytes(b"fake-video")
+        clipped = tmp_path / "source_trimmed.mp4"
+
+        def fake_extract(
+            source_path: str | Path,
+            *,
+            start_time: float,
+            duration: float,
+            output_dir: Path,
+        ) -> Path:
+            del output_dir
+            assert str(source_path) == str(video)
+            assert start_time == 1.0
+            assert duration == 4.0
+            clipped.write_bytes(b"fake-video")
+            return clipped
+
+        monkeypatch.setattr(
+            "handlers.video_generation_handler.extract_video_clip",
+            fake_extract,
+        )
+        monkeypatch.setattr(
+            "handlers.video_generation_handler.probe_video_metadata",
+            lambda _path: VideoMetadata(frame_count=97, duration_seconds=4.0),
+        )
+        tool_loras = {
+            "relight": "black-magic-ic-lora-450.safetensors",
+            "colorize": "ltx-2.3-22b-ic-lora-colorization-0.9.safetensors",
+            "clean_plate": "ltx-2.3-22b-ic-lora-clean-plate-1.0.safetensors",
+            "lip_dub": "ltx-2.3-22b-ic-lora-lipdub-0.9.safetensors",
+            "decompression": "ltx-2.3-22b-ic-lora-decompression-0.9.safetensors",
+            "sdr_to_hdr": "ltx-2.3-22b-ic-lora-hdr-0.9.safetensors",
+            "remove_glare": "lens-remover-ltx23-ic-lora.safetensors",
+            "deblur": "ltx-2.3-22b-ic-lora-deblur-0.9.safetensors",
+        }
+
+        for tool, filename in tool_loras.items():
+            response = client.post(
+                "/api/generate",
+                json={
+                    **_T2V_JSON,
+                    "modelProfileId": "ltx2_22b_distilled",
+                    "videoTool": tool,
+                    "enhancePrompt": True,
+                    "inputMedia": [
+                        {
+                            "role": "control_video",
+                            "path": str(video),
+                            "type": "video",
+                            "trimStartTime": 1.0,
+                            "trimDuration": 4.0,
+                        }
+                    ],
+                },
+            )
+
+            assert response.status_code == 200
+            call = enable_wangp.video_calls[-1]
+            assert call.default_settings["activated_loras"] == [
+                f"https://huggingface.co/buckets/retIbedi/LTX-Loras/resolve/{filename}"
+            ]
+            assert call.default_settings["loras_multipliers"] == ""
+            assert call.default_settings["force_fps"] == "control"
+            assert call.default_settings["guidance_phases"] == 2
+            assert call.video_prompt_type == "VG"
+            assert call.image_prompt_type is None
+            assert call.audio_prompt_type == "K"
+            assert call.start_image_path is None
+            assert call.control_video_path == str(clipped)
+            assert call.video_length_frames == 97
+            assert call.default_settings["prompt_enhancer"] == "T"
+            assert not clipped.exists()
+
+    def test_video_tool_rejects_unknown_id_and_missing_source(
+        self, client, enable_wangp: FakeWanGPBridge
+    ):
+        unknown = client.post(
+            "/api/generate", json={**_T2V_JSON, "videoTool": "unknown"}
+        )
+        missing = client.post(
+            "/api/generate", json={**_T2V_JSON, "videoTool": "relight"}
+        )
+
+        assert unknown.status_code == 422
+        assert missing.status_code == 400
+        assert "VIDEO_TOOL_SOURCE_REQUIRED" in missing.json()["error"]
+        assert enable_wangp.video_calls == []
 
     def test_retake_routes_through_wangp_control_video(
         self, client, enable_wangp: FakeWanGPBridge, tmp_path: Path, monkeypatch
@@ -500,6 +629,7 @@ class TestGenerate:
                 "duration": "5",
                 "fps": "24",
                 "cameraMotion": "none",
+                "enhancePrompt": True,
                 "inputMedia": [
                     {"role": "control_video", "path": str(video), "type": "video"},
                 ],
@@ -520,6 +650,7 @@ class TestGenerate:
         assert call.control_video_path == str(clipped)
         assert call.video_prompt_type == "VG"
         assert call.audio_prompt_type == "K"
+        assert call.default_settings["prompt_enhancer"] == "T"
         assert call.video_guide_outpainting == ""
         assert call.video_guide_outpainting_ratio == ""
         assert call.video_length_frames == 150
@@ -748,6 +879,84 @@ class TestGenerateImage:
         assert call.height == 1024
         assert call.num_steps == 8
         assert call.seed is None
+        assert call.default_settings["prompt_enhancer"] == ""
+
+    def test_prompt_enhancer_uses_text_without_input_image(
+        self, client, enable_wangp: FakeWanGPBridge
+    ):
+        response = client.post(
+            "/api/generate-image",
+            json={"prompt": "A cat", "enhancePrompt": True},
+        )
+
+        assert response.status_code == 200
+        assert enable_wangp.image_calls[0].default_settings["prompt_enhancer"] == "T"
+
+    def test_disabled_prompt_enhancer_overrides_profile_default(
+        self, client, enable_wangp: FakeWanGPBridge
+    ):
+        response = client.post(
+            "/api/generate-image",
+            json={
+                "prompt": "Poster layout",
+                "modelProfileId": "ideogram4_int8",
+                "aspectRatio": "1:1",
+                "resolutionTier": "720p",
+                "enhancePrompt": False,
+            },
+        )
+
+        assert response.status_code == 200
+        assert enable_wangp.image_calls[0].default_settings["prompt_enhancer"] == ""
+
+    def test_prompt_enhancer_uses_reference_image_but_not_control_guide(
+        self, client, enable_wangp: FakeWanGPBridge, tmp_path: Path
+    ):
+        from PIL import Image
+
+        image_path = tmp_path / "input.png"
+        Image.new("RGB", (16, 16), color="red").save(image_path)
+        reference_response = client.post(
+            "/api/generate-image",
+            json={
+                "prompt": "Add a hat",
+                "modelProfileId": "flux2_klein_4b",
+                "aspectRatio": "1:1",
+                "resolutionTier": "720p",
+                "enhancePrompt": True,
+                "inputMedia": [
+                    {
+                        "type": "image",
+                        "path": str(image_path),
+                        "role": "reference_subject",
+                    }
+                ],
+            },
+        )
+        control_response = client.post(
+            "/api/generate-image",
+            json={
+                "prompt": "Follow the pose",
+                "modelProfileId": "z_image_turbo",
+                "aspectRatio": "1:1",
+                "resolutionTier": "720p",
+                "enhancePrompt": True,
+                "inputMedia": [
+                    {
+                        "type": "image",
+                        "path": str(image_path),
+                        "role": "control_pose",
+                    }
+                ],
+            },
+        )
+
+        assert reference_response.status_code == 200
+        assert control_response.status_code == 200
+        assert [
+            call.default_settings["prompt_enhancer"]
+            for call in enable_wangp.image_calls
+        ] == ["TI", "T"]
 
     def test_dimension_clamping(self, client, enable_wangp: FakeWanGPBridge):
         # WanGP bridge receives the request dimensions directly; the bridge

@@ -1,11 +1,11 @@
 ---
 id: AIVS-004
 title: Add model variant 'chips' to the model picker
-status: Human Review
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-08-01 16:36'
-updated_date: '2026-08-01 17:58'
+updated_date: '2026-08-02 08:49'
 labels: []
 dependencies: []
 modified_files:
@@ -17,6 +17,7 @@ modified_files:
   - frontend/views/genspace/music/MusicGenPanel.tsx
   - frontend/views/genspace/video/VideoGenPanel.tsx
 type: enhancement
+ordinal: 4000
 ---
 
 ## Description

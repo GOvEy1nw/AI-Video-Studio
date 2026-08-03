@@ -19,6 +19,7 @@ import type {
 import type { RegionPromptState } from "./image/region-prompt";
 import type { ReframePanelState } from "./video/ReframePanel";
 import type { ReframeAspectMode } from "./video/reframe-outpaint";
+import type { VideoToolId } from "../../types/video-tools";
 import type { GenSpaceSettings } from "./constants";
 
 export type GenSpaceMode = "image" | "video" | "music";
@@ -38,6 +39,7 @@ export interface FramingSettings {
 export interface GenSpaceMediaInput {
   id: string;
   url: string;
+  path?: string;
   role: string;
   type?: GenSpaceMediaKind;
   trimStartTime?: number;
@@ -127,10 +129,17 @@ export interface GenSpaceMusicController {
 export interface GenSpaceVideoToolsController {
   mode: VideoProcessMode;
   setMode: (mode: VideoProcessMode) => void;
-  panel: (controls?: ReactNode) => ReactNode;
+  panel: () => ReactNode;
   reframeDurationSeconds: number;
   reframeAspectMode: ReframeAspectMode;
+  reframePadding: ReframePanelState["padding"];
+  reframePanelKey: number;
+  onReframePanelChange: (input: ReframePanelState) => void;
   setReframeAspectMode: (aspectMode: ReframeAspectMode) => void;
+  selectedTool: VideoToolId;
+  setSelectedTool: (tool: VideoToolId) => void;
+  toolInput: GenSpaceMediaInput | null;
+  setToolInput: (input: GenSpaceMediaInput | null) => void;
 }
 
 export interface GenSpaceImageToolsController {
@@ -213,6 +222,7 @@ export interface ImageSubmissionSnapshot {
 export interface VideoSubmissionSnapshot extends ImageSubmissionSnapshot {
   inputImage: string | null;
   inputAudio: string | null;
+  videoTool?: VideoToolId;
 }
 
 export interface MusicSubmissionSnapshot {

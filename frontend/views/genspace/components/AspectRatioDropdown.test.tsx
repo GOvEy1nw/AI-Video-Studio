@@ -24,7 +24,8 @@ describe("AspectRatioDropdown", () => {
     expect(menu.querySelectorAll("[data-aspect-ratio]")).toHaveLength(
       ASPECT_RATIO_OPTIONS.length,
     );
-    expect(menu.classList.contains("right-0")).toBe(true);
+    expect(menu.dataset.preferredPlacement).toBe("top-end");
+    expect(menu.parentElement).toBe(document.body);
   });
 
   it("shows Auto instead of a stale ratio when media owns the aspect", () => {

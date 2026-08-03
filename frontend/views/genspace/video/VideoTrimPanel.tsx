@@ -260,9 +260,9 @@ export function VideoTrimPanel({
   const selDuration = selEnd - selStart;
 
   return (
-    <div className="shrink-0">
-      <div className="px-4 pb-0">
-        <div className="relative h-3 mb-0">
+    <div className="w-full">
+      <div className="pb-0">
+        <div className="relative h-3 mb-[-8px]">
           <div
             className="absolute pointer-events-none z-10"
             style={{

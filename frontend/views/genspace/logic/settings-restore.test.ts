@@ -174,6 +174,53 @@ describe("GenSpace settings restoration", () => {
     });
   });
 
+  it("restores a curated Video Tool and its single source", () => {
+    const source: Asset = {
+      id: "source",
+      type: "video",
+      path: "C:\\source.mp4",
+      url: "file:///C:/source.mp4",
+      prompt: "",
+      resolution: "540p",
+      createdAt: 1,
+    };
+    const plan = buildGenSpaceRestorePlan(
+      asset({
+        mode: "text-to-video",
+        prompt: "relight at sunset",
+        model: "fast",
+        videoTool: "relight",
+        duration: 5,
+        resolution: "540p",
+        fps: 24,
+        audio: false,
+        cameraMotion: "none",
+        imageInputMedia: [
+          {
+            url: source.url,
+            path: source.path,
+            role: "control_video",
+            type: "video",
+          },
+        ],
+      }),
+      [source],
+      DEFAULT_VIDEO_SETTINGS,
+      musicSettings,
+    );
+
+    expect(plan).toMatchObject({
+      mode: "video",
+      videoMode: "reframe",
+      videoTool: "relight",
+      prompt: "relight at sunset",
+      media: {
+        imageInputs: [],
+        videoToolInput: { url: source.url, role: "control_video" },
+      },
+    });
+  });
+
   it("normalizes legacy custom Image and Video Reframe recipes", () => {
     const legacyVideo = buildGenSpaceRestorePlan(
       asset({

@@ -1,10 +1,18 @@
 import {
+  Image,
+  Music,
+  Sparkles,
+  Upload,
+  Video,
+  type LucideIcon,
+} from "lucide-react";
+import {
   GALLERY_SOURCE_OPTIONS,
   GALLERY_TYPE_OPTIONS,
-  toggleGalleryFilterValue,
   type GalleryAssetSource,
   type GalleryFilterState,
   type GalleryMediaType,
+  toggleGalleryFilterValue,
 } from "../lib/gallery-filters";
 
 interface GalleryFiltersProps {
@@ -17,6 +25,23 @@ const filterChipClass = (active: boolean) =>
     ? "border border-zinc-500/40 bg-zinc-400/30 text-zinc-300"
     : "border border-transparent bg-zinc-800 text-zinc-500 hover:text-zinc-300";
 
+const GALLERY_FILTER_ICONS: Record<
+  GalleryMediaType | GalleryAssetSource,
+  LucideIcon
+> = {
+  image: Image,
+  video: Video,
+  audio: Music,
+  generated: Sparkles,
+  uploaded: Upload,
+};
+
+type FilterOption<T extends string> = {
+  value: T;
+  label: string;
+  icon: LucideIcon;
+};
+
 function FilterChipGroup<T extends string>({
   label,
   options,
@@ -24,7 +49,7 @@ function FilterChipGroup<T extends string>({
   onToggle,
 }: {
   label: string;
-  options: { value: T; label: string }[];
+  options: FilterOption<T>[];
   selected: T[];
   onToggle: (value: T) => void;
 }) {
@@ -32,15 +57,18 @@ function FilterChipGroup<T extends string>({
     <div className="flex shrink-0 gap-1" aria-label={label}>
       {options.map((option) => {
         const isActive = selected.includes(option.value);
+        const Icon = option.icon;
         return (
           <button
             key={option.value}
             type="button"
             onClick={() => onToggle(option.value)}
             aria-pressed={isActive}
-            className={`flex h-8 shrink-0 items-center gap-1 rounded-md border px-2.5 text-xs font-medium transition-colors ${filterChipClass(isActive)}`}
+            aria-label={option.label}
+            title={option.label}
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-colors ${filterChipClass(isActive)}`}
           >
-            {option.label}
+            <Icon className="h-4 w-4" aria-hidden="true" />
           </button>
         );
       })}
@@ -49,6 +77,15 @@ function FilterChipGroup<T extends string>({
 }
 
 export function GalleryFilters({ filter, onChange }: GalleryFiltersProps) {
+  const typeOptions = GALLERY_TYPE_OPTIONS.map((option) => ({
+    ...option,
+    icon: GALLERY_FILTER_ICONS[option.value],
+  }));
+  const sourceOptions = GALLERY_SOURCE_OPTIONS.map((option) => ({
+    ...option,
+    icon: GALLERY_FILTER_ICONS[option.value],
+  }));
+
   const toggleType = (value: GalleryMediaType) => {
     onChange({
       ...filter,
@@ -67,13 +104,13 @@ export function GalleryFilters({ filter, onChange }: GalleryFiltersProps) {
     <div className="flex min-w-0 items-center gap-1 overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden">
       <FilterChipGroup
         label="Media type"
-        options={GALLERY_TYPE_OPTIONS}
+        options={typeOptions}
         selected={filter.types}
         onToggle={toggleType}
       />
       <FilterChipGroup
         label="Source"
-        options={GALLERY_SOURCE_OPTIONS}
+        options={sourceOptions}
         selected={filter.sources}
         onToggle={toggleSource}
       />

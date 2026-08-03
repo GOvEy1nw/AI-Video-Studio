@@ -44,16 +44,6 @@ export const VIDEO_GUIDE_ROLE_OPTIONS = [
     label: "Canny Edges",
     description: "Guide generation using Canny edge maps.",
   },
-  {
-    role: "sdr_to_hdr",
-    label: "Convert SDR to HDR",
-    description: "Convert SDR video to HDR using IC-LoRA.",
-  },
-  {
-    role: "continue_video",
-    label: "Continue Video",
-    description: "Continue video generation from the end of this video.",
-  },
 ] as const;
 
 export const AUDIO_GUIDE_ROLE_OPTIONS = [

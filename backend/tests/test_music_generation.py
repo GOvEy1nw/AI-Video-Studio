@@ -49,6 +49,7 @@ def test_instrumental_generation_maps_product_values(client, enable_wangp) -> No
     assert call.model_mode == 4
     assert call.temperature == 0.85
     assert call.lm_guidance_scale == 2.5
+    assert call.default_settings["prompt_enhancer"] == ""
 
 
 def test_custom_lyrics_are_normalized_and_returned(client, enable_wangp) -> None:
@@ -59,24 +60,23 @@ def test_custom_lyrics_are_normalized_and_returned(client, enable_wangp) -> None
     assert response.status_code == 200
     assert response.json()["resolvedLyrics"] == "[Verse]\nHello"
     assert enable_wangp.music_calls[0].lyrics == "[Verse]\nHello"
+    assert enable_wangp.music_calls[0].default_settings["prompt_enhancer"] == ""
 
 
-def test_auto_lyrics_are_composed_locally(client, enable_wangp) -> None:
+def test_auto_lyrics_are_composed_by_wangp_during_generation(client, enable_wangp) -> None:
     response = client.post(
         "/api/generate-music",
         json=_request(vocalMode="auto-lyrics"),
     )
     assert response.status_code == 200
-    assert response.json()["resolvedLyrics"].startswith("[Verse]")
-    assert len(enable_wangp.compose_music_lyrics_calls) == 1
-    call = enable_wangp.compose_music_lyrics_calls[0]
-    assert call.description == "Warm cinematic ambient music"
-    assert call.lyrics_prompt is None
-    assert call.think is False
-    assert call.seed is None
+    assert response.json()["resolvedLyrics"] is None
+    assert enable_wangp.compose_music_lyrics_calls == []
+    call = enable_wangp.music_calls[0]
+    assert call.lyrics == "Warm cinematic ambient music"
+    assert call.default_settings["prompt_enhancer"] == "T"
 
 
-def test_empty_custom_lyrics_are_composed_with_idea_think_and_seed(
+def test_empty_custom_lyrics_are_rejected_before_generation(
     client, enable_wangp
 ) -> None:
     response = client.post(
@@ -88,13 +88,10 @@ def test_empty_custom_lyrics_are_composed_with_idea_think_and_seed(
             lyricsSeed=123,
         ),
     )
-    assert response.status_code == 200
-    assert response.json()["resolvedLyrics"].startswith("[Verse]")
-    call = enable_wangp.compose_music_lyrics_calls[0]
-    assert call.description == "Warm cinematic ambient music"
-    assert call.lyrics_prompt == "A reunion at sunrise"
-    assert call.think is True
-    assert call.seed == 123
+    assert response.status_code == 400
+    assert response.json()["error"].startswith("MUSIC_CUSTOM_LYRICS_REQUIRED")
+    assert enable_wangp.compose_music_lyrics_calls == []
+    assert enable_wangp.music_calls == []
 
 
 def test_compose_lyrics_is_a_separate_local_operation(client, enable_wangp) -> None:
@@ -281,17 +278,15 @@ def test_request_validation_rejects_invalid_music_payloads(client, enable_wangp)
     assert response.json()["error"].startswith("MUSIC_KEY_SCALE_INVALID")
 
 
-def test_auto_lyrics_dependency_error_is_actionable(client, enable_wangp) -> None:
+def test_auto_lyrics_does_not_depend_on_local_compose_operation(client, enable_wangp) -> None:
     enable_wangp.raise_on_compose_music_lyrics = RuntimeError("missing enhancer")
     response = client.post(
         "/api/generate-music",
         json=_request(vocalMode="auto-lyrics"),
     )
-    assert response.status_code == 503
-    assert response.json()["error"].startswith("AUTO_LYRICS_UNAVAILABLE")
-    progress = client.get("/api/generation/progress")
-    assert progress.status_code == 200
-    assert progress.json()["status"] == "error"
+    assert response.status_code == 200
+    assert enable_wangp.compose_music_lyrics_calls == []
+    assert enable_wangp.music_calls[0].default_settings["prompt_enhancer"] == "T"
 
 
 def test_v1_request_remains_compatible(client, enable_wangp) -> None:

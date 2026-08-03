@@ -1,12 +1,14 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createEmptyRegionPrompt,
   serializeRegionPrompt,
   type RegionPromptState,
 } from "./region-prompt";
 import { RegionPromptEditor } from "./RegionPromptEditor";
+
+afterEach(cleanup);
 
 function RegionPromptHarness() {
   const [value, setValue] = useState<RegionPromptState>(
@@ -34,7 +36,7 @@ describe("RegionPromptEditor", () => {
     const summaries = [...container.querySelectorAll("summary")].map(
       (summary) => summary.textContent,
     );
-    expect(summaries).toEqual(["Global Prompt", "Region", "Style"]);
+    expect(summaries).toEqual(["Global Prompt", "Style"]);
     expect(
       screen
         .getByText("Global Prompt")
@@ -42,11 +44,8 @@ describe("RegionPromptEditor", () => {
         ?.hasAttribute("open"),
     ).toBe(false);
     expect(
-      screen.getByText("Region").closest("details")?.hasAttribute("open"),
-    ).toBe(true);
-    expect(
       screen.getByText("Style").closest("details")?.hasAttribute("open"),
-    ).toBe(true);
+    ).toBe(false);
 
     const canvas = screen.getByTestId("region-layout-canvas");
     expect(canvas.style.aspectRatio).toBe("16 / 9");
@@ -227,5 +226,112 @@ describe("RegionPromptEditor", () => {
     expect(
       screen.getByTestId("serialized-region-prompt").textContent,
     ).toBe("");
+  });
+
+  it("cycles overlapping regions and resizes the revealed region", () => {
+    render(<RegionPromptHarness />);
+    fireEvent.click(screen.getByRole("button", { name: "Add box" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add box" }));
+
+    const canvas = screen.getByTestId("region-layout-canvas");
+    Object.defineProperty(canvas, "getBoundingClientRect", {
+      configurable: true,
+      value: () => ({
+        bottom: 1000,
+        height: 1000,
+        left: 0,
+        right: 1000,
+        top: 0,
+        width: 1000,
+        x: 0,
+        y: 0,
+      }),
+    });
+
+    const regionOne = () =>
+      screen.getByRole("group", { name: "Region 1: Untitled" });
+    const regionTwo = () =>
+      screen.getByRole("group", { name: "Region 2: Untitled" });
+    const regionGeometry = (region: HTMLElement) => [
+      region.style.top,
+      region.style.left,
+      region.style.width,
+      region.style.height,
+    ];
+
+    expect(regionTwo().style.zIndex).toBe("3");
+    const geometryBeforeCycle = [
+      regionGeometry(regionOne()),
+      regionGeometry(regionTwo()),
+    ];
+    fireEvent.click(regionTwo(), {
+      clientX: 200,
+      clientY: 200,
+      detail: 1,
+    });
+    expect(
+      screen.getByTestId("selected-region-settings").dataset.regionColor,
+    ).toBe("#38BDF8");
+    expect(regionOne().style.zIndex).toBe("3");
+    expect(regionTwo().style.zIndex).toBe("");
+    expect(
+      [regionGeometry(regionOne()), regionGeometry(regionTwo())],
+    ).toEqual(geometryBeforeCycle);
+
+    fireEvent.pointerDown(
+      screen.getByRole("button", { name: "Resize region 1" }),
+      { clientX: 490, clientY: 410, pointerId: 1 },
+    );
+    fireEvent.pointerMove(canvas, {
+      clientX: 590,
+      clientY: 510,
+      pointerId: 1,
+    });
+    fireEvent.pointerUp(canvas, { pointerId: 1 });
+
+    expect(regionOne().style.width).toBe("52%");
+    expect(regionOne().style.height).toBe("44%");
+    expect(regionTwo().style.width).toBe("42%");
+    expect(regionTwo().style.height).toBe("34%");
+  });
+
+  it("cycles an overlapping region on long press", () => {
+    vi.useFakeTimers();
+    try {
+      render(<RegionPromptHarness />);
+      fireEvent.click(screen.getByRole("button", { name: "Add box" }));
+      fireEvent.click(screen.getByRole("button", { name: "Add box" }));
+
+      const canvas = screen.getByTestId("region-layout-canvas");
+      Object.defineProperty(canvas, "getBoundingClientRect", {
+        configurable: true,
+        value: () => ({
+          bottom: 1000,
+          height: 1000,
+          left: 0,
+          right: 1000,
+          top: 0,
+          width: 1000,
+          x: 0,
+          y: 0,
+        }),
+      });
+      const regionTwo = screen.getByRole("group", {
+        name: "Region 2: Untitled",
+      });
+      fireEvent.pointerDown(regionTwo, {
+        clientX: 200,
+        clientY: 200,
+        pointerId: 1,
+      });
+      act(() => vi.advanceTimersByTime(520));
+
+      expect(
+        screen.getByTestId("selected-region-settings").dataset.regionColor,
+      ).toBe("#38BDF8");
+      fireEvent.pointerUp(canvas, { pointerId: 1 });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

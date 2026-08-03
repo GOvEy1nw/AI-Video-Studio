@@ -23,6 +23,7 @@ import type {
   ImageProcessMode,
   VideoProcessMode,
 } from "../types";
+import type { VideoToolId } from "../../../types/video-tools";
 import {
   parseRegionPrompt,
   type RegionPromptState,
@@ -49,6 +50,8 @@ export function useGenSpaceSettingsRestore({
   setInputImage,
   setInputAudio,
   setReframeSource,
+  setVideoTool,
+  setVideoToolInput,
   clearError,
 }: {
   assets: Asset[];
@@ -77,6 +80,8 @@ export function useGenSpaceSettingsRestore({
     aspectMode?: ReframeAspectMode;
     padding?: { top: number; bottom: number; left: number; right: number };
   }) => void;
+  setVideoTool: (tool: VideoToolId) => void;
+  setVideoToolInput: (input: GenSpaceMediaInput | null) => void;
   clearError: () => void;
 }) {
   const pendingMedia = useRef<{
@@ -100,6 +105,7 @@ export function useGenSpaceSettingsRestore({
       clearError();
       pendingMedia.current = { ...plan.media, mode: plan.mode };
       setInputs([]);
+      setVideoToolInput(null);
       setEditImage(null);
       setInputImage(null);
       setInputAudio(null);
@@ -115,6 +121,8 @@ export function useGenSpaceSettingsRestore({
         setPrompt(plan.prompt);
       }
       setVideoMode(plan.videoMode);
+      setVideoTool(plan.videoTool);
+      setVideoToolInput(plan.media.videoToolInput);
       setEditToolMode(plan.editToolMode);
       setEditMask(plan.editMask);
       setEditOutpaint(plan.editOutpaint);
@@ -142,6 +150,8 @@ export function useGenSpaceSettingsRestore({
       setReframeSource,
       setSettings,
       setVideoMode,
+      setVideoTool,
+      setVideoToolInput,
       settings,
     ],
   );

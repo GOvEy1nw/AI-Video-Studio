@@ -1,5 +1,6 @@
 import { Plus, Trash2, X } from "lucide-react";
 import {
+  useEffect,
   useRef,
   useState,
   type KeyboardEvent,
@@ -95,7 +96,13 @@ type Interaction = {
   bbox: RegionPromptBbox;
   canvasWidth: number;
   canvasHeight: number;
+  moved: boolean;
+  holdTimer: ReturnType<typeof setTimeout> | null;
 };
+
+const REGION_LAYER_HOLD_MS = 520;
+const REGION_DRAG_THRESHOLD_PX = 8;
+const REGION_CLICK_SUPPRESSION_MS = 400;
 
 function parseAspectRatio(value: string): [number, number] {
   const [width, height] = value.split(":").map(Number);
@@ -259,6 +266,7 @@ export function RegionPromptEditor({
 }) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const interactionRef = useRef<Interaction | null>(null);
+  const clickSuppressionRef = useRef(0);
   const [selectedId, setSelectedId] = useState<string | null>(
     value.elements[0]?.id ?? null,
   );
@@ -322,6 +330,48 @@ export function RegionPromptEditor({
     setSelectedId(nextElements[Math.max(0, selectedIndex - 1)]?.id ?? null);
   };
 
+  const regionsAtPoint = (clientX: number, clientY: number) => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect?.width || !rect.height) return [];
+    const x = ((clientX - rect.left) / rect.width) * 1000;
+    const y = ((clientY - rect.top) / rect.height) * 1000;
+    return value.elements.filter((element) => {
+      const [yMin, xMin, yMax, xMax] = element.bbox;
+      return x >= xMin && x <= xMax && y >= yMin && y <= yMax;
+    });
+  };
+
+  const cycleRegionSelection = (
+    clientX: number,
+    clientY: number,
+    currentId: string,
+  ) => {
+    const hits = regionsAtPoint(clientX, clientY);
+    if (hits.length < 2) {
+      setSelectedId(currentId);
+      return false;
+    }
+    const currentIndex = hits.findIndex((element) => element.id === currentId);
+    if (currentIndex < 0) {
+      setSelectedId(currentId);
+      return false;
+    }
+    const nextIndex = currentIndex > 0 ? currentIndex - 1 : hits.length - 1;
+    const next = hits[nextIndex];
+    if (!next) return false;
+    setSelectedId(next.id);
+    return true;
+  };
+
+  useEffect(() => {
+    return () => {
+      const interaction = interactionRef.current;
+      if (interaction && interaction.holdTimer !== null) {
+        clearTimeout(interaction.holdTimer);
+      }
+    };
+  }, []);
+
   const startInteraction = (
     event: PointerEvent<HTMLElement>,
     element: RegionPromptElement,
@@ -333,8 +383,7 @@ export function RegionPromptEditor({
     event.preventDefault();
     event.stopPropagation();
     setSelectedId(element.id);
-    event.currentTarget.setPointerCapture(event.pointerId);
-    interactionRef.current = {
+    const interaction: Interaction = {
       id: element.id,
       mode,
       startX: event.clientX,
@@ -342,12 +391,45 @@ export function RegionPromptEditor({
       bbox: element.bbox,
       canvasWidth: rect.width,
       canvasHeight: rect.height,
+      moved: false,
+      holdTimer: null,
     };
+    interactionRef.current = interaction;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    if (mode === "move") {
+      interaction.holdTimer = setTimeout(() => {
+        if (interactionRef.current !== interaction || interaction.moved) return;
+        interactionRef.current = null;
+        if (
+          cycleRegionSelection(
+            interaction.startX,
+            interaction.startY,
+            interaction.id,
+          )
+        ) {
+          clickSuppressionRef.current =
+            Date.now() + REGION_CLICK_SUPPRESSION_MS;
+        }
+      }, REGION_LAYER_HOLD_MS);
+    }
   };
 
   const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
     const interaction = interactionRef.current;
     if (!interaction || disabled) return;
+    if (interaction.mode === "move" && !interaction.moved) {
+      const movedPx = Math.hypot(
+        event.clientX - interaction.startX,
+        event.clientY - interaction.startY,
+      );
+      if (movedPx < REGION_DRAG_THRESHOLD_PX) return;
+      interaction.moved = true;
+      if (interaction.holdTimer !== null) {
+        clearTimeout(interaction.holdTimer);
+        interaction.holdTimer = null;
+      }
+      clickSuppressionRef.current = Date.now() + REGION_CLICK_SUPPRESSION_MS;
+    }
     const deltaX =
       ((event.clientX - interaction.startX) / interaction.canvasWidth) * 1000;
     const deltaY =
@@ -357,6 +439,14 @@ export function RegionPromptEditor({
         ? moveRegionPromptBbox(interaction.bbox, deltaX, deltaY)
         : resizeRegionPromptBbox(interaction.bbox, deltaX, deltaY);
     updateElement(interaction.id, (element) => ({ ...element, bbox }));
+  };
+
+  const clearInteraction = () => {
+    const interaction = interactionRef.current;
+    if (interaction && interaction.holdTimer !== null) {
+      clearTimeout(interaction.holdTimer);
+    }
+    interactionRef.current = null;
   };
 
   const moveWithKeyboard = (
@@ -471,18 +561,14 @@ export function RegionPromptEditor({
             <div
               ref={canvasRef}
               role="group"
-              aria-label={`Region layout canvas ${aspectRatio}`}
+              aria-label={`Region layout canvas ${aspectRatio}. Click selected overlapping region again to cycle layers; hold to cycle.`}
               data-testid="region-layout-canvas"
               onPointerDown={(event) => {
                 if (event.target === event.currentTarget) setSelectedId(null);
               }}
               onPointerMove={handlePointerMove}
-              onPointerUp={() => {
-                interactionRef.current = null;
-              }}
-              onPointerCancel={() => {
-                interactionRef.current = null;
-              }}
+              onPointerUp={clearInteraction}
+              onPointerCancel={clearInteraction}
               className="relative mx-auto overflow-hidden rounded-lg border border-zinc-700 bg-black"
               style={{
                 aspectRatio: `${aspectWidth} / ${aspectHeight}`,
@@ -505,7 +591,18 @@ export function RegionPromptEditor({
                     aria-label={`Region ${index + 1}: ${
                       element.description || element.text || "Untitled"
                     }`}
-                    onClick={() => setSelectedId(element.id)}
+                    onClick={(event) => {
+                      if (Date.now() < clickSuppressionRef.current) return;
+                      if (event.detail === 0 || selected?.id !== element.id) {
+                        setSelectedId(element.id);
+                        return;
+                      }
+                      cycleRegionSelection(
+                        event.clientX,
+                        event.clientY,
+                        element.id,
+                      );
+                    }}
                     onPointerDown={(event) =>
                       startInteraction(event, element, "move")
                     }
@@ -520,6 +617,9 @@ export function RegionPromptEditor({
                       height: `${(yMax - yMin) / 10}%`,
                       borderColor: color,
                       backgroundColor: `${color}18`,
+                      zIndex: isSelected
+                        ? value.elements.length + 1
+                        : undefined,
                       boxShadow: isSelected
                         ? `0 0 0 2px ${color}55`
                         : undefined,
@@ -532,6 +632,7 @@ export function RegionPromptEditor({
                       {element.description || element.text || "Describe region"}
                     </span>
                     <button
+                      data-genspace-theme-ignore
                       type="button"
                       aria-label={`Resize region ${index + 1}`}
                       disabled={disabled}
@@ -562,10 +663,13 @@ export function RegionPromptEditor({
             >
               <div className="mb-3 flex items-center justify-between gap-3">
                 <span
-                  className="shrink-0 text-xs font-semibold"
-                  style={{ color: selectedColor }}
+                  className="shrink-0 w-5 h-5 flex items-center justify-center text-xs font-semibold rounded-full"
+                  style={{
+                    backgroundColor: `${selectedColor}18`,
+                    color: selectedColor,
+                  }}
                 >
-                  Selected region {selectedDisplayIndex + 1}
+                  {selectedDisplayIndex + 1}
                 </span>
                 <div className="flex min-w-40 flex-1 rounded-md bg-zinc-950 p-0.5">
                   {(["obj", "text"] as const).map((type) => {

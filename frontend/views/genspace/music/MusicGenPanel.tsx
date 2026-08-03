@@ -12,7 +12,7 @@ import { MUSIC_KEYWORDS } from "./music-keywords";
 import { MusicAdvancedSettings } from "./MusicAdvancedSettings";
 import { MusicMediaInputs } from "./MusicMediaInputs";
 import { MusicPromptControls } from "./MusicPromptControls";
-import { MusicSettings } from "./MusicSettings";
+import { MusicSettings, MusicVocalModeTabs } from "./MusicSettings";
 
 const MUSIC_PRESET_GROUPS = Object.entries(MUSIC_KEYWORDS).map(
   ([label, options]) => ({ label, options }),
@@ -53,6 +53,10 @@ export function MusicGenPanel({
           <ModelDownloadButton />
         )}
       </GenPanelSection>
+      <MusicVocalModeTabs
+        settings={music.settings}
+        onChange={music.setSettings}
+      />
       <MusicMediaInputs
         coverInput={music.settings.coverAudioInput}
         referenceTimbreInput={music.settings.referenceTimbreAudioInput}

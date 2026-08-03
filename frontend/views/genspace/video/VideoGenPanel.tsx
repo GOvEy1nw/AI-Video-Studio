@@ -17,6 +17,8 @@ import { isVideoAspectRatioLocked } from "../logic/media-inputs";
 import { formatTrimTimecode } from "./VideoTrimPanel";
 import { VideoMediaInputs } from "./VideoMediaInputs";
 import { VideoModeTabs } from "./VideoModeTabs";
+import { VideoToolInput } from "./VideoToolInput";
+import { getVideoToolLabel } from "./video-tools";
 
 function LightricksIcon({ className }: { className?: string }) {
   return (
@@ -193,12 +195,21 @@ export function VideoGenPanel({
       (profile) => profile.id === videoSettings.profileId,
     ) ?? installedProfiles[0];
   const isRetake = videoTools.mode === "retake";
-  const isReframe = videoTools.mode === "reframe";
-  const isPanelMode = isRetake || isReframe;
+  const isTools = videoTools.mode === "reframe";
+  const isReframe = isTools && videoTools.selectedTool === "reframe";
+  const isPanelMode = isRetake || isTools;
   const guide = media.inputs.find(({ role }) => GUIDE_MEDIA_ROLE_SET.has(role));
-  const isContinueVideo = guide?.role === "continue_video";
-  const autoDuration = guide?.trimDuration ?? guide?.mediaDuration ?? 0;
-  const durationFollowsGuide = !!guide && !isContinueVideo;
+  const isContinueVideo = isTools
+    ? videoTools.selectedTool === "extend"
+    : guide?.role === "continue_video";
+  const autoDuration = isTools
+    ? (videoTools.toolInput?.trimDuration ??
+      videoTools.toolInput?.mediaDuration ??
+      0)
+    : (guide?.trimDuration ?? guide?.mediaDuration ?? 0);
+  const durationFollowsGuide = isTools
+    ? !isReframe && !isContinueVideo
+    : !!guide && !isContinueVideo;
   const hasAudioInput =
     !!media.inputAudio ||
     media.inputs.some(({ role }) => AUDIO_MEDIA_ROLE_SET.has(role));
@@ -246,23 +257,22 @@ export function VideoGenPanel({
     ? ["16:9"]
     : (selectedProfile?.ui.allowedAspectRatios ?? ["16:9", "9:16"]);
   const durationControl = isReframe ? (
-    <div className="flex items-center gap-1.5 rounded-md bg-zinc-800/40 px-2 py-1 text-zinc-400">
+    <button
+      type="button"
+      disabled
+      className="flex cursor-not-allowed items-center gap-1.5 rounded-md bg-zinc-800/40 px-2 py-1 text-2xs text-zinc-500"
+    >
       <Clock className="h-3.5 w-3.5" />
-      <span>{videoTools.reframeDurationSeconds.toFixed(1)}s auto</span>
-    </div>
+      <span>auto</span>
+    </button>
   ) : durationFollowsGuide ? (
     <button
       type="button"
       disabled
-      className="flex cursor-not-allowed items-center gap-1.5 rounded-md bg-zinc-800/40 px-2 py-1 text-zinc-500"
+      className="flex cursor-not-allowed items-center gap-1.5 rounded-md bg-zinc-800/40 px-2 py-1 text-2xs text-zinc-500"
     >
       <Clock className="h-3.5 w-3.5" />
       <span>auto</span>
-      {autoDuration > 0 ? (
-        <span className="text-zinc-600">
-          {formatTrimTimecode(autoDuration)}
-        </span>
-      ) : null}
     </button>
   ) : (
     <SettingsDropdown
@@ -314,7 +324,7 @@ export function VideoGenPanel({
       value={videoSettings.resolution}
       onChange={(resolution) => patchVideoSettings({ resolution })}
       options={resolutionOptions.map((value) => ({ value, label: value }))}
-      placement={isReframe ? "bottom" : "top"}
+      placement={isTools ? "bottom" : "top"}
       trigger={
         <>
           <Monitor className="h-3.5 w-3.5" />
@@ -327,7 +337,7 @@ export function VideoGenPanel({
     <AspectRatioDropdown
       value={aspectRatioValue}
       allowedAspectRatios={allowedAspectRatios}
-      disabled={!isReframe && aspectRatioDisabled}
+      disabled={!isReframe && (isTools || aspectRatioDisabled)}
       placement={isReframe ? "bottom" : "top"}
       onChange={(aspectRatio) =>
         isReframe
@@ -339,7 +349,12 @@ export function VideoGenPanel({
 
   return (
     <>
-      <VideoModeTabs mode={videoTools.mode} onChange={videoTools.setMode} />
+      <VideoModeTabs
+        mode={videoTools.mode}
+        onChange={videoTools.setMode}
+        selectedTool={videoTools.selectedTool}
+        onToolChange={videoTools.setSelectedTool}
+      />
       <GenPanelSection
         title=""
         className="text-xs text-zinc-400"
@@ -374,16 +389,38 @@ export function VideoGenPanel({
           syncInputFileToGallery={media.syncInputFileToGallery}
         />
       ) : null}
-      {isPanelMode ? (
+      {isTools ? (
         <div className="border-b border-zinc-800/60 bg-zinc-950/20">
-          {videoTools.panel(
-            isReframe ? (
-              <div className="flex shrink-0 items-center gap-1">
-                {resolutionControl}
-                {aspectRatioControl}
-              </div>
-            ) : undefined,
-          )}
+          <div className={isReframe ? "max-h-[52vh] overflow-y-auto" : ""}>
+            <VideoToolInput
+              item={videoTools.toolInput}
+              role={isContinueVideo ? "continue_video" : "control_video"}
+              label={getVideoToolLabel(videoTools.selectedTool)}
+              controls={
+                isReframe ? (
+                  <div className="flex shrink-0 items-center gap-1">
+                    {resolutionControl}
+                    {aspectRatioControl}
+                  </div>
+                ) : (
+                  resolutionControl
+                )
+              }
+              sourceOnly={!isReframe}
+              aspectMode={videoTools.reframeAspectMode}
+              initialPadding={videoTools.reframePadding}
+              resetKey={videoTools.reframePanelKey}
+              onReframePanelChange={videoTools.onReframePanelChange}
+              onChange={videoTools.setToolInput}
+              resolveInputFileUrl={media.resolveInputFileUrl}
+              syncInputFileToGallery={media.syncInputFileToGallery}
+            />
+          </div>
+        </div>
+      ) : null}
+      {isRetake ? (
+        <div className="border-b border-zinc-800/60 bg-zinc-950/20">
+          {videoTools.panel()}
         </div>
       ) : null}
       <PromptEditor
@@ -397,7 +434,9 @@ export function VideoGenPanel({
             ? "optional text prompt to drive outpainting..."
             : isRetake
               ? "Describe what should happen in the selected section..."
-              : "The woman sips from a cup of coffee..."
+              : isTools
+                ? `Describe the ${getVideoToolLabel(videoTools.selectedTool).toLowerCase()} result...`
+                : "The woman sips from a cup of coffee..."
         }
         leading={
           !isPanelMode && !selectedProfile?.inputMedia.supportsImageInputs ? (
@@ -408,8 +447,8 @@ export function VideoGenPanel({
           !isRetake ? (
             <div className="flex flex-wrap items-center justify-end gap-1">
               {durationControl}
-              {!isReframe ? resolutionControl : null}
-              {!isReframe ? aspectRatioControl : null}
+              {!isTools ? resolutionControl : null}
+              {!isTools ? aspectRatioControl : null}
               {!isPanelMode ? (
                 <FramingControl
                   value={framing.value}
@@ -421,7 +460,7 @@ export function VideoGenPanel({
           ) : undefined
         }
         actions={
-          !isPanelMode ? (
+          !isRetake && !isReframe ? (
             <PromptActions
               seedLocked={prompt.seedLocked}
               lockedSeed={prompt.lockedSeed}

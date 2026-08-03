@@ -160,6 +160,7 @@ export function buildGeneratedVideoAsset({
       prompt: snapshot.prompt,
       model: snapshot.settings.model,
       videoProfileId: snapshot.settings.videoProfileId,
+      videoTool: snapshot.videoTool,
       duration: snapshot.settings.duration,
       resolution: snapshot.settings.videoResolution,
       fps: snapshot.settings.fps,

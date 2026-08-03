@@ -7,6 +7,7 @@ import {
   AUDIO_MEDIA_ROLE_SET,
   GUIDE_MEDIA_ROLE_SET,
 } from "../../views/genspace/constants";
+import type { SubmittedVideoToolId } from "../../types/video-tools";
 
 export interface GenerationInputMediaRequest {
   path: string;
@@ -73,6 +74,7 @@ export function buildVideoRequestBody({
   useAudioTrack,
   shotPrompts,
   reframe,
+  videoTool,
 }: {
   prompt: string;
   imagePath: string | null;
@@ -82,6 +84,7 @@ export function buildVideoRequestBody({
   useAudioTrack?: boolean;
   shotPrompts?: { seconds: number; prompt: string }[];
   reframe?: GenerationReframeOptions;
+  videoTool?: SubmittedVideoToolId;
 }): { endpoint: string; body: Record<string, unknown> } {
   if (!settings) throw new Error("Generation settings are required");
 
@@ -96,6 +99,7 @@ export function buildVideoRequestBody({
     cameraMotion: settings.cameraMotion,
     aspectRatio: settings.aspectRatio || "16:9",
     useAudioTrack: useAudioTrack ?? true,
+    enhancePrompt: settings.enhancePrompt ?? false,
   };
   if (imagePath) body.imagePath = imagePath;
   if (audioPath) body.audioPath = audioPath;
@@ -119,6 +123,7 @@ export function buildVideoRequestBody({
     body.videoPromptType = "VG";
     body.reframe = normalizeReframeForApi(reframe);
   }
+  if (videoTool) body.videoTool = videoTool;
   return { endpoint: "/api/generate", body };
 }
 
@@ -164,6 +169,7 @@ export function buildImageRequestBody(
     prompt,
     numSteps: settings.imageSteps || 8,
     numImages: settings.variations || 1,
+    enhancePrompt: settings.enhancePrompt ?? false,
   };
   if (settings.imageProfileId) {
     body.modelProfileId = settings.imageProfileId;

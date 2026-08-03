@@ -8,8 +8,9 @@ import {
   Trash2,
 } from "lucide-react";
 import { memo, type HTMLAttributes, type RefObject } from "react";
-import { DownloadProgressView } from "../../components/DownloadProgressView";
 import { GenSpaceResizeHandle } from "./GenSpaceResizeHandle";
+import { getGenSpaceModeAccentStyle } from "./mode-accent";
+import type { GenSpaceMode } from "./types";
 import {
   AssetLibraryImportButton,
   GalleryAssetLibrary,
@@ -37,6 +38,7 @@ export interface GenSpaceGalleryProps {
   filterActive: boolean;
   isPanelMode: boolean;
   generation: {
+    mode: GenSpaceMode;
     isRunning: boolean;
     isSelected: boolean;
     isCancelling: boolean;
@@ -67,6 +69,7 @@ function GenSpaceGalleryView({
   generation,
 }: GenSpaceGalleryProps) {
   const { assets, visibleAssets, showFavorites, selectedBin } = library;
+  const generationProgress = Math.max(0, Math.min(100, generation.progress));
   return (
     <div
       {...dropZoneProps}
@@ -152,7 +155,7 @@ function GenSpaceGalleryView({
       {assets.length > 0 || generation.isRunning ? (
         <GalleryAssetLibrary
           {...library}
-          className="absolute inset-0 px-3 pt-4"
+          className="absolute inset-0 pl-2 pt-4"
           headerAction={
             <>
               <AssetLibraryImportButton
@@ -224,6 +227,7 @@ function GenSpaceGalleryView({
                   tabIndex={0}
                   aria-label="Select active generation"
                   aria-pressed={generation.isSelected}
+                  data-testid="active-generation-card"
                   onClick={generation.onSelect}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") {
@@ -233,62 +237,36 @@ function GenSpaceGalleryView({
                   }}
                   className={`relative aspect-square cursor-pointer overflow-hidden rounded-xl border-2 bg-zinc-800 transition-colors ${
                     generation.isSelected
-                      ? "border-violet-500 ring-2 ring-violet-500/30"
+                      ? "ring-2"
                       : "border-transparent hover:border-zinc-700"
                   }`}
+                  style={{
+                    ...getGenSpaceModeAccentStyle(generation.mode),
+                    backgroundColor:
+                      "color-mix(in srgb, var(--genspace-mode-accent) 22%, var(--color-zinc-800))",
+                    ...(generation.isSelected
+                      ? {
+                          borderColor: "var(--genspace-mode-accent)",
+                          boxShadow:
+                            "0 0 0 2px color-mix(in srgb, var(--genspace-mode-accent) 30%, transparent)",
+                        }
+                      : {}),
+                  }}
                 >
-                  <span className="absolute left-2 top-2 z-10 max-w-[calc(100%_-_1rem)] truncate rounded-full bg-black/75 px-2 py-1 text-[10px] font-medium text-white">
-                    {generation.modelName}
-                  </span>
-                  {generation.previewUrl ? (
-                    <img
-                      src={generation.previewUrl}
-                      alt=""
-                      className="absolute inset-0 h-full w-full object-cover"
-                    />
-                  ) : null}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/35 px-4">
-                    {generation.modelDownload === null &&
-                    (!generation.previewUrl ||
-                      generation.modelLifecycleActive) ? (
-                      <LoaderCircle className="mb-3 h-8 w-8 animate-spin text-violet-400" />
-                    ) : null}
-                    {generation.modelDownload ? (
-                      <DownloadProgressView
-                        className="w-full max-w-72 rounded-lg bg-black/55 p-2"
-                        title={`Downloading ${
-                          generation.modelDownload.modelName ?? "model files"
-                        }`}
-                        transfer={generation.modelDownload}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-4">
+                    <div
+                      role="progressbar"
+                      aria-label="Generation progress"
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={generationProgress}
+                      className="h-1.5 w-full max-w-32 overflow-hidden rounded-full bg-black/30"
+                    >
+                      <div
+                        className="h-full bg-[var(--genspace-mode-accent)] transition-all"
+                        style={{ width: `${generationProgress}%` }}
                       />
-                    ) : (
-                      <>
-                        <p className="max-w-full truncate text-sm text-zinc-200">
-                          {generation.statusMessage || "Generating..."}
-                        </p>
-                        {generation.badges.length > 0 ? (
-                          <div className="mt-2 flex max-w-full flex-wrap justify-center gap-1">
-                            {generation.badges.map((badge) => (
-                              <span
-                                key={badge}
-                                className="rounded-sm bg-black/50 px-1.5 py-0.5 text-[10px] text-zinc-300"
-                              >
-                                {badge}
-                              </span>
-                            ))}
-                          </div>
-                        ) : null}
-                        {generation.progress > 0 &&
-                        !generation.modelLifecycleActive ? (
-                          <div className="mt-2 h-1 w-32 overflow-hidden rounded-full bg-zinc-800">
-                            <div
-                              className="h-full bg-violet-500 transition-all"
-                              style={{ width: `${generation.progress}%` }}
-                            />
-                          </div>
-                        ) : null}
-                      </>
-                    )}
+                    </div>
                     <button
                       type="button"
                       onClick={(event) => {
@@ -296,7 +274,7 @@ function GenSpaceGalleryView({
                         generation.cancel();
                       }}
                       disabled={generation.isCancelling}
-                      className="mt-3 rounded-md border border-white/15 bg-black/30 px-2 py-1 text-xs text-zinc-200 transition-colors hover:bg-black/50 disabled:cursor-wait disabled:opacity-60"
+                      className="rounded-md border border-white/15 bg-black/30 px-2 py-1 text-xs text-zinc-200 transition-colors hover:bg-black/50 disabled:cursor-wait disabled:opacity-60"
                     >
                       {generation.isCancelling ? "Cancelling..." : "Cancel"}
                     </button>

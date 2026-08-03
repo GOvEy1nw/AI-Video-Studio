@@ -1,6 +1,7 @@
 import React from "react";
 import { Plus, Copy, Eye, Trash2 } from "lucide-react";
 import type { Asset, AssetTake } from "../../types/project";
+import { FloatingMenu } from "../../components/FloatingMenu";
 
 export interface TakeContextMenuProps {
   tcAsset: Asset;
@@ -57,10 +58,12 @@ export function TakeContextMenu({
   const isActive = (tcAsset.activeTakeIndex ?? 0) === takeIndex;
 
   return (
-    <div
+    <FloatingMenu
       ref={takeContextMenuRef}
-      className="fixed bg-zinc-800 border border-zinc-700 rounded-xl shadow-2xl py-1.5 z-60 min-w-[190px] text-xs"
-      style={{ left: takeContextMenu.x, top: takeContextMenu.y }}
+      anchorPoint={takeContextMenu}
+      gap={0}
+      role="menu"
+      className="min-w-[190px] overflow-y-auto rounded-xl border border-zinc-700 bg-zinc-800 py-1.5 text-xs shadow-2xl"
       onClick={(e) => e.stopPropagation()}
     >
       <div className="px-3 py-1 text-2xs text-zinc-500 font-medium">
@@ -163,6 +166,6 @@ export function TakeContextMenu({
           </button>
         </>
       )}
-    </div>
+    </FloatingMenu>
   );
 }

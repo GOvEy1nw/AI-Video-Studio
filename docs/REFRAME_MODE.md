@@ -1,17 +1,18 @@
 # Reframe Mode
 
 Reframe is AiVS's shared image/video outpainting workflow. Video Reframe lives
-under GenSpace video mode alongside Generate and Retake. Image Reframe lives
-under Image Edit alongside Edit and Retouch.
+inside GenSpace Video's Tools mode alongside Extend and curated IC-LoRA tools.
+Image Reframe lives under Image Edit alongside Edit and Retouch.
 
 ## UI Flow
 
-- `frontend/views/genspace/hooks/useGenSpaceVideoTools.tsx` owns video process mode state: `generate`, `reframe`, or `retake`.
-- `frontend/views/genspace/video/ReframePanel.tsx` renders inside the prompt bar area so the gallery remains visible.
+- `frontend/views/genspace/hooks/useGenSpaceVideoTools.tsx` owns video process mode state (`generate`, compatibility value `reframe`, or `retake`) plus selected Tools item and source media. The compatibility value is labelled `Tools` in the UI.
+- `frontend/views/genspace/video/VideoToolInput.tsx` is the persistent host for the single trimmed video source used by every Tools item. Switching Reframe framing on or off updates this host without remounting its media element.
+- `frontend/views/genspace/video/ReframePanel.tsx` renders inside that host in the prompt bar area so the gallery remains visible.
 - `frontend/views/genspace/video/VideoTrimPanel.tsx` is shared by Retake and Reframe for trim selection and seeking.
 - `frontend/views/genspace/components/ReframeEditor.tsx` is the one framing component used by Image and Video. It owns zoom, reset, frame layout, and pan. Resolution and the shared aspect-ratio dropdown are injected into its control row before reset and zoom.
 - `frontend/views/genspace/video/OutpaintFrameOverlay.tsx` handles frame pan and edge/corner padding adjustment.
-- Image keeps its full-width source-aspect canvas with zero display inset. Video keeps its trim/playback canvas. Both supply media lifecycle state to the shared editor.
+- Image Reframe and source-only Video Tools use full-width source-aspect canvases. Framing-enabled Video Reframe uses the selected output aspect so its target frame fills the available canvas without side gutters. All use zero display inset; Video retains its playback transport and trim timeline below the canvas.
 - Reframe shows an optional prompt textarea below the trim panel. Placeholder: `optional text prompt to drive outpainting...`.
 - Blank prompt submits `outpaint`, because WanGP requires a text prompt even for outpainting.
 

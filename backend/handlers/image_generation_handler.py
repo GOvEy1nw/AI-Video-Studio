@@ -44,6 +44,7 @@ class ResolvedImageInputSettings:
     settings: dict[str, object]
     model_type: str | None = None
     temporary_paths: tuple[Path, ...] = ()
+    enhancer_has_image: bool = False
 
 
 class ImageGenerationHandler(StateHandlerBase):
@@ -108,6 +109,9 @@ class ImageGenerationHandler(StateHandlerBase):
             if input_settings.model_type is not None:
                 wangp_model_type = input_settings.model_type
             wangp_default_settings.update(input_settings.settings)
+            wangp_default_settings["prompt_enhancer"] = (
+                "TI" if input_settings.enhancer_has_image else "T"
+            ) if req.enhancePrompt else ""
             num_steps = self._resolve_num_steps(req, wangp_default_settings, wangp_model_type)
 
             self._generation.start_generation_job(generation_id)
@@ -283,7 +287,11 @@ class ImageGenerationHandler(StateHandlerBase):
                 "video_prompt_type": value,
                 "image_refs": [str(path.resolve()) for path in reference_paths],
             })
-            return ResolvedImageInputSettings(settings=settings, model_type=model_type)
+            return ResolvedImageInputSettings(
+                settings=settings,
+                model_type=model_type,
+                enhancer_has_image=True,
+            )
 
         if control_path is not None and control_role is not None:
             if not profile.control_image:
@@ -361,6 +369,7 @@ class ImageGenerationHandler(StateHandlerBase):
             return ResolvedImageInputSettings(
                 settings=settings,
                 model_type=model_type,
+                enhancer_has_image=True,
             )
 
         if edit.mask is not None and not profile.inpainting:
@@ -419,6 +428,7 @@ class ImageGenerationHandler(StateHandlerBase):
             settings=settings,
             model_type=model_type,
             temporary_paths=(guide_path, mask_path),
+            enhancer_has_image=bool(reference_paths),
         )
 
     @staticmethod

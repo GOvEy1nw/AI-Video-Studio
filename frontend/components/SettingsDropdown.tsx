@@ -1,5 +1,6 @@
 import { ChevronDown } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { FloatingMenu, type FloatingMenuPlacement } from "./FloatingMenu";
 
 interface SettingsDropdownOption {
   value: string;
@@ -46,12 +47,22 @@ export function SettingsDropdown({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const preferredPlacement: FloatingMenuPlacement =
+    placement === "bottom"
+      ? align === "right" || variant === "model"
+        ? "bottom-end"
+        : "bottom-start"
+      : align === "right" || variant === "model"
+        ? "top-end"
+        : "top-start";
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
         dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
+        !dropdownRef.current.contains(event.target as Node) &&
+        !menuRef.current?.contains(event.target as Node)
       ) {
         setIsOpen(false);
       }
@@ -98,7 +109,7 @@ export function SettingsDropdown({
       <button
         type="button"
         onClick={() => selectOption(option)}
-        className={`flex w-full items-center justify-between rounded-md px-2 py-2 text-left transition-colors ${
+        className={`flex w-full items-center justify-between rounded-md px-2 py-2 text-2xs text-left transition-colors ${
           option.disabled
             ? "cursor-not-allowed"
             : value === option.value
@@ -107,7 +118,7 @@ export function SettingsDropdown({
         }`}
       >
         <span
-          className={`flex items-center gap-2.5 text-xs ${
+          className={`flex items-center gap-2.5 text-2xs ${
             option.disabled
               ? "text-zinc-600"
               : value === option.value
@@ -140,7 +151,7 @@ export function SettingsDropdown({
     <div
       ref={dropdownRef}
       data-genspace-theme-ignore={variant === "model" ? "" : undefined}
-      className={`relative ${variant === "model" ? "w-full" : ""}`}
+      className={`relative ${variant === "model" ? "min-w-1/2 w-fit max-w-[350px] mx-auto" : ""}`}
     >
       {variant === "model" ? (
         <div
@@ -182,7 +193,7 @@ export function SettingsDropdown({
           aria-label={triggerLabel}
           onClick={() => setIsOpen(!isOpen)}
           disabled={disabled}
-          className={`flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md bg-zinc-900 px-1 py-1 text-xs font-medium leading-none tracking-wider text-zinc-200 transition-colors ${
+          className={`flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md bg-zinc-900 px-1 py-1 text-2xs font-medium leading-none tracking-wider text-zinc-200 transition-colors ${
             disabled ? "cursor-not-allowed opacity-50" : "hover:bg-blue-500"
           } ${isOpen && !disabled ? "border-zinc-600 bg-zinc-700 hover:bg-zinc-700" : ""}`}
         >
@@ -191,15 +202,15 @@ export function SettingsDropdown({
       )}
 
       {isOpen && (
-        <div
-          className={`absolute z-9999 w-fit text-nowrap rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl ${
-            align === "right" ? "right-0" : "left-0"
-          } ${
-            variant === "model" ? "right-0" : ""
-          } ${placement === "bottom" ? "top-full mt-2" : "bottom-full mb-2"}`}
+        <FloatingMenu
+          ref={menuRef}
+          anchorRef={dropdownRef}
+          placement={preferredPlacement}
+          gap={8}
+          className="w-fit text-nowrap rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl"
         >
           {title && (
-            <div className="mb-2 text-xs uppercase tracking-wider text-zinc-500">
+            <div className="mb-2 text-2xs uppercase tracking-wider text-zinc-500">
               {title}
             </div>
           )}
@@ -207,8 +218,8 @@ export function SettingsDropdown({
             <div
               className={
                 optionLayout === "aspect-grid"
-                  ? "grid min-w-36 grid-cols-2 gap-1"
-                  : "space-y-1"
+                  ? "grid max-h-60 min-w-36 grid-cols-2 gap-1 overflow-y-auto pr-1"
+                  : "max-h-60 space-y-1 overflow-y-auto pr-1"
               }
             >
               {variant === "model"
@@ -216,7 +227,7 @@ export function SettingsDropdown({
                     group.options.some((option) => option.variantLabel) ? (
                       <div
                         key={key}
-                        className={`flex w-full px-2 py-2 items-center justify-between rounded-md text-left transition-colors hover:bg-zinc-700 hover:text-white ${
+                        className={`flex w-full px-2 py-2 gap-2 text-2xs items-center justify-between rounded-md text-left transition-colors hover:bg-zinc-700 hover:text-white ${
                           value === group.options[0]?.value ||
                           value === group.options[1]?.value
                             ? "bg-zinc-700 text-white"
@@ -263,7 +274,7 @@ export function SettingsDropdown({
           {footer && (
             <div className="mt-2 border-t border-zinc-700 pt-2">{footer}</div>
           )}
-        </div>
+        </FloatingMenu>
       )}
     </div>
   );

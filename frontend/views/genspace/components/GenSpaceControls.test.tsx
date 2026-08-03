@@ -82,8 +82,8 @@ describe("GenSpace shared controls", () => {
       screen
         .getByText("Lock seed")
         .closest(".space-y-3")
-        ?.parentElement?.classList.contains("left-0"),
-    ).toBe(true);
+        ?.parentElement?.getAttribute("data-preferred-placement"),
+    ).toBe("top-start");
   });
 
   it("keeps Generate disabled when submission is invalid", async () => {
@@ -324,8 +324,8 @@ describe("GenSpace shared controls", () => {
       screen
         .getByText("Audio input")
         .closest("[data-media-menu]")
-        ?.classList.contains("top-full"),
-    ).toBe(true);
+        ?.getAttribute("data-preferred-placement"),
+    ).toBe("bottom-start");
     expect(screen.queryByRole("button", { name: "Remove" })).toBeNull();
 
     await userEvent.click(

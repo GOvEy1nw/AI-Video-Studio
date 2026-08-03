@@ -2,7 +2,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_MUSIC_SETTINGS } from "../../../types/music";
-import { MusicSettings } from "./MusicSettings";
+import { MusicSettings, MusicVocalModeTabs } from "./MusicSettings";
 
 afterEach(cleanup);
 
@@ -18,14 +18,9 @@ describe("MusicSettings", () => {
   it("switches between all three vocal modes", async () => {
     const onChange = vi.fn();
     render(
-      <MusicSettings
-        description="song"
+      <MusicVocalModeTabs
         settings={DEFAULT_MUSIC_SETTINGS}
         onChange={onChange}
-        profile={profile}
-        onComposeLyrics={vi.fn(async () => null)}
-        disabled={false}
-        isComposing={false}
       />,
     );
 
@@ -40,7 +35,7 @@ describe("MusicSettings", () => {
     });
   });
 
-  it("shows lyrics and vocal controls only when the vocal mode can use them", () => {
+  it("shows the custom lyrics editor only in custom lyrics mode", () => {
     const common = {
       description: "song",
       onChange: vi.fn(),
@@ -63,9 +58,7 @@ describe("MusicSettings", () => {
     expect(screen.getAllByRole("textbox")).toHaveLength(1);
     expect(screen.getByLabelText("Lyrics")).toHaveProperty("disabled", false);
     expect(screen.getByRole("button", { name: /Compose Lyrics/ })).toHaveProperty("disabled", false);
-    expect(screen.getByRole("switch", { name: "Think" })).toHaveProperty("disabled", false);
-    expect(screen.getByLabelText("Language")).toBeTruthy();
-    expect(screen.getByLabelText("Vocal character")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Think" })).toHaveProperty("disabled", false);
 
     rerender(
       <MusicSettings
@@ -79,8 +72,6 @@ describe("MusicSettings", () => {
       />,
     );
     expect(screen.queryByLabelText("Lyrics")).toBeNull();
-    expect(screen.getByLabelText("Language")).toBeTruthy();
-    expect(screen.getByLabelText("Vocal character")).toBeTruthy();
 
     rerender(
       <MusicSettings

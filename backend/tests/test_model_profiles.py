@@ -122,7 +122,7 @@ class TestCuratedProfiles:
             profile = get_image_profile(profile_id)
             assert profile is not None
             assert profile.wangp_model_type == model_type
-            assert profile.status == "experimental"
+            assert profile.status == "stable"
 
     def test_requested_edit_profiles_expose_supported_image_inputs(self) -> None:
         flux = get_image_profile("flux2_klein_9b")

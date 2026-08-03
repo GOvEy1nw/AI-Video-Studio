@@ -29,6 +29,12 @@ export function compileMusicRequest(
 
   const vocalMode = resolveMusicVocalMode(settings);
   const customLyrics = settings.customLyrics.trim();
+  if (vocalMode === "custom-lyrics" && !customLyrics) {
+    return {
+      ok: false,
+      message: "Write or compose lyrics before generating.",
+    };
+  }
   const resolvedAudioInputs = [
     settings.coverAudioInput,
     settings.referenceTimbreAudioInput,
@@ -63,24 +69,13 @@ export function compileMusicRequest(
     modelProfileId: profile.id,
     description: cleanDescription,
     vocalMode,
-    lyricsPrompt:
-      vocalMode === "custom-lyrics" && !customLyrics
-        ? settings.lyricsPrompt.trim() || undefined
-        : undefined,
+    lyricsPrompt: undefined,
     lyrics:
       vocalMode === "custom-lyrics" && customLyrics
         ? customLyrics
         : undefined,
-    lyricsThink:
-      vocalMode === "custom-lyrics" &&
-      !customLyrics &&
-      settings.composeWithThinking,
-    lyricsSeed:
-      vocalMode === "custom-lyrics" &&
-      !customLyrics &&
-      settings.lyricsSeedLocked
-        ? settings.lyricsSeed
-        : undefined,
+    lyricsThink: false,
+    lyricsSeed: undefined,
     durationMode: settings.durationMode,
     durationSeconds,
     vocalLanguage: settings.vocalLanguage,

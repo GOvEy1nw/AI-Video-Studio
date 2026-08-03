@@ -5,6 +5,7 @@ import {
   COLOR_LABELS,
   getColorLabel,
 } from "../views/editor/video-editor-utils";
+import { FloatingMenu } from "./FloatingMenu";
 
 export type GalleryBinContextMenuState = {
   bin: string;
@@ -171,10 +172,12 @@ export function GalleryBinBar({
       </div>
 
       {binContextMenu && (
-        <div
+        <FloatingMenu
           ref={binContextMenuRef}
-          className="fixed z-60 min-w-[160px] rounded-xl border border-zinc-700 bg-zinc-800 py-1.5 text-xs shadow-2xl"
-          style={{ left: binContextMenu.x, top: binContextMenu.y }}
+          anchorPoint={binContextMenu}
+          gap={0}
+          role="menu"
+          className="min-w-[160px] overflow-y-auto rounded-xl border border-zinc-700 bg-zinc-800 py-1.5 text-xs shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
           <button
@@ -243,7 +246,7 @@ export function GalleryBinBar({
             <Trash2 className="h-3.5 w-3.5" />
             <span>Delete Bin</span>
           </button>
-        </div>
+        </FloatingMenu>
       )}
     </>
   );

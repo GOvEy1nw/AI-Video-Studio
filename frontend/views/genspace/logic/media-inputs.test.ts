@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ModelProfileInputMedia } from "../../../types/model-profiles";
 import type { GenSpaceMediaInput } from "../types";
+import { VIDEO_GUIDE_ROLE_OPTIONS } from "../constants";
 import {
   findGuideInput,
   isImageAspectRatioLocked,
@@ -112,5 +113,12 @@ describe("GenSpace media input logic", () => {
     ).toBe(true);
     expect(isVideoAspectRatioLocked("generate", [], true)).toBe(true);
     expect(isVideoAspectRatioLocked("reframe", [video], true)).toBe(false);
+  });
+
+  it("keeps Video Tools-only roles out of standard media input choices", () => {
+    const labels = VIDEO_GUIDE_ROLE_OPTIONS.map(({ label }) => label);
+
+    expect(labels).not.toContain("Convert SDR to HDR");
+    expect(labels).not.toContain("Continue Video");
   });
 });

@@ -9,6 +9,7 @@ import {
   Sparkles,
   Scissors,
   Expand,
+  Wrench,
 } from "lucide-react";
 import { useProjects } from "../../../contexts/ProjectContext";
 import type { GenSpaceRetakeSource } from "../../../contexts/ProjectContext";
@@ -26,9 +27,11 @@ import type {
   ImageEditToolMode,
 } from "../../../types/image-edit";
 import type { ImageUseTarget } from "../../../components/UseImageDropdown";
+import type { VideoUseTarget } from "../../../components/UseVideoDropdown";
 import { getAssetModelId } from "../logic/generation-assets";
 import {
   getDefaultImageInputRole,
+  replaceGuideInput,
   replaceInputForRole,
 } from "../logic/media-inputs";
 import {
@@ -45,7 +48,6 @@ import type { GenSpaceSelectedGenerationProps } from "../GenSpaceSelectedGenerat
 import { useGenSpaceModeState } from "./useGenSpaceModeState";
 import { useGenSpaceSettingsState } from "./useGenSpaceSettingsState";
 import { useGenSpaceGenerationActions } from "./useGenSpaceGenerationActions";
-import { useGenSpacePromptEnhancement } from "./useGenSpacePromptEnhancement";
 import { useGenSpaceResultPersistence } from "./useGenSpaceResultPersistence";
 import { useGenSpaceGallery } from "./useGenSpaceGallery";
 import { useGenSpaceMediaInputs } from "./useGenSpaceMediaInputs";
@@ -62,6 +64,24 @@ import {
   isRegionPromptReady,
 } from "../image/region-prompt";
 import { getImageProfilesForMode } from "../image/image-profile-options";
+import type { VideoToolId } from "../../../types/video-tools";
+import { getVideoToolLabel } from "../video/video-tools";
+
+export function usePromptEnhancementPreference(
+  isToolsMode: boolean,
+  selectedTool: VideoToolId,
+) {
+  const [standardEnabled, setStandardEnabled] = useState(true);
+  const [toolEnabled, setToolEnabled] = useState(false);
+
+  useEffect(() => {
+    if (isToolsMode) setToolEnabled(false);
+  }, [isToolsMode, selectedTool]);
+
+  return isToolsMode
+    ? ([toolEnabled, setToolEnabled] as const)
+    : ([standardEnabled, setStandardEnabled] as const);
+}
 
 export function useGenSpaceController() {
   const {
@@ -121,8 +141,6 @@ export function useGenSpaceController() {
     setPrompt,
   });
   const [localError, setLocalError] = useState<string | null>(null);
-  const [promptEnhancementEnabled, setPromptEnhancementEnabled] =
-    useState(true);
   const [framingSettings, setFramingSettings] =
     useState<FramingSettings | null>(null);
   const [regionPrompt, setRegionPrompt] = useState(createEmptyRegionPrompt);
@@ -230,18 +248,25 @@ export function useGenSpaceController() {
     reframeSubmissionRef,
     retakeSubmissionRef,
     isRetakeMode,
+    isToolsMode,
     isReframeMode,
     panel: videoToolPanel,
     setReframeSource,
     setReframeAspectMode,
+    reframePanelKey,
+    handleReframePanelChange,
+    selectedTool,
+    setSelectedTool,
+    toolInput,
+    setToolInput,
   } = useGenSpaceVideoTools({
     mode,
     videoMode,
-    isGenerating,
-    generationStatus: statusMessage,
     isRetaking,
     retakeStatus,
   });
+  const [promptEnhancementEnabled, setPromptEnhancementEnabled] =
+    usePromptEnhancementPreference(isToolsMode, selectedTool);
   const [activeRetakeSource, setActiveRetakeSource] =
     useState<GenSpaceRetakeSource | null>(null);
 
@@ -315,17 +340,6 @@ export function useGenSpaceController() {
     updateSettings,
   ]);
 
-  const { resolvePromptForGeneration, isEnhancingPrompt } =
-    useGenSpacePromptEnhancement({
-      mode,
-      videoMode,
-      settings,
-      imageInputs,
-      inputImage,
-      isBusy: isGenerating || isComposingLyrics || isRetaking,
-      setLocalError,
-    });
-
   const {
     submit: handleGenerate,
     imageSubmissionRef,
@@ -336,10 +350,11 @@ export function useGenSpaceController() {
     imageMode,
     regionPrompt,
     videoMode,
+    selectedVideoTool: selectedTool,
+    videoToolInput: toolInput,
     prompt,
     framingSettings,
     promptEnhancementEnabled,
-    resolvePromptForGeneration,
     currentProjectId,
     projectAssets: currentProject?.assets ?? [],
     settings,
@@ -364,30 +379,6 @@ export function useGenSpaceController() {
     generateMusic,
     submitRetake,
   });
-  useGenSpaceResultPersistence({
-    videoUrl,
-    videoPath,
-    isGenerating,
-    addAsset,
-    reset,
-    videoSubmissionRef,
-    reframeSubmissionRef,
-    retakeResult,
-    isRetaking,
-    retakeSubmissionRef,
-    projects,
-    activeRetakeSource,
-    setActiveRetakeSource,
-    addTakeToAsset,
-    setPendingRetakeUpdate,
-    resetRetake,
-    imageUrls,
-    imagePaths,
-    imageSubmissionRef,
-    musicResult,
-    musicSubmissionRef,
-  });
-
   const handleUseImage = useCallback(
     (imageAsset: Asset, target: ImageUseTarget) => {
       const input = {
@@ -475,13 +466,55 @@ export function useGenSpaceController() {
   const handleReframe = useCallback((videoAsset: Asset) => {
     setMode("video");
     setVideoMode("reframe");
+    setSelectedTool("reframe");
     setPrompt("");
     setReframeSource({
       videoUrl: videoAsset.url,
       videoPath: videoAsset.path,
       duration: videoAsset.duration,
     });
-  }, [setMode, setVideoMode, setPrompt, setReframeSource]);
+  }, [setMode, setVideoMode, setPrompt, setReframeSource, setSelectedTool]);
+  const handleUseVideo = useCallback(
+    (videoAsset: Asset, target: VideoUseTarget) => {
+      if (target === "reframe") {
+        handleReframe(videoAsset);
+        return;
+      }
+
+      setMode("video");
+      if (target === "reference") {
+        setVideoMode("generate");
+        setImageInputs((current) =>
+          replaceGuideInput(current, {
+            id: crypto.randomUUID(),
+            url: videoAsset.url,
+            path: videoAsset.path,
+            role: "control_video",
+            type: "video",
+          }),
+        );
+        return;
+      }
+
+      setVideoMode("reframe");
+      setSelectedTool(target);
+      setPrompt("");
+      setReframeSource({
+        videoUrl: videoAsset.url,
+        videoPath: videoAsset.path,
+        duration: videoAsset.duration,
+      });
+    },
+    [
+      handleReframe,
+      setImageInputs,
+      setMode,
+      setPrompt,
+      setReframeSource,
+      setSelectedTool,
+      setVideoMode,
+    ],
+  );
   const clearLocalError = useCallback(() => setLocalError(null), []);
 
   const handleCopySettings = useGenSpaceSettingsRestore({
@@ -505,12 +538,15 @@ export function useGenSpaceController() {
     setInputImage,
     setInputAudio,
     setReframeSource,
+    setVideoTool: setSelectedTool,
+    setVideoToolInput: setToolInput,
     clearError: clearLocalError,
   });
   const gallery = useGenSpaceGallery({
     currentProject,
     currentProjectId,
     currentTab,
+    isGenerating,
     addAsset,
     deleteAsset,
     updateAsset,
@@ -534,12 +570,37 @@ export function useGenSpaceController() {
     isDragOver: isGalleryDragOver,
     isImporting: isGalleryImporting,
     filterActive: galleryFilterActive,
+    selectAsset,
     syncInputFileToGallery,
     rootDragHandlers,
     overlays: galleryOverlays,
   } = gallery;
+  useGenSpaceResultPersistence({
+    videoUrl,
+    videoPath,
+    isGenerating,
+    addAsset,
+    reset,
+    videoSubmissionRef,
+    reframeSubmissionRef,
+    retakeResult,
+    isRetaking,
+    retakeSubmissionRef,
+    projects,
+    activeRetakeSource,
+    setActiveRetakeSource,
+    addTakeToAsset,
+    setPendingRetakeUpdate,
+    resetRetake,
+    imageUrls,
+    imagePaths,
+    imageSubmissionRef,
+    musicResult,
+    musicSubmissionRef,
+    onAssetAdded: selectAsset,
+  });
 
-  const isPanelMode = isRetakeMode || isReframeMode;
+  const isPanelMode = isRetakeMode || isToolsMode;
   const selectedMusicProfile =
     musicProfiles.find(
       (candidate) => candidate.id === musicSettings.profileId,
@@ -564,8 +625,10 @@ export function useGenSpaceController() {
             editOutpaint.padding.right >
             0
         : true;
-  const canSubmit = isReframeMode
-    ? reframeInput.ready && !!reframeInput.videoPath && !isGenerating
+  const canSubmit = isToolsMode
+    ? isReframeMode
+      ? reframeInput.ready && !!reframeInput.videoPath && !isGenerating
+      : !!toolInput && !!prompt.trim() && !isGenerating
     : isRetakeMode
       ? retakeInput.ready && !!retakeInput.videoPath && !isRetaking
       : mode === "music"
@@ -575,13 +638,17 @@ export function useGenSpaceController() {
         : mode === "image" && imageMode === "edit"
           ? !!editImage && !!prompt.trim() && editWorkflowReady
           : !!prompt.trim();
-  const promptButtonLabel = isReframeMode
-    ? "Reframe"
+  const promptButtonLabel = isToolsMode
+    ? getVideoToolLabel(selectedTool)
     : isRetakeMode
       ? "Retake"
       : "Generate";
-  const promptButtonIcon = isReframeMode ? (
-    <Expand className="h-3.5 w-3.5" />
+  const promptButtonIcon = isToolsMode ? (
+    isReframeMode ? (
+      <Expand className="h-3.5 w-3.5" />
+    ) : (
+      <Wrench className="h-3.5 w-3.5" />
+    )
   ) : isRetakeMode ? (
     <Scissors className="h-3.5 w-3.5" />
   ) : (
@@ -591,13 +658,13 @@ export function useGenSpaceController() {
   );
   const promptGenerating = isRetakeMode
     ? isRetaking
-    : isGenerating || isComposingLyrics || isEnhancingPrompt;
+    : isGenerating || isComposingLyrics;
   const promptController = {
     value: prompt,
     setValue: setPrompt,
     enhance: () => setPromptEnhancementEnabled((current) => !current),
     enhanceEnabled: promptEnhancementEnabled,
-    isEnhancing: isEnhancingPrompt,
+    isEnhancing: false,
     seedLocked,
     lockedSeed,
     setSeed: handleSeedChange,
@@ -677,7 +744,14 @@ export function useGenSpaceController() {
         panel: videoToolPanel,
         reframeDurationSeconds: reframeInput.duration,
         reframeAspectMode: reframeInput.aspectMode,
+        reframePadding: reframeInput.padding,
+        reframePanelKey,
+        onReframePanelChange: handleReframePanelChange,
         setReframeAspectMode,
+        selectedTool,
+        setSelectedTool,
+        toolInput,
+        setToolInput,
       },
       framing: {
         value: framingSettings,
@@ -749,6 +823,7 @@ export function useGenSpaceController() {
 
   const galleryGeneration = useMemo<GenSpaceGalleryProps["generation"]>(
     () => ({
+      mode,
       isRunning: isGenerating,
       isSelected: isGenerating && galleryOverlays.selectedAsset === null,
       isCancelling,
@@ -770,6 +845,7 @@ export function useGenSpaceController() {
       galleryOverlays.setSelectedAsset,
       isCancelling,
       isGenerating,
+      mode,
       modelDownload,
       modelLifecycleActive,
       previewUrl,
@@ -830,7 +906,7 @@ export function useGenSpaceController() {
         if (currentProjectId) toggleFavorite(currentProjectId, asset.id);
       },
       onUseImage: handleUseImage,
-      onReframe: handleReframe,
+      onUseVideo: handleUseVideo,
       onCopySettings: handleCopySettings,
       onDelete: (asset: Asset) =>
         galleryOverlays.requestDeleteAssets([asset.id]),
@@ -858,7 +934,7 @@ export function useGenSpaceController() {
         if (currentProjectId) toggleFavorite(currentProjectId, asset.id);
       },
       onUseImage: handleUseImage,
-      onReframe: handleReframe,
+      onUseVideo: handleUseVideo,
       onCopySettings: handleCopySettings,
       setAssetActiveTake,
       setTakesViewAssetId: galleryOverlays.setTakesViewAssetId,

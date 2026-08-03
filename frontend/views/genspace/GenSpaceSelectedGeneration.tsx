@@ -11,10 +11,8 @@ import {
   ChevronRight,
   ClipboardPaste,
   Copy,
-  Expand,
   FolderOpen,
   Heart,
-  LoaderCircle,
   Pause,
   Play,
   Sparkles,
@@ -24,11 +22,14 @@ import {
   X,
 } from "lucide-react";
 import { ClipWaveform } from "../../components/AudioWaveform";
-import { DownloadProgressView } from "../../components/DownloadProgressView";
 import {
   UseImageDropdown,
   type ImageUseTarget,
 } from "../../components/UseImageDropdown";
+import {
+  UseVideoDropdown,
+  type VideoUseTarget,
+} from "../../components/UseVideoDropdown";
 import type { Asset } from "../../types/project";
 import type { GenSpaceGalleryProps } from "./GenSpaceGallery";
 
@@ -48,7 +49,7 @@ export interface GenSpaceSelectedGenerationProps {
   onCopyPrompt: (prompt: string) => void;
   onToggleFavorite: (asset: Asset) => void;
   onUseImage: (asset: Asset, target: ImageUseTarget) => void;
-  onReframe: (asset: Asset) => void;
+  onUseVideo: (asset: Asset, target: VideoUseTarget) => void;
   onCopySettings: (asset: Asset) => void;
   onDelete: (asset: Asset) => void;
 }
@@ -86,80 +87,78 @@ function ActionButton({
   );
 }
 
-function GenerationProgress({
+function formatGenerationProgressDetails(badges: string[]) {
+  const step = badges.find((badge) => badge.startsWith("Step "));
+  const phase = badges.find((badge) => badge.startsWith("Phase "));
+  const section = badges.find((badge) => badge.startsWith("Section "));
+  return [step, phase ? `(${phase})` : null, section]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function getGenerationStatusMessage(
+  generation: GenSpaceGalleryProps["generation"],
+) {
+  const statusMessage = generation.statusMessage.trim();
+  if (
+    generation.modelLifecycleActive ||
+    /^loading model\b/i.test(statusMessage)
+  ) {
+    return "Loading Model";
+  }
+  if (generation.modelDownload || /^downloading model\b/i.test(statusMessage)) {
+    return "Downloading Model";
+  }
+  return statusMessage || "Generating...";
+}
+
+function GenerationProgressHeader({
   generation,
 }: {
   generation: GenSpaceGalleryProps["generation"];
 }) {
+  const progress = Math.max(0, Math.min(100, generation.progress));
+  const details = formatGenerationProgressDetails(generation.badges);
+
   return (
-    <div className="flex min-h-0 flex-1 flex-col p-5">
-      <div className="relative min-h-0 flex-1 overflow-hidden rounded-xl border border-zinc-800 bg-black">
-        {generation.previewUrl ? (
-          <img
-            src={generation.previewUrl}
-            alt="Current generation preview"
-            className="h-full w-full object-contain"
-          />
-        ) : null}
+    <div className="min-w-0 flex-1">
+      <p className="truncate text-sm font-semibold text-white">
+        {getGenerationStatusMessage(generation)}
+      </p>
+      <div className="mt-2 flex min-w-0 items-center gap-3 text-xs">
+        <p className="min-w-0 flex-1 truncate text-zinc-400">
+          <span className="text-zinc-200">{generation.modelName}</span>
+          {details ? <span>: {details}</span> : null}
+        </p>
+        <span className="shrink-0 font-mono text-zinc-300">
+          {Math.round(progress)}%
+        </span>
+      </div>
+      <div className="mt-2 flex items-center gap-3">
         <div
-          className={`absolute inset-0 flex flex-col items-center justify-center px-6 text-center ${
-            generation.previewUrl ? "bg-black/45" : ""
-          }`}
+          role="progressbar"
+          aria-label="Generation progress"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={progress}
+          data-testid="generation-progress-bar"
+          className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-zinc-800"
         >
-          {generation.modelDownload === null &&
-          (!generation.previewUrl || generation.modelLifecycleActive) ? (
-            <LoaderCircle className="mb-4 h-10 w-10 animate-spin text-violet-400" />
-          ) : null}
-          {generation.modelDownload ? (
-            <DownloadProgressView
-              className="w-full max-w-md rounded-xl bg-black/65 p-4"
-              title={`Downloading ${
-                generation.modelDownload.modelName ?? "model files"
-              }`}
-              transfer={generation.modelDownload}
-            />
-          ) : (
-            <>
-              <p className="text-base font-medium text-zinc-100">
-                {generation.statusMessage || "Generating..."}
-              </p>
-              {generation.badges.length > 0 ? (
-                <div className="mt-3 flex flex-wrap justify-center gap-1.5">
-                  {generation.badges.map((badge) => (
-                    <span
-                      key={badge}
-                      className="rounded-full border border-white/10 bg-black/50 px-2 py-1 text-[10px] text-zinc-300"
-                    >
-                      {badge}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
-              {!generation.modelLifecycleActive ? (
-                <div className="mt-5 w-full max-w-sm">
-                  <div className="mb-2 flex justify-between text-xs text-zinc-400">
-                    <span>{generation.modelName}</span>
-                    <span>{Math.round(generation.progress)}%</span>
-                  </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-zinc-800">
-                    <div
-                      className="h-full bg-violet-500 transition-all"
-                      style={{ width: `${generation.progress}%` }}
-                    />
-                  </div>
-                </div>
-              ) : null}
-            </>
-          )}
-          <button
-            type="button"
-            onClick={generation.cancel}
-            disabled={generation.isCancelling}
-            className="mt-5 rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-xs font-medium text-zinc-200 transition-colors hover:bg-black/60 disabled:cursor-wait disabled:opacity-60"
-          >
-            {generation.isCancelling ? "Cancelling..." : "Cancel generation"}
-          </button>
+          <div
+            className="h-full bg-violet-500 transition-all"
+            style={{ width: `${progress}%` }}
+          />
         </div>
+        <button
+          type="button"
+          onClick={generation.cancel}
+          disabled={generation.isCancelling}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-zinc-700 text-zinc-300 transition-colors hover:border-zinc-600 hover:bg-zinc-800 hover:text-white disabled:cursor-wait disabled:opacity-60"
+          aria-label="Cancel generation"
+          title="Cancel generation"
+        >
+          <X className="h-4 w-4" />
+        </button>
       </div>
     </div>
   );
@@ -443,7 +442,7 @@ export function GenSpaceSelectedGeneration({
   onCopyPrompt,
   onToggleFavorite,
   onUseImage,
-  onReframe,
+  onUseVideo,
   onCopySettings,
   onDelete,
 }: GenSpaceSelectedGenerationProps) {
@@ -478,7 +477,9 @@ export function GenSpaceSelectedGeneration({
       style={style}
     >
       <header className="flex h-30 shrink-0 items-center justify-between gap-4 border-b bg-zinc-900 border-zinc-800 px-5">
-        <div className="min-w-0 flex-1">
+        <div
+          className={`min-w-0 flex-1 ${showingGeneration ? "hidden" : ""}`}
+        >
           <div className="flex min-w-0 mb-4 items-center gap-2">
             <h2
               className="min-w-0 truncate text-sm font-semibold text-white"
@@ -529,10 +530,6 @@ export function GenSpaceSelectedGeneration({
           <p className="mt-0.5 text-[10px] text-zinc-500">
             {selectedIndex + 1} of {visibleAssetCount}
           </p>
-        ) : showingGeneration ? (
-          <p className="mt-0.5 text-[10px] text-violet-300">
-            Generation in progress
-          </p>
         ) : null}
         {asset ? (
           <div className="flex items-center gap-1">
@@ -564,10 +561,21 @@ export function GenSpaceSelectedGeneration({
             </button>
           </div>
         ) : null}
+        {showingGeneration ? (
+          <GenerationProgressHeader generation={generation} />
+        ) : null}
       </header>
 
       {showingGeneration ? (
-        <GenerationProgress generation={generation} />
+        <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-black/40">
+          {generation.previewUrl ? (
+            <img
+              src={generation.previewUrl}
+              alt="Current generation preview"
+              className="h-full w-full object-contain"
+            />
+          ) : null}
+        </div>
       ) : asset ? (
         <>
           <div className="flex min-h-0 flex-1 overflow-hidden bg-black/40">
@@ -600,10 +608,8 @@ export function GenSpaceSelectedGeneration({
                 />
               ) : null}
               {asset.type === "video" ? (
-                <ActionButton
-                  label="Reframe"
-                  icon={<Expand className="h-4 w-4" />}
-                  onClick={() => onReframe(asset)}
+                <UseVideoDropdown
+                  onSelect={(target) => onUseVideo(asset, target)}
                 />
               ) : null}
               <ActionButton

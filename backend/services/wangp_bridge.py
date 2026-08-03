@@ -344,8 +344,12 @@ class WanGPBridge:
         on_progress: ProgressCallback,
         is_cancelled: CancelledCallback,
     ) -> str:
+        effective_settings = dict(settings)
+        model_type = effective_settings.get("model_type")
+        if isinstance(model_type, str) and model_type.startswith("ltx"):
+            effective_settings["config"] = "PrunaAI VAE"
         outputs = self._run_manifest(
-            manifest=[{"id": 1, "params": settings, "plugin_data": {}}],
+            manifest=[{"id": 1, "params": effective_settings, "plugin_data": {}}],
             media_suffixes={".mp4", ".mov", ".mkv", ".avi", ".webm", ".mp3", ".wav", ".ogg", ".aac", ".flac", ".m4a"},
             on_progress=on_progress,
             is_cancelled=is_cancelled,

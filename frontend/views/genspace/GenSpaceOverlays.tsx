@@ -14,6 +14,7 @@ import { useProjects } from "../../contexts/ProjectContext";
 import type { DuplicateFilenameChoice } from "../../lib/media-import";
 import type { Asset } from "../../types/project";
 import type { ImageUseTarget } from "../../components/UseImageDropdown";
+import type { VideoUseTarget } from "../../components/UseVideoDropdown";
 import { AssetContextMenu } from "../editor/AssetContextMenu";
 
 type Projects = ReturnType<typeof useProjects>;
@@ -37,7 +38,7 @@ export interface GenSpaceOverlaysProps {
   currentProjectId: string | null;
   onToggleFavorite: (asset: Asset) => void;
   onUseImage: (asset: Asset, target: ImageUseTarget) => void;
-  onReframe: (asset: Asset) => void;
+  onUseVideo: (asset: Asset, target: VideoUseTarget) => void;
   onCopySettings: (asset: Asset) => void;
   setAssetActiveTake: Projects["setAssetActiveTake"];
   setTakesViewAssetId: (assetId: string | null) => void;
@@ -73,7 +74,7 @@ export function GenSpaceOverlays({
   currentProjectId,
   onToggleFavorite,
   onUseImage,
-  onReframe,
+  onUseVideo,
   onCopySettings,
   setAssetActiveTake,
   setTakesViewAssetId,
@@ -186,7 +187,7 @@ export function GenSpaceOverlays({
           currentProjectId={currentProjectId}
           onToggleFavorite={onToggleFavorite}
           onUseImage={onUseImage}
-          onReframe={onReframe}
+          onUseVideo={onUseVideo}
           onCopySettings={onCopySettings}
           setAssetActiveTake={setAssetActiveTake}
           setTakesViewAssetId={setTakesViewAssetId}

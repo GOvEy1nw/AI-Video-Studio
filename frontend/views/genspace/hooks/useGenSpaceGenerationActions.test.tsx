@@ -24,12 +24,9 @@ const framingSettings = {
 };
 
 describe("useGenSpaceGenerationActions", () => {
-  it("enhances and frames image prompts only on submit, then snapshots the effective prompt", async () => {
+  it("sends authored image prompts with native enhancement enabled", async () => {
     const generateImage: UseGenerationReturn["generateImage"] = vi.fn(
       async () => undefined,
-    );
-    const resolvePromptForGeneration = vi.fn(
-      async () => "expanded cinematic prompt",
     );
     const reframeSubmissionRef: {
       current: ReframeSubmissionSnapshot | null;
@@ -47,7 +44,6 @@ describe("useGenSpaceGenerationActions", () => {
         prompt: "user prompt",
         framingSettings,
         promptEnhancementEnabled: true,
-        resolvePromptForGeneration,
         currentProjectId: "project-a",
         projectAssets: [],
         settings: { ...DEFAULT_VIDEO_SETTINGS },
@@ -88,12 +84,11 @@ describe("useGenSpaceGenerationActions", () => {
 
     await act(() => result.current.submit());
 
-    expect(resolvePromptForGeneration).toHaveBeenCalledWith("user prompt");
     const effectivePrompt =
-      "Shot on ARRI Alexa 35, Premium Spherical Prime, 35mm, f/2.8, 1/50s, ISO 800. expanded cinematic prompt";
+      "Shot on ARRI Alexa 35, Premium Spherical Prime, 35mm, f/2.8, 1/50s, ISO 800. user prompt";
     expect(generateImage).toHaveBeenCalledWith(
       effectivePrompt,
-      expect.any(Object),
+      expect.objectContaining({ enhancePrompt: true }),
       [],
     );
     expect(result.current.imageSubmissionRef.current?.prompt).toBe(
@@ -105,7 +100,6 @@ describe("useGenSpaceGenerationActions", () => {
     const generateImage: UseGenerationReturn["generateImage"] = vi.fn(
       async () => undefined,
     );
-    const resolvePromptForGeneration = vi.fn(async () => "wrong prompt");
     const regionPrompt = {
       ...createEmptyRegionPrompt(),
       highLevelDescription: "A poster with one central subject.",
@@ -137,7 +131,6 @@ describe("useGenSpaceGenerationActions", () => {
         prompt: "unrelated Create prompt",
         framingSettings,
         promptEnhancementEnabled: true,
-        resolvePromptForGeneration,
         currentProjectId: "project-a",
         projectAssets: [],
         settings: {
@@ -189,10 +182,9 @@ describe("useGenSpaceGenerationActions", () => {
     await act(() => result.current.submit());
 
     const serialized = serializeRegionPrompt(regionPrompt);
-    expect(resolvePromptForGeneration).not.toHaveBeenCalled();
     expect(generateImage).toHaveBeenCalledWith(
       serialized,
-      expect.any(Object),
+      expect.objectContaining({ enhancePrompt: false }),
       [],
     );
     expect(result.current.imageSubmissionRef.current?.prompt).toBe(serialized);
@@ -248,7 +240,6 @@ describe("useGenSpaceGenerationActions", () => {
           prompt: "change the source",
           framingSettings: null,
           promptEnhancementEnabled: false,
-          resolvePromptForGeneration: vi.fn(async (value) => value),
           currentProjectId: "project-a",
           projectAssets: [],
           settings: { ...DEFAULT_VIDEO_SETTINGS },
@@ -334,5 +325,101 @@ describe("useGenSpaceGenerationActions", () => {
     expect(result.current.imageSubmissionRef.current?.editOutpaint).toEqual(
       editOutpaint,
     );
+  });
+
+  it("passes a selected video tool through generation and snapshots its source", async () => {
+    const generate: UseGenerationReturn["generate"] = vi.fn(
+      async () => undefined,
+    );
+    const reframeSubmissionRef: {
+      current: ReframeSubmissionSnapshot | null;
+    } = { current: null };
+    const retakeSubmissionRef: {
+      current: RetakeSubmissionSnapshot | null;
+    } = { current: null };
+    const toolInput = {
+      id: "tool-source",
+      url: "file:///C:/source.mp4",
+      role: "control_video",
+      type: "video" as const,
+      trimStartTime: 1,
+      trimDuration: 3,
+    };
+
+    const { result } = renderHook(() =>
+      useGenSpaceGenerationActions({
+        mode: "video",
+        imageMode: "create",
+        regionPrompt: createEmptyRegionPrompt(),
+        videoMode: "reframe",
+        selectedVideoTool: "relight",
+        videoToolInput: toolInput,
+        prompt: "relight this shot",
+        framingSettings: null,
+        promptEnhancementEnabled: true,
+        currentProjectId: "project-a",
+        projectAssets: [],
+        settings: { ...DEFAULT_VIDEO_SETTINGS },
+        setSettings: vi.fn(),
+        musicSettings: DEFAULT_MUSIC_SETTINGS,
+        musicProfiles: [],
+        imageInputs: [],
+        inputImage: null,
+        inputAudio: null,
+        useAudioTrack: false,
+        reframeInput: {
+          videoUrl: null,
+          videoPath: null,
+          startTime: 0,
+          duration: 0,
+          videoDuration: 0,
+          videoWidth: 0,
+          videoHeight: 0,
+          aspectMode: "16:9",
+          padding: { top: 0, bottom: 0, left: 0, right: 0 },
+          ready: false,
+        },
+        retakeInput: {
+          videoPath: null,
+          startTime: 0,
+          duration: 0,
+          videoDuration: 0,
+        },
+        setLocalError: vi.fn(),
+        reframeSubmissionRef,
+        retakeSubmissionRef,
+        generate,
+        generateImage: vi.fn(async () => undefined),
+        generateMusic: vi.fn(async () => null),
+        submitRetake: vi.fn(async () => undefined),
+      }),
+    );
+
+    await act(() => result.current.submit());
+
+    expect(generate).toHaveBeenCalledWith(
+      "relight this shot",
+      null,
+      expect.objectContaining({ enhancePrompt: true }),
+      null,
+      [
+        {
+          path: "C:/source.mp4",
+          role: "control_video",
+          type: "video",
+          trimStartTime: 1,
+          trimDuration: 3,
+        },
+      ],
+      false,
+      undefined,
+      undefined,
+      "relight",
+    );
+    expect(result.current.videoSubmissionRef.current).toMatchObject({
+      prompt: "relight this shot",
+      videoTool: "relight",
+      inputs: [toolInput],
+    });
   });
 });

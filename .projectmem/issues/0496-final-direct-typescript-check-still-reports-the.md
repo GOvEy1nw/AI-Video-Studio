@@ -1,0 +1,9 @@
+# #0496 Final direct TypeScript check still reports the same 12 unrelated unused-symbol diagnostics in GalleryAssetLibrary.tsx, ReframePanel.tsx, and VideoGenPanel.tsx; no Music or SettingsDropdown diagnostics.
+
+- 2026-08-03T10:56:55Z `issue`: Final direct TypeScript check still reports the same 12 unrelated unused-symbol diagnostics in GalleryAssetLibrary.tsx, ReframePanel.tsx, and VideoGenPanel.tsx; no Music or SettingsDropdown diagnostics. [frontend validation tooling]
+- 2026-08-03T10:56:55Z `attempt`: Final direct TypeScript check still reports the same 12 unrelated unused-symbol diagnostics in GalleryAssetLibrary.tsx, ReframePanel.tsx, and VideoGenPanel.tsx; no Music or SettingsDropdown diagnostics. [frontend validation tooling] (partial)
+- 2026-08-03T10:57:14Z `attempt`: Final direct Vitest run remains 185/194 passing after scroll-cap change; same nine unrelated failures persist, while both Music test files pass. [frontend/views/genspace/music/MusicGenPanel.test.tsx] (partial)
+- 2026-08-03T10:57:49Z `attempt`: Adjusted shared option-list cap from max-h-72 to max-h-80 so standard rows fit approximately ten entries before overflow scrolling. [frontend/components/SettingsDropdown.tsx] (partial)
+- 2026-08-03T10:58:04Z `attempt`: Focused MusicGenPanel and MusicSettings tests pass 7/7 with max-h-80 scroll cap in shared option menus. [frontend/views/genspace/music/MusicGenPanel.test.tsx] (worked)
+- 2026-08-03T10:58:43Z `attempt`: Added focused assertion that opened Music key menu exposes shared max-h-80 overflow scrolling container. [frontend/views/genspace/music/MusicGenPanel.test.tsx] (partial)
+- 2026-08-03T13:18:49Z `attempt`: Direct TypeScript check has 13 existing unused-symbol diagnostics in GalleryAssetLibrary.tsx, ReframePanel.tsx, and VideoGenPanel.tsx; no diagnostics in UseVideo, context menu, selected generation, constants, or tests [frontend validation tooling] (partial)

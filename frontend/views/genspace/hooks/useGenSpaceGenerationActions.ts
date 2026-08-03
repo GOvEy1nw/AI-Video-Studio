@@ -29,6 +29,7 @@ import type {
   VideoSubmissionSnapshot,
   VideoProcessMode,
 } from "../types";
+import type { VideoToolId } from "../../../types/video-tools";
 import { applyFramingPrefix } from "../logic/framing";
 import {
   serializeRegionPrompt,
@@ -39,6 +40,7 @@ import {
   buildMusicGenerationCommand,
   buildReframeGenerationCommand,
   buildRetakeGenerationCommand,
+  buildVideoToolGenerationCommand,
   buildVideoGenerationCommand,
 } from "../logic/generation-requests";
 
@@ -54,10 +56,11 @@ export function useGenSpaceGenerationActions({
   imageMode,
   regionPrompt,
   videoMode,
+  selectedVideoTool = "reframe",
+  videoToolInput = null,
   prompt,
   framingSettings,
   promptEnhancementEnabled,
-  resolvePromptForGeneration,
   currentProjectId,
   projectAssets,
   settings,
@@ -86,10 +89,11 @@ export function useGenSpaceGenerationActions({
   imageMode: ImageProcessMode;
   regionPrompt: RegionPromptState;
   videoMode: VideoProcessMode;
+  selectedVideoTool?: VideoToolId;
+  videoToolInput?: GenSpaceMediaInput | null;
   prompt: string;
   framingSettings: FramingSettings | null;
   promptEnhancementEnabled: boolean;
-  resolvePromptForGeneration: (prompt: string) => Promise<string | null>;
   currentProjectId: string | null;
   projectAssets: Asset[];
   settings: GenSpaceSettings;
@@ -118,12 +122,17 @@ export function useGenSpaceGenerationActions({
   const videoSubmissionRef = useRef<VideoSubmissionSnapshot | null>(null);
   const musicSubmissionRef = useRef<MusicSubmissionSnapshot | null>(null);
   const submit = useCallback(async () => {
-    if (mode === "video" && videoMode === "reframe") {
+    if (
+      mode === "video" &&
+      videoMode === "reframe" &&
+      selectedVideoTool === "reframe"
+    ) {
       if (!currentProjectId) return;
       const command = buildReframeGenerationCommand(
         prompt,
         settings,
         reframeInput,
+        promptEnhancementEnabled,
       );
       if (!command) return;
       setSettings(command.normalizedSettings);
@@ -192,13 +201,60 @@ export function useGenSpaceGenerationActions({
       return;
     }
 
-    const resolvedPrompt =
-      promptEnhancementEnabled && !isRegionImage
-        ? await resolvePromptForGeneration(authoredPrompt)
-        : authoredPrompt;
-    if (!resolvedPrompt) return;
+    if (
+      mode === "video" &&
+      videoMode === "reframe" &&
+      selectedVideoTool !== "reframe"
+    ) {
+      if (!currentProjectId || !prompt.trim()) return;
+      const command = buildVideoToolGenerationCommand({
+        tool: selectedVideoTool,
+        prompt,
+        settings,
+        input: videoToolInput,
+        enhancePrompt: promptEnhancementEnabled,
+      });
+      if (!command) return;
+      if (command.persistNormalizedSettings) {
+        setSettings(command.normalizedSettings);
+      }
+      const submittedInput = videoToolInput
+        ? [{
+            ...videoToolInput,
+            role:
+              selectedVideoTool === "extend"
+                ? "continue_video"
+                : "control_video",
+            type: "video" as const,
+          }]
+        : [];
+      videoSubmissionRef.current = {
+        projectId: currentProjectId,
+        submittedAt: Date.now(),
+        prompt,
+        settings: { ...command.normalizedSettings },
+        inputs: submittedInput,
+        inputImage: null,
+        inputAudio: null,
+        videoTool: selectedVideoTool,
+        assetPaths: projectAssets.map(({ url, path }) => ({ url, path })),
+      };
+      await generate(
+        command.prompt,
+        command.imagePath,
+        command.settings,
+        command.audioPath,
+        command.inputMedia,
+        command.useAudioTrack,
+        undefined,
+        undefined,
+        command.videoTool,
+      );
+      return;
+    }
+
     const effectivePrompt = applyFramingPrefix(
-      resolvedPrompt,
+      authoredPrompt,
       mode === "video" || imageMode === "create"
         ? framingSettings
         : null,
@@ -220,6 +276,7 @@ export function useGenSpaceGenerationActions({
         effectivePrompt,
         settings,
         submittedImageInputs,
+        promptEnhancementEnabled && !isRegionImage,
         imageMode === "edit" && editImage
           ? {
               image: editImage,
@@ -286,6 +343,7 @@ export function useGenSpaceGenerationActions({
       inputImage,
       inputAudio,
       useAudioTrack,
+      enhancePrompt: promptEnhancementEnabled,
     });
     if (command.persistNormalizedSettings) {
       setSettings(command.normalizedSettings);
@@ -332,15 +390,16 @@ export function useGenSpaceGenerationActions({
     projectAssets,
     reframeInput,
     reframeSubmissionRef,
-    resolvePromptForGeneration,
     retakeInput,
     retakeSubmissionRef,
     setLocalError,
     setSettings,
+    selectedVideoTool,
     settings,
     submitRetake,
     useAudioTrack,
     videoMode,
+    videoToolInput,
   ]);
   return {
     submit,

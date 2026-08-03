@@ -37,7 +37,11 @@ branch head.
 ## Behavior
 
 - Video requests are translated into single-task WanGP manifests and executed through `shared.api.WanGPSession`.
+- Image/video clients send semantic `enhancePrompt`; backend owns WanGP's raw `prompt_enhancer` value. Disabled sends `""`. Enabled text-only sends `"T"`; enhancer-visible start/end/reference images add `I`; relay shot prompts add `1`. This yields `T`, `TI`, `T1`, or `TI1`. Control guides and Continue Video sources do not count as enhancer-visible images. Profile defaults are always overridden, including Region's forced disabled state.
+- Curated Video Tools use the typed `videoTool` request field. Extend keeps the existing `continue_video` path; Relight, Colorize, Clean Plate, Lip Dub, Decompression, SDR to HDR, Remove Glare, and Deblur map to backend-owned exact IC-LoRA URLs with guide-only input, `guidance_phases=2`, and an empty LoRA multiplier. Unknown tool IDs are rejected before WanGP execution.
+- Every LTX video submission, including Director, forces WanGP `config="PrunaAI VAE"` at the shared bridge boundary.
 - Image requests use the same mechanism with the configured image model.
+- ACE-Step song-description enhancement remains LM CoT through `model_mode`: manual/off `1`, manual/on `2`, auto-duration/off `4`, and auto-duration/on `3`. Auto Lyrics passes the song description as lyrics context with `prompt_enhancer="T"`; Instrumental and Custom Lyrics send `""`. Empty Custom Lyrics is rejected, while `/api/music/compose-lyrics` remains a separate editable pre-generation operation.
 - Progress comes from WanGP's native `send_cmd(...)` events, with stdout/stderr also streamed into the bridge.
 - Cancel requests signal the active WanGP model directly instead of terminating a subprocess.
 - LTX Desktop first-run "download" becomes a no-op when the bridge is enabled, because model management is delegated to WanGP.

@@ -3,6 +3,7 @@ import { Magnet, Type } from 'lucide-react'
 import { PRIMARY_TOOLS, TRIM_TOOLS, ToolType } from './video-editor-utils'
 import { getShortcutLabel, type KeyboardLayout } from './video-editor-utils'
 import { Tooltip } from '@/components/ui/tooltip'
+import { FloatingMenu } from '../../components/FloatingMenu'
 
 interface ToolsPanelProps {
   activeTool: ToolType
@@ -30,6 +31,7 @@ export function ToolsPanel({
   showEffectsBrowser: _showEffectsBrowser, setShowEffectsBrowser: _setShowEffectsBrowser, // EFFECTS HIDDEN
   addTextClip, kbLayout,
 }: ToolsPanelProps) {
+  const trimTriggerRef = React.useRef<HTMLButtonElement>(null)
   return (
     <div className="w-10 shrink-0 bg-zinc-900 border-r border-zinc-800 flex flex-col items-center py-1 gap-0.5 overflow-y-auto">
       {PRIMARY_TOOLS.map(tool => (
@@ -63,6 +65,7 @@ export function ToolsPanel({
               content={(() => { const s = getShortcutLabel(kbLayout, currentTrimTool.actionId); return <>{currentTrimTool.label}<span className="text-zinc-400">{s ? ` (${s}) — ` : ' — '}right-click or hold for more</span></>; })()}
             >
               <button
+                ref={trimTriggerRef}
                 onClick={() => {
                   if (trimFlyoutOpenedRef.current) { trimFlyoutOpenedRef.current = false; return }
                   setActiveTool(currentTrimTool.id)
@@ -101,15 +104,15 @@ export function ToolsPanel({
                 <div className="absolute bottom-0 right-0 w-0 h-0 border-l-4 border-l-transparent border-b-4 border-b-current opacity-60" />
               </button>
             </Tooltip>
-            {showTrimFlyout && (() => {
-              const btnEl = document.querySelector('[data-trim-group-btn]')
-              const rect = btnEl?.getBoundingClientRect()
-              return (
+            {showTrimFlyout && (
                 <>
                   <div className="fixed inset-0 z-9998" onMouseDown={() => setShowTrimFlyout(false)} onContextMenu={(e) => { e.preventDefault(); setShowTrimFlyout(false) }} />
-                  <div
-                    className="fixed bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl py-1 z-9999 min-w-[160px]"
-                    style={{ top: rect?.top ?? 0, left: (rect?.right ?? 44) + 4 }}
+                  <FloatingMenu
+                    anchorRef={trimTriggerRef}
+                    placement="right-start"
+                    gap={4}
+                    role="menu"
+                    className="min-w-[160px] overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-800 py-1 shadow-xl"
                   >
                     {TRIM_TOOLS.map(t => (
                       <button
@@ -128,10 +131,9 @@ export function ToolsPanel({
                         <span className="text-zinc-500 text-[10px]">{getShortcutLabel(kbLayout, t.actionId)}</span>
                       </button>
                     ))}
-                  </div>
+                  </FloatingMenu>
                 </>
-              )
-            })()}
+            )}
           </div>
         )
       })()}

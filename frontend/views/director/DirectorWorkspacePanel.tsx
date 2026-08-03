@@ -33,6 +33,7 @@ import type {
 } from "@/types/project";
 import type { DirectorSequenceV1 } from "@/types/director";
 import { SeedSettings } from "@/components/SeedControl";
+import { FloatingMenu } from "../../components/FloatingMenu";
 import { useAppSettings } from "@/contexts/AppSettingsContext";
 import { useVideoProfiles } from "@/hooks/use-image-profiles";
 import { useGeneration } from "@/hooks/use-generation";
@@ -156,6 +157,7 @@ export function DirectorWorkspacePanel(props: Props) {
   const [loopEnabled, setLoopEnabled] = useState(true);
   const [globalSettingsOpen, setGlobalSettingsOpen] = useState(false);
   const globalSettingsMenuRef = useRef<HTMLDivElement>(null);
+  const globalSettingsSurfaceRef = useRef<HTMLDivElement>(null);
   const processedPath = useRef<string | null>(null);
   const persistingPath = useRef<string | null>(null);
   const pendingGeneration = useRef<{
@@ -170,7 +172,8 @@ export function DirectorWorkspacePanel(props: Props) {
     const closeOnOutsideClick = (event: globalThis.MouseEvent) => {
       if (
         globalSettingsMenuRef.current &&
-        !globalSettingsMenuRef.current.contains(event.target as Node)
+        !globalSettingsMenuRef.current.contains(event.target as Node) &&
+        !globalSettingsSurfaceRef.current?.contains(event.target as Node)
       )
         setGlobalSettingsOpen(false);
     };
@@ -686,8 +689,12 @@ export function DirectorWorkspacePanel(props: Props) {
                         <SettingsIcon className="h-4 w-4" />
                       </button>
                       {globalSettingsOpen && (
-                        <div
-                          className="absolute left-0 top-full z-50 mt-2 w-72 space-y-4 rounded-md border border-zinc-700 bg-zinc-800 p-3 text-left font-normal normal-case tracking-normal shadow-xl"
+                        <FloatingMenu
+                          ref={globalSettingsSurfaceRef}
+                          anchorRef={globalSettingsMenuRef}
+                          placement="bottom-start"
+                          gap={8}
+                          className="w-72 space-y-4 overflow-y-auto rounded-md border border-zinc-700 bg-zinc-800 p-3 text-left font-normal normal-case tracking-normal shadow-xl"
                           role="dialog"
                           aria-label="Global settings controls"
                         >
@@ -781,7 +788,7 @@ export function DirectorWorkspacePanel(props: Props) {
                               <Lock className="h-3 w-3" />
                             </div>
                           )}
-                        </div>
+                        </FloatingMenu>
                       )}
                     </div>
                   </div>

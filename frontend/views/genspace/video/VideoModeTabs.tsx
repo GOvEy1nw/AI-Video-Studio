@@ -1,13 +1,18 @@
-import { Expand, Scissors, Sparkles } from "lucide-react";
+import { Scissors, Sparkles, Wrench } from "lucide-react";
 import { RETAKE_AVAILABLE } from "../constants";
 import type { VideoProcessMode } from "../types";
+import { VIDEO_TOOL_OPTIONS, type VideoToolId } from "./video-tools";
 
 export function VideoModeTabs({
   mode,
   onChange,
+  selectedTool = "reframe",
+  onToolChange,
 }: {
   mode: VideoProcessMode;
   onChange: (mode: VideoProcessMode) => void;
+  selectedTool?: VideoToolId;
+  onToolChange?: (tool: VideoToolId) => void;
 }) {
   return (
     <div className="px-4 py-3">
@@ -19,7 +24,7 @@ export function VideoModeTabs({
         {(
           [
             ["generate", "Generate", Sparkles, false],
-            ["reframe", "Reframe", Expand, false],
+            ["reframe", "Tools", Wrench, false],
             ["retake", "Retake", Scissors, !RETAKE_AVAILABLE],
           ] as const
         ).map(([value, label, Icon, disabled]) => (
@@ -44,6 +49,29 @@ export function VideoModeTabs({
           </button>
         ))}
       </div>
+      {mode === "reframe" && onToolChange ? (
+        <div
+          role="group"
+          aria-label="Video tools"
+          className="mt-2 flex flex-wrap gap-1"
+        >
+          {VIDEO_TOOL_OPTIONS.map(({ value, label }) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={selectedTool === value}
+              onClick={() => onToolChange(value)}
+              className={`rounded-full px-2 py-1 text-xs font-medium transition-colors ${
+                selectedTool === value
+                  ? "bg-violet-500 text-white shadow-sm"
+                  : "bg-zinc-800/70 text-zinc-200 hover:bg-zinc-700 hover:text-white"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

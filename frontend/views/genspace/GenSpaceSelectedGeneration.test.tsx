@@ -1,10 +1,11 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { Asset } from "../../types/project";
 import {
   GenSpaceSelectedGeneration,
   type GenSpaceSelectedGenerationProps,
 } from "./GenSpaceSelectedGeneration";
+import { VIDEO_USE_OPTIONS } from "../../components/UseVideoDropdown";
 
 vi.mock("../../components/DownloadProgressView", () => ({
   DownloadProgressView: () => null,
@@ -24,6 +25,7 @@ function generation(
   patch: Partial<GenSpaceSelectedGenerationProps["generation"]> = {},
 ): GenSpaceSelectedGenerationProps["generation"] {
   return {
+    mode: "image",
     isRunning: false,
     isSelected: false,
     isCancelling: false,
@@ -57,7 +59,7 @@ function props(
     onCopyPrompt: noop,
     onToggleFavorite: noop,
     onUseImage: noop,
-    onReframe: noop,
+    onUseVideo: noop,
     onCopySettings: noop,
     onDelete: noop,
     ...patch,
@@ -126,28 +128,75 @@ describe("GenSpaceSelectedGeneration", () => {
 
   it("shows progress when the active generation card is selected", () => {
     const cancel = vi.fn();
-    render(
+    const { container } = render(
       <GenSpaceSelectedGeneration
         {...props({
           generation: generation({
             isRunning: true,
             isSelected: true,
-            progress: 48,
-            statusMessage: "Generating image...",
-            badges: ["Step 12/25"],
+            modelName: "LTX Fast",
+            modelLifecycleActive: true,
+            previewUrl: "data:image/png;base64,preview",
+            progress: 20,
+            statusMessage: "Loading model WanGP into memory...",
+            badges: ["Phase 1/2", "Step 0/8"],
             cancel,
           }),
         })}
       />,
     );
+    const view = within(container);
 
-    expect(screen.getByText("Generating image...")).toBeTruthy();
-    expect(screen.getByText("48%")).toBeTruthy();
-    expect(screen.getByText("Step 12/25")).toBeTruthy();
+    expect(view.getByText("Loading Model")).toBeTruthy();
+    expect(
+      view.getByText(
+        (_, element) =>
+          element?.textContent === "LTX Fast: Step 0/8 (Phase 1/2)",
+      ),
+    ).toBeTruthy();
+    expect(view.getByText("20%")).toBeTruthy();
+    expect(view.getByAltText("Current generation preview")).toBeTruthy();
+    expect(
+      view.getByRole("progressbar", { name: "Generation progress" }),
+    ).toBeTruthy();
+    expect(view.queryByText("Generation in progress")).toBeNull();
+    expect(view.queryByText("Loading model WanGP into memory...")).toBeNull();
+    expect(container.querySelector(".animate-spin")).toBeNull();
     fireEvent.click(
-      screen.getByRole("button", { name: "Cancel generation" }),
+      view.getByRole("button", { name: "Cancel generation" }),
     );
     expect(cancel).toHaveBeenCalledOnce();
+  });
+
+  it("routes selected video actions through the Use video menu", () => {
+    const asset: Asset = {
+      id: "video-1",
+      type: "video",
+      path: "C:\\video.mp4",
+      url: "file:///video.mp4",
+      prompt: "A slow pan",
+      resolution: "540p",
+      duration: 5,
+      createdAt: 1_700_000_000_000,
+    };
+    const onUseVideo = vi.fn();
+
+    render(
+      <GenSpaceSelectedGeneration
+        {...props({ asset, onUseVideo })}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Use video" }));
+    const menu = screen.getByRole("menu");
+    expect(menu.className).toContain("max-h-60");
+    expect(menu.className).toContain("overflow-y-auto");
+    for (const option of VIDEO_USE_OPTIONS) {
+      expect(within(menu).getByRole("menuitem", { name: option.label })).toBeTruthy();
+    }
+
+    fireEvent.click(within(menu).getByRole("menuitem", { name: "Relight" }));
+    expect(onUseVideo).toHaveBeenCalledWith(asset, "relight");
   });
 
   it("toggles selected playback with spacebar only in active non-editable context", () => {

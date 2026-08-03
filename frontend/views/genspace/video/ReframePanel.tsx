@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Play, Pause, Volume2, VolumeX, Upload, X } from "lucide-react";
+import { Play, Pause, Volume2, VolumeX, X } from "lucide-react";
 import { fileUrlToPath } from "../../../lib/url-to-path";
 import { getNativeFilePath } from "../../../lib/native-file-path";
 import { ReframeEditor } from "../components/ReframeEditor";
@@ -9,10 +9,12 @@ import {
   formatTrimTimecode,
 } from "./VideoTrimPanel";
 import {
+  aspectRatioValue,
   type ReframeAspectMode,
   type ReframePadding,
   ZERO_PADDING,
 } from "./reframe-outpaint";
+import { VideoSourceDropZone } from "./VideoSourceDropZone";
 
 export interface ReframePanelState {
   videoUrl: string | null;
@@ -31,6 +33,8 @@ interface ReframePanelProps {
   initialVideoUrl?: string | null;
   initialVideoPath?: string | null;
   initialDuration?: number;
+  initialStartTime?: number;
+  initialTrimDuration?: number;
   aspectMode: ReframeAspectMode;
   initialPadding?: ReframePadding;
   resetKey?: number;
@@ -38,6 +42,10 @@ interface ReframePanelProps {
   processingStatus?: string;
   fillHeight?: boolean;
   controls?: React.ReactNode;
+  sourceOnly?: boolean;
+  emptyPrompt?: string;
+  onBrowse?: () => void;
+  onDrop?: React.DragEventHandler<HTMLDivElement>;
   onChange?: (data: ReframePanelState) => void;
 }
 
@@ -52,11 +60,17 @@ export function ReframePanel({
   initialVideoUrl,
   initialVideoPath,
   initialDuration,
+  initialStartTime = 0,
+  initialTrimDuration,
   aspectMode,
   initialPadding = ZERO_PADDING,
   resetKey,
   fillHeight = false,
   controls,
+  sourceOnly = false,
+  emptyPrompt,
+  onBrowse,
+  onDrop,
   onChange,
 }: ReframePanelProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -71,39 +85,61 @@ export function ReframePanel({
   );
   const [videoWidth, setVideoWidth] = useState(0);
   const [videoHeight, setVideoHeight] = useState(0);
-  const [selStart, setSelStart] = useState(0);
-  const [selEnd, setSelEnd] = useState(0);
+  const sourceAspectRatio =
+    videoWidth > 0 && videoHeight > 0 ? videoWidth / videoHeight : 1;
+  const canvasAspectRatio =
+    sourceOnly || aspectMode === "custom"
+      ? sourceAspectRatio
+      : aspectRatioValue(aspectMode);
+  const [selStart, setSelStart] = useState(initialStartTime);
+  const [selEnd, setSelEnd] = useState(
+    initialStartTime + (initialTrimDuration ?? initialDuration ?? 0),
+  );
   const [padding, setPadding] = useState<ReframePadding>(initialPadding);
+  const resetStateRef = useRef({
+    videoUrl: initialVideoUrl,
+    videoPath: initialVideoPath,
+    duration: initialDuration,
+    startTime: initialStartTime,
+    trimDuration: initialTrimDuration,
+    padding: initialPadding,
+  });
+  resetStateRef.current = {
+    videoUrl: initialVideoUrl,
+    videoPath: initialVideoPath,
+    duration: initialDuration,
+    startTime: initialStartTime,
+    trimDuration: initialTrimDuration,
+    padding: initialPadding,
+  };
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [isDragOver, setIsDragOver] = useState(false);
 
   useEffect(() => {
     if (resetKey === undefined) return;
-    setVideoUrl(initialVideoUrl || null);
-    setVideoPath(initialVideoPath || null);
-    setVideoDuration(initialDuration || 0);
+    const initial = resetStateRef.current;
+    setVideoUrl(initial.videoUrl || null);
+    setVideoPath(initial.videoPath || null);
+    setVideoDuration(initial.duration || 0);
     setIsPlaying(false);
-    setCurrentTime(0);
-    setSelStart(0);
-    setSelEnd(initialDuration || 0);
-    setPadding(initialPadding);
-    setVideoWidth(0);
-    setVideoHeight(0);
-  }, [
-    resetKey,
-    initialVideoUrl,
-    initialVideoPath,
-    initialDuration,
-    initialPadding,
-  ]);
+    setCurrentTime(initial.startTime);
+    setSelStart(initial.startTime);
+    setSelEnd(
+      initial.startTime + (initial.trimDuration ?? initial.duration ?? 0),
+    );
+    setPadding(initial.padding);
+    // Tool switches reset editor state while keeping the video element mounted.
+    // Keep its dimensions so framing remains usable without another metadata event.
+  }, [resetKey]);
 
   useEffect(() => {
     const duration = selEnd - selStart;
     const ready =
-      !!videoPath && duration >= MIN_TRIM_DURATION && videoWidth > 0;
+      (sourceOnly ? !!videoUrl : !!videoPath) &&
+      duration >= MIN_TRIM_DURATION &&
+      videoWidth > 0;
     onChange?.({
       videoUrl,
       videoPath,
@@ -126,6 +162,7 @@ export function ReframePanel({
     videoHeight,
     aspectMode,
     padding,
+    sourceOnly,
     onChange,
   ]);
 
@@ -213,7 +250,6 @@ export function ReframePanel({
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-    setIsDragOver(false);
 
     const assetData = e.dataTransfer.getData("asset");
     if (assetData) {
@@ -251,33 +287,13 @@ export function ReframePanel({
       className={`bg-zinc-900 overflow-hidden flex flex-col ${fillHeight ? "h-full min-h-0" : ""}`}
     >
       {!videoUrl ? (
-        <div
-          data-genspace-dropzone
-          data-drag-active={isDragOver || undefined}
-          className="m-4 flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-zinc-700 p-8 transition-colors"
-          onDragOver={(e) => {
-            e.preventDefault();
-            setIsDragOver(true);
-          }}
-          onDragLeave={() => setIsDragOver(false)}
-          onDrop={handleDrop}
-        >
-          <div className="p-3 rounded-full bg-zinc-800">
-            <Upload className="h-5 w-5 text-zinc-400" />
-          </div>
-          <div className="text-center">
-            <p className="text-sm text-white">Drop a video to reframe</p>
-            <p className="text-xs text-zinc-500">mp4, mov, avi, webm, mkv</p>
-          </div>
-          <button
-            onClick={handleBrowse}
-            className="px-4 py-1.5 text-xs font-medium rounded-md bg-white text-black hover:bg-zinc-200 transition-colors"
-          >
-            Browse
-          </button>
-        </div>
+        <VideoSourceDropZone
+          prompt={emptyPrompt ?? "Drop a video to reframe"}
+          onBrowse={onBrowse ?? handleBrowse}
+          onDrop={onDrop ?? handleDrop}
+        />
       ) : (
-        <div className="flex min-h-0 flex-1 flex-col px-3 pb-3 pt-2">
+        <div className="flex min-h-0 flex-1 flex-col px-4 py-3">
           <ReframeEditor
             mediaType="video"
             mediaUrl={videoUrl}
@@ -293,19 +309,26 @@ export function ReframePanel({
             }}
             videoRef={videoRef}
             onVideoEnded={() => setIsPlaying(false)}
-            headerLabel="Reframe video"
-            headerTestId="video-reframe-header"
-            canvasTestId="video-reframe-canvas"
-            canvasClassName={`w-full rounded-lg ${
-              fillHeight ? "flex-1" : "aspect-video max-h-[32vh]"
-            }`}
+            headerLabel={sourceOnly ? "Source video" : "Reframe"}
+            headerTestId={
+              sourceOnly ? "video-source-header" : "video-reframe-header"
+            }
+            canvasTestId={
+              sourceOnly ? "video-source-canvas" : "video-reframe-canvas"
+            }
+            canvasClassName={`w-full rounded-lg ${sourceOnly ? "border-2 border-zinc-500" : "aspect-video max-h-[32vh]"}`}
+            canvasStyle={fillHeight ? undefined : { aspectRatio: "16/9" }}
+            frameInset={0}
             resetKey={resetKey}
             fillHeight={fillHeight}
+            framingEnabled={!sourceOnly}
             controls={controls}
           >
             <button
               type="button"
-              aria-label="Remove Reframe Video"
+              aria-label={
+                sourceOnly ? "Remove Source Video" : "Remove Reframe Video"
+              }
               onClick={handleClear}
               className="pointer-events-auto absolute right-2 top-2 z-30 rounded-full bg-black/80 p-1.5 text-zinc-300 shadow-md transition-colors hover:bg-red-500 hover:text-white"
             >
@@ -324,38 +347,32 @@ export function ReframePanel({
               </button>
             </div>
           </ReframeEditor>
-
-          <div className="shrink-0">
-            <div className="flex items-center justify-center gap-3 rounded-b-lg border border-t-0 border-zinc-700 bg-zinc-950 px-4 py-2">
+          <div className="flex justify-between mt-2 gap-2">
+            <div className="flex w-fit h-fit justify-center rounded-lg bg-zinc-800/35 p-1">
               <button
                 onClick={togglePlay}
                 className="p-1 rounded-sm hover:bg-zinc-800 text-white transition-colors"
               >
                 {isPlaying ? (
-                  <Pause className="h-4 w-4" />
+                  <Pause className="h-3.5 w-3.5" />
                 ) : (
-                  <Play className="h-4 w-4" />
+                  <Play className="h-3.5 w-3.5" />
                 )}
               </button>
-              <span className="text-xs font-mono text-zinc-400">
-                {formatTrimTimecode(currentTime)} /{" "}
-                {formatTrimTimecode(videoDuration)}
-              </span>
             </div>
-
-            <div className="mt-2">
-              <VideoTrimPanel
-                videoUrl={videoUrl}
-                videoDuration={videoDuration}
-                currentTime={currentTime}
-                defaultToFullClip
-                onSeek={handleSeek}
-                onSelectionChange={(start, end) => {
-                  setSelStart(start);
-                  setSelEnd(end);
-                }}
-              />
-            </div>
+            <VideoTrimPanel
+              videoUrl={videoUrl}
+              videoDuration={videoDuration}
+              currentTime={currentTime}
+              initialStartTime={initialStartTime}
+              initialDuration={initialTrimDuration}
+              defaultToFullClip
+              onSeek={handleSeek}
+              onSelectionChange={(start, end) => {
+                setSelStart(start);
+                setSelEnd(end);
+              }}
+            />
           </div>
         </div>
       )}

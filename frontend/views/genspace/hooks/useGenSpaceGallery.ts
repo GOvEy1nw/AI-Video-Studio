@@ -1,10 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { GalleryBinContextMenuState } from "../../../components/GalleryBinBar";
 import type { GalleryGridColumns } from "../../../components/GalleryViewControls";
 import { useProjects } from "../../../contexts/ProjectContext";
@@ -32,6 +26,7 @@ export function useGenSpaceGallery({
   currentProject,
   currentProjectId,
   currentTab,
+  isGenerating,
   addAsset,
   deleteAsset,
   updateAsset,
@@ -49,6 +44,7 @@ export function useGenSpaceGallery({
   currentProject: Projects["currentProject"];
   currentProjectId: string | null;
   currentTab: string;
+  isGenerating: boolean;
   addAsset: Projects["addAsset"];
   deleteAsset: Projects["deleteAsset"];
   updateAsset: Projects["updateAsset"];
@@ -66,18 +62,18 @@ export function useGenSpaceGallery({
   const assets = useMemo(
     () =>
       (currentProject?.assets ?? []).filter(
-        ({ type }) =>
-          type === "image" || type === "video" || type === "audio",
+        ({ type }) => type === "image" || type === "video" || type === "audio",
       ),
     [currentProject?.assets],
   );
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
-  const [filter, setFilter] =
-    useState<GalleryFilterState>(DEFAULT_GALLERY_FILTER);
+  const [filter, setFilter] = useState<GalleryFilterState>(
+    DEFAULT_GALLERY_FILTER,
+  );
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [gridColumns, setGridColumns] = useState<GalleryGridColumns>(3);
+  const [gridColumns, setGridColumns] = useState<GalleryGridColumns>(2);
   const [isDocumentVisible, setIsDocumentVisible] = useState(
     () => !document.hidden,
   );
@@ -100,6 +96,7 @@ export function useGenSpaceGallery({
   const [isDragOver, setIsDragOver] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const wasGeneratingRef = useRef(false);
   const [duplicateFilenameChoice, setDuplicateFilenameChoice] = useState<{
     fileName: string;
     resolve: (choice: DuplicateFilenameChoice) => void;
@@ -134,6 +131,13 @@ export function useGenSpaceGallery({
   }, []);
 
   useEffect(() => {
+    if (isGenerating && !wasGeneratingRef.current) {
+      setSelectedAsset(null);
+    }
+    wasGeneratingRef.current = isGenerating;
+  }, [isGenerating]);
+
+  useEffect(() => {
     if (!toast) return;
     const timer = window.setTimeout(() => setToast(null), 4000);
     return () => window.clearTimeout(timer);
@@ -141,9 +145,7 @@ export function useGenSpaceGallery({
 
   useEffect(() => {
     setSelectedAsset((current) =>
-      current
-        ? assets.find(({ id }) => id === current.id) ?? null
-        : current,
+      current ? (assets.find(({ id }) => id === current.id) ?? null) : current,
     );
   }, [assets]);
 
@@ -220,12 +222,7 @@ export function useGenSpaceGallery({
         );
       }
     },
-    [
-      addAsset,
-      assets,
-      currentProjectId,
-      requestDuplicateChoice,
-    ],
+    [addAsset, assets, currentProjectId, requestDuplicateChoice],
   );
 
   const visibleAssets = useMemo(() => {
@@ -407,6 +404,9 @@ export function useGenSpaceGallery({
       visibleAssets,
     ],
   );
+  const selectAsset = useCallback((asset: Asset) => {
+    setSelectedAsset(asset);
+  }, []);
 
   return {
     assets,
@@ -417,6 +417,7 @@ export function useGenSpaceGallery({
     isDragOver,
     isImporting,
     filterActive: isGalleryFilterActive(filter),
+    selectAsset,
     syncInputFileToGallery,
     rootDragHandlers: {
       onDragEnter: (event: React.DragEvent) => {
