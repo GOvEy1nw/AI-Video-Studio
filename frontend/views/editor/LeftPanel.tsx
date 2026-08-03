@@ -300,6 +300,7 @@ export function LeftPanel(props: LeftPanelProps) {
               onDeleteAsset={(asset) => {
                 requestDeleteAssets([asset.id]);
               }}
+              onDeleteAssets={requestDeleteAssets}
               onToggleFavorite={(asset) => {
                 if (currentProjectId) {
                   updateAsset(currentProjectId, asset.id, {

@@ -319,6 +319,7 @@ export function DirectorSidebar(props: Props) {
               })
             }
             onDeleteAsset={(asset) => requestDeleteAssets([asset.id])}
+            onDeleteAssets={requestDeleteAssets}
             onToggleFavorite={(asset) =>
               props.onUpdateAsset(asset.id, { favorite: !asset.favorite })
             }

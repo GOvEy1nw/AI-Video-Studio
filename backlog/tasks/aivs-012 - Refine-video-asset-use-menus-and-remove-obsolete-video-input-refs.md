@@ -1,11 +1,11 @@
 ---
 id: AIVS-012
 title: Refine video asset use menus and remove obsolete video input refs
-status: Human Review
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-08-03 12:05'
-updated_date: '2026-08-03 13:21'
+updated_date: '2026-08-03 15:36'
 labels: []
 dependencies: []
 type: enhancement

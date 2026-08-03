@@ -1,11 +1,11 @@
 ---
 id: AIVS-010
 title: Fix overlapping Image Region box selection
-status: Human Review
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-08-03 09:54'
-updated_date: '2026-08-03 10:12'
+updated_date: '2026-08-03 15:35'
 labels: []
 dependencies: []
 references:

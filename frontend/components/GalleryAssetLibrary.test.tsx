@@ -40,6 +40,48 @@ const makeAsset = (
   createdAt: 1,
 });
 
+function makeLibraryProps(
+  overrides: Partial<GalleryAssetLibraryProps> = {},
+): GalleryAssetLibraryProps {
+  const assets = [
+    makeAsset("asset-one", "image", "generated"),
+    makeAsset("asset-two", "video", "uploaded"),
+  ];
+  return {
+    assets,
+    visibleAssets: assets,
+    bins: [],
+    binColors: {},
+    filter: DEFAULT_GALLERY_FILTER,
+    onFilterChange: vi.fn(),
+    selectedBin: null,
+    onSelectedBinChange: vi.fn(),
+    creatingBin: false,
+    onCreatingBinChange: vi.fn(),
+    newBinName: "",
+    onNewBinNameChange: vi.fn(),
+    onCommitNewBin: vi.fn(),
+    onAssignAssetToBin: vi.fn(),
+    onRenameBin: vi.fn(),
+    onDeleteBin: vi.fn(),
+    onSetBinColor: vi.fn(),
+    binContextMenu: null,
+    onBinContextMenuChange: vi.fn(),
+    viewMode: "grid",
+    onViewModeChange: vi.fn(),
+    gridColumns: 2,
+    onGridColumnsChange: vi.fn(),
+    showFavorites: false,
+    onShowFavoritesChange: vi.fn(),
+    getThumbnailUrl: () => undefined,
+    previewEnabled: false,
+    onAssetDragStart: vi.fn(),
+    onAssetContextMenu: vi.fn(),
+    onDeleteAssets: vi.fn(),
+    ...overrides,
+  };
+}
+
 describe("Asset Library controls", () => {
   it("shows everything with no filters and combines selected filters", () => {
     const assets = [
@@ -155,6 +197,146 @@ describe("Asset Library controls", () => {
 
     const { container } = render(<GalleryAssetLibrary {...props} />);
     expect(container.querySelector(".gallery-scrollbar")).toBeTruthy();
+  });
+
+  it("supports click, keyboard, clear, and bulk-delete selection", () => {
+    const onDeleteAssets = vi.fn();
+    render(
+      <GalleryAssetLibrary
+        {...makeLibraryProps({ onDeleteAssets })}
+      />,
+    );
+
+    const modeToggle = screen.getByRole("button", {
+      name: "Enter multi-select mode",
+    });
+    fireEvent.click(modeToggle);
+    expect(modeToggle.getAttribute("aria-pressed")).toBe("true");
+    const cards = screen.getAllByRole("checkbox");
+    expect(cards).toHaveLength(2);
+    expect(cards[0].getAttribute("aria-checked")).toBe("false");
+
+    fireEvent.click(cards[0]);
+    fireEvent.keyDown(cards[1], { key: " " });
+    expect(cards[0].getAttribute("aria-checked")).toBe("true");
+    expect(cards[1].getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByText("2 selected")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear selection" }));
+    expect(cards[0].getAttribute("aria-checked")).toBe("false");
+    expect(cards[1].getAttribute("aria-checked")).toBe("false");
+
+    fireEvent.click(cards[1]);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Delete selected assets" }),
+    );
+    expect(onDeleteAssets).toHaveBeenCalledWith(["asset-two"]);
+    expect(cards[1].getAttribute("aria-checked")).toBe("false");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Exit multi-select mode" }),
+    );
+    expect(
+      screen
+        .getByRole("button", { name: "Enter multi-select mode" })
+        .getAttribute("aria-pressed"),
+    ).toBe("false");
+  });
+
+  it("keeps pointer clicks on cards out of marquee capture", () => {
+    render(<GalleryAssetLibrary {...makeLibraryProps()} />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Enter multi-select mode" }),
+    );
+    const card = screen.getAllByRole("checkbox")[0];
+    const surface = document.querySelector(".gallery-scrollbar");
+    expect(surface).toBeTruthy();
+    const setPointerCapture = vi.fn();
+    Object.defineProperty(surface, "setPointerCapture", {
+      configurable: true,
+      value: setPointerCapture,
+    });
+
+    fireEvent.pointerDown(card, {
+      button: 0,
+      pointerId: 1,
+      clientX: 20,
+      clientY: 20,
+    });
+    fireEvent.pointerUp(card, {
+      button: 0,
+      pointerId: 1,
+      clientX: 20,
+      clientY: 20,
+    });
+    fireEvent.click(card);
+
+    expect(card.getAttribute("aria-checked")).toBe("true");
+    expect(setPointerCapture).not.toHaveBeenCalled();
+  });
+
+  it("prevents native text selection while multi-select mode is active", () => {
+    render(<GalleryAssetLibrary {...makeLibraryProps()} />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Enter multi-select mode" }),
+    );
+    const surface = document.querySelector(".gallery-scrollbar");
+    expect(surface).toBeTruthy();
+
+    const selectStart = new Event("selectstart", {
+      bubbles: true,
+      cancelable: true,
+    });
+    expect(surface?.dispatchEvent(selectStart)).toBe(false);
+  });
+
+  it("selects cards intersecting a marquee box", () => {
+    render(<GalleryAssetLibrary {...makeLibraryProps()} />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Enter multi-select mode" }),
+    );
+    const cards = screen.getAllByRole("checkbox");
+    const makeRect = (left: number, top: number, right: number, bottom: number) => ({
+      left,
+      top,
+      right,
+      bottom,
+      width: right - left,
+      height: bottom - top,
+      x: left,
+      y: top,
+      toJSON: () => ({}),
+    });
+    Object.defineProperty(cards[0], "getBoundingClientRect", {
+      configurable: true,
+      value: () => makeRect(10, 10, 40, 40),
+    });
+    Object.defineProperty(cards[1], "getBoundingClientRect", {
+      configurable: true,
+      value: () => makeRect(70, 10, 100, 40),
+    });
+
+    const surface = document.querySelector(".gallery-scrollbar");
+    expect(surface).toBeTruthy();
+    fireEvent.pointerDown(surface!, {
+      button: 0,
+      pointerId: 1,
+      clientX: 0,
+      clientY: 0,
+    });
+    fireEvent.pointerMove(surface!, {
+      pointerId: 1,
+      clientX: 50,
+      clientY: 50,
+    });
+    fireEvent.pointerUp(surface!, {
+      pointerId: 1,
+      clientX: 50,
+      clientY: 50,
+    });
+
+    expect(cards[0].getAttribute("aria-checked")).toBe("true");
+    expect(cards[1].getAttribute("aria-checked")).toBe("false");
   });
 
   it("snaps the grid slider between column counts", () => {

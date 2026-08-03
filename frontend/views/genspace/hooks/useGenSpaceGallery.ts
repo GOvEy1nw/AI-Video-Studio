@@ -361,6 +361,7 @@ export function useGenSpaceGallery({
         setBinContextMenu(null);
       },
       onDeleteAsset: (asset) => requestDeleteAssets([asset.id]),
+      onDeleteAssets: requestDeleteAssets,
       onToggleFavorite: (asset) => {
         if (currentProjectId) toggleFavorite(currentProjectId, asset.id);
       },

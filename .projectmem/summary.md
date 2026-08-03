@@ -16,6 +16,18 @@ Product principles:
 Current integration baseline: `dev`.
 
 ## Recent issues
+- [DONE] #0524 Multi-select cards ignore direct clicks, and marquee dragging triggers native browser text selection. [frontend/components/GalleryAssetLibrary.tsx] -> GalleryAssetLibrary now leaves pointer clicks uncaptured until drag threshold, prevents selectstart/native highlighting in multi-select mode, and clears ranges during marquee; regression tests and production build pass. [frontend/components/GalleryAssetLibrary.tsx] (fixed)
+  - Failed attempt: Added pointer-click capture and selectstart regression tests; current handlers fail both as expected. Focused suite also retains three pre-existing GalleryAssetLibrary failures. [frontend/components/GalleryAssetLibrary.tsx]
+- [OPEN] #0523 Full frontend Vitest run has 11 unrelated baseline failures and one jsdom media error; multi-select tests remain green [frontend validation tooling] (open)
+  - Partial attempt: Direct full Vitest: 50 files, 195 passed and 11 failed with one unhandled jsdom media error; failures are unrelated to Asset Library multi-select [frontend validation tooling]
+  - Partial attempt: Final direct TypeScript rerun remains blocked by same 12 pre-existing unused-symbol diagnostics; no diagnostics in changed selection or caller wiring [frontend validation tooling]
+- [OPEN] #0522 pnpm TypeScript check timed out without output after 60 seconds [frontend validation tooling] (open)
+  - Partial attempt: Direct cached TypeScript check reports 12 existing unused-symbol diagnostics in GalleryAssetLibrary.tsx, ReframePanel.tsx, and VideoGenPanel.tsx; no new multi-select type errors [frontend validation tooling]
+- [OPEN] #0521 Focused pnpm GalleryAssetLibrary test command timed out without Vitest output [frontend validation tooling] (open)
+  - Partial attempt: Direct cached Vitest ran GalleryAssetLibrary suite: new multi-select click/keyboard/delete and marquee tests pass; three pre-existing failures remain in grid slider and GalleryAssetCard Use image/model metadata tests [frontend/components/GalleryAssetLibrary.test.tsx]
+- [DONE] #0520 Backlog task creation times out while acquiring repository task lock [Backlog CLI task creation] -> Backlog task creation completed with approved repository metadata access and quoted assignee arguments [Backlog CLI task lifecycle] (fixed)
+  - Failed attempt: Quoted task status update failed because PowerShell parsed unquoted @codex as a missing option argument [Backlog CLI task edit]
+  - Failed attempt: Initial GalleryAssetLibrary patch missed current type declaration anchor; no source changes applied [frontend/components/GalleryAssetLibrary.tsx]
 - [DONE] #0519 Concurrent Vitest and Vite build saw stale bottom-start SettingsDropdown placement despite focused test passing immediately before [frontend/components/SettingsDropdown.tsx; frontend/views/genspace/video/VideoGenPanel.test.tsx] -> Restored SettingsDropdown end alignment after unexpected workspace reversion; targeted integration passes [frontend/components/SettingsDropdown.tsx] (fixed)
   - Failed attempt: Re-ran targeted test and confirmed SettingsDropdown source had reverted end placements back to start placements [frontend/components/SettingsDropdown.tsx]
   - Partial attempt: Reapplied end placements after external source reversion [frontend/components/SettingsDropdown.tsx]
@@ -93,6 +105,7 @@ Current integration baseline: `dev`.
 - [OPEN] #0491 Pinned pnpm invocation still blocks focused frontend tests on offline registry signature verification [frontend validation tooling] (open)
   - Failed attempt: Pinned pnpm path refused project execution after offline registry signature verification; switched to direct cached Vitest runtime [frontend validation tooling]
   - Failed attempt: Pinned pnpm focused frontend test command blocked before Vitest by offline registry signature verification [frontend validation tooling]
+  - Failed attempt: pnpm build:frontend blocked before build by offline registry signature verification for pinned pnpm 10.30.3 [frontend validation tooling]
 - [DONE] #0490 Gallery filters use text buttons and allow multiple selections per group; gallery scrollbar stays visible instead of appearing on hover. [frontend/components/GalleryFilters.tsx] -> Confirmed icon-only accessible filters, one-at-a-time media/source toggles, AND filtering, and hover-only gallery scrollbar styling with focused controls tests and production build. [frontend/components/GalleryFilters.tsx] (fixed)
   - Failed attempt: Direct focused Vitest ran 9 tests; 7 new/control tests passed, 2 pre-existing GalleryAssetCard tests failed because dirty worktree removed Use image and metadata markup. [frontend/components/GalleryAssetLibrary.test.tsx]
   - Failed attempt: Direct TypeScript checked current worktree; no diagnostics in GalleryFilters, gallery-filters, index.css, or tests, but existing unused symbols remain in GalleryAssetLibrary.tsx, ReframePanel.tsx, and VideoGenPanel.tsx. [frontend validation tooling]
@@ -1190,9 +1203,9 @@ Current integration baseline: `dev`.
 - Hide SDR-to-HDR and Continue Video from standard video media-role choices while retaining legacy role IDs; route new Use Video choices through existing Video Tools source hand-off. [frontend/views/genspace/video/VideoMediaInputs.tsx]
 - Div-based context/dropdown menus use one body-portaled FloatingMenu owner for fixed positioning, side fallback, viewport clamping, and overflow bounds; dialogs, tooltips, and native selects remain separate. [frontend/components/FloatingMenu.tsx]
 - FloatingMenu uses browser maximum z-index and document.body portal so shared menus stay above app overlays and stacking contexts [frontend/components/FloatingMenu.tsx]
+- Keep multi-select interaction state inside shared GalleryAssetLibrary; preserve existing controlled selectedAssetIds for normal workspace selection, and expose only plural asset IDs to callers so existing useAssetDeletion remains confirmation and project-safe deletion owner.
 
 ## Notes
-- AIVS-005 IC-LoRA source routing follow-up validated with 74 backend generation/bridge tests and targeted Pyright; Reframe/Extend regression coverage included [backend/handlers/video_generation_handler.py]
 - gotcha: ReframePanel resetKey changes on Tool switches without remounting its video; clearing videoWidth/videoHeight waits for a loadedmetadata event that will not fire again, so preserve dimensions during same-source transitions. [frontend/views/genspace/video/ReframePanel.tsx]
 - Final direct TypeScript check remains blocked by six unrelated unused symbols in GalleryAssetLibrary.tsx, ReframePanel.tsx, and VideoGenPanel.tsx; no diagnostics point to selected-generation changes. [frontend validation tooling]
 - gotcha: RegionPromptEditor renders overlapping region divs in array order; later boxes own pointer hit testing, so earlier resize buttons can be visually covered and unreachable [frontend/views/genspace/image/RegionPromptEditor.tsx]
@@ -1202,6 +1215,7 @@ Current integration baseline: `dev`.
 - gotcha: Windows TCP exclusion range 5141-5240 currently includes Vite default port 5173; use an unreserved port such as 3000 for local dev. [frontend validation tooling / Windows TCP port reservation]
 - gotcha: Cold Vite/Electron dev launches have delayed first renderer execution by 81–261s, while a warm Electron restart completed in 0.3s; blank window predates AIVS-012. [electron/window.ts / Vite dev startup]
 - AIVS-014 added shared body-portaled FloatingMenu/FloatingSubmenu and migrated app div-based dropdown/context menus. Focused menu tests: 25 passed plus targeted VideoGenPanel test; Vite renderer/Electron/preload build passed. Full Vitest remains blocked by 11 unrelated active-worktree failures; strict tsc remains blocked by 13 unrelated unused-symbol diagnostics. [frontend/components/FloatingMenu.tsx]
+- AIVS-015 implemented: shared GalleryAssetLibrary now owns local multi-select mode with click/keyboard toggles, pointer marquee selection, accessible checkbox state, clear action, and bulk-delete request. GenSpace, Director, and Video Editor pass selected IDs to existing useAssetDeletion. Targeted tests and direct Vite build pass; pnpm signature and pre-existing tsc/full-suite failures remain documented in backlog.
 
 ## Key files
 - `LTX-2.3_Cinematic_hardcut.safetensors`

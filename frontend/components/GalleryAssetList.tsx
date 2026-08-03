@@ -12,6 +12,8 @@ type ColorLabel = {
 type GalleryAssetListProps = {
   assets: Asset[]
   selectedAssetIds?: Set<string>
+  multiSelectMode?: boolean
+  onToggleSelection?: (asset: Asset) => void
   getAssetColorLabel?: (asset: Asset) => ColorLabel | undefined
   getThumbnailUrl?: (asset: Asset) => string | undefined
   onAssetClick?: (event: MouseEvent<HTMLDivElement>, asset: Asset) => void
@@ -34,6 +36,8 @@ function resolutionHeight(resolution?: string) {
 export function GalleryAssetList({
   assets,
   selectedAssetIds = new Set(),
+  multiSelectMode = false,
+  onToggleSelection,
   getAssetColorLabel,
   getThumbnailUrl,
   onAssetClick,
@@ -117,9 +121,22 @@ export function GalleryAssetList({
             key={asset.id}
             data-asset-card
             data-asset-id={asset.id}
-            draggable={Boolean(onAssetDragStart)}
+            role={multiSelectMode ? 'checkbox' : undefined}
+            aria-checked={multiSelectMode ? selectedAssetIds.has(asset.id) : undefined}
+            aria-label={multiSelectMode ? `${asset.type} asset` : undefined}
+            tabIndex={multiSelectMode ? 0 : undefined}
+            draggable={Boolean(onAssetDragStart) && !multiSelectMode}
             onDragStart={(event) => onAssetDragStart?.(event, asset)}
             onClick={(event) => onAssetClick?.(event, asset)}
+            onKeyDown={(event) => {
+              if (
+                !multiSelectMode ||
+                event.target !== event.currentTarget ||
+                (event.key !== 'Enter' && event.key !== ' ')
+              ) return
+              event.preventDefault()
+              onToggleSelection?.(asset)
+            }}
             onDoubleClick={(event) => onAssetDoubleClick?.(event, asset)}
             onContextMenu={(event) => onAssetContextMenu?.(event, asset)}
             className={`group flex cursor-pointer items-center gap-1 px-2 py-1 transition-all ${

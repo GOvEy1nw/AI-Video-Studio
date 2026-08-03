@@ -1,11 +1,11 @@
 ---
 id: AIVS-014
 title: Unify smart floating menus
-status: Human Review
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-08-03 14:08'
-updated_date: '2026-08-03 14:47'
+updated_date: '2026-08-03 15:36'
 labels: []
 dependencies: []
 modified_files:
@@ -38,7 +38,7 @@ modified_files:
   - frontend/views/genspace/components/AspectRatioDropdown.test.tsx
   - frontend/views/genspace/music/MusicGenPanel.test.tsx
   - frontend/views/genspace/video/VideoGenPanel.test.tsx
-ordinal: 17000
+ordinal: 16000
 ---
 
 ## Description

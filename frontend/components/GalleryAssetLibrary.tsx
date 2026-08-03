@@ -1,10 +1,12 @@
 import {
   useEffect,
+  useRef,
   useState,
   type Dispatch,
   type DragEvent,
   type CSSProperties,
   type MouseEvent,
+  type PointerEvent,
   type ReactNode,
   type SetStateAction,
 } from "react";
@@ -18,10 +20,12 @@ import {
   Heart,
   Image,
   Layers,
+  ListChecks,
   Music,
   Trash2,
   Upload,
   Video,
+  X,
 } from "lucide-react";
 import type { Asset } from "../types/project";
 import type { GalleryFilterState } from "../lib/gallery-filters";
@@ -40,6 +44,34 @@ import { getColorLabel } from "../views/editor/video-editor-utils";
 import { UseImageDropdown, type ImageUseTarget } from "./UseImageDropdown";
 
 type AssetContextMenuPosition = { assetId: string; x: number; y: number };
+
+type SelectionBox = {
+  startX: number;
+  startY: number;
+  currentX: number;
+  currentY: number;
+};
+
+function getSelectionBounds(selection: SelectionBox) {
+  return {
+    left: Math.min(selection.startX, selection.currentX),
+    top: Math.min(selection.startY, selection.currentY),
+    right: Math.max(selection.startX, selection.currentX),
+    bottom: Math.max(selection.startY, selection.currentY),
+  };
+}
+
+function rectanglesIntersect(
+  first: ReturnType<typeof getSelectionBounds>,
+  second: DOMRect,
+) {
+  return (
+    first.left <= second.right &&
+    first.right >= second.left &&
+    first.top <= second.bottom &&
+    first.bottom >= second.top
+  );
+}
 
 export type GalleryAssetLibraryProps = {
   assets: Asset[];
@@ -77,6 +109,7 @@ export type GalleryAssetLibraryProps = {
   onAssetDragStart: (event: DragEvent<HTMLDivElement>, asset: Asset) => void;
   onAssetContextMenu: (event: MouseEvent, asset: Asset) => void;
   onDeleteAsset?: (asset: Asset) => void;
+  onDeleteAssets?: (assetIds: string[]) => void;
   onToggleFavorite?: (asset: Asset) => void;
   onUseImage?: (asset: Asset, target: ImageUseTarget) => void;
   onReframe?: (asset: Asset) => void;
@@ -172,6 +205,8 @@ export function GalleryAssetCard({
   onDoubleClick,
   onDragStart,
   onContextMenu,
+  multiSelectMode = false,
+  onToggleSelection,
   onDelete,
   onToggleFavorite,
   onUseImage,
@@ -189,6 +224,8 @@ export function GalleryAssetCard({
   onDoubleClick?: (event: MouseEvent, asset: Asset) => void;
   onDragStart: (event: DragEvent<HTMLDivElement>, asset: Asset) => void;
   onContextMenu: (event: MouseEvent, asset: Asset) => void;
+  multiSelectMode?: boolean;
+  onToggleSelection?: (asset: Asset) => void;
   onDelete?: () => void;
   onToggleFavorite?: () => void;
   onUseImage?: (asset: Asset, target: ImageUseTarget) => void;
@@ -211,6 +248,10 @@ export function GalleryAssetCard({
     <div
       data-asset-card
       data-asset-id={asset.id}
+      role={multiSelectMode ? "checkbox" : undefined}
+      aria-checked={multiSelectMode ? selected : undefined}
+      aria-label={multiSelectMode ? `${asset.type} asset` : undefined}
+      tabIndex={multiSelectMode ? 0 : undefined}
       className={`asset-library-card relative cursor-pointer overflow-visible rounded-xl border-2 bg-zinc-900 transition-all ${
         selected
           ? "border-blue-500 ring-2 ring-blue-500/40 shadow-lg shadow-blue-500/20"
@@ -219,12 +260,23 @@ export function GalleryAssetCard({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={(event) => onClick(event, asset)}
+      onKeyDown={(event) => {
+        if (
+          !multiSelectMode ||
+          event.target !== event.currentTarget ||
+          (event.key !== "Enter" && event.key !== " ")
+        ) {
+          return;
+        }
+        event.preventDefault();
+        onToggleSelection?.(asset);
+      }}
       onDoubleClick={(event) => onDoubleClick?.(event, asset)}
       onContextMenu={(event) => {
         event.preventDefault();
         onContextMenu(event, asset);
       }}
-      draggable={asset.type !== "adjustment"}
+      draggable={!multiSelectMode && asset.type !== "adjustment"}
       onDragStart={(event) => onDragStart(event, asset)}
     >
       <div className="relative aspect-square overflow-hidden rounded-[10px] bg-zinc-900">
@@ -352,6 +404,16 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
   const [documentVisible, setDocumentVisible] = useState(
     () => !document.hidden,
   );
+  const [multiSelectMode, setMultiSelectMode] = useState(false);
+  const [multiSelectedAssetIds, setMultiSelectedAssetIds] = useState<
+    Set<string>
+  >(new Set());
+  const [selectionBox, setSelectionBox] = useState<SelectionBox | null>(null);
+  const selectionSurfaceRef = useRef<HTMLDivElement>(null);
+  const pointerSelectionRef = useRef<
+    (SelectionBox & { hasMoved: boolean; pointerId: number }) | null
+  >(null);
+  const suppressNextClickRef = useRef(false);
 
   useEffect(() => {
     const updateVisibility = () => setDocumentVisible(!document.hidden);
@@ -360,11 +422,161 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
       document.removeEventListener("visibilitychange", updateVisibility);
   }, []);
 
+  useEffect(() => {
+    const surface = selectionSurfaceRef.current;
+    if (!multiSelectMode || !surface) return;
+    const preventTextSelection = (event: Event) => event.preventDefault();
+    surface.addEventListener("selectstart", preventTextSelection);
+    return () => surface.removeEventListener("selectstart", preventTextSelection);
+  }, [multiSelectMode]);
+
   const displayAssets = props.showFavorites
     ? props.visibleAssets.filter((asset) => asset.favorite)
     : props.visibleAssets;
 
+  useEffect(() => {
+    const visibleAssetIds = new Set(displayAssets.map((asset) => asset.id));
+    setMultiSelectedAssetIds((current) => {
+      const next = new Set(
+        [...current].filter((assetId) => visibleAssetIds.has(assetId)),
+      );
+      if (
+        next.size === current.size &&
+        [...next].every((assetId) => current.has(assetId))
+      ) {
+        return current;
+      }
+      return next;
+    });
+  }, [displayAssets]);
+
+  const toggleMultiSelectMode = () => {
+    if (multiSelectMode) {
+      setMultiSelectMode(false);
+      setMultiSelectedAssetIds(new Set());
+      setSelectionBox(null);
+      pointerSelectionRef.current = null;
+      return;
+    }
+
+    const visibleAssetIds = new Set(displayAssets.map((asset) => asset.id));
+    setMultiSelectedAssetIds(
+      new Set(
+        [...(props.selectedAssetIds ?? new Set<string>())].filter((assetId) =>
+          visibleAssetIds.has(assetId),
+        ),
+      ),
+    );
+    setMultiSelectMode(true);
+  };
+
+  const toggleMultiSelectedAsset = (asset: Asset) => {
+    setMultiSelectedAssetIds((current) => {
+      const next = new Set(current);
+      if (next.has(asset.id)) next.delete(asset.id);
+      else next.add(asset.id);
+      return next;
+    });
+  };
+
+  const clearMultiSelection = () => setMultiSelectedAssetIds(new Set());
+
+  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (!multiSelectMode || event.button !== 0) return;
+    const target = event.target as HTMLElement;
+    if (target.closest("button, input, select, textarea, a")) return;
+
+    suppressNextClickRef.current = false;
+    pointerSelectionRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      currentX: event.clientX,
+      currentY: event.clientY,
+      hasMoved: false,
+    };
+  };
+
+  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    const selection = pointerSelectionRef.current;
+    if (!selection || selection.pointerId !== event.pointerId) return;
+    if (
+      !selection.hasMoved &&
+      Math.hypot(
+        event.clientX - selection.startX,
+        event.clientY - selection.startY,
+      ) < 5
+    ) {
+      return;
+    }
+    if (!selection.hasMoved) {
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+    }
+    selection.hasMoved = true;
+    selection.currentX = event.clientX;
+    selection.currentY = event.clientY;
+    setSelectionBox({ ...selection });
+    window.getSelection()?.removeAllRanges();
+    event.preventDefault();
+  };
+
+  const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    const selection = pointerSelectionRef.current;
+    if (!selection || selection.pointerId !== event.pointerId) return;
+
+    if (selection.hasMoved) {
+      selection.currentX = event.clientX;
+      selection.currentY = event.clientY;
+      const bounds = getSelectionBounds(selection);
+      const selectedIds = new Set<string>();
+      selectionSurfaceRef.current
+        ?.querySelectorAll<HTMLElement>("[data-asset-card]")
+        .forEach((card) => {
+          const assetId = card.dataset.assetId;
+          if (
+            assetId &&
+            rectanglesIntersect(bounds, card.getBoundingClientRect())
+          ) {
+            selectedIds.add(assetId);
+          }
+        });
+      setMultiSelectedAssetIds((current) => {
+        const next = event.shiftKey ? new Set(current) : new Set<string>();
+        selectedIds.forEach((assetId) => next.add(assetId));
+        return next;
+      });
+      suppressNextClickRef.current = true;
+      window.setTimeout(() => {
+        suppressNextClickRef.current = false;
+      }, 0);
+    }
+
+    pointerSelectionRef.current = null;
+    setSelectionBox(null);
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+      event.currentTarget.releasePointerCapture?.(event.pointerId);
+    }
+  };
+
+  const handlePointerCancel = (event: PointerEvent<HTMLDivElement>) => {
+    if (pointerSelectionRef.current?.pointerId !== event.pointerId) return;
+    pointerSelectionRef.current = null;
+    setSelectionBox(null);
+  };
+
   const selectAsset = (event: MouseEvent, asset: Asset) => {
+    if (suppressNextClickRef.current) {
+      event.preventDefault();
+      event.stopPropagation();
+      suppressNextClickRef.current = false;
+      return;
+    }
+    if (multiSelectMode) {
+      event.preventDefault();
+      event.stopPropagation();
+      toggleMultiSelectedAsset(asset);
+      return;
+    }
     if (props.onAssetClick) {
       props.onAssetClick(event, asset);
       return;
@@ -407,6 +619,16 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
     );
   };
 
+  const deleteMultiSelectedAssets = () => {
+    if (!props.onDeleteAssets || multiSelectedAssetIds.size === 0) return;
+    props.onDeleteAssets([...multiSelectedAssetIds]);
+    clearMultiSelection();
+  };
+
+  const renderedSelectedAssetIds = multiSelectMode
+    ? multiSelectedAssetIds
+    : props.selectedAssetIds;
+
   const openContextMenu = (event: MouseEvent, asset: Asset) => {
     event.stopPropagation();
     if (
@@ -427,13 +649,71 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
             <span className="text-sm font-semibold text-white">Assets</span>
             {props.headerAction}
           </div>
-          <GalleryViewControls
-            viewMode={props.viewMode}
-            onViewModeChange={props.onViewModeChange}
-            gridColumns={props.gridColumns}
-            onGridColumnsChange={props.onGridColumnsChange}
-          />
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={toggleMultiSelectMode}
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-colors ${
+                multiSelectMode
+                  ? "border-blue-500/40 bg-blue-500/20 text-blue-300"
+                  : "border-transparent text-zinc-400 hover:bg-zinc-800 hover:text-white"
+              }`}
+              aria-label={
+                multiSelectMode
+                  ? "Exit multi-select mode"
+                  : "Enter multi-select mode"
+              }
+              aria-pressed={multiSelectMode}
+              title={
+                multiSelectMode
+                  ? "Exit multi-select mode"
+                  : "Enter multi-select mode"
+              }
+            >
+              <ListChecks className="h-4 w-4" />
+            </button>
+            <GalleryViewControls
+              viewMode={props.viewMode}
+              onViewModeChange={props.onViewModeChange}
+              gridColumns={props.gridColumns}
+              onGridColumnsChange={props.onGridColumnsChange}
+            />
+          </div>
         </div>
+        {multiSelectMode && (
+          <div className="flex items-center justify-between gap-2 rounded-md border border-blue-500/20 bg-blue-500/5 px-2 py-1">
+            <span
+              className="text-xs text-blue-200"
+              aria-live="polite"
+            >
+              {multiSelectedAssetIds.size} selected
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={clearMultiSelection}
+                disabled={multiSelectedAssetIds.size === 0}
+                className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                aria-label="Clear selection"
+              >
+                <X className="h-3.5 w-3.5" />
+                Clear
+              </button>
+              <button
+                type="button"
+                onClick={deleteMultiSelectedAssets}
+                disabled={
+                  multiSelectedAssetIds.size === 0 || !props.onDeleteAssets
+                }
+                className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-red-300 transition-colors hover:bg-red-950/60 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-40"
+                aria-label="Delete selected assets"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete
+              </button>
+            </div>
+          </div>
+        )}
         <div className="flex items-center flex-wrap gap-2">
           <GalleryFilters
             filter={props.filter}
@@ -481,8 +761,17 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
       </div>
 
       <div
-        className={`gallery-scrollbar min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-gutter-stable ${props.scrollClassName ?? ""}`}
-        style={props.scrollStyle}
+        ref={selectionSurfaceRef}
+        className={`gallery-scrollbar min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-gutter-stable ${multiSelectMode ? "select-none" : ""} ${props.scrollClassName ?? ""}`}
+        style={
+          multiSelectMode
+            ? { ...props.scrollStyle, userSelect: "none" }
+            : props.scrollStyle
+        }
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
       >
         <div
           className={
@@ -502,7 +791,9 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
           ) : props.viewMode === "list" ? (
             <GalleryAssetList
               assets={displayAssets}
-              selectedAssetIds={props.selectedAssetIds}
+              selectedAssetIds={renderedSelectedAssetIds}
+              multiSelectMode={multiSelectMode}
+              onToggleSelection={toggleMultiSelectedAsset}
               getThumbnailUrl={props.getThumbnailUrl}
               getAssetColorLabel={(asset) =>
                 getColorLabel(
@@ -519,7 +810,7 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
               <GalleryAssetCard
                 key={asset.id}
                 asset={asset}
-                selected={props.selectedAssetIds?.has(asset.id)}
+                selected={renderedSelectedAssetIds?.has(asset.id)}
                 thumbnailUrl={props.getThumbnailUrl(asset)}
                 modelName={props.getAssetModelName?.(asset)}
                 previewEnabled={props.previewEnabled && documentVisible}
@@ -529,6 +820,8 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
                   )?.color
                 }
                 onClick={selectAsset}
+                multiSelectMode={multiSelectMode}
+                onToggleSelection={toggleMultiSelectedAsset}
                 onDoubleClick={props.onAssetDoubleClick}
                 onDragStart={props.onAssetDragStart}
                 onContextMenu={openContextMenu}
@@ -555,6 +848,18 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
           )}
         </div>
       </div>
+      {selectionBox && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none fixed z-50 border border-blue-400 bg-blue-500/10"
+          style={{
+            left: Math.min(selectionBox.startX, selectionBox.currentX),
+            top: Math.min(selectionBox.startY, selectionBox.currentY),
+            width: Math.abs(selectionBox.currentX - selectionBox.startX),
+            height: Math.abs(selectionBox.currentY - selectionBox.startY),
+          }}
+        />
+      )}
       {props.footerOverlay}
     </div>
   );

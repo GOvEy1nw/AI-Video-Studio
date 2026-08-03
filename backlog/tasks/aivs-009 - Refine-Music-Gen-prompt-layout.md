@@ -1,11 +1,11 @@
 ---
 id: AIVS-009
 title: Refine Music Gen prompt layout
-status: Human Review
+status: Done
 assignee:
   - codex
 created_date: '2026-08-03 09:07'
-updated_date: '2026-08-03 09:23'
+updated_date: '2026-08-03 15:35'
 labels: []
 dependencies: []
 references:

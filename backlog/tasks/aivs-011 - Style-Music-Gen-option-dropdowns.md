@@ -1,11 +1,11 @@
 ---
 id: AIVS-011
 title: Style Music Gen option dropdowns
-status: Human Review
+status: Done
 assignee:
   - codex
 created_date: '2026-08-03 10:45'
-updated_date: '2026-08-03 10:59'
+updated_date: '2026-08-03 15:35'
 labels: []
 dependencies: []
 references:

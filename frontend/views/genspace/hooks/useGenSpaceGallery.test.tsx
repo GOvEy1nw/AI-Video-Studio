@@ -92,4 +92,15 @@ describe("useGenSpaceGallery generation selection", () => {
 
     expect(result.current.overlays.selectedAsset).toEqual(completedAsset);
   });
+
+  it("routes bulk gallery deletion through asset deletion", () => {
+    const { result } = renderHook(() =>
+      useGenSpaceGallery(props(false)),
+    );
+
+    act(() => result.current.selectAsset(asset));
+    act(() => result.current.library.onDeleteAssets?.([asset.id]));
+
+    expect(result.current.overlays.selectedAsset).toBeNull();
+  });
 });
