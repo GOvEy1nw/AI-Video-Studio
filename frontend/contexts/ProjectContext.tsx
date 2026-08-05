@@ -244,6 +244,21 @@ function loadProjectsFromStorage(): Project[] {
   return []
 }
 
+export type PersistedMediaRecoveryOutcome = { status: 'approved' | 'cancelled' | 'no-pending'; approved: string[] }
+export async function recoverPersistedMediaBatches(candidates: string[], recover: (paths: string[]) => Promise<PersistedMediaRecoveryOutcome>): Promise<{ approved: string[]; deferred: string[] }> {
+  let pending = [...new Set(candidates)]
+  const approved: string[] = []
+  while (pending.length > 0) {
+    const outcome = await recover(pending)
+    const batch = [...new Set(outcome.approved.filter((filePath) => pending.includes(filePath)))]
+    if (outcome.status !== 'approved' || batch.length === 0) break
+    approved.push(...batch)
+    const retired = new Set(batch)
+    pending = pending.filter((filePath) => !retired.has(filePath))
+  }
+  return { approved, deferred: pending }
+}
+
 export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const [currentView, setCurrentView] = useState<ViewType>('home')
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null)
@@ -254,12 +269,15 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const [genSpaceRetakeSource, setGenSpaceRetakeSource] = useState<GenSpaceRetakeSource | null>(null)
   const [pendingRetakeUpdate, setPendingRetakeUpdate] = useState<PendingRetakeUpdate | null>(null)
   const [projects, setProjects] = useState<Project[]>([])
+  const [recoveryRevision, setRecoveryRevision] = useState(0)
   const storageReadyRef = useRef(false)
   const persistedProjectsRef = useRef<Map<string, Project>>(new Map())
   const pendingProjectIdsRef = useRef(new Set<string>())
   const pendingDeletedProjectIdsRef = useRef(new Set<string>())
-  const approvedPathsRef = useRef(new Set<string>())
-  const approvingPathsRef = useRef(new Set<string>())
+  const recoveryAttemptedPathsRef = useRef(new Set<string>())
+  const recoveryDeferredPathsRef = useRef(new Set<string>())
+  const recoveryProjectRef = useRef<string | null>(null)
+  const recoveryInFlightRef = useRef<string | null>(null)
   const persistenceFailureReportedRef = useRef(false)
 
   const reportPersistenceFailure = useCallback((error: unknown) => {
@@ -358,40 +376,43 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     return () => window.clearTimeout(saveTimer)
   }, [projects, reportPersistenceFailure])
 
-  useEffect(() => {
-    const approveProjectPaths = async () => {
-      const paths = new Set<string>()
-      for (const project of projects) {
-        for (const asset of project.assets) {
-          if (isRealPath(asset.path)) {
-            paths.add(asset.path)
-          }
-          for (const take of asset.takes || []) {
-            if (isRealPath(take.path)) {
-              paths.add(take.path)
-            }
-          }
-        }
-      }
-      const newPaths = [...paths].filter((filePath) => (
-        !approvedPathsRef.current.has(filePath) && !approvingPathsRef.current.has(filePath)
-      ))
-      await Promise.all(newPaths.map(async (filePath) => {
-        approvingPathsRef.current.add(filePath)
-        try {
-          await window.electronAPI?.approveLocalPath?.(filePath)
-          approvedPathsRef.current.add(filePath)
-        } catch (e) {
-          logger.warn(`Failed to approve stored asset path: ${filePath} ${e}`)
-        } finally {
-          approvingPathsRef.current.delete(filePath)
-        }
-      }))
-    }
-    void approveProjectPaths()
-  }, [projects])
-  
   const currentProject = projects.find(p => p.id === currentProjectId) || null
+
+  useEffect(() => {
+    if (!window.electronAPI?.recoverPersistedProjectFiles) return
+    if (recoveryProjectRef.current !== currentProjectId) {
+      recoveryProjectRef.current = currentProjectId
+      recoveryAttemptedPathsRef.current.clear()
+      recoveryDeferredPathsRef.current.clear()
+    }
+    if (recoveryInFlightRef.current) return
+    const candidates = currentProject ? currentProject.assets.flatMap((asset) => [
+      ...(isRealPath(asset.path) ? [asset.path] : []),
+      ...(asset.takes || []).flatMap((take) => isRealPath(take.path) ? [take.path] : []),
+    ]) : []
+    const pending = candidates.filter((candidate) => (
+      !recoveryAttemptedPathsRef.current.has(candidate) &&
+      !recoveryDeferredPathsRef.current.has(candidate)
+    ))
+    if (pending.length === 0) return
+    const recoveryProjectId = currentProjectId
+    recoveryInFlightRef.current = recoveryProjectId
+    void recoverPersistedMediaBatches(pending, window.electronAPI.recoverPersistedProjectFiles).then((outcome) => {
+      if (recoveryProjectRef.current !== recoveryProjectId) return
+      outcome.approved.forEach((candidate) => recoveryAttemptedPathsRef.current.add(candidate))
+      outcome.deferred.forEach((candidate) => recoveryDeferredPathsRef.current.add(candidate))
+    }).catch((error) => {
+      logger.warn(`Failed to recover persisted project files: ${error}`)
+      if (recoveryProjectRef.current === recoveryProjectId) {
+        pending.forEach((candidate) => recoveryDeferredPathsRef.current.add(candidate))
+      }
+    }).finally(() => {
+      if (recoveryInFlightRef.current === recoveryProjectId) {
+        recoveryInFlightRef.current = null
+        setRecoveryRevision((revision) => revision + 1)
+      }
+    })
+  }, [currentProjectId, projects, recoveryRevision])
   
   const createProject = useCallback((name: string): Project => {
     const createdAt = Date.now()

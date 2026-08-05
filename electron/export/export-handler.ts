@@ -4,7 +4,7 @@ import fs from 'fs'
 import os from 'os'
 import { getAllowedRoots } from '../config'
 import { logger } from '../logger'
-import { validatePath } from '../path-validation'
+import { validateExactWritePath, validatePath } from '../path-validation'
 import { findFfmpegPath, runFfmpeg, urlToFilePath, stopExportProcess } from './ffmpeg-utils'
 import { flattenTimeline } from './timeline'
 import type { ExportClip } from './timeline'
@@ -24,8 +24,9 @@ export function registerExportHandlers(): void {
     const { clips, outputPath, codec, width, height, fps, quality, letterbox, subtitles } = data
 
     // Validate output path and all clip source paths
+    let normalizedOutputPath: string
     try {
-      validatePath(outputPath, getAllowedRoots())
+      normalizedOutputPath = validateExactWritePath(outputPath)
       for (const clip of clips) {
         const fp = urlToFilePath(clip.url)
         if (fp) validatePath(fp, getAllowedRoots())
@@ -116,12 +117,12 @@ export function registerExportHandlers(): void {
         '-y', '-i', tmpVideo, '-i', tmpAudio,
         '-map', '0:v', '-map', '1:a',
         ...(canCopyVideo ? ['-c:v', 'copy'] : videoCodecArgs),
-        ...audioCodecArgs, '-shortest', outputPath
+        ...audioCodecArgs, '-shortest', normalizedOutputPath
       ])
 
       cleanup()
       if (!r.success) return { error: r.error }
-      logger.info( `[Export] Done: ${outputPath}`)
+      logger.info( `[Export] Done: ${normalizedOutputPath}`)
       return { success: true }
     } catch (err) {
       cleanup()

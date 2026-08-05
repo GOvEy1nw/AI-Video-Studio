@@ -274,10 +274,11 @@ export function ReframePanel({
     if (file) {
       const filePath = getNativeFilePath(file);
       if (filePath) {
-        void window.electronAPI?.approveLocalPath?.(filePath).finally(() => {
+        void (async () => {
+          if (!await window.electronAPI?.approveFile?.(file)) return
           setVideoPath(filePath);
           setVideoUrl(pathToFileUrl(filePath));
-        });
+        })();
       }
     }
   }, []);

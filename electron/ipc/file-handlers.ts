@@ -1,15 +1,20 @@
 import { app, ipcMain, dialog, type OpenDialogOptions } from 'electron'
 import path from 'path'
 import fs from 'fs'
+import os from 'os'
+import { randomUUID } from 'crypto'
 import { getAllowedRoots } from '../config'
 import { logger } from '../logger'
 import { getMainWindow } from '../window'
-import { validatePath, approvePath } from '../path-validation'
+import { approveDirectorySubtree, approveExactFilePath, approveExactWritePath, canonicalizeForContainment, canonicalizePath, filterMatchingCanonicalPaths, loadApprovedExactFilePaths, validateExactWritePath, validatePath } from '../path-validation'
 import {
   getLastDirectoryPickerPath,
   getLastOpenDirectory,
   getLastSaveDirectory,
+  getApprovedExternalFilePaths,
   getProjectAssetsPath,
+  getProjectAssetsPathStatus,
+  addApprovedExternalFilePath,
   setLastDirectoryPickerPath,
   setLastOpenDirectory,
   setLastSaveDirectory,
@@ -91,7 +96,26 @@ function getDialogFallbackDirectory(): string {
   ) ?? app.getPath('home')
 }
 
+function canonicalExistingFile(filePath: string): string {
+  const resolved = canonicalizePath(filePath)
+  if (!fs.existsSync(resolved) || !fs.statSync(resolved).isFile()) {
+    throw new Error('Selected file is unavailable')
+  }
+  return canonicalizeForContainment(resolved)
+}
+
+function canonicalExistingDirectory(directory: string, rejectFilesystemRoot = false): string {
+  const resolved = canonicalizePath(directory)
+  if (!fs.existsSync(resolved) || !fs.statSync(resolved).isDirectory()) {
+    throw new Error('Selected directory is unavailable')
+  }
+  const canonical = fs.realpathSync.native(resolved)
+  if (rejectFilesystemRoot && path.parse(canonical).root === canonical) throw new Error('Filesystem root cannot be used for project assets')
+  return canonical
+}
+
 export function registerFileHandlers(): void {
+  loadApprovedExactFilePaths(getApprovedExternalFilePaths())
   ipcMain.handle('open-parent-folder-of-file', async (_event, filePath: string) => {
     const { shell } = await import('electron')
     const normalizedPath = validatePath(filePath, getAllowedRoots())
@@ -104,7 +128,7 @@ export function registerFileHandlers(): void {
 
   ipcMain.handle('show-item-in-folder', async (_event, filePath: string) => {
     const { shell } = await import('electron')
-    shell.showItemInFolder(filePath)
+    shell.showItemInFolder(validatePath(filePath, getAllowedRoots()))
   })
 
   ipcMain.handle('read-local-file', async (_event, filePath: string) => {
@@ -122,9 +146,11 @@ export function registerFileHandlers(): void {
     }
   })
 
-  ipcMain.handle('approve-local-path', async (_event, filePath: string) => {
+  ipcMain.handle('approve-file-from-renderer', async (_event, filePath: string) => {
     try {
-      approvePath(filePath)
+      const approved = canonicalExistingFile(filePath)
+      approveExactFilePath(approved)
+      addApprovedExternalFilePath(approved)
       return true
     } catch (error) {
       logger.error(`Error approving local path: ${error}`)
@@ -150,20 +176,20 @@ export function registerFileHandlers(): void {
       filters: options.filters || [],
     })
     if (result.canceled || !result.filePath) return null
-    approvePath(result.filePath)
+    const approvedPath = approveExactWritePath(result.filePath)
     setLastSaveDirectory(directoryForDialogSelection(result.filePath, 'file'))
-    return result.filePath
+    return approvedPath
   })
 
   ipcMain.handle('save-file', async (_event, filePath: string, data: string, encoding?: string) => {
     try {
-      validatePath(filePath, getAllowedRoots())
+      const normalizedPath = validateExactWritePath(filePath)
       if (encoding === 'base64') {
-        fs.writeFileSync(filePath, Buffer.from(data, 'base64'))
+        fs.writeFileSync(normalizedPath, Buffer.from(data, 'base64'))
       } else {
-        fs.writeFileSync(filePath, data, 'utf-8')
+        fs.writeFileSync(normalizedPath, data, 'utf-8')
       }
-      return { success: true, path: filePath }
+      return { success: true, path: normalizedPath }
     } catch (error) {
       logger.error( `Error saving file: ${error}`)
       return { success: false, error: String(error) }
@@ -172,9 +198,9 @@ export function registerFileHandlers(): void {
 
   ipcMain.handle('save-binary-file', async (_event, filePath: string, data: ArrayBuffer) => {
     try {
-      validatePath(filePath, getAllowedRoots())
-      fs.writeFileSync(filePath, Buffer.from(data))
-      return { success: true, path: filePath }
+      const normalizedPath = validateExactWritePath(filePath)
+      fs.writeFileSync(normalizedPath, Buffer.from(data))
+      return { success: true, path: normalizedPath }
     } catch (error) {
       logger.error( `Error saving binary file: ${error}`)
       return { success: false, error: String(error) }
@@ -197,15 +223,56 @@ export function registerFileHandlers(): void {
       properties: ['openDirectory', 'createDirectory'],
     })
     if (result.canceled || result.filePaths.length === 0) return null
-    approvePath(result.filePaths[0])
+    approveDirectorySubtree(canonicalExistingDirectory(result.filePaths[0]))
     setLastDirectoryPickerPath(
       directoryForDialogSelection(result.filePaths[0], 'directory'),
     )
-    return result.filePaths[0]
+    return canonicalExistingDirectory(result.filePaths[0])
   })
 
   ipcMain.handle('search-directory-for-files', async (_event, dir: string, filenames: string[]) => {
-    return searchDirectoryForFiles(dir, filenames)
+    return searchDirectoryForFiles(validatePath(dir, getAllowedRoots()), filenames)
+  })
+
+  ipcMain.handle('recover-persisted-project-files', async (_event, candidates: string[]) => {
+    const rootStatus = getProjectAssetsPathStatus()
+    const legacyRoot = rootStatus.needsReselection && rootStatus.legacyPath ? path.resolve(rootStatus.legacyPath) : null
+    const pending = [...new Set(candidates)].filter((candidate) => {
+      if (legacyRoot) {
+        const relative = path.relative(legacyRoot, path.resolve(candidate))
+        if (relative === '' || (!relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative))) return false
+      }
+      try {
+        validatePath(candidate, getAllowedRoots())
+        return false
+      } catch {
+        return true
+      }
+    })
+    if (pending.length === 0) return { status: 'no-pending' as const, approved: [] }
+    const mainWindow = getMainWindow()
+    if (!mainWindow) return { status: 'cancelled' as const, approved: [] }
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: 'Reconnect project media files',
+      properties: ['openFile', 'multiSelections'],
+    })
+    if (result.canceled) return { status: 'cancelled' as const, approved: [] }
+    const approved: string[] = []
+    for (const selected of filterMatchingCanonicalPaths(pending, result.filePaths.map(canonicalExistingFile))) {
+      approveExactFilePath(selected)
+      addApprovedExternalFilePath(selected)
+      approved.push(selected)
+    }
+    return { status: approved.length > 0 ? 'approved' as const : 'cancelled' as const, approved }
+  })
+
+  ipcMain.handle('save-temporary-file', async (_event, data: string, extension: string, encoding?: 'base64' | 'utf8') => {
+    const safeExtension = /^\.[a-zA-Z0-9]+$/.test(extension) ? extension : '.bin'
+    const temporaryPath = path.join(os.tmpdir(), `aivs-${randomUUID()}${safeExtension}`)
+    const normalizedPath = canonicalizeForContainment(temporaryPath)
+    fs.writeFileSync(normalizedPath, encoding === 'base64' ? Buffer.from(data, 'base64') : data, encoding === 'base64' ? undefined : 'utf8')
+    approveExactFilePath(normalizedPath)
+    return normalizedPath
   })
 
   ipcMain.handle('copy-to-project-assets', async (_event, srcPath: string, projectId: string) => {
@@ -289,10 +356,23 @@ export function registerFileHandlers(): void {
     return getProjectAssetsPath()
   })
 
-  ipcMain.handle('set-project-assets-path', async (_event, newPath: string) => {
+  ipcMain.handle('get-project-assets-path-status', async () => {
+    return getProjectAssetsPathStatus()
+  })
+
+  ipcMain.handle('choose-project-assets-path', async () => {
     try {
-      setProjectAssetsPath(newPath)
-      return { success: true }
+      const mainWindow = getMainWindow()
+      if (!mainWindow) return { success: false, error: 'Main window unavailable' }
+      const result = await dialog.showOpenDialog(mainWindow, {
+        title: 'Choose AiVS projects folder',
+        defaultPath: getProjectAssetsPath(),
+        properties: ['openDirectory', 'createDirectory'],
+      })
+      if (result.canceled || result.filePaths.length === 0) return { success: true, cancelled: true }
+      const selectedPath = canonicalExistingDirectory(result.filePaths[0], true)
+      setProjectAssetsPath(selectedPath)
+      return { success: true, path: selectedPath }
     } catch (error) {
       return { success: false, error: String(error) }
     }
@@ -302,7 +382,7 @@ export function registerFileHandlers(): void {
     const results: Record<string, boolean> = {}
     for (const p of filePaths) {
       try {
-        results[p] = fs.existsSync(p)
+        results[p] = fs.existsSync(validatePath(p, getAllowedRoots()))
       } catch {
         results[p] = false
       }
@@ -330,12 +410,14 @@ export function registerFileHandlers(): void {
     })
     if (result.canceled || result.filePaths.length === 0) return null
     for (const fp of result.filePaths) {
-      approvePath(fp)
+      const approved = canonicalExistingFile(fp)
+      approveExactFilePath(approved)
+      addApprovedExternalFilePath(approved)
     }
     setLastOpenDirectory(
       directoryForDialogSelection(result.filePaths[0], 'file'),
     )
-    return result.filePaths
+    return result.filePaths.map(canonicalExistingFile)
   })
 
 }

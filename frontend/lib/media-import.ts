@@ -72,8 +72,8 @@ export function buildSuffixedFileName(fileName: string, suffix: number): string 
 
 /**
  * GenSpace import path: copy into project assets with duplicate handling.
- * Editor in-place imports should use policy `reference-in-place` via this helper
- * so path approval stays centralized without copying.
+ * Native dialogs and dropped files are approved by Electron before this helper
+ * receives their filesystem path.
  */
 export async function importMediaAsset(
   options: ImportMediaOptions,
@@ -95,9 +95,6 @@ export async function importMediaAsset(
   }
 
   if (policy === 'reference-in-place') {
-    if (window.electronAPI?.approveLocalPath) {
-      await window.electronAPI.approveLocalPath(filePath)
-    }
     return {
       path: filePath,
       url: filePathToFileUrl(filePath),
@@ -261,7 +258,9 @@ export async function importGalleryFile(
     return { ok: false, reason: 'unsupported' }
   }
 
-  await window.electronAPI?.approveLocalPath?.(filePath)
+  if (!await window.electronAPI?.approveFile?.(file)) {
+    return { ok: false, reason: 'import-failed' }
+  }
 
   let result = await importMediaAsset({
     projectId,

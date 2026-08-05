@@ -4,7 +4,13 @@ import os from 'os'
 import path from 'path'
 import fs from 'fs'
 import { findFfmpegPath, urlToFilePath } from '../export/ffmpeg-utils'
+import { getAllowedRoots } from '../config'
 import { logger } from '../logger'
+import { approveExactFilePath, validatePath } from '../path-validation'
+
+export function validateVideoFrameInput(videoUrl: string, allowedRoots = getAllowedRoots()): string {
+  return validatePath(urlToFilePath(videoUrl), allowedRoots)
+}
 
 export function registerVideoProcessingHandlers(): void {
   ipcMain.handle(
@@ -16,12 +22,12 @@ export function registerVideoProcessingHandlers(): void {
       width?: number,
       quality?: number,
     ): Promise<{ path: string; url: string }> => {
+      const inputPath = validateVideoFrameInput(videoUrl)
       const ffmpeg = findFfmpegPath()
       if (!ffmpeg) {
         throw new Error('ffmpeg not found')
       }
 
-      const inputPath = urlToFilePath(videoUrl)
       if (!fs.existsSync(inputPath)) {
         throw new Error(`Video file not found: ${inputPath}`)
       }
@@ -52,8 +58,9 @@ export function registerVideoProcessingHandlers(): void {
         throw new Error('ffmpeg produced no output file')
       }
 
-      const fileUrl = `file://${outputPath}`
-      return { path: outputPath, url: fileUrl }
+      const approvedOutputPath = approveExactFilePath(outputPath)
+      const fileUrl = `file://${approvedOutputPath}`
+      return { path: approvedOutputPath, url: fileUrl }
     },
   )
 }

@@ -5,6 +5,7 @@ import { checkGPU } from '../gpu'
 import { cancelModelPackDownload, deleteModelPack, downloadModelPacks, getCheckpointsLocation, getLorasLocation, getModelPackProgress, getModelPacks, isPythonReady, downloadPythonEmbed, openWanGP, refreshModelPacks, setCheckpointsLocation, setLorasLocation } from '../python-setup'
 import { getBackendHealthStatus, getBackendUrl, getAuthToken, startPythonBackend, restartPythonBackend } from '../python-backend'
 import { getMainWindow } from '../window'
+import { validateModelFolderSelection } from '../lib/model-folder-selection'
 
 function getModelsPath(): string {
   const modelsPath = path.join(app.getPath('userData'), 'models')
@@ -142,9 +143,9 @@ export function registerAppHandlers(): void {
   ipcMain.handle('refresh-model-packs', () => refreshModelPacks())
   ipcMain.handle('get-model-pack-progress', () => getModelPackProgress())
   ipcMain.handle('get-checkpoints-location', () => getCheckpointsLocation())
-  ipcMain.handle('set-checkpoints-location', (_event, value: string | null) => setCheckpointsLocation(value))
+  ipcMain.handle('set-checkpoints-location', (_event, value: string | null) => setCheckpointsLocation(validateModelFolderSelection(value)))
   ipcMain.handle('get-loras-location', () => getLorasLocation())
-  ipcMain.handle('set-loras-location', (_event, value: string | null) => setLorasLocation(value))
+  ipcMain.handle('set-loras-location', (_event, value: string | null) => setLorasLocation(validateModelFolderSelection(value)))
   ipcMain.handle('open-wangp', () => openWanGP())
 
   ipcMain.handle('download-model-packs', async (_event, ids: string[]) => {

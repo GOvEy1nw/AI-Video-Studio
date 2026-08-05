@@ -1,6 +1,8 @@
 import fs from 'fs'
 import path from 'path'
 import { shell } from 'electron'
+import { projectAssetCategoryDir, validateProjectId } from './project-asset-import'
+import { canonicalizeForContainment } from '../path-validation'
 
 function normalizeComparable(filePath: string): string {
   const resolved = path.resolve(filePath)
@@ -12,8 +14,9 @@ export function isPathUnderProjectAssetsDir(
   assetsRoot: string,
   projectId: string,
 ): boolean {
-  const projectDir = normalizeComparable(path.join(assetsRoot, projectId))
-  const resolved = normalizeComparable(filePath)
+  validateProjectId(projectId)
+  const projectDir = normalizeComparable(path.dirname(projectAssetCategoryDir(assetsRoot, projectId, 'uploads')))
+  const resolved = normalizeComparable(canonicalizeForContainment(filePath))
   return resolved === projectDir || resolved.startsWith(`${projectDir}${path.sep}`)
 }
 

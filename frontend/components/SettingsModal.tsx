@@ -62,6 +62,8 @@ export function SettingsModal({
   const [modelLicenseLoading, setModelLicenseLoading] = useState(false);
   const [showModelLicense, setShowModelLicense] = useState(false);
   const [projectAssetsPath, setProjectAssetsPath] = useState("");
+  const [projectAssetsNeedsReselection, setProjectAssetsNeedsReselection] = useState(false);
+  const [legacyProjectAssetsPath, setLegacyProjectAssetsPath] = useState<string | undefined>();
   const [advancedSettings, setAdvancedSettings] = useState<AdvancedSettings>(
     () => getAdvancedSettings(settings),
   );
@@ -98,8 +100,12 @@ export function SettingsModal({
   useEffect(() => {
     if (!isOpen) return;
     window.electronAPI
-      .getProjectAssetsPath()
-      .then((p: string) => setProjectAssetsPath(p))
+      .getProjectAssetsPathStatus()
+      .then((status) => {
+        setProjectAssetsPath(status.path);
+        setProjectAssetsNeedsReselection(status.needsReselection);
+        setLegacyProjectAssetsPath(status.legacyPath);
+      })
       .catch(() => {});
   }, [isOpen]);
 
@@ -292,6 +298,11 @@ export function SettingsModal({
                   Where generated video and image assets are saved. Each project
                   gets a subfolder.
                 </p>
+                {projectAssetsNeedsReselection && (
+                  <p className="text-xs text-amber-300">
+                    Previous project-assets folder was kept untouched: {legacyProjectAssetsPath}. Select it again to restore access.
+                  </p>
+                )}
                 <div className="flex gap-2">
                   <div className="flex-1 px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-300 text-sm truncate select-text">
                     {projectAssetsPath || (
@@ -302,13 +313,11 @@ export function SettingsModal({
                     variant="outline"
                     className="border-zinc-700 shrink-0"
                     onClick={async () => {
-                      const dir =
-                        await window.electronAPI.showOpenDirectoryDialog({
-                          title: "Select Project Assets Path",
-                        });
-                      if (dir) {
-                        setProjectAssetsPath(dir);
-                        window.electronAPI.setProjectAssetsPath(dir);
+                      const result = await window.electronAPI.chooseProjectAssetsPath();
+                      if (result.path) {
+                        setProjectAssetsPath(result.path);
+                        setProjectAssetsNeedsReselection(false);
+                        setLegacyProjectAssetsPath(undefined);
                       }
                     }}
                   >
