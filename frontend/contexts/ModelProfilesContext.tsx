@@ -181,6 +181,7 @@ export function ModelProfilesProvider({ children }: { children: ReactNode }) {
   }, [clearRetry, processStatus, refresh]);
 
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
       mountedRef.current = false;
       clearRetry();

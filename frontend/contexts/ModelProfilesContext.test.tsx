@@ -164,6 +164,20 @@ afterEach(() => {
 });
 
 describe("ModelProfilesProvider", () => {
+  it("loads profiles after Strict Mode replays effect cleanup and setup", async () => {
+    installElectronApi();
+    installSuccessfulFetch();
+
+    const { result } = renderHook(() => useModelProfiles(), {
+      wrapper,
+      reactStrictMode: true,
+    });
+
+    await waitFor(() => expect(result.current.all).toHaveLength(3));
+    expect(result.current.loading).toBe(false);
+    expect(result.current.error).toBeNull();
+  });
+
   it("shares one lifecycle snapshot and profile/model-pack load across media hooks", async () => {
     installElectronApi();
     installSuccessfulFetch();
