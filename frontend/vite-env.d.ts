@@ -20,6 +20,7 @@ interface Window {
     readLocalFile: (filePath: string) => Promise<{ data: string; mimeType: string }>
     approveFile: (file: File) => Promise<boolean>
     recoverPersistedProjectFiles: (candidates: string[]) => Promise<{ status: 'approved' | 'cancelled' | 'no-pending'; approved: string[] }>
+    approvePersistedProjectFiles: (candidates: string[]) => Promise<{ approved: string[]; rejected: string[] }>
     getPathForFile: (file: File) => string
     checkGpu: () => Promise<{ available: boolean; name?: string; vram?: number }>
     getAppInfo: () => Promise<{ version: string; isPackaged: boolean; modelsPath: string; userDataPath: string }>

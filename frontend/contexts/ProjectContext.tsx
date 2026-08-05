@@ -5,6 +5,7 @@ import { recoverGenerationParamsMedia } from '../lib/apply-generation-params'
 import { cloneDirectorSequence, normalizeDirectorSequence } from '../lib/director-timeline'
 import type { DirectorSequenceV1 } from '../types/director'
 import { logger } from '../lib/logger'
+import { ProjectPersistenceQueue } from './project-persistence-queue'
 
 function createProjectId(name: string, createdAt: number, existingIds: Set<string>): string {
   const date = new Date(createdAt)
@@ -22,6 +23,8 @@ function createProjectId(name: string, createdAt: number, existingIds: Set<strin
 }
 
 export interface ProjectContextType {
+  persistenceStatus: { pendingCount: number; saving: boolean; lastError: string | null }
+  retryProjectPersistence: () => void
   // Navigation
   currentView: ViewType
   setCurrentView: (view: ViewType) => void
@@ -353,34 +356,52 @@ export async function recoverPersistedMediaBatches(candidates: string[], recover
   return { approved, deferred: pending }
 }
 
+function collectProjectMediaPaths(projects: Project[]): string[] {
+  return [...new Set(projects.flatMap((project) => project.assets.flatMap((asset) => [
+    ...(isRealPath(asset.path) ? [asset.path] : []),
+    ...(asset.takes ?? []).flatMap((take) => isRealPath(take.path) ? [take.path] : []),
+  ])))]
+}
+
 export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const [currentView, setCurrentView] = useState<ViewType>('home')
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null)
+  const currentProjectIdRef = useRef<string | null>(null)
   const [currentTab, setCurrentTab] = useState<ProjectTab>('gen-space')
   const [genSpaceEditImageUrl, setGenSpaceEditImageUrl] = useState<string | null>(null)
   const [genSpaceEditMode, setGenSpaceEditMode] = useState<'image' | 'video' | null>(null)
   const [genSpaceAudioUrl, setGenSpaceAudioUrl] = useState<string | null>(null)
   const [genSpaceRetakeSource, setGenSpaceRetakeSource] = useState<GenSpaceRetakeSource | null>(null)
   const [pendingRetakeUpdate, setPendingRetakeUpdate] = useState<PendingRetakeUpdate | null>(null)
-  const [projects, setProjects] = useState<Project[]>([])
+  const [projects, setProjectState] = useState<Project[]>([])
   const projectsRef = useRef(projects)
   const [recoveryRevision, setRecoveryRevision] = useState(0)
   const storageReadyRef = useRef(false)
-  const persistedProjectsRef = useRef<Map<string, Project>>(new Map())
-  const pendingProjectIdsRef = useRef(new Set<string>())
-  const pendingDeletedProjectIdsRef = useRef(new Set<string>())
+  const loadGenerationRef = useRef(0)
+  const preReadyChangedProjectIdsRef = useRef(new Set<string>())
+  const preReadyDeletedProjectIdsRef = useRef(new Set<string>())
+  const persistenceQueueRef = useRef<ProjectPersistenceQueue | null>(null)
+  const rejectedPersistedPathsRef = useRef(new Map<string, Set<string>>())
   const recoveryAttemptedPathsRef = useRef(new Set<string>())
   const recoveryDeferredPathsRef = useRef(new Set<string>())
   const recoveryProjectRef = useRef<string | null>(null)
   const recoveryInFlightRef = useRef<string | null>(null)
+  const recoveryGenerationRef = useRef(0)
+  const projectLifetimeRef = useRef(new Map<string, number>())
+  const [persistenceStatus, setPersistenceStatus] = useState({ pendingCount: 0, saving: false, lastError: null as string | null })
   const persistenceFailureReportedRef = useRef(false)
 
   useEffect(() => {
     projectsRef.current = projects
   }, [projects])
 
+  useEffect(() => {
+    currentProjectIdRef.current = currentProjectId
+  }, [currentProjectId])
+
   const reportPersistenceFailure = useCallback((error: unknown) => {
     const message = error instanceof Error ? error.message : String(error)
+    setPersistenceStatus((current) => ({ ...current, lastError: message }))
     logger.error(`Project storage failed: ${message}`)
     if (!persistenceFailureReportedRef.current) {
       persistenceFailureReportedRef.current = true
@@ -388,92 +409,178 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  if (!persistenceQueueRef.current) {
+    persistenceQueueRef.current = new ProjectPersistenceQueue({
+      save: async (project, position) => {
+        if (window.electronAPI?.saveProject) {
+          await window.electronAPI.saveProject(project, position)
+        } else {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(projectsRef.current))
+        }
+      },
+      remove: async (id) => {
+        if (window.electronAPI?.deleteProject) {
+          await window.electronAPI.deleteProject(id)
+        } else {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(projectsRef.current))
+        }
+      },
+      onError: reportPersistenceFailure,
+      onPersisted: () => {
+        persistenceFailureReportedRef.current = false
+        setPersistenceStatus((current) => ({ ...current, lastError: null }))
+      },
+      onChange: ({ pendingCount, saving }) => setPersistenceStatus((current) => ({ ...current, pendingCount, saving })),
+    })
+  }
+
+  const retryProjectPersistence = useCallback(() => persistenceQueueRef.current?.retry(), [])
+  const currentLifetime = useCallback((id: string) => projectLifetimeRef.current.get(id) ?? 0, [])
+
+  const deferPersistedPaths = useCallback((projectId: string, paths: string[]) => {
+    if (paths.length === 0) return
+    const deferred = rejectedPersistedPathsRef.current.get(projectId) ?? new Set<string>()
+    paths.forEach((filePath) => deferred.add(filePath))
+    rejectedPersistedPathsRef.current.set(projectId, deferred)
+    if (currentProjectIdRef.current === projectId) setRecoveryRevision((revision) => revision + 1)
+  }, [])
+
+  const approvePersistedPaths = useCallback((projectId: string, paths: string[]) => {
+    const lifetime = currentLifetime(projectId)
+    const candidates = [...new Set(paths.filter(isRealPath))]
+    if (candidates.length === 0) return
+    const api = window.electronAPI
+    if (!api?.approvePersistedProjectFiles) {
+      deferPersistedPaths(projectId, candidates)
+      return
+    }
+    void api.approvePersistedProjectFiles(candidates).then(({ rejected }) => {
+      if (currentLifetime(projectId) === lifetime) deferPersistedPaths(projectId, rejected)
+    }).catch((error) => logger.warn(`Failed to validate persisted project files: ${error}`))
+  }, [currentLifetime, deferPersistedPaths])
+
+  const approveLoadedProjectPaths = useCallback((loadedProjects: Project[]) => {
+    const owners = new Map<string, Set<string>>()
+    loadedProjects.forEach((project) => {
+      collectProjectMediaPaths([project]).forEach((filePath) => {
+        const projectIds = owners.get(filePath) ?? new Set<string>()
+        projectIds.add(project.id)
+        owners.set(filePath, projectIds)
+      })
+    })
+    const candidates = [...owners.keys()]
+    if (candidates.length === 0) return
+    const lifetimes = new Map([...owners.values()].flatMap((ids) => [...ids].map((id) => [id, currentLifetime(id)] as const)))
+    const deferRejected = (rejected: string[]) => rejected.forEach((filePath) => {
+      owners.get(filePath)?.forEach((projectId) => {
+        if (currentLifetime(projectId) === lifetimes.get(projectId)) deferPersistedPaths(projectId, [filePath])
+      })
+    })
+    const api = window.electronAPI
+    if (!api?.approvePersistedProjectFiles) {
+      deferRejected(candidates)
+      return
+    }
+    void api.approvePersistedProjectFiles(candidates).then(({ rejected }) => {
+      deferRejected(rejected)
+    }).catch((error) => logger.warn(`Failed to validate persisted project files: ${error}`))
+  }, [currentLifetime, deferPersistedPaths])
+
+  const commitProjects = useCallback((update: (currentProjects: Project[]) => Project[]) => {
+    const currentProjects = projectsRef.current
+    const nextProjects = update(currentProjects)
+    if (nextProjects === currentProjects) return
+    projectsRef.current = nextProjects
+    setProjectState(nextProjects)
+    const previousById = new Map(currentProjects.map((project) => [project.id, project]))
+    const nextIds = new Set(nextProjects.map((project) => project.id))
+    if (!storageReadyRef.current) {
+      nextProjects.forEach((project) => {
+        if (previousById.get(project.id) !== project) {
+          preReadyChangedProjectIdsRef.current.add(project.id)
+          if (!previousById.has(project.id)) preReadyDeletedProjectIdsRef.current.delete(project.id)
+        }
+      })
+      previousById.forEach((_project, id) => {
+        if (!nextIds.has(id)) preReadyDeletedProjectIdsRef.current.add(id)
+      })
+      return
+    }
+
+    nextProjects.forEach((project, position) => {
+      if (previousById.get(project.id) !== project) {
+        persistenceQueueRef.current?.enqueueSave(project, position)
+      }
+    })
+    previousById.forEach((_project, id) => {
+      if (!nextIds.has(id)) persistenceQueueRef.current?.enqueueDelete(id)
+    })
+  }, [])
+
+  const flushPreReadyMutations = useCallback((currentProjects: Project[]) => {
+    if (storageReadyRef.current) return
+    storageReadyRef.current = true
+    const changedIds = preReadyChangedProjectIdsRef.current
+    const deletedIds = preReadyDeletedProjectIdsRef.current
+    currentProjects.forEach((project, position) => {
+      if (changedIds.has(project.id)) persistenceQueueRef.current?.enqueueSave(project, position)
+    })
+    deletedIds.forEach((id) => persistenceQueueRef.current?.enqueueDelete(id))
+    changedIds.clear()
+    deletedIds.clear()
+  }, [])
+
+  const setProjects = commitProjects
+
   useEffect(() => {
+    const loadGeneration = loadGenerationRef.current + 1
+    loadGenerationRef.current = loadGeneration
     let cancelled = false
+    const isActiveLoad = () => !cancelled && loadGenerationRef.current === loadGeneration
 
     const loadProjects = async () => {
       try {
         if (!window.electronAPI?.loadProjects) {
           const legacyProjects = loadProjectsFromStorage()
-          persistedProjectsRef.current = new Map(legacyProjects.map((project) => [project.id, project]))
-          if (!cancelled) setProjects(legacyProjects)
+          if (!isActiveLoad()) return
+          projectsRef.current = legacyProjects
+          setProjectState(legacyProjects)
+          approvePersistedPaths('__legacy__', collectProjectMediaPaths(legacyProjects))
           return
         }
 
         let storedProjects = await window.electronAPI.loadProjects() as Project[]
+        if (!isActiveLoad()) return
         if (storedProjects.length === 0) {
           const legacyProjects = loadProjectsFromStorage()
           if (legacyProjects.length > 0) {
             storedProjects = await window.electronAPI.migrateProjectsFromLocalStorage(legacyProjects) as Project[]
+            if (!isActiveLoad()) return
           }
         }
 
         const recoveredProjects = storedProjects.map(migrateProject).map(recoverAssetUrls)
-        persistedProjectsRef.current = new Map(recoveredProjects.map((project) => [project.id, project]))
-        if (!cancelled) {
-          setProjects((currentProjects) => currentProjects.length === 0
-            ? recoveredProjects
-            : [
-                ...currentProjects,
-                ...recoveredProjects.filter((project) => !currentProjects.some((current) => current.id === project.id)),
-              ])
-        }
+        if (!isActiveLoad()) return
+        const currentProjects = projectsRef.current
+        const currentProjectIds = new Set(currentProjects.map((project) => project.id))
+        const projectsToMerge = recoveredProjects.filter((project) => (
+          !currentProjectIds.has(project.id) && !preReadyDeletedProjectIdsRef.current.has(project.id)
+        ))
+        const nextProjects = [...currentProjects, ...projectsToMerge]
+        approveLoadedProjectPaths(projectsToMerge)
+        projectsRef.current = nextProjects
+        setProjectState(nextProjects)
+        flushPreReadyMutations(nextProjects)
       } catch (error) {
-        reportPersistenceFailure(error)
+        if (isActiveLoad()) reportPersistenceFailure(error)
       } finally {
-        storageReadyRef.current = true
+        if (isActiveLoad()) flushPreReadyMutations(projectsRef.current)
       }
     }
 
     void loadProjects()
     return () => { cancelled = true }
-  }, [reportPersistenceFailure])
-
-  useEffect(() => {
-    if (!storageReadyRef.current) return
-
-    const previousProjects = persistedProjectsRef.current
-    const currentProjects = new Map(projects.map((project) => [project.id, project]))
-    for (const project of projects) {
-      if (previousProjects.get(project.id) !== project) {
-        pendingProjectIdsRef.current.add(project.id)
-      }
-    }
-    for (const id of previousProjects.keys()) {
-      if (!currentProjects.has(id)) {
-        pendingDeletedProjectIdsRef.current.add(id)
-      }
-    }
-    persistedProjectsRef.current = currentProjects
-
-    if (pendingProjectIdsRef.current.size === 0 && pendingDeletedProjectIdsRef.current.size === 0) return
-
-    const saveTimer = window.setTimeout(() => {
-      const projectsById = new Map(projects.map((project) => [project.id, project]))
-      const changedIds = [...pendingProjectIdsRef.current]
-      const deletedIds = [...pendingDeletedProjectIdsRef.current]
-      pendingProjectIdsRef.current.clear()
-      pendingDeletedProjectIdsRef.current.clear()
-
-      void (async () => {
-        try {
-          if (!window.electronAPI?.saveProject) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(projects))
-            return
-          }
-          await Promise.all(deletedIds.map((id) => window.electronAPI.deleteProject(id)))
-          await Promise.all(changedIds.flatMap((id) => {
-            const project = projectsById.get(id)
-            return project ? [window.electronAPI.saveProject(project, projects.indexOf(project))] : []
-          }))
-        } catch (error) {
-          reportPersistenceFailure(error)
-        }
-      })()
-    }, 500)
-
-    return () => window.clearTimeout(saveTimer)
-  }, [projects, reportPersistenceFailure])
+  }, [approveLoadedProjectPaths, approvePersistedPaths, flushPreReadyMutations, reportPersistenceFailure])
 
   const currentProject = projects.find(p => p.id === currentProjectId) || null
 
@@ -481,37 +588,42 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     if (!window.electronAPI?.recoverPersistedProjectFiles) return
     if (recoveryProjectRef.current !== currentProjectId) {
       recoveryProjectRef.current = currentProjectId
+      recoveryGenerationRef.current += 1
       recoveryAttemptedPathsRef.current.clear()
       recoveryDeferredPathsRef.current.clear()
     }
     if (recoveryInFlightRef.current) return
-    const candidates = currentProject ? currentProject.assets.flatMap((asset) => [
-      ...(isRealPath(asset.path) ? [asset.path] : []),
-      ...(asset.takes || []).flatMap((take) => isRealPath(take.path) ? [take.path] : []),
-    ]) : []
+    if (!currentProjectId) return
+    const candidates = currentProjectId
+      ? [...(rejectedPersistedPathsRef.current.get(currentProjectId) ?? [])]
+      : []
     const pending = candidates.filter((candidate) => (
       !recoveryAttemptedPathsRef.current.has(candidate) &&
       !recoveryDeferredPathsRef.current.has(candidate)
     ))
     if (pending.length === 0) return
     const recoveryProjectId = currentProjectId
-    recoveryInFlightRef.current = recoveryProjectId
+    const recoveryLifetime = currentLifetime(recoveryProjectId)
+    const recoveryGeneration = recoveryGenerationRef.current + 1
+    recoveryGenerationRef.current = recoveryGeneration
+    const recoveryToken = `${recoveryProjectId}:${recoveryLifetime}:${recoveryGeneration}`
+    recoveryInFlightRef.current = recoveryToken
     void recoverPersistedMediaBatches(pending, window.electronAPI.recoverPersistedProjectFiles).then((outcome) => {
-      if (recoveryProjectRef.current !== recoveryProjectId) return
+      if (recoveryProjectRef.current !== recoveryProjectId || currentLifetime(recoveryProjectId) !== recoveryLifetime || recoveryGenerationRef.current !== recoveryGeneration) return
       outcome.approved.forEach((candidate) => recoveryAttemptedPathsRef.current.add(candidate))
       outcome.deferred.forEach((candidate) => recoveryDeferredPathsRef.current.add(candidate))
     }).catch((error) => {
       logger.warn(`Failed to recover persisted project files: ${error}`)
-      if (recoveryProjectRef.current === recoveryProjectId) {
+      if (recoveryProjectRef.current === recoveryProjectId && currentLifetime(recoveryProjectId) === recoveryLifetime && recoveryGenerationRef.current === recoveryGeneration) {
         pending.forEach((candidate) => recoveryDeferredPathsRef.current.add(candidate))
       }
     }).finally(() => {
-      if (recoveryInFlightRef.current === recoveryProjectId) {
+      if (recoveryInFlightRef.current === recoveryToken) {
         recoveryInFlightRef.current = null
         setRecoveryRevision((revision) => revision + 1)
       }
     })
-  }, [currentProjectId, projects, recoveryRevision])
+  }, [currentProjectId, recoveryRevision])
   
   const createProject = useCallback((name: string): Project => {
     const createdAt = Date.now()
@@ -528,12 +640,23 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       activeTimelineId: defaultTimeline.id,
       directorTimelines: [],
     }
+    if (!projectLifetimeRef.current.has(newProject.id)) projectLifetimeRef.current.set(newProject.id, 0)
     setProjects(prev => [newProject, ...prev])
     return newProject
   }, [])
   
   const deleteProject = useCallback((id: string) => {
+    projectLifetimeRef.current.set(id, currentLifetime(id) + 1)
+    if (!storageReadyRef.current) preReadyDeletedProjectIdsRef.current.add(id)
     setProjects(prev => prev.filter(p => p.id !== id))
+    rejectedPersistedPathsRef.current.delete(id)
+    if (recoveryProjectRef.current === id) {
+      recoveryProjectRef.current = null
+      recoveryGenerationRef.current += 1
+      recoveryAttemptedPathsRef.current.clear()
+      recoveryDeferredPathsRef.current.clear()
+      if (recoveryInFlightRef.current?.startsWith(`${id}:`)) recoveryInFlightRef.current = null
+    }
     if (currentProjectId === id) {
       setCurrentProjectId(null)
       setCurrentView('home')
@@ -578,8 +701,9 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
           } 
         : p
     ))
+    approvePersistedPaths(projectId, [newAsset.path])
     return newAsset
-  }, [])
+  }, [approvePersistedPaths])
   
   const deleteAsset = useCallback((projectId: string, assetId: string) => {
     setProjects(prev => prev.map(p => 
@@ -632,7 +756,8 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
         updatedAt: Date.now(),
       }
     }))
-  }, [])
+    approvePersistedPaths(projectId, [take.path])
+  }, [approvePersistedPaths])
 
   const deleteTakeFromAsset = useCallback((projectId: string, assetId: string, takeIndex: number) => {
     setProjects(prev => prev.map(p => {
@@ -1095,6 +1220,8 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     pendingRetakeUpdate,
   ])
   const compatibilityValue = useMemo<ProjectContextType>(() => ({
+    persistenceStatus,
+    retryProjectPersistence,
     ...navigationValue,
     ...projectListValue,
     currentProject,
@@ -1105,12 +1232,14 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     ...genSpaceHandoffsValue,
   }), [
     currentProject,
+    persistenceStatus,
     directorTimelinesValue,
     editorTimelinesValue,
     genSpaceHandoffsValue,
     navigationValue,
     projectAssetsValue,
     projectListValue,
+    retryProjectPersistence,
     updateProjectGenSpaceSeed,
   ])
   
