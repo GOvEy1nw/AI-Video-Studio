@@ -49,10 +49,6 @@ export function useRegeneration(params: UseRegenerationParams) {
   const [regeneratingAssetId, setRegeneratingAssetId] = useState<string | null>(null)
   const [regeneratingClipId, setRegeneratingClipId] = useState<string | null>(null)
 
-  // IC-LoRA panel state
-  const [showICLoraPanel, setShowICLoraPanel] = useState(false)
-  const [icLoraSourceClipId, setIcLoraSourceClipId] = useState<string | null>(null)
-
   // Error state for imported assets that can't auto-generate a prompt
   const [regenerationPreError, setRegenerationPreError] = useState<string | null>(null)
   const dismissRegenerationPreError = useCallback(() => setRegenerationPreError(null), [])
@@ -375,46 +371,6 @@ export function useRegeneration(params: UseRegenerationParams) {
     // Do NOT call regenReset() — let the error dialog handle it
   }, [regenError, regeneratingAssetId, isRegenerating])
 
-  // IC-LoRA result handler
-  const handleICLoraResult = useCallback((result: { videoPath: string; sourceClipId: string | null }) => {
-    if (!currentProjectId) return
-
-    const pathNormalized = result.videoPath.replace(/\\/g, '/')
-    const videoUrl = pathNormalized.startsWith('/') ? `file://${pathNormalized}` : `file:///${pathNormalized}`
-
-    if (result.sourceClipId) {
-      // Add as a new take on the source clip's asset
-      const clip = clips.find(c => c.id === result.sourceClipId)
-      const asset = clip?.assetId ? assets.find(a => a.id === clip.assetId) : null
-      if (asset) {
-        const newTakeIdx = asset.takes ? asset.takes.length : 1
-        addTakeToAsset(currentProjectId, asset.id, {
-          url: videoUrl,
-          path: result.videoPath,
-          createdAt: Date.now(),
-        })
-        setClips(prev => prev.map(c => {
-          if (c.id !== result.sourceClipId) return c
-          return { ...c, takeIndex: newTakeIdx }
-        }))
-      }
-    } else {
-      // Add as a new asset to the project
-      addAsset(currentProjectId, {
-        type: 'video',
-        path: result.videoPath,
-        url: videoUrl,
-        prompt: 'IC-LoRA generation',
-        resolution: '',
-        takes: [{ url: videoUrl, path: result.videoPath, createdAt: Date.now() }],
-        activeTakeIndex: 0,
-      })
-    }
-
-    setShowICLoraPanel(false)
-    setIcLoraSourceClipId(null)
-  }, [currentProjectId, clips, assets, addTakeToAsset, addAsset])
-
   // Handle take navigation on a clip (also updates linked audio/video clips)
   const handleClipTakeChange = useCallback((clipId: string, direction: 'prev' | 'next') => {
     setClips(prev => {
@@ -472,8 +428,6 @@ export function useRegeneration(params: UseRegenerationParams) {
     // State
     regeneratingAssetId, setRegeneratingAssetId,
     regeneratingClipId, setRegeneratingClipId,
-    showICLoraPanel, setShowICLoraPanel,
-    icLoraSourceClipId, setIcLoraSourceClipId,
     i2vClipId, setI2vClipId,
     i2vPrompt, setI2vPrompt,
     i2vSettings, setI2vSettings,
@@ -485,7 +439,6 @@ export function useRegeneration(params: UseRegenerationParams) {
     handleI2vGenerate,
     handleRegenerate,
     handleCancelRegeneration,
-    handleICLoraResult,
     handleClipTakeChange,
     handleDeleteTake,
   }

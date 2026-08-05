@@ -38,20 +38,6 @@ export interface LeftPanelProps {
   setGalleryFilter: (filter: GalleryFilterState) => void;
   selectedAssetIds: Set<string>;
   setSelectedAssetIds: React.Dispatch<React.SetStateAction<Set<string>>>;
-  assetLasso: {
-    startX: number;
-    startY: number;
-    currentX: number;
-    currentY: number;
-  } | null;
-  setAssetLasso: React.Dispatch<
-    React.SetStateAction<{
-      startX: number;
-      startY: number;
-      currentX: number;
-      currentY: number;
-    } | null>
-  >;
   assetGridRef: React.RefObject<HTMLDivElement | null>;
   setAssetContextMenu: React.Dispatch<
     React.SetStateAction<{ assetId: string; x: number; y: number } | null>

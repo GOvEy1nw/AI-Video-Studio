@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import type { Asset, TimelineClip, Track } from '../../types/project'
+import { DEFAULT_LETTERBOX, DEFAULT_TEXT_STYLE, type Asset, type TimelineClip, type Track } from '../../types/project'
 import { buildPlaybackIndex, selectActiveAudioAtTime, selectDissolveAtTime, selectVisualAtTime, type IndexedClip } from './playback-index'
+import { migrateClip } from './video-editor-utils'
 
 declare const process: { stdout: { write(value: string): void } }
 
@@ -38,6 +39,31 @@ const tracks: Track[] = [
 ]
 
 describe('playback index', () => {
+  it('preserves legacy effect and overlay fields through migration and an unrelated edit payload', () => {
+    const legacy = {
+      ...clip('legacy', 0, 0, 5),
+      flipH: true,
+      transitionIn: { type: 'dissolve' as const, duration: 0.25 },
+      transitionOut: { type: 'wipe-left' as const, duration: 0.5 },
+      colorCorrection: { brightness: 12, contrast: -8, saturation: 4, temperature: 2, tint: -1, exposure: 3, highlights: -5, shadows: 6 },
+      effects: [{ id: 'legacy-effect', type: 'blur' as const, enabled: true, params: { radius: 8 } }],
+      letterbox: { ...DEFAULT_LETTERBOX, enabled: true },
+      textStyle: { ...DEFAULT_TEXT_STYLE, text: 'Legacy title' },
+    }
+    const persistedPayload = { ...migrateClip(legacy), startTime: 2 }
+
+    expect(persistedPayload).toMatchObject({
+      startTime: 2,
+      flipH: true,
+      transitionIn: legacy.transitionIn,
+      transitionOut: legacy.transitionOut,
+      colorCorrection: legacy.colorCorrection,
+      effects: legacy.effects,
+      letterbox: legacy.letterbox,
+      textStyle: legacy.textStyle,
+    })
+  })
+
   it('keeps topmost and later-array visual precedence while skipping disabled tracks', () => {
     const lower = clip('lower', 0, 0, 10)
     const upperFirst = clip('upper-first', 1, 0, 10)

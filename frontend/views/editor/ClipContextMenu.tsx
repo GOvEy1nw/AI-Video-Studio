@@ -87,8 +87,6 @@ export interface ClipContextMenuProps {
   setI2vClipId: (v: string | null) => void;
   setI2vPrompt: (v: string) => void;
   onRetakeClip: (clip: TimelineClip) => void;
-  setIcLoraSourceClipId: (v: string | null) => void;
-  setShowICLoraPanel: (v: boolean) => void;
   onCaptureFrameForVideo: (clip: TimelineClip) => void;
   onCreateVideoFromAudio: (clip: TimelineClip) => void;
 }
@@ -195,8 +193,6 @@ export function ClipContextMenu({
   setI2vClipId,
   setI2vPrompt,
   onRetakeClip,
-  setIcLoraSourceClipId, // IC-LORA HIDDEN: still passed to SingleClipMenu
-  setShowICLoraPanel, // IC-LORA HIDDEN: still passed to SingleClipMenu
   onCaptureFrameForVideo,
   onCreateVideoFromAudio,
 }: ClipContextMenuProps) {
@@ -354,8 +350,6 @@ export function ClipContextMenu({
           setI2vClipId={setI2vClipId}
           setI2vPrompt={setI2vPrompt}
           onRetakeClip={onRetakeClip}
-          setIcLoraSourceClipId={setIcLoraSourceClipId}
-          setShowICLoraPanel={setShowICLoraPanel}
           onCaptureFrameForVideo={onCaptureFrameForVideo}
           onCreateVideoFromAudio={onCreateVideoFromAudio}
           close={close}
@@ -409,8 +403,6 @@ function SingleClipMenu({
   setI2vClipId,
   setI2vPrompt,
   onRetakeClip,
-  setIcLoraSourceClipId: _setIcLoraSourceClipId,
-  setShowICLoraPanel: _setShowICLoraPanel, // IC-LORA HIDDEN
   onCaptureFrameForVideo,
   onCreateVideoFromAudio,
   close,
@@ -454,8 +446,6 @@ function SingleClipMenu({
   setI2vClipId: (v: string | null) => void;
   setI2vPrompt: (v: string) => void;
   onRetakeClip: (clip: TimelineClip) => void;
-  setIcLoraSourceClipId: (v: string | null) => void;
-  setShowICLoraPanel: (v: boolean) => void;
   onCaptureFrameForVideo: (clip: TimelineClip) => void;
   onCreateVideoFromAudio: (clip: TimelineClip) => void;
   close: () => void;
@@ -833,10 +823,6 @@ function SingleClipMenu({
                   close();
                 }}
               />
-              {/* IC-LORA HIDDEN - IC-LoRA context menu item hidden because IC-LoRA is broken on server
-              <MenuItem icon={Sparkles} iconClass="text-amber-400" label="IC-LoRA / Style Transfer"
-                onClick={() => { setIcLoraSourceClipId(contextClip.id); setShowICLoraPanel(true); close() }} />
-              */}
             </>
           )}
           {contextClip.type === "audio" &&

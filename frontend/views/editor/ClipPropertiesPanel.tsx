@@ -28,7 +28,6 @@ import type {
   Asset,
   TimelineClip,
   Track,
-  ClipEffect,
   LetterboxSettings,
   TextOverlayStyle,
   TransitionType,
@@ -51,21 +50,12 @@ interface ClipPropertiesPanelProps {
   setShowFlip: (v: boolean) => void;
   showTransitions: boolean;
   setShowTransitions: (v: boolean) => void;
-  showAppliedEffects: boolean;
-  setShowAppliedEffects: (v: boolean) => void;
   showColorCorrection: boolean;
   setShowColorCorrection: (v: boolean) => void;
   resolutionCache: Record<string, { width: number; height: number }>;
   rightPanelWidth: number;
   updateClip: (clipId: string, updates: Partial<TimelineClip>) => void;
-  removeEffectFromClip: (clipId: string, effectId: string) => void;
-  updateEffectOnClip: (
-    clipId: string,
-    effectId: string,
-    updates: Partial<ClipEffect>,
-  ) => void;
   handleDeleteTake: (clipId: string) => void;
-  setShowEffectsBrowser: (v: boolean) => void;
   setI2vClipId: (v: string | null) => void;
   setI2vPrompt: (v: string) => void;
   i2vClipId: string | null;
@@ -95,13 +85,11 @@ export function ClipPropertiesPanel(props: ClipPropertiesPanelProps) {
     setShowFlip,
     showTransitions,
     setShowTransitions,
-    // EFFECTS HIDDEN: showAppliedEffects, setShowAppliedEffects removed from destructuring
     showColorCorrection,
     setShowColorCorrection,
     resolutionCache,
     rightPanelWidth,
     updateClip,
-    // EFFECTS HIDDEN: removeEffectFromClip, updateEffectOnClip, setShowEffectsBrowser removed from destructuring
     handleDeleteTake,
     setI2vClipId,
     setI2vPrompt,
