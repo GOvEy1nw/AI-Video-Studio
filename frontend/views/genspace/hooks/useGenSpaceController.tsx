@@ -556,10 +556,7 @@ export function useGenSpaceController() {
     deleteAssetBin,
     setAssetBinColor,
     setAssetActiveTake,
-    onUseImage: handleUseImage,
-    onReframe: handleReframe,
     onCopySettings: handleCopySettings,
-    getAssetModelName,
   });
   const {
     assets,

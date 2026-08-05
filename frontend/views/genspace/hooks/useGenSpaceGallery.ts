@@ -17,7 +17,6 @@ import {
   type DuplicateFilenameChoice,
 } from "../../../lib/media-import";
 import type { Asset } from "../../../types/project";
-import type { ImageUseTarget } from "../../../components/UseImageDropdown";
 import type { GenSpaceGalleryProps } from "../GenSpaceGallery";
 
 type Projects = ReturnType<typeof useProjects>;
@@ -36,10 +35,7 @@ export function useGenSpaceGallery({
   deleteAssetBin,
   setAssetBinColor,
   setAssetActiveTake,
-  onUseImage,
-  onReframe,
   onCopySettings,
-  getAssetModelName,
 }: {
   currentProject: Projects["currentProject"];
   currentProjectId: string | null;
@@ -54,10 +50,7 @@ export function useGenSpaceGallery({
   deleteAssetBin: Projects["deleteAssetBin"];
   setAssetBinColor: Projects["setAssetBinColor"];
   setAssetActiveTake: Projects["setAssetActiveTake"];
-  onUseImage: (asset: Asset, target: ImageUseTarget) => void;
-  onReframe: (asset: Asset) => void;
   onCopySettings: (asset: Asset) => void;
-  getAssetModelName: (asset: Asset) => string | undefined;
 }) {
   const assets = useMemo(
     () =>
@@ -337,7 +330,6 @@ export function useGenSpaceGallery({
       showFavorites,
       onShowFavoritesChange: setShowFavorites,
       getThumbnailUrl: ({ thumbnail }) => thumbnail,
-      getAssetModelName,
       previewEnabled: currentTab === "gen-space" && isDocumentVisible,
       selectedAssetIds: selectedAsset
         ? new Set([selectedAsset.id])
@@ -365,8 +357,6 @@ export function useGenSpaceGallery({
       onToggleFavorite: (asset) => {
         if (currentProjectId) toggleFavorite(currentProjectId, asset.id);
       },
-      onUseImage,
-      onReframe,
       onCopySettings,
       onSelectTake: (asset, takeIndex) => {
         if (currentProjectId) {
@@ -385,13 +375,10 @@ export function useGenSpaceGallery({
       currentTab,
       deleteAssetBin,
       filter,
-      getAssetModelName,
       gridColumns,
       isDocumentVisible,
       newBinName,
       onCopySettings,
-      onUseImage,
-      onReframe,
       renameAssetBin,
       requestDeleteAssets,
       selectedAsset,

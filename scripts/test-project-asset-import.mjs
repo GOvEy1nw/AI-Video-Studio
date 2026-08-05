@@ -18,28 +18,18 @@ function loadProjectAssetImport() {
       return require(candidate)
     }
   }
-  return null
-}
-
-function buildSuffixedFileNameFallback(fileName, suffix) {
-  const ext = path.extname(fileName)
-  const stem = path.basename(fileName, ext)
-  return `${stem} (${suffix})${ext}`
-}
-
-function runFallbackTests() {
-  assert.equal(buildSuffixedFileNameFallback('clip.mp4', 2), 'clip (2).mp4')
-  assert.equal(buildSuffixedFileNameFallback('clip.mp4', 3), 'clip (3).mp4')
-  assert.equal(buildSuffixedFileNameFallback('README', 2), 'README (2)')
+  throw new Error(
+    `Standalone production Electron module build required: expected ${candidates.join(' or ')}`,
+  )
 }
 
 const mod = loadProjectAssetImport()
 
-if (mod) {
-  const { buildSuffixedFileName, resolveImportDestPlan, importProjectAsset } = mod
-  assert.equal(buildSuffixedFileName('clip.mp4', 2), 'clip (2).mp4')
+const { buildSuffixedFileName, resolveImportDestPlan, importProjectAsset } = mod
+assert.equal(buildSuffixedFileName('clip.mp4', 2), 'clip (2).mp4')
 
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aivs-import-test-'))
+const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aivs-import-test-'))
+try {
   const srcPath = path.join(tmpDir, 'sample.mp4')
   fs.writeFileSync(srcPath, 'video-bytes')
 
@@ -63,9 +53,7 @@ if (mod) {
   assert.equal(imported.reusedExisting, false)
   assert.equal(fs.existsSync(imported.destPath), true)
 
-  fs.rmSync(tmpDir, { recursive: true, force: true })
   console.log('project-asset-import dist tests passed')
-} else {
-  runFallbackTests()
-  console.log('project-asset-import fallback suffix tests passed (dist-electron not built)')
+} finally {
+  fs.rmSync(tmpDir, { recursive: true, force: true })
 }
