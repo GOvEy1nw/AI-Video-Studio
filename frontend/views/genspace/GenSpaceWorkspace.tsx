@@ -6,8 +6,8 @@ import { GenSpaceResizeHandle } from "./GenSpaceResizeHandle";
 import { useGenSpaceController } from "./hooks/useGenSpaceController";
 import { useState } from "react";
 
-export function GenSpaceWorkspace() {
-  const controller = useGenSpaceController();
+export function GenSpaceWorkspace({ isActive }: { isActive: boolean }) {
+  const controller = useGenSpaceController(isActive);
   const [leftWidth, setLeftWidth] = useState<number>();
   const [rightWidth, setRightWidth] = useState<number>();
   const resize = (
@@ -26,6 +26,7 @@ export function GenSpaceWorkspace() {
       />
       <GenSpaceSelectedGeneration
         {...controller.selectedGeneration}
+        isActive={isActive}
         style={{
           left: leftWidth ? leftWidth + "vw" : "clamp(20vw, 25vw, 25vw)",
           right: rightWidth ? rightWidth + "vw" : "clamp(15vw, 15vw, 25vw)",

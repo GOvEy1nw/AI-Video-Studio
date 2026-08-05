@@ -53,11 +53,10 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-export function DirectorEditor() {
+export function DirectorEditor({ isActive }: { isActive: boolean }) {
   const {
     currentProject,
     currentProjectId,
-    currentTab,
     addAsset,
     updateAsset,
     addTakeToAsset,
@@ -101,6 +100,7 @@ export function DirectorEditor() {
   }, [layout]);
 
   useEffect(() => {
+    if (!isActive) return;
     if (timelines.length > 0) creatingInitialTimeline.current = false;
     if (
       !currentProjectId ||
@@ -123,6 +123,7 @@ export function DirectorEditor() {
     addDirectorTimeline,
     currentProjectId,
     enabledProfiles,
+    isActive,
     timelines.length,
   ]);
 
@@ -195,7 +196,7 @@ export function DirectorEditor() {
         style={{ width: layout.leftWidth }}
       >
         <DirectorSidebar
-          isActive={currentTab === "director"}
+          isActive={isActive}
           projectId={currentProjectId}
           assets={currentProject.assets}
           assetBins={currentProject.assetBins || []}
@@ -261,7 +262,8 @@ export function DirectorEditor() {
         aria-label="Resize Director sidebar"
       />
       <DirectorWorkspacePanel
-        isActive={currentTab === "director"}
+        isActive={isActive}
+        enabledProfiles={enabledProfiles}
         projectId={currentProjectId}
         timeline={activeTimeline}
         timelines={timelines}

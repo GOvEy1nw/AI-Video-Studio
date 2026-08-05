@@ -1,7 +1,6 @@
 import {
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
   type DragEvent,
@@ -35,7 +34,7 @@ import type { DirectorSequenceV1 } from "@/types/director";
 import { SeedSettings } from "@/components/SeedControl";
 import { FloatingMenu } from "../../components/FloatingMenu";
 import { useAppSettings } from "@/contexts/AppSettingsContext";
-import { useVideoProfiles } from "@/hooks/use-image-profiles";
+import type { ModelProfile } from "@/types/model-profiles";
 import { useGeneration } from "@/hooks/use-generation";
 import { copyToAssetFolder } from "@/lib/asset-copy";
 import { buildDirectorRequest } from "@/lib/director-request";
@@ -60,6 +59,7 @@ import { useDirectorSequence } from "./useDirectorSequence";
 
 interface Props {
   isActive: boolean;
+  enabledProfiles: ModelProfile[];
   projectId: string;
   timeline: DirectorTimelineDocument | null;
   timelines: DirectorTimelineDocument[];
@@ -117,11 +117,7 @@ function timecode(frame: number, fps: number) {
 }
 
 export function DirectorWorkspacePanel(props: Props) {
-  const { profiles } = useVideoProfiles();
-  const enabledProfiles = useMemo(
-    () => profiles.filter((profile) => profile.director.enabled),
-    [profiles],
-  );
+  const { enabledProfiles } = props;
   const update = useCallback(
     (director: DirectorSequenceV1) => {
       if (props.timeline)

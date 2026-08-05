@@ -35,6 +35,7 @@ import type { GenSpaceGalleryProps } from "./GenSpaceGallery";
 
 export interface GenSpaceSelectedGenerationProps {
   style?: React.CSSProperties;
+  isActive?: boolean;
   asset: Asset | null;
   modelName?: string;
   generation: GenSpaceGalleryProps["generation"];
@@ -247,7 +248,13 @@ function MediaPlayerControls({
   );
 }
 
-function PlayableAssetPreview({ asset }: { asset: Asset }) {
+function PlayableAssetPreview({
+  asset,
+  isActive,
+}: {
+  asset: Asset;
+  isActive: boolean;
+}) {
   const mediaRef = useRef<HTMLMediaElement | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(asset.duration ?? 0);
@@ -273,7 +280,12 @@ function PlayableAssetPreview({ asset }: { asset: Asset }) {
   }, []);
 
   useEffect(() => {
+    if (!isActive) mediaRef.current?.pause();
+  }, [isActive]);
+
+  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (!isActive) return;
       const isSpace =
         event.code === "Space" ||
         event.key === " " ||
@@ -299,7 +311,7 @@ function PlayableAssetPreview({ asset }: { asset: Asset }) {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handlePlayPause]);
+  }, [handlePlayPause, isActive]);
 
   const handleSeek = (time: number) => {
     const media = mediaRef.current;
@@ -410,9 +422,17 @@ function PlayableAssetPreview({ asset }: { asset: Asset }) {
   );
 }
 
-function AssetPreview({ asset }: { asset: Asset }) {
+function AssetPreview({
+  asset,
+  isActive,
+}: {
+  asset: Asset;
+  isActive: boolean;
+}) {
   if (asset.type === "video" || asset.type === "audio") {
-    return <PlayableAssetPreview key={asset.url} asset={asset} />;
+    return (
+      <PlayableAssetPreview key={asset.url} asset={asset} isActive={isActive} />
+    );
   }
   return (
     <div className="flex h-full w-full items-center justify-center p-5">
@@ -428,6 +448,7 @@ function AssetPreview({ asset }: { asset: Asset }) {
 
 export function GenSpaceSelectedGeneration({
   asset,
+  isActive = true,
   style,
   modelName,
   generation,
@@ -579,7 +600,7 @@ export function GenSpaceSelectedGeneration({
       ) : asset ? (
         <>
           <div className="flex min-h-0 flex-1 overflow-hidden bg-black/40">
-            <AssetPreview asset={asset} />
+            <AssetPreview asset={asset} isActive={isActive} />
           </div>
           <div className="shrink-0 border-t bg-zinc-900 border-zinc-800 px-5 py-4">
             <div className="flex flex-wrap gap-2">

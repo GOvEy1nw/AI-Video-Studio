@@ -48,7 +48,7 @@ function props(isGenerating: boolean) {
   return {
     currentProject: project,
     currentProjectId: project.id,
-    currentTab: "gen-space",
+    isActive: true,
     isGenerating,
     addAsset: vi.fn(() => asset),
     deleteAsset: vi.fn(),
