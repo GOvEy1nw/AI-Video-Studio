@@ -18,7 +18,8 @@ interface Window {
     getBackend: () => Promise<{ url: string; token: string }>
     getModelsPath: () => Promise<string>
     readLocalFile: (filePath: string) => Promise<{ data: string; mimeType: string }>
-    approveLocalPath: (filePath: string) => Promise<boolean>
+    approveFile: (file: File) => Promise<boolean>
+    recoverPersistedProjectFiles: (candidates: string[]) => Promise<{ status: 'approved' | 'cancelled' | 'no-pending'; approved: string[] }>
     getPathForFile: (file: File) => string
     checkGpu: () => Promise<{ available: boolean; name?: string; vram?: number }>
     getAppInfo: () => Promise<{ version: string; isPackaged: boolean; modelsPath: string; userDataPath: string }>
@@ -50,7 +51,8 @@ interface Window {
       error?: string
     }>
     getProjectAssetsPath: () => Promise<string>
-    setProjectAssetsPath: (newPath: string) => Promise<{ success: boolean; error?: string }>
+    chooseProjectAssetsPath: () => Promise<{ success: boolean; cancelled?: boolean; path?: string; error?: string }>
+    getProjectAssetsPathStatus: () => Promise<{ path: string; needsReselection: boolean; legacyPath?: string }>
     deleteProjectAssetFiles: (options: {
       projectId: string
       filePaths: string[]
@@ -67,6 +69,7 @@ interface Window {
     showSaveDialog: (options: { title?: string; defaultPath?: string; filters?: { name: string; extensions: string[] }[] }) => Promise<string | null>
     saveFile: (filePath: string, data: string, encoding?: string) => Promise<{ success: boolean; path?: string; error?: string }>
     saveBinaryFile: (filePath: string, data: ArrayBuffer) => Promise<{ success: boolean; path?: string; error?: string }>
+    saveTemporaryFile: (data: string, extension: string, encoding?: 'base64' | 'utf8') => Promise<string>
     showOpenDirectoryDialog: (options: { title?: string; defaultPath?: string }) => Promise<string | null>
     checkFilesExist: (filePaths: string[]) => Promise<Record<string, boolean>>
     showOpenFileDialog: (options: { title?: string; defaultPath?: string; filters?: { name: string; extensions: string[] }[]; properties?: string[] }) => Promise<string[] | null>

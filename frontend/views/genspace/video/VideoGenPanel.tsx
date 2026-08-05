@@ -14,7 +14,6 @@ import { PromptActions } from "../components/PromptActions";
 import { PromptEditor } from "../components/PromptEditor";
 import type { VideoGenPanelController } from "../types";
 import { isVideoAspectRatioLocked } from "../logic/media-inputs";
-import { formatTrimTimecode } from "./VideoTrimPanel";
 import { VideoMediaInputs } from "./VideoMediaInputs";
 import { VideoModeTabs } from "./VideoModeTabs";
 import { VideoToolInput } from "./VideoToolInput";
@@ -202,11 +201,6 @@ export function VideoGenPanel({
   const isContinueVideo = isTools
     ? videoTools.selectedTool === "extend"
     : guide?.role === "continue_video";
-  const autoDuration = isTools
-    ? (videoTools.toolInput?.trimDuration ??
-      videoTools.toolInput?.mediaDuration ??
-      0)
-    : (guide?.trimDuration ?? guide?.mediaDuration ?? 0);
   const durationFollowsGuide = isTools
     ? !isReframe && !isContinueVideo
     : !!guide && !isContinueVideo;

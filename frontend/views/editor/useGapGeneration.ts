@@ -192,11 +192,7 @@ export function useGapGeneration({
             // In-memory file (e.g. canvas capture) — save to temp file
             const buf = await gapImageFile.arrayBuffer()
             const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)))
-            const modelsPath = await window.electronAPI.getModelsPath()
-            const tmpDir = modelsPath.replace(/[/\\]models$/, '')
-            const tmpPath = `${tmpDir}/tmp_gap_image_${Date.now()}.png`
-            await window.electronAPI.saveFile(tmpPath, b64, 'base64')
-            imagePath = tmpPath
+            imagePath = await window.electronAPI.saveTemporaryFile(b64, '.png', 'base64')
           }
         }
         await regenGenerate(finalPrompt, imagePath, settings)

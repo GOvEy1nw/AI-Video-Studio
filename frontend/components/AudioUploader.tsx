@@ -15,7 +15,7 @@ export function AudioUploader({ onAudioSelect, selectedAudio }: AudioUploaderPro
     if (file) {
       const filePath = getNativeFilePath(file)
       if (filePath) {
-        await window.electronAPI?.approveLocalPath?.(filePath)
+        if (!await window.electronAPI?.approveFile?.(file)) return
         const normalized = filePath.replace(/\\/g, '/')
         const fileUrl = normalized.startsWith('/') ? `file://${normalized}` : `file:///${normalized}`
         onAudioSelect(fileUrl)

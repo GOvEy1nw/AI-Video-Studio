@@ -8,7 +8,7 @@ import {
 
 type FileImportElectronAPI = Pick<
   NonNullable<Window['electronAPI']>,
-  'approveLocalPath' | 'getPathForFile' | 'importToProjectAssets'
+  'approveFile' | 'getPathForFile' | 'importToProjectAssets'
 >
 
 const originalCreateObjectURL = Object.getOwnPropertyDescriptor(
@@ -36,9 +36,9 @@ afterEach(() => {
 })
 
 describe('importGalleryFile', () => {
-  it('approves a user-dropped path before importing it', async () => {
+  it('approves a user-dropped File before importing it', async () => {
     const filePath = 'C:\\tmp\\drag-gallery.png'
-    const approveLocalPath = vi.fn().mockResolvedValue(true)
+    const approveFile = vi.fn().mockResolvedValue(true)
     const getPathForFile = vi.fn().mockReturnValue(filePath)
     const importToProjectAssets = vi.fn().mockResolvedValue({
       success: true,
@@ -47,7 +47,7 @@ describe('importGalleryFile', () => {
       fileName: 'drag-gallery.png',
     })
     setElectronAPI({
-      approveLocalPath,
+      approveFile,
       getPathForFile,
       importToProjectAssets,
     })
@@ -57,22 +57,22 @@ describe('importGalleryFile', () => {
 
     expect(outcome.ok).toBe(true)
     expect(getPathForFile).toHaveBeenCalledWith(file)
-    expect(approveLocalPath).toHaveBeenCalledWith(filePath)
+    expect(approveFile).toHaveBeenCalledWith(file)
     expect(importToProjectAssets).toHaveBeenCalledWith({
       srcPath: filePath,
       projectId: 'project',
       onDuplicate: 'prompt',
     })
-    expect(approveLocalPath.mock.invocationCallOrder[0]).toBeLessThan(
+    expect(approveFile.mock.invocationCallOrder[0]).toBeLessThan(
       importToProjectAssets.mock.invocationCallOrder[0],
     )
   })
 
   it('returns no-path only when the preload bridge has no native path', async () => {
-    const approveLocalPath = vi.fn()
+    const approveFile = vi.fn()
     const importToProjectAssets = vi.fn()
     setElectronAPI({
-      approveLocalPath,
+      approveFile,
       getPathForFile: () => '',
       importToProjectAssets,
     })
@@ -82,15 +82,15 @@ describe('importGalleryFile', () => {
       ok: false,
       reason: 'no-path',
     })
-    expect(approveLocalPath).not.toHaveBeenCalled()
+    expect(approveFile).not.toHaveBeenCalled()
     expect(importToProjectAssets).not.toHaveBeenCalled()
   })
 
   it('rejects unsupported media before path approval or import', async () => {
-    const approveLocalPath = vi.fn()
+    const approveFile = vi.fn()
     const importToProjectAssets = vi.fn()
     setElectronAPI({
-      approveLocalPath,
+      approveFile,
       getPathForFile: () => 'C:\\tmp\\notes.txt',
       importToProjectAssets,
     })
@@ -100,7 +100,7 @@ describe('importGalleryFile', () => {
       ok: false,
       reason: 'unsupported',
     })
-    expect(approveLocalPath).not.toHaveBeenCalled()
+    expect(approveFile).not.toHaveBeenCalled()
     expect(importToProjectAssets).not.toHaveBeenCalled()
   })
 
@@ -126,7 +126,7 @@ describe('importGalleryFile', () => {
         })
       const resolveDuplicate = vi.fn().mockResolvedValue(choice)
       setElectronAPI({
-        approveLocalPath: vi.fn().mockResolvedValue(true),
+        approveFile: vi.fn().mockResolvedValue(true),
         getPathForFile: () => filePath,
         importToProjectAssets,
       })
@@ -162,7 +162,7 @@ describe('importGalleryFile', () => {
       needsDuplicateChoice: true,
     })
     setElectronAPI({
-      approveLocalPath: vi.fn().mockResolvedValue(true),
+      approveFile: vi.fn().mockResolvedValue(true),
       getPathForFile: () => 'C:\\tmp\\duplicate.png',
       importToProjectAssets,
     })
@@ -183,7 +183,7 @@ describe('ensureGalleryAssetForInputFile', () => {
     const filePath = 'C:\\project\\uploads\\existing.png'
     const importToProjectAssets = vi.fn()
     setElectronAPI({
-      approveLocalPath: vi.fn(),
+      approveFile: vi.fn(),
       getPathForFile: () => filePath,
       importToProjectAssets,
     })
@@ -218,7 +218,7 @@ describe('ensureGalleryAssetForInputFile', () => {
       value: createObjectURL,
     })
     setElectronAPI({
-      approveLocalPath: vi.fn(),
+      approveFile: vi.fn(),
       getPathForFile: () => '',
       importToProjectAssets: vi.fn(),
     })

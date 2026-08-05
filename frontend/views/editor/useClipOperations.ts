@@ -176,7 +176,7 @@ export function useClipOperations(params: UseClipOperationsParams) {
       let persistentPath: string
       
       if (electronFilePath) {
-        await window.electronAPI?.approveLocalPath?.(electronFilePath)
+        if (!await window.electronAPI?.approveFile?.(file)) continue
         // Reference the original file in place (no copy)
         const normalized = electronFilePath.replace(/\\/g, '/')
         persistentUrl = normalized.startsWith('/') ? `file://${normalized}` : `file:///${normalized}`

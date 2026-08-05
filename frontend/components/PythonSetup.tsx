@@ -81,10 +81,8 @@ export function PythonSetup({ onReady }: PythonSetupProps) {
   const loadProjectAssetsPath = async () =>
     setProjectAssetsPath(await window.electronAPI.getProjectAssetsPath());
   const chooseProjectAssetsPath = async () => {
-    const selected = await window.electronAPI.showOpenDirectoryDialog({
-      title: "Choose AiVS projects folder",
-    });
-    if (selected) setProjectAssetsPath(selected);
+    const result = await window.electronAPI.chooseProjectAssetsPath();
+    if (result.path) setProjectAssetsPath(result.path);
   };
   const chooseModelFolder = async (kind: "checkpoints" | "loras") => {
     const selected = await window.electronAPI.showOpenDirectoryDialog({
@@ -120,11 +118,7 @@ export function PythonSetup({ onReady }: PythonSetupProps) {
       setError(reason instanceof Error ? reason.message : "Model folder could not be reset.");
     }
   };
-  const finishSetup = async () => {
-    if (projectAssetsPath)
-      await window.electronAPI.setProjectAssetsPath(projectAssetsPath);
-    onReady();
-  };
+  const finishSetup = async () => onReady();
 
   return (
     <main className="min-h-screen bg-black text-white">

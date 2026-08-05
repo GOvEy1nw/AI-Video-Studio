@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import { canonicalizeForContainment } from '../path-validation'
 
 export type DuplicateStrategy = 'reuse' | 'suffix' | 'overwrite' | 'prompt'
 export type TransferMode = 'copy' | 'move'
@@ -11,12 +12,31 @@ export const PROJECT_ASSET_SUBFOLDERS = {
 
 export type ProjectAssetCategory = keyof typeof PROJECT_ASSET_SUBFOLDERS
 
+function isPathWithin(candidate: string, root: string): boolean {
+  const relative = path.relative(root, candidate)
+  return relative !== '' && !relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative)
+}
+
+export function validateProjectId(projectId: string): string {
+  if (!/^[a-zA-Z0-9_-]+$/.test(projectId)) {
+    throw new Error('Invalid project ID')
+  }
+  return projectId
+}
+
 export function projectAssetCategoryDir(
   assetsRoot: string,
   projectId: string,
   category: ProjectAssetCategory,
 ): string {
-  return path.join(assetsRoot, projectId, PROJECT_ASSET_SUBFOLDERS[category])
+  const root = canonicalizeForContainment(assetsRoot)
+  const safeProjectId = validateProjectId(projectId)
+  const projectDir = canonicalizeForContainment(path.join(root, safeProjectId))
+  const categoryDir = canonicalizeForContainment(path.join(projectDir, PROJECT_ASSET_SUBFOLDERS[category]))
+  if (!isPathWithin(projectDir, root) || !isPathWithin(categoryDir, projectDir)) {
+    throw new Error('Project asset destination is outside the project root')
+  }
+  return categoryDir
 }
 
 export type ResolveImportPlan =
@@ -145,38 +165,45 @@ export function importProjectAsset(
   strategy: DuplicateStrategy,
   transferMode: TransferMode = 'copy',
 ): ImportProjectAssetResult {
-  fs.mkdirSync(destDir, { recursive: true })
-  const fileName = path.basename(resolvedSrc)
-  const plan = resolveImportDestPlan(destDir, resolvedSrc, fileName, strategy)
+  const resolvedDestDir = canonicalizeForContainment(destDir)
+  const resolvedSrcPath = canonicalizeForContainment(resolvedSrc)
+  fs.mkdirSync(resolvedDestDir, { recursive: true })
+  const fileName = path.basename(resolvedSrcPath)
+  const plan = resolveImportDestPlan(resolvedDestDir, resolvedSrcPath, fileName, strategy)
+  const safeDestPath = canonicalizeForContainment(plan.destPath)
+  if (!isPathWithin(safeDestPath, resolvedDestDir)) {
+    throw new Error('Project asset destination is outside the project root')
+  }
+  const safePlan = { ...plan, destPath: safeDestPath }
 
-  if (plan.action === 'needs-choice') {
+  if (safePlan.action === 'needs-choice') {
     return {
-      destPath: plan.destPath,
-      url: pathToFileUrl(plan.destPath),
-      fileName: plan.fileName,
+      destPath: safePlan.destPath,
+      url: pathToFileUrl(safePlan.destPath),
+      fileName: safePlan.fileName,
       alreadyExisted: true,
       reusedExisting: false,
       needsDuplicateChoice: true,
     }
   }
 
-  if (plan.action === 'reuse') {
+  if (safePlan.action === 'reuse') {
     return {
-      destPath: plan.destPath,
-      url: pathToFileUrl(plan.destPath),
-      fileName: plan.fileName,
+      destPath: safePlan.destPath,
+      url: pathToFileUrl(safePlan.destPath),
+      fileName: safePlan.fileName,
       alreadyExisted: true,
       reusedExisting: true,
       needsDuplicateChoice: false,
     }
   }
 
-  transferFile(resolvedSrc, plan.destPath, transferMode)
+  transferFile(resolvedSrc, safePlan.destPath, transferMode)
   return {
-    destPath: plan.destPath,
-    url: pathToFileUrl(plan.destPath),
-    fileName: plan.fileName,
-    alreadyExisted: plan.alreadyExisted,
+    destPath: safePlan.destPath,
+    url: pathToFileUrl(safePlan.destPath),
+    fileName: safePlan.fileName,
+    alreadyExisted: safePlan.alreadyExisted,
     reusedExisting: false,
     needsDuplicateChoice: false,
   }

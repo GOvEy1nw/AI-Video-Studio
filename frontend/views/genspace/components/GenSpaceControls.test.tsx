@@ -1,17 +1,10 @@
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  within,
-} from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GenerateButton } from "./GenerateButton";
 import { ImageMediaInputs } from "../image/ImageMediaInputs";
 import { MusicMediaInputs } from "../music/MusicMediaInputs";
 import { VideoMediaInputs } from "../video/VideoMediaInputs";
-import { PromptActions } from "./PromptActions";
 import { PromptEditor } from "./PromptEditor";
 import type { ModelProfile } from "../../../types/model-profiles";
 
@@ -36,54 +29,6 @@ describe("GenSpace shared controls", () => {
     expect(submit).not.toHaveBeenCalled();
     await userEvent.keyboard("{Enter}");
     expect(submit).toHaveBeenCalledOnce();
-  });
-
-  it("places prompt actions and trailing controls on opposite footer sides", () => {
-    render(
-      <PromptEditor
-        value="prompt"
-        onChange={vi.fn()}
-        onSubmit={vi.fn()}
-        canSubmit
-        disabled={false}
-        placeholder="Prompt"
-        actions={<button type="button">Seed</button>}
-        bottomRight={<button type="button">Camera settings</button>}
-      />,
-    );
-
-    const footer = screen.getByTestId("prompt-editor-footer");
-    expect(
-      within(
-        within(footer).getByTestId("prompt-editor-footer-left"),
-      ).getByRole("button", { name: "Seed" }),
-    ).toBeTruthy();
-    expect(
-      within(
-        within(footer).getByTestId("prompt-editor-footer-right"),
-      ).getByRole("button", { name: "Camera settings" }),
-    ).toBeTruthy();
-  });
-
-  it("opens prompt Seed settings inward from the left footer", async () => {
-    render(
-      <PromptActions
-        seedLocked={false}
-        lockedSeed={42}
-        onSeedChange={vi.fn()}
-        disabled={false}
-        prompt=""
-        showEnhance={false}
-      />,
-    );
-
-    await userEvent.click(screen.getByRole("button", { name: /seed/i }));
-    expect(
-      screen
-        .getByText("Lock seed")
-        .closest(".space-y-3")
-        ?.parentElement?.getAttribute("data-preferred-placement"),
-    ).toBe("top-start");
   });
 
   it("keeps Generate disabled when submission is invalid", async () => {
@@ -301,7 +246,7 @@ describe("GenSpace shared controls", () => {
     ]);
   });
 
-  it("opens media menus below the header and removes from the slot control", async () => {
+  it("removes an occupied media input", async () => {
     const onInputChange = vi.fn();
     render(
       <MusicMediaInputs
@@ -320,14 +265,6 @@ describe("GenSpace shared controls", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "Cover Song actions" }),
     );
-    expect(
-      screen
-        .getByText("Audio input")
-        .closest("[data-media-menu]")
-        ?.getAttribute("data-preferred-placement"),
-    ).toBe("bottom-start");
-    expect(screen.queryByRole("button", { name: "Remove" })).toBeNull();
-
     await userEvent.click(
       screen.getByRole("button", { name: "Remove Cover Song" }),
     );

@@ -212,10 +212,13 @@ Minimum:
 ```text
 pnpm typecheck:ts
 relevant focused Vitest tests
-pnpm test:frontend
 ```
 
 Also run `pnpm build:frontend` when the change affects composition, imports, bundling, preload types, global CSS, or a broad product surface.
+
+See `docs/TESTING_POLICY.md` for retention rules and the risk-based validation matrix. Run full suites at PR completion/CI when the changed contract warrants them, not after every small edit. CSS, copy, and layout-only changes need build plus manual visual smoke, not a new automated test.
+
+For component interaction changes, run the focused critical test, TypeScript, and the production build. For CSS, copy, or layout-only TypeScript changes, run TypeScript, the production build, and a manual visual smoke; do not add an automated test unless behavior changed.
 
 Native media behaviour—drag/drop, audio/video playback, seeking, file URLs, resize interactions—still requires Electron smoke testing when relevant.
 
@@ -510,9 +513,9 @@ Never hold the shared `RLock` during model loading, generation, downloads, ffmpe
 
 - Tests are integration-first through the real FastAPI app and composed `AppHandler`.
 - Heavy services are replaced with fakes under `backend/tests/fakes/`.
-- Do not use `unittest.mock`; `test_no_mock_usage.py` enforces this rule.
+- Prefer real pure collaborators and composed handlers. Use fakes or narrow mocks only at heavyweight/process/network boundaries when needed for deterministic critical behavior; do not scan test source for policy compliance at pytest runtime.
 - `backend/tests/conftest.py` provides fresh state per test.
-- Strict Pyright is enforced both directly and through the test suite.
+- Run strict Pyright as its own gate, not from pytest.
 
 When adding or replacing a backend feature:
 

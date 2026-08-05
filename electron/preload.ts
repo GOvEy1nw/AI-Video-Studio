@@ -13,8 +13,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Read a local file and return as base64
   readLocalFile: (filePath: string): Promise<{ data: string; mimeType: string }> => 
     ipcRenderer.invoke('read-local-file', filePath),
-  approveLocalPath: (filePath: string): Promise<boolean> =>
-    ipcRenderer.invoke('approve-local-path', filePath),
+  approveFile: (file: File): Promise<boolean> => {
+    const filePath = webUtils.getPathForFile(file)
+    return filePath ? ipcRenderer.invoke('approve-file-from-renderer', filePath) : Promise.resolve(false)
+  },
+  recoverPersistedProjectFiles: (candidates: string[]): Promise<{ status: 'approved' | 'cancelled' | 'no-pending'; approved: string[] }> =>
+    ipcRenderer.invoke('recover-persisted-project-files', candidates),
   getPathForFile: (file: File): string => webUtils.getPathForFile(file),
   
   // Check GPU availability
@@ -67,8 +71,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   }> => ipcRenderer.invoke('import-to-project-assets', options),
   getProjectAssetsPath: (): Promise<string> =>
     ipcRenderer.invoke('get-project-assets-path'),
-  setProjectAssetsPath: (newPath: string): Promise<{ success: boolean; error?: string }> =>
-    ipcRenderer.invoke('set-project-assets-path', newPath),
+  chooseProjectAssetsPath: (): Promise<{ success: boolean; cancelled?: boolean; path?: string; error?: string }> =>
+    ipcRenderer.invoke('choose-project-assets-path'),
+  getProjectAssetsPathStatus: (): Promise<{ path: string; needsReselection: boolean; legacyPath?: string }> =>
+    ipcRenderer.invoke('get-project-assets-path-status'),
   deleteProjectAssetFiles: (options: {
     projectId: string
     filePaths: string[]
@@ -92,6 +98,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('save-file', filePath, data, encoding),
   saveBinaryFile: (filePath: string, data: ArrayBuffer): Promise<{ success: boolean; path?: string; error?: string }> =>
     ipcRenderer.invoke('save-binary-file', filePath, data),
+  saveTemporaryFile: (data: string, extension: string, encoding?: 'base64' | 'utf8'): Promise<string> =>
+    ipcRenderer.invoke('save-temporary-file', data, extension, encoding),
   showOpenDirectoryDialog: (options: { title?: string; defaultPath?: string }): Promise<string | null> =>
     ipcRenderer.invoke('show-open-directory-dialog', options),
   searchDirectoryForFiles: (dir: string, filenames: string[]): Promise<Record<string, string>> =>
@@ -182,7 +190,8 @@ declare global {
       getBackend: () => Promise<{ url: string; token: string }>
       getModelsPath: () => Promise<string>
       readLocalFile: (filePath: string) => Promise<{ data: string; mimeType: string }>
-      approveLocalPath: (filePath: string) => Promise<boolean>
+      approveFile: (file: File) => Promise<boolean>
+      recoverPersistedProjectFiles: (candidates: string[]) => Promise<{ status: 'approved' | 'cancelled' | 'no-pending'; approved: string[] }>
       getPathForFile: (file: File) => string
       checkGpu: () => Promise<{ available: boolean; name?: string; vram?: number }>
       getAppInfo: () => Promise<{ version: string; isPackaged: boolean; modelsPath: string; userDataPath: string }>
@@ -214,7 +223,8 @@ declare global {
         error?: string
       }>
       getProjectAssetsPath: () => Promise<string>
-      setProjectAssetsPath: (newPath: string) => Promise<{ success: boolean; error?: string }>
+      chooseProjectAssetsPath: () => Promise<{ success: boolean; cancelled?: boolean; path?: string; error?: string }>
+      getProjectAssetsPathStatus: () => Promise<{ path: string; needsReselection: boolean; legacyPath?: string }>
       deleteProjectAssetFiles: (options: {
         projectId: string
         filePaths: string[]
@@ -231,6 +241,7 @@ declare global {
       showSaveDialog: (options: { title?: string; defaultPath?: string; filters?: { name: string; extensions: string[] }[] }) => Promise<string | null>
       saveFile: (filePath: string, data: string, encoding?: string) => Promise<{ success: boolean; path?: string; error?: string }>
       saveBinaryFile: (filePath: string, data: ArrayBuffer) => Promise<{ success: boolean; path?: string; error?: string }>
+      saveTemporaryFile: (data: string, extension: string, encoding?: 'base64' | 'utf8') => Promise<string>
       showOpenDirectoryDialog: (options: { title?: string; defaultPath?: string }) => Promise<string | null>
       searchDirectoryForFiles: (dir: string, filenames: string[]) => Promise<Record<string, string>>
       checkFilesExist: (filePaths: string[]) => Promise<Record<string, boolean>>

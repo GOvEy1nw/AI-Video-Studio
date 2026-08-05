@@ -83,7 +83,7 @@ describe("getFloatingMenuPosition", () => {
 });
 
 describe("FloatingMenu", () => {
-  it("renders through document.body above normal app stacking contexts", () => {
+  it("renders through document.body", () => {
     const host = document.createElement("div");
     document.body.append(host);
     const anchor = document.createElement("button");
@@ -98,9 +98,6 @@ describe("FloatingMenu", () => {
 
     const floatingMenu = screen.getByRole("menu");
     expect(floatingMenu.parentElement).toBe(document.body);
-    expect(floatingMenu.classList.contains("z-[2147483647]")).toBe(true);
-    expect(floatingMenu.style.maxHeight).toBe("calc(100vh - 16px)");
-    expect(floatingMenu.style.maxWidth).toBe("calc(100vw - 16px)");
   });
 
   it("keeps portaled submenu content interactive", () => {

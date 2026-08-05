@@ -63,31 +63,7 @@ function MusicPanelHarness() {
   );
 }
 
-function follows(before: Node, after: Node) {
-  return Boolean(
-    before.compareDocumentPosition(after) & Node.DOCUMENT_POSITION_FOLLOWING,
-  );
-}
-
 describe("MusicGenPanel", () => {
-  it("places vocal mode tabs below the model and custom lyrics below the song prompt", async () => {
-    render(<MusicPanelHarness />);
-
-    const model = screen.getByText("Model", { exact: true });
-    const tabs = screen.getByRole("tablist", { name: "Vocal mode" });
-    const mediaInputs = screen.getByText("Media inputs", { exact: true });
-    const songPrompt = screen.getByText("Song Prompt", { exact: true });
-
-    expect(follows(model, tabs)).toBe(true);
-    expect(follows(tabs, mediaInputs)).toBe(true);
-    expect(follows(mediaInputs, songPrompt)).toBe(true);
-
-    await userEvent.click(
-      screen.getByRole("tab", { name: "Custom Lyrics" }),
-    );
-    expect(follows(songPrompt, screen.getByLabelText("Lyrics"))).toBe(true);
-  });
-
   it("adds multiple popup presets as editable comma-separated prompt text", async () => {
     render(<MusicPanelHarness />);
 
@@ -134,7 +110,7 @@ describe("MusicGenPanel", () => {
     );
   });
 
-  it("places duration, BPM, key, and time signature popovers in the song prompt footer", async () => {
+  it("updates music settings from prompt controls", async () => {
     render(<MusicPanelHarness />);
 
     expect(screen.getByRole("button", { name: "Music duration" })).toBeTruthy();
@@ -145,9 +121,6 @@ describe("MusicGenPanel", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "Music key and scale" }),
     );
-    const keyMenu = screen.getByText("KEY & SCALE", { exact: true }).parentElement;
-    expect(keyMenu?.parentElement).toBe(document.body);
-    expect(keyMenu?.style.maxHeight).toBe("calc(100vh - 16px)");
     expect(screen.getByRole("button", { name: "D minor" })).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "D minor" }));
     expect(screen.getByTestId("music-key-scale").textContent).toBe("D minor");

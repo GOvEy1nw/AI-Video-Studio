@@ -6,10 +6,8 @@ import { ReframeEditor } from "../components/ReframeEditor";
 import {
   MIN_TRIM_DURATION,
   VideoTrimPanel,
-  formatTrimTimecode,
 } from "./VideoTrimPanel";
 import {
-  aspectRatioValue,
   type ReframeAspectMode,
   type ReframePadding,
   ZERO_PADDING,
@@ -85,12 +83,6 @@ export function ReframePanel({
   );
   const [videoWidth, setVideoWidth] = useState(0);
   const [videoHeight, setVideoHeight] = useState(0);
-  const sourceAspectRatio =
-    videoWidth > 0 && videoHeight > 0 ? videoWidth / videoHeight : 1;
-  const canvasAspectRatio =
-    sourceOnly || aspectMode === "custom"
-      ? sourceAspectRatio
-      : aspectRatioValue(aspectMode);
   const [selStart, setSelStart] = useState(initialStartTime);
   const [selEnd, setSelEnd] = useState(
     initialStartTime + (initialTrimDuration ?? initialDuration ?? 0),
@@ -274,10 +266,11 @@ export function ReframePanel({
     if (file) {
       const filePath = getNativeFilePath(file);
       if (filePath) {
-        void window.electronAPI?.approveLocalPath?.(filePath).finally(() => {
+        void (async () => {
+          if (!await window.electronAPI?.approveFile?.(file)) return
           setVideoPath(filePath);
           setVideoUrl(pathToFileUrl(filePath));
-        });
+        })();
       }
     }
   }, []);

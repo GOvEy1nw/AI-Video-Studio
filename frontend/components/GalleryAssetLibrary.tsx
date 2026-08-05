@@ -13,10 +13,6 @@ import {
 import {
   ChevronLeft,
   ChevronRight,
-  Clock3,
-  ClipboardPaste,
-  Expand,
-  FolderOpen,
   Heart,
   Image,
   Layers,
@@ -41,7 +37,6 @@ import {
   type GalleryGridColumns,
 } from "./GalleryViewControls";
 import { getColorLabel } from "../views/editor/video-editor-utils";
-import { UseImageDropdown, type ImageUseTarget } from "./UseImageDropdown";
 
 type AssetContextMenuPosition = { assetId: string; x: number; y: number };
 
@@ -100,7 +95,6 @@ export type GalleryAssetLibraryProps = {
   showFavorites: boolean;
   onShowFavoritesChange: (show: boolean) => void;
   getThumbnailUrl: (asset: Asset) => string | undefined;
-  getAssetModelName?: (asset: Asset) => string | undefined;
   previewEnabled: boolean;
   selectedAssetIds?: Set<string>;
   onSelectedAssetIdsChange?: Dispatch<SetStateAction<Set<string>>>;
@@ -111,8 +105,6 @@ export type GalleryAssetLibraryProps = {
   onDeleteAsset?: (asset: Asset) => void;
   onDeleteAssets?: (assetIds: string[]) => void;
   onToggleFavorite?: (asset: Asset) => void;
-  onUseImage?: (asset: Asset, target: ImageUseTarget) => void;
-  onReframe?: (asset: Asset) => void;
   onCopySettings?: (asset: Asset) => void;
   onSelectTake?: (asset: Asset, takeIndex: number) => void;
   headerAction?: ReactNode;
@@ -124,42 +116,6 @@ export type GalleryAssetLibraryProps = {
   scrollStyle?: CSSProperties;
   footerOverlay?: ReactNode;
 };
-
-function AssetCardActionButton({
-  label,
-  icon,
-  onClick,
-  active = false,
-  danger = false,
-}: {
-  label: string;
-  icon: ReactNode;
-  onClick: (event: MouseEvent<HTMLButtonElement>) => void;
-  active?: boolean;
-  danger?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      className={`group/action flex h-7 max-w-7 items-center gap-2 overflow-hidden rounded-full px-1.5 transition-[max-width,background-color,color] duration-200 hover:max-w-36 ${
-        danger
-          ? "bg-red-600/90 text-white hover:bg-red-500"
-          : active
-            ? "bg-white/20 text-white hover:bg-black/70"
-            : "bg-black/70 text-white hover:bg-black/80"
-      }`}
-    >
-      <span className="flex h-4 w-4 shrink-0 items-center justify-center">
-        {icon}
-      </span>
-      <span className="-translate-x-1 whitespace-nowrap pr-1 text-xs font-medium opacity-0 transition-[opacity,transform] duration-200 group-hover/action:translate-x-0 group-hover/action:opacity-100">
-        {label}
-      </span>
-    </button>
-  );
-}
 
 function AudioVariationRow({
   url,
@@ -198,7 +154,6 @@ export function GalleryAssetCard({
   asset,
   selected = false,
   thumbnailUrl,
-  modelName,
   previewEnabled,
   binColor,
   onClick,
@@ -207,17 +162,11 @@ export function GalleryAssetCard({
   onContextMenu,
   multiSelectMode = false,
   onToggleSelection,
-  onDelete,
-  onToggleFavorite,
-  onUseImage,
-  onReframe,
-  onCopySettings,
   onSelectTake,
 }: {
   asset: Asset;
   selected?: boolean;
   thumbnailUrl?: string;
-  modelName?: string;
   previewEnabled: boolean;
   binColor?: string;
   onClick: (event: MouseEvent, asset: Asset) => void;
@@ -226,23 +175,11 @@ export function GalleryAssetCard({
   onContextMenu: (event: MouseEvent, asset: Asset) => void;
   multiSelectMode?: boolean;
   onToggleSelection?: (asset: Asset) => void;
-  onDelete?: () => void;
-  onToggleFavorite?: () => void;
-  onUseImage?: (asset: Asset, target: ImageUseTarget) => void;
-  onReframe?: (asset: Asset) => void;
-  onCopySettings?: (asset: Asset) => void;
   onSelectTake?: (takeIndex: number) => void;
 }) {
   const [isHovered, setIsHovered] = useState(false);
   const hasStackedAudioTakes =
     asset.type === "audio" && (asset.takes?.length ?? 0) > 1;
-  const canCopySettings = !!asset.generationParams && !!onCopySettings;
-  const hasActions =
-    !!onToggleFavorite ||
-    !!onUseImage ||
-    !!onReframe ||
-    canCopySettings ||
-    !!onDelete;
 
   return (
     <div
@@ -812,7 +749,6 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
                 asset={asset}
                 selected={renderedSelectedAssetIds?.has(asset.id)}
                 thumbnailUrl={props.getThumbnailUrl(asset)}
-                modelName={props.getAssetModelName?.(asset)}
                 previewEnabled={props.previewEnabled && documentVisible}
                 binColor={
                   getColorLabel(
@@ -825,19 +761,6 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
                 onDoubleClick={props.onAssetDoubleClick}
                 onDragStart={props.onAssetDragStart}
                 onContextMenu={openContextMenu}
-                onDelete={
-                  props.onDeleteAsset
-                    ? () => props.onDeleteAsset?.(asset)
-                    : undefined
-                }
-                onToggleFavorite={
-                  props.onToggleFavorite
-                    ? () => props.onToggleFavorite?.(asset)
-                    : undefined
-                }
-                onUseImage={props.onUseImage}
-                onReframe={props.onReframe}
-                onCopySettings={props.onCopySettings}
                 onSelectTake={
                   props.onSelectTake
                     ? (takeIndex) => props.onSelectTake?.(asset, takeIndex)
