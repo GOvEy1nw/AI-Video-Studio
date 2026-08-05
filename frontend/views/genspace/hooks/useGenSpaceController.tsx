@@ -83,12 +83,11 @@ export function usePromptEnhancementPreference(
     : ([standardEnabled, setStandardEnabled] as const);
 }
 
-export function useGenSpaceController() {
+export function useGenSpaceController(isActive: boolean) {
   const {
     currentProject,
     currentProjectId,
     projects,
-    currentTab,
     addAsset,
     addTakeToAsset,
     deleteTakeFromAsset,
@@ -545,7 +544,7 @@ export function useGenSpaceController() {
   const gallery = useGenSpaceGallery({
     currentProject,
     currentProjectId,
-    currentTab,
+    isActive,
     isGenerating,
     addAsset,
     deleteAsset,

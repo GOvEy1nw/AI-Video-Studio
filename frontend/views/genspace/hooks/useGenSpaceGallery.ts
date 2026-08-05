@@ -24,7 +24,7 @@ type Projects = ReturnType<typeof useProjects>;
 export function useGenSpaceGallery({
   currentProject,
   currentProjectId,
-  currentTab,
+  isActive,
   isGenerating,
   addAsset,
   deleteAsset,
@@ -39,7 +39,7 @@ export function useGenSpaceGallery({
 }: {
   currentProject: Projects["currentProject"];
   currentProjectId: string | null;
-  currentTab: string;
+  isActive: boolean;
   isGenerating: boolean;
   addAsset: Projects["addAsset"];
   deleteAsset: Projects["deleteAsset"];
@@ -330,7 +330,7 @@ export function useGenSpaceGallery({
       showFavorites,
       onShowFavoritesChange: setShowFavorites,
       getThumbnailUrl: ({ thumbnail }) => thumbnail,
-      previewEnabled: currentTab === "gen-space" && isDocumentVisible,
+      previewEnabled: isActive && isDocumentVisible,
       selectedAssetIds: selectedAsset
         ? new Set([selectedAsset.id])
         : new Set<string>(),
@@ -372,7 +372,7 @@ export function useGenSpaceGallery({
       creatingBin,
       currentProject?.assetBinColors,
       currentProjectId,
-      currentTab,
+      isActive,
       deleteAssetBin,
       filter,
       gridColumns,

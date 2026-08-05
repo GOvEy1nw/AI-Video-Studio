@@ -132,7 +132,7 @@ const TRACK_FWD_ALL_CURSOR = `url("data:image/svg+xml,${encodeURIComponent(TRACK
 const TRACK_FWD_ONE_SVG = `<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M8 6l6 6-6 6'/></svg>`;
 const TRACK_FWD_ONE_CURSOR = `url("data:image/svg+xml,${encodeURIComponent(TRACK_FWD_ONE_SVG)}") 12 12, e-resize`;
 
-export function VideoEditor() {
+export function VideoEditor({ isActive }: { isActive: boolean }) {
   const {
     currentProject,
     currentProjectId,
@@ -153,7 +153,6 @@ export function VideoEditor() {
     setActiveTimeline,
     updateTimeline,
     getActiveTimeline,
-    currentTab,
     setCurrentTab,
     setGenSpaceEditImageUrl,
     setGenSpaceEditMode,
@@ -766,12 +765,12 @@ export function VideoEditor() {
   }, [sourceIsPlaying]);
 
   useEffect(() => {
-    if (currentTab === "video-editor") return;
+    if (isActive) return;
     setIsPlaying(false);
     setShuttleSpeed(0);
     sourceVideoRef.current?.pause();
     setSourceIsPlaying(false);
-  }, [currentTab, setSourceIsPlaying, sourceVideoRef]);
+  }, [isActive, setSourceIsPlaying, sourceVideoRef]);
 
   // Clip/track operations (extracted hook)
   const {
@@ -869,7 +868,7 @@ export function VideoEditor() {
   const [thumbnailMap, setThumbnailMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (currentTab !== "video-editor") return;
+    if (!isActive) return;
     // Generate thumbnails for all video assets that don't have one yet
     let cancelled = false;
     const videoAssets = assets.filter((a) => a.type === "video" && a.url);
@@ -894,7 +893,7 @@ export function VideoEditor() {
     return () => {
       cancelled = true;
     };
-  }, [assets, currentTab]); // re-run when assets or active workspace changes
+  }, [assets, isActive]); // re-run when assets or active workspace changes
 
   // For the properties panel: show properties when a single clip (or a single linked group) is selected.
   // When all selected clips belong to the same linked group, show the primary clip (prefer video/image over audio).
@@ -1584,7 +1583,7 @@ export function VideoEditor() {
   });
 
   useEditorKeyboard({
-    enabled: currentTab === "video-editor",
+    enabled: isActive,
     refs: {
       kbLayoutRef,
       isKbEditorOpenRef,
@@ -2422,7 +2421,7 @@ export function VideoEditor() {
         <LeftPanel
           leftPanelWidth={layout.leftPanelWidth}
           assetsHeight={layout.assetsHeight}
-          previewEnabled={currentTab === "video-editor"}
+          previewEnabled={isActive}
           takesViewAssetId={takesViewAssetId}
           setTakesViewAssetId={setTakesViewAssetId}
           creatingBin={creatingBin}

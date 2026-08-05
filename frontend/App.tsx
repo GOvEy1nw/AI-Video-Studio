@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import {
   Loader2,
   AlertCircle,
@@ -13,12 +13,39 @@ import { KeyboardShortcutsModal } from "./components/KeyboardShortcutsModal";
 import { useBackend } from "./hooks/use-backend";
 import { logger } from "./lib/logger";
 import { Home } from "./views/Home";
-import { Project } from "./views/Project";
-import { PythonSetup } from "./components/PythonSetup";
-import { SettingsModal, type SettingsTabId } from "./components/SettingsModal";
-import { LogViewer } from "./components/LogViewer";
+import type { SettingsTabId } from "./components/SettingsModal";
 import { Button } from "./components/ui/button";
 import { ConnectionIndicator } from "./components/ModelStatusDropdown";
+
+const loadProject = () => import("./views/Project");
+const loadPythonSetup = () => import("./components/PythonSetup");
+const loadSettingsModal = () => import("./components/SettingsModal");
+const loadLogViewer = () => import("./components/LogViewer");
+
+const LazyProject = lazy(async () => {
+  const { Project } = await loadProject();
+  return { default: Project };
+});
+const LazyPythonSetup = lazy(async () => {
+  const { PythonSetup } = await loadPythonSetup();
+  return { default: PythonSetup };
+});
+const LazySettingsModal = lazy(async () => {
+  const { SettingsModal } = await loadSettingsModal();
+  return { default: SettingsModal };
+});
+const LazyLogViewer = lazy(async () => {
+  const { LogViewer } = await loadLogViewer();
+  return { default: LogViewer };
+});
+
+function LoadingPanel() {
+  return (
+    <div className="flex h-full items-center justify-center bg-background">
+      <Loader2 className="h-5 w-5 animate-spin text-primary" />
+    </div>
+  );
+}
 
 function AppContent() {
   const { currentView } = useProjects();
@@ -147,7 +174,11 @@ function AppContent() {
   }
 
   if (pythonReady === false) {
-    return <PythonSetup onReady={() => setPythonReady(true)} />;
+    return (
+      <Suspense fallback={<LoadingPanel />}>
+        <LazyPythonSetup onReady={() => setPythonReady(true)} />
+      </Suspense>
+    );
   }
 
   if (isBackendDead) {
@@ -164,7 +195,9 @@ function AppContent() {
             </p>
           </div>
           <div className="h-[50vh]">
-            <LogViewer isOpen={true} onClose={() => {}} embedded={true} />
+            <Suspense fallback={<LoadingPanel />}>
+              <LazyLogViewer isOpen={true} onClose={() => {}} embedded={true} />
+            </Suspense>
           </div>
           <div className="mt-4 flex justify-center">
             <Button onClick={() => window.location.reload()}>
@@ -198,7 +231,11 @@ function AppContent() {
       case "home":
         return <Home />;
       case "project":
-        return <Project />;
+        return (
+          <Suspense fallback={<LoadingPanel />}>
+            <LazyProject />
+          </Suspense>
+        );
       default:
         return <Home />;
     }
@@ -236,18 +273,26 @@ function AppContent() {
         </button>
       </div>
 
-      <LogViewer
-        isOpen={isLogViewerOpen}
-        onClose={() => setIsLogViewerOpen(false)}
-      />
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => {
-          setIsSettingsOpen(false);
-          setSettingsInitialTab(undefined);
-        }}
-        initialTab={settingsInitialTab}
-      />
+      {isLogViewerOpen ? (
+        <Suspense fallback={<LoadingPanel />}>
+          <LazyLogViewer
+            isOpen={true}
+            onClose={() => setIsLogViewerOpen(false)}
+          />
+        </Suspense>
+      ) : null}
+      {isSettingsOpen ? (
+        <Suspense fallback={<LoadingPanel />}>
+          <LazySettingsModal
+            isOpen={true}
+            onClose={() => {
+              setIsSettingsOpen(false);
+              setSettingsInitialTab(undefined);
+            }}
+            initialTab={settingsInitialTab}
+          />
+        </Suspense>
+      ) : null}
 
       {restartingOverlay}
     </div>

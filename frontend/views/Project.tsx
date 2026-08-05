@@ -1,14 +1,56 @@
+import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { ArrowLeft, Sparkles, Film, Clapperboard } from "lucide-react";
 import { useProjects } from "../contexts/ProjectContext";
 import { AivsLogo } from "../components/AivsLogo";
 import { Button } from "../components/ui/button";
-import { GenSpace } from "./GenSpace";
-import { VideoEditor } from "./VideoEditor";
-import { DirectorEditor } from "./DirectorEditor";
 import type { ProjectTab } from "../types/project";
+
+const loadGenSpace = () => import("./GenSpace");
+const loadDirectorEditor = () => import("./DirectorEditor");
+const loadVideoEditor = () => import("./VideoEditor");
+
+const LazyGenSpace = lazy(async () => {
+  const { GenSpace } = await loadGenSpace();
+  return { default: GenSpace };
+});
+const LazyDirectorEditor = lazy(async () => {
+  const { DirectorEditor } = await loadDirectorEditor();
+  return { default: DirectorEditor };
+});
+const LazyVideoEditor = lazy(async () => {
+  const { VideoEditor } = await loadVideoEditor();
+  return { default: VideoEditor };
+});
+
+const workspaceLoaders: Record<ProjectTab, () => Promise<unknown>> = {
+  "gen-space": loadGenSpace,
+  director: loadDirectorEditor,
+  "video-editor": loadVideoEditor,
+};
+
+export function addVisitedTab(
+  current: ReadonlySet<ProjectTab>,
+  tab: ProjectTab,
+): ReadonlySet<ProjectTab> {
+  if (current.has(tab)) return current;
+  const next = new Set(current);
+  next.add(tab);
+  return next;
+}
+
+function WorkspaceFallback() {
+  return <div className="h-full bg-zinc-950" />;
+}
 
 export function Project() {
   const { currentProject, currentTab, setCurrentTab, goHome } = useProjects();
+  const [visitedTabs, setVisitedTabs] = useState<ReadonlySet<ProjectTab>>(
+    () => new Set([currentTab]),
+  );
+
+  useEffect(() => {
+    setVisitedTabs((current) => addVisitedTab(current, currentTab));
+  }, [currentTab]);
 
   if (!currentProject) {
     return (
@@ -21,7 +63,7 @@ export function Project() {
     );
   }
 
-  const tabs: { id: ProjectTab; label: string; icon: React.ReactNode }[] = [
+  const tabs: { id: ProjectTab; label: string; icon: ReactNode }[] = [
     {
       id: "gen-space",
       label: "Quick Gen",
@@ -63,7 +105,12 @@ export function Project() {
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setCurrentTab(tab.id)}
+              onPointerEnter={() => void workspaceLoaders[tab.id]()}
+              onFocus={() => void workspaceLoaders[tab.id]()}
+              onClick={() => {
+                setVisitedTabs((current) => addVisitedTab(current, tab.id));
+                setCurrentTab(tab.id);
+              }}
               className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 currentTab === tab.id
                   ? "bg-zinc-800 text-white"
@@ -80,26 +127,38 @@ export function Project() {
         <div className="flex-1" />
       </header>
 
-      {/* Workspaces stay mounted for state, but inactive compositor layers do not render. */}
+      {/* Visited workspaces stay mounted for state, but inactive layers do not render. */}
       <main className="flex-1 overflow-hidden relative">
-        <div
-          hidden={currentTab !== "gen-space"}
-          className="absolute inset-0 z-10 bg-zinc-950"
-        >
-          <GenSpace />
-        </div>
-        <div
-          hidden={currentTab !== "director"}
-          className="absolute inset-0 z-10 bg-zinc-950"
-        >
-          <DirectorEditor />
-        </div>
-        <div
-          hidden={currentTab !== "video-editor"}
-          className="absolute inset-0 z-10 bg-zinc-950"
-        >
-          <VideoEditor />
-        </div>
+        {visitedTabs.has("gen-space") ? (
+          <div
+            hidden={currentTab !== "gen-space"}
+            className="absolute inset-0 z-10 bg-zinc-950"
+          >
+            <Suspense fallback={<WorkspaceFallback />}>
+              <LazyGenSpace isActive={currentTab === "gen-space"} />
+            </Suspense>
+          </div>
+        ) : null}
+        {visitedTabs.has("director") ? (
+          <div
+            hidden={currentTab !== "director"}
+            className="absolute inset-0 z-10 bg-zinc-950"
+          >
+            <Suspense fallback={<WorkspaceFallback />}>
+              <LazyDirectorEditor isActive={currentTab === "director"} />
+            </Suspense>
+          </div>
+        ) : null}
+        {visitedTabs.has("video-editor") ? (
+          <div
+            hidden={currentTab !== "video-editor"}
+            className="absolute inset-0 z-10 bg-zinc-950"
+          >
+            <Suspense fallback={<WorkspaceFallback />}>
+              <LazyVideoEditor isActive={currentTab === "video-editor"} />
+            </Suspense>
+          </div>
+        ) : null}
       </main>
     </div>
   );
