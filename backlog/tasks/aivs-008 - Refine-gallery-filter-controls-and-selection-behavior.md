@@ -16,7 +16,7 @@ modified_files:
   - frontend/lib/gallery-filters.ts
 priority: medium
 type: enhancement
-ordinal: 11000
+ordinal: 13000
 ---
 
 ## Description

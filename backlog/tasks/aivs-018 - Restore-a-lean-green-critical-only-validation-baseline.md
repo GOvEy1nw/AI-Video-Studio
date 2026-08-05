@@ -1,11 +1,11 @@
 ---
 id: AIVS-018
 title: 'Restore a lean, green, critical-only validation baseline'
-status: Human Review
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-08-05 08:37'
-updated_date: '2026-08-05 09:51'
+updated_date: '2026-08-05 14:23'
 labels:
   - audit
 dependencies: []
@@ -47,7 +47,7 @@ modified_files:
   - docs/TESTING_POLICY.md
 priority: high
 type: chore
-ordinal: 22000
+ordinal: 25000
 ---
 
 ## Description

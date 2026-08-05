@@ -1,11 +1,11 @@
 ---
 id: AIVS-015
 title: Add multi-select asset library deletion
-status: Human Review
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-08-03 15:32'
-updated_date: '2026-08-03 16:01'
+updated_date: '2026-08-05 14:23'
 labels:
   - frontend asset-library
 dependencies: []
@@ -19,7 +19,7 @@ modified_files:
   - frontend/views/editor/LeftPanel.tsx
 priority: medium
 type: feature
-ordinal: 18000
+ordinal: 24000
 ---
 
 ## Description

@@ -12,7 +12,7 @@ references:
 parent_task_id: AIVS-005
 priority: medium
 type: bug
-ordinal: 5000
+ordinal: 7000
 ---
 
 ## Description

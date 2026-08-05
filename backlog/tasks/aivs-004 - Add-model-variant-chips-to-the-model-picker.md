@@ -17,7 +17,7 @@ modified_files:
   - frontend/views/genspace/music/MusicGenPanel.tsx
   - frontend/views/genspace/video/VideoGenPanel.tsx
 type: enhancement
-ordinal: 4000
+ordinal: 6000
 ---
 
 ## Description

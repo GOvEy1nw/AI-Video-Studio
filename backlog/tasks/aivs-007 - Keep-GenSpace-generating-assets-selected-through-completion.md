@@ -17,7 +17,7 @@ modified_files:
   - docs/GENSPACE_ARCHITECTURE.md
 priority: high
 type: enhancement
-ordinal: 10000
+ordinal: 12000
 ---
 
 ## Description

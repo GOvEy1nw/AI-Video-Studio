@@ -16,7 +16,7 @@ modified_files:
   - frontend/views/genspace/image/RegionPromptEditor.test.tsx
 priority: medium
 type: bug
-ordinal: 13000
+ordinal: 15000
 ---
 
 ## Description

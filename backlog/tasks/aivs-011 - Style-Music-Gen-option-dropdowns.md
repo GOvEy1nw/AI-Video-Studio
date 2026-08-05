@@ -21,7 +21,7 @@ modified_files:
   - frontend/components/SettingsDropdown.tsx
 priority: medium
 type: enhancement
-ordinal: 14000
+ordinal: 16000
 ---
 
 ## Description

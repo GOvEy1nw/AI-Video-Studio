@@ -46,7 +46,7 @@ modified_files:
   - frontend/views/genspace/video/VideoToolInput.tsx
   - frontend/views/genspace/video/video-tools.ts
 type: feature
-ordinal: 8000
+ordinal: 10000
 ---
 
 ## Description

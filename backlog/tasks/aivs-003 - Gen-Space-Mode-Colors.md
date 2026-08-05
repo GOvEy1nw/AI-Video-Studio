@@ -25,7 +25,7 @@ modified_files:
   - frontend/views/genspace/video/ReframePanel.tsx
   - frontend/views/genspace/video/RetakePanel.tsx
 type: enhancement
-ordinal: 3000
+ordinal: 5000
 ---
 
 ## Description

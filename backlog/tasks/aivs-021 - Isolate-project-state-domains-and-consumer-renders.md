@@ -30,7 +30,7 @@ modified_files:
   - frontend/views/genspace/hooks/useGenSpaceResultPersistence.ts
 priority: high
 type: enhancement
-ordinal: 2000
+ordinal: 3000
 ---
 
 ## Description

@@ -22,7 +22,7 @@ modified_files:
   - docs/GENSPACE_ARCHITECTURE.md
 priority: medium
 type: enhancement
-ordinal: 12000
+ordinal: 14000
 ---
 
 ## Description
