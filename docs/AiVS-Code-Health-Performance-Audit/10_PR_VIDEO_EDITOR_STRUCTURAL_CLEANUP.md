@@ -1,12 +1,12 @@
 ---
-suggested_backlog_id: AIVS-025
+suggested_backlog_id: AIVS-027
 title: Remove dormant Video Editor residue and finish structural decomposition
-status: Draft
+status: Implemented
 priority: medium
 type: refactor
-baseline_commit: c405f8224a8a510140591a9b76a568f3a78b49ad
+baseline_commit: 68362e1
 dependencies:
-  - AIVS-024
+  - AIVS-026
 ---
 
 # PR 10 — Remove dormant Video Editor residue and finish structural decomposition
@@ -16,6 +16,43 @@ dependencies:
 Reduce maintenance and review cost in `VideoEditor.tsx` after its hot paths are optimised. Remove unreachable UI/plumbing while preserving persisted-data compatibility, then extract coherent visible sections.
 
 This is not a behaviour redesign and should not produce a new giant controller hook.
+
+## Implementation result
+
+AIVS-027 removed proven dormant code and split visible editor ownership without changing timeline persistence, playback indexing, or export contracts.
+
+### Dormant inventory
+
+| Symbol/block | Reachable render path? | Persisted schema dependency? | External import? | Decision |
+|---|---:|---:|---:|---|
+| `EffectsBrowser` | No | No; persisted clip effect fields remain | No | Deleted |
+| `ToolsPanel` | No | No | No | Deleted |
+| `TimelineToolbar` | No | No | No | Deleted |
+| `TimelineTrackRow` | No | No | No | Deleted |
+| Asset lasso state/props | No consumer | No | No | Deleted |
+| Hidden Effects browser state/callbacks/comments | No; all entry points hidden | Persisted `effects`, flip, transition, color, letterbox, and text fields remain | No | Deleted UI plumbing only |
+| Hidden IC-LoRA panel/menu/toolbar/context threading | No; UI blocks were commented | No persisted editor dependency | No active caller | Deleted |
+| `createAdjustmentLayerAsset` | Yes; File menu | Existing timeline behavior | Yes | Retained |
+
+### Final ownership
+
+- `VideoEditor.tsx`: domain contexts, local document state, commands, persistence, playback, and top-level composition.
+- `useEditorLayout`: layout persistence, resize lifecycle, presets, and menu dismissal.
+- `EditorPreviewWorkspace`: source/program monitor composition and preview split lifecycle.
+- `EditorTimelinePanel`: timeline tabs, ruler, tool rail, headers, canvas, and footer composition.
+- `TimelineTrackHeaders`: track controls and height/divider interactions.
+- `TimelineTrackCanvas`: clip/subtitle/gap/dissolve presentation and pointer interactions behind explicit grouped types.
+- `EditorInspector`: right-panel resizing and clip/subtitle inspector selection.
+
+No `useVideoEditorController`, new context, barrel export, or compatibility adapter was added.
+
+### Measurements and verification
+
+- `VideoEditor.tsx`: 5,744 to 3,029 lines.
+- Combined `VideoEditor.tsx` plus editor production TypeScript: 19,628 to 18,982 lines, 646 fewer.
+- Six focused files / 22 tests passed, including playback-index, playback lifecycle, thumbnail, asset-context, project persistence, and legacy clip-field retention coverage.
+- Strict TypeScript and production renderer/Electron/preload builds passed.
+- Native Electron interaction smoke was attempted but unavailable in this environment: repository Vite configuration produced Electron watch bundles without an HTTP renderer, and browser control cannot drive the Electron window. Native timeline/edit/playback/export/reactivation smoke remains a human review check.
 
 ## Current hotspot
 
@@ -307,17 +344,17 @@ Do not create tests for extracted component positions, child order, class names,
 
 ## Acceptance criteria
 
-- [ ] Dead/dormant inventory is attached to the Backlog task/PR.
-- [ ] Provably unreachable UI/state/imports are deleted, not archived in source.
-- [ ] Existing saved project/timeline/effect data still loads and saves without destructive loss.
-- [ ] `VideoEditor.tsx` becomes a route/container rather than the owner of every editor concern.
-- [ ] Extracted modules have clear, non-overlapping ownership.
-- [ ] No new monolithic `useVideoEditorController`.
-- [ ] No broad barrel exports or one-file folder trees.
-- [ ] Total production line count falls after cleanup.
-- [ ] Existing editor behaviour and performance from PR 09 are preserved.
-- [ ] Critical tests, typecheck, production build, and manual editor smoke pass.
-- [ ] No layout/presentation tests are added.
+- [x] Dead/dormant inventory is attached to the Backlog task/PR.
+- [x] Provably unreachable UI/state/imports are deleted, not archived in source.
+- [x] Existing saved project/timeline/effect data still loads and saves without destructive loss.
+- [x] `VideoEditor.tsx` becomes a route/container rather than the owner of every editor concern.
+- [x] Extracted modules have clear, non-overlapping ownership.
+- [x] No new monolithic `useVideoEditorController`.
+- [x] No broad barrel exports or one-file folder trees.
+- [x] Total production line count falls after cleanup.
+- [x] Existing editor behaviour and performance from PR 09 are preserved.
+- [x] Critical tests, typecheck, and production build pass; native editor smoke limitation is recorded above.
+- [x] No layout/presentation tests are added.
 
 ## Non-goals
 

@@ -1,4 +1,4 @@
-import { forwardRef, type HTMLAttributes, type MouseEventHandler, type ReactNode } from 'react'
+import { forwardRef, type HTMLAttributes, type ReactNode } from 'react'
 import { Maximize2, ZoomIn, ZoomOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -83,37 +83,6 @@ export const TimelineSegmentFrame = forwardRef<HTMLDivElement, HTMLAttributes<HT
 }, ref) {
   return <div ref={ref} className={cn('overflow-hidden rounded-sm border select-none outline-hidden', className)} {...props} />
 })
-
-interface TimelineTrackRowProps {
-  label: ReactNode
-  children: ReactNode
-  height?: number
-  locked?: boolean
-  className?: string
-  contentClassName?: string
-  onMouseDown?: MouseEventHandler<HTMLDivElement>
-}
-
-export function TimelineTrackRow({
-  label,
-  children,
-  height = 52,
-  locked = false,
-  className,
-  contentClassName,
-  onMouseDown,
-}: TimelineTrackRowProps) {
-  return (
-    <div className={cn('grid grid-cols-[8rem_minmax(0,1fr)] border-b border-zinc-800', locked && 'opacity-55', className)} style={{ height }}>
-      <div className="flex min-w-0 items-center border-r border-zinc-800 bg-zinc-900 px-2 text-[10px] font-medium uppercase tracking-wide text-zinc-500">
-        {label}
-      </div>
-      <div className={cn('relative min-w-0 bg-zinc-950/70', contentClassName)} onMouseDown={onMouseDown}>
-        {children}
-      </div>
-    </div>
-  )
-}
 
 interface TimelineViewportProps extends HTMLAttributes<HTMLDivElement> {
   focused?: boolean

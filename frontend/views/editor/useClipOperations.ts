@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
-import type { Asset, TimelineClip, Track, TransitionType, SubtitleClip, ClipEffect, EffectType, TextOverlayStyle } from '../../types/project'
-import { DEFAULT_COLOR_CORRECTION, DEFAULT_LETTERBOX, EFFECT_DEFINITIONS, DEFAULT_TEXT_STYLE } from '../../types/project'
+import type { Asset, TimelineClip, Track, TransitionType, SubtitleClip, TextOverlayStyle } from '../../types/project'
+import { DEFAULT_COLOR_CORRECTION, DEFAULT_LETTERBOX, DEFAULT_TEXT_STYLE } from '../../types/project'
 import type { ParsedTimeline } from '../../lib/timeline-import'
 import { exportFcp7Xml } from '../../lib/timeline-import'
 import { getNativeFilePath } from '../../lib/native-file-path'
@@ -233,34 +233,6 @@ export function useClipOperations(params: UseClipOperationsParams) {
   const updateClip = (clipId: string, updates: Partial<TimelineClip>) => {
     pushUndo()
     setClips(clips.map(c => c.id === clipId ? { ...c, ...updates } : c))
-  }
-
-  const addEffectToClip = (clipId: string, effectType: EffectType) => {
-    const def = EFFECT_DEFINITIONS[effectType]
-    if (!def) return
-    const newEffect: ClipEffect = {
-      id: `fx-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
-      type: effectType,
-      enabled: true,
-      params: { ...def.defaultParams },
-    }
-    const clip = clips.find(c => c.id === clipId)
-    if (!clip) return
-    updateClip(clipId, { effects: [...(clip.effects || []), newEffect] })
-  }
-
-  const removeEffectFromClip = (clipId: string, effectId: string) => {
-    const clip = clips.find(c => c.id === clipId)
-    if (!clip?.effects) return
-    updateClip(clipId, { effects: clip.effects.filter(fx => fx.id !== effectId) })
-  }
-
-  const updateEffectOnClip = (clipId: string, effectId: string, updates: Partial<ClipEffect>) => {
-    const clip = clips.find(c => c.id === clipId)
-    if (!clip?.effects) return
-    updateClip(clipId, {
-      effects: clip.effects.map(fx => fx.id === effectId ? { ...fx, ...updates } : fx),
-    })
   }
 
   const duplicateClip = (clipId: string) => {
@@ -724,9 +696,6 @@ export function useClipOperations(params: UseClipOperationsParams) {
     handleImportFile,
     getMediaDuration,
     updateClip,
-    addEffectToClip,
-    removeEffectFromClip,
-    updateEffectOnClip,
     duplicateClip,
     splitClipAtPlayhead,
     removeClip,
