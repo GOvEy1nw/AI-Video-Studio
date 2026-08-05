@@ -1,8 +1,17 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import type { TimelineClip, Track, Asset } from '../../types/project'
 import { acquireAudioBuffer, getSharedAudioContext, suspendSharedAudioContext } from '../../lib/audio-decode-service'
+import {
+  selectActiveAudioAtTime,
+  selectDissolveAtTime,
+  selectVisualAtTime,
+  type IndexedClip,
+  type PlaybackIndex,
+} from './playback-index'
 
 export interface UsePlaybackEngineParams {
+  isActive: boolean
+  playbackIndex: PlaybackIndex
   isPlaying: boolean
   setIsPlaying: (v: boolean) => void
   shuttleSpeed: number
@@ -47,6 +56,7 @@ export interface UsePlaybackEngineParams {
 
 export function usePlaybackEngine(params: UsePlaybackEngineParams) {
   const {
+    isActive, playbackIndex,
     isPlaying, setIsPlaying, shuttleSpeed, setShuttleSpeed,
     currentTime, setCurrentTime, pixelsPerSecond,
     clips, tracks, assets, activeClip, crossDissolveState,
@@ -54,7 +64,7 @@ export function usePlaybackEngine(params: UsePlaybackEngineParams) {
     resolveClipSrc,
     videoPoolRef, playbackTimeRef, isPlayingRef, activePoolSrcRef,
     previewVideoRef, trackContainerRef, rulerScrollRef,
-    centerOnPlayheadRef, clipsRef, tracksRef, assetsRef,
+    centerOnPlayheadRef,
     playheadOverlayRef, playheadRulerRef, lastStateUpdateRef,
     preSeekDoneRef, rafActiveClipIdRef, setPlaybackActiveClipId,
     inPoint, outPoint, totalDuration, zoom,
@@ -63,6 +73,52 @@ export function usePlaybackEngine(params: UsePlaybackEngineParams) {
   const audioElementsRef = useRef<Map<string, HTMLAudioElement>>(new Map())
   const audioNodesRef = useRef<Map<string, { source: AudioBufferSourceNode; gain: GainNode; startedAt: number; offsetAtStart: number; playbackRate: number; url: string; release: () => void }>>(new Map())
   const audioNodeStartRef = useRef<Map<string, { url: string; playbackRate: number }>>(new Map())
+  const activeAudioClipsRef = useRef<IndexedClip[]>([])
+  const activeAudioIdsRef = useRef<Set<string>>(new Set())
+  const activeBufferedAudioIdsRef = useRef<Set<string>>(new Set())
+  const publishedPlaybackTimeRef = useRef<number | null>(null)
+  const publishedActiveClipIdRef = useRef<string | null>(null)
+  const playbackResolutionRef = useRef(playbackResolution)
+  playbackResolutionRef.current = playbackResolution
+
+  const releasePooledVideo = (src: string, video: HTMLVideoElement) => {
+    video.pause()
+    video.removeAttribute('src')
+    video.load()
+    video.remove()
+    videoPoolRef.current.delete(src)
+  }
+
+  const getPooledVideo = (src: string) => {
+    const pool = videoPoolRef.current
+    const existing = pool.get(src)
+    if (existing) return existing
+    if (pool.size >= 3) {
+      for (const [staleSrc, staleVideo] of pool) {
+        if (staleSrc !== activePoolSrcRef.current) {
+          releasePooledVideo(staleSrc, staleVideo)
+          break
+        }
+      }
+    }
+    const video = document.createElement('video')
+    video.preload = 'auto'
+    video.playsInline = true
+    video.muted = true
+    video.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;z-index:0;pointer-events:none;'
+    if (playbackResolutionRef.current < 1) {
+      video.style.width = `${playbackResolutionRef.current * 100}%`
+      video.style.height = `${playbackResolutionRef.current * 100}%`
+      video.style.transform = `scale(${1 / playbackResolutionRef.current})`
+      video.style.transformOrigin = 'top left'
+    }
+    video.src = src
+    video.load()
+    pool.set(src, video)
+    const container = document.getElementById('video-pool-container')
+    if (container) container.appendChild(video)
+    return video
+  }
 
   const stopBufferedAudio = (clipId: string) => {
     audioNodeStartRef.current.delete(clipId)
@@ -78,7 +134,7 @@ export function usePlaybackEngine(params: UsePlaybackEngineParams) {
   const isBufferedAudioClip = (clip: TimelineClip) => {
     if (clip.type === 'audio') return true
     if (clip.asset?.type === 'audio') return true
-    const liveAsset = clip.assetId ? assetsRef.current.find(a => a.id === clip.assetId) : null
+    const liveAsset = clip.assetId ? playbackIndex.assetById.get(clip.assetId) : null
     return liveAsset?.type === 'audio'
   }
 
@@ -100,7 +156,7 @@ export function usePlaybackEngine(params: UsePlaybackEngineParams) {
     const existing = audioNodesRef.current.get(clip.id)
     if (existing && existing.url === url && Math.abs(existing.playbackRate - desiredRate) < 0.001) {
       existing.gain.gain.value = muted ? 0 : volume
-      const liveAsset = clip.assetId ? assetsRef.current.find(a => a.id === clip.assetId) : null
+      const liveAsset = clip.assetId ? playbackIndex.assetById.get(clip.assetId) : null
       const mediaDuration = liveAsset?.duration || clip.asset?.duration || clip.duration
       const target = getBufferedAudioTarget(clip, mediaDuration, atTime)
       const expected = existing.offsetAtStart + Math.max(0, ctx.currentTime - existing.startedAt) * existing.playbackRate
@@ -161,86 +217,13 @@ export function usePlaybackEngine(params: UsePlaybackEngineParams) {
   // React state (currentTime) is synced at a throttled rate (~24 fps) for UI.
   // This eliminates the old pipeline: rAF→setState→render→useEffect→sync.
   useEffect(() => {
-    if (!isPlaying) return
+    if (!isPlaying || !isActive) return
     
     const effectiveSpeed = shuttleSpeed !== 0 ? shuttleSpeed : 1
     let lastTimestamp: number | null = null
     let animFrameId: number
     
-    // Inline helpers that read refs (no React dependency)
-    const resolveClipSrcRef = (clip: TimelineClip): string => {
-      if (!clip) return ''
-      let src = clip.asset?.url || ''
-      if (clip.assetId) {
-        const liveAsset = assetsRef.current.find((a: any) => a.id === clip.assetId)
-        if (liveAsset) {
-          if (liveAsset.takes && liveAsset.takes.length > 0 && clip.takeIndex !== undefined) {
-            const idx = Math.max(0, Math.min(clip.takeIndex, liveAsset.takes.length - 1))
-            src = liveAsset.takes[idx].url
-          } else {
-            src = liveAsset.url
-          }
-        }
-      }
-      return src || clip.importedUrl || ''
-    }
-    
-    const getClipAtTimeRef = (time: number): TimelineClip | null => {
-      const all = clipsRef.current
-      const trks = tracksRef.current
-      const clipsAtTime = all
-        .map((clip: TimelineClip, arrayIndex: number) => ({ clip, arrayIndex }))
-        .filter(({ clip }: { clip: TimelineClip }) =>
-          clip.type !== 'audio' && clip.type !== 'adjustment' && clip.type !== 'text' &&
-          (trks[clip.trackIndex]?.enabled !== false) &&
-          time >= clip.startTime && time < clip.startTime + clip.duration
-        )
-      if (clipsAtTime.length === 0) return null
-      // Higher trackIndex = higher visual track = takes priority (NLE rule)
-      clipsAtTime.sort((a: any, b: any) => {
-        if (a.clip.trackIndex !== b.clip.trackIndex) return b.clip.trackIndex - a.clip.trackIndex
-        return b.arrayIndex - a.arrayIndex
-      })
-      return clipsAtTime[0].clip
-    }
-    
-    // Find the next video clip AFTER a given clip (for pre-seeking)
-    const getNextVideoClip = (afterClip: TimelineClip): TimelineClip | null => {
-      const all = clipsRef.current
-      const endTime = afterClip.startTime + afterClip.duration
-      let best: TimelineClip | null = null
-      for (const c of all) {
-        if (c.type === 'audio' || c.type === 'adjustment' || c.type === 'text') continue
-        if (c.asset?.type !== 'video') continue
-        if (c.startTime >= endTime - 0.01) {
-          if (!best || c.startTime < best.startTime) best = c
-        }
-      }
-      return best
-    }
-    
-    // Detect dissolve region at a given time (inline, no React dependency)
-    const getDissolveAtTime = (time: number): { outgoing: TimelineClip; incoming: TimelineClip; progress: number } | null => {
-      const all = clipsRef.current
-      for (const clipA of all) {
-        if (clipA.transitionOut?.type !== 'dissolve' || clipA.transitionOut.duration <= 0) continue
-        const clipAEnd = clipA.startTime + clipA.duration
-        const dissolveStart = clipAEnd - clipA.transitionOut.duration
-        if (time < dissolveStart || time >= clipAEnd) continue
-        const clipB = all.find((c: TimelineClip) =>
-          c.id !== clipA.id &&
-          c.trackIndex === clipA.trackIndex &&
-          c.transitionIn?.type === 'dissolve' &&
-          Math.abs(c.startTime - clipAEnd) < 0.05
-        )
-        if (!clipB) continue
-        const dissolveDuration = clipA.transitionOut.duration
-        const timeIntoDissolve = time - dissolveStart
-        const progress = Math.max(0, Math.min(1, timeIntoDissolve / dissolveDuration))
-        return { outgoing: clipA, incoming: clipB, progress }
-      }
-      return null
-    }
+    const resolveClipSrcRef = (clip: TimelineClip) => playbackIndex.clipById.get(clip.id)?.sourceUrl || clip.importedUrl || ''
     
     const STATE_UPDATE_INTERVAL = 250 // ~4fps for React state updates (playhead/video/audio are smooth via rAF+DOM, this is only for timecode display)
     const DISSOLVE_STATE_UPDATE_INTERVAL = 33 // ~30fps during dissolves for smooth crossfade
@@ -277,19 +260,25 @@ export function usePlaybackEngine(params: UsePlaybackEngineParams) {
       if (stopped) {
         setIsPlaying(false)
         setShuttleSpeed(0)
-        setCurrentTime(next)
+        if (publishedPlaybackTimeRef.current !== next) {
+          publishedPlaybackTimeRef.current = next
+          setCurrentTime(next)
+        }
         return // don't schedule next frame
       }
       
       // ── 2. Find active clip & sync video directly ──
       const pool = videoPoolRef.current
-      const syncClip = getClipAtTimeRef(next)
+      const syncClip = selectVisualAtTime(playbackIndex, next)?.clip ?? null
       
       // Track which clip the rAF is actively displaying (for audio dedup)
       rafActiveClipIdRef.current = syncClip?.id ?? null
       
       // Check if we're in a dissolve region
-      const dissolveInfo = getDissolveAtTime(next)
+      const dissolve = selectDissolveAtTime(playbackIndex, next)
+      const dissolveInfo = dissolve
+        ? { outgoing: dissolve.outgoing.clip, incoming: dissolve.incoming.clip, progress: Math.max(0, Math.min(1, (next - dissolve.start) / dissolve.duration)) }
+        : null
       
       // Show/hide the video pool container via DOM to avoid React dependency on throttled activeClip
       const poolContainer = document.getElementById('video-pool-container')
@@ -303,7 +292,7 @@ export function usePlaybackEngine(params: UsePlaybackEngineParams) {
         const outClip = dissolveInfo.outgoing
         const outSrc = resolveClipSrcRef(outClip)
         if (outSrc) {
-          let outVid = pool.get(outSrc)
+          let outVid = getPooledVideo(outSrc)
           if (outVid) {
             const container = document.getElementById('video-pool-container')
             if (container && !outVid.parentElement) container.appendChild(outVid)
@@ -360,25 +349,14 @@ export function usePlaybackEngine(params: UsePlaybackEngineParams) {
         // Pre-load the incoming clip's video in the pool for seamless transition when dissolve ends
         if (dissolveInfo.incoming.asset?.type === 'video') {
           const inSrc = resolveClipSrcRef(dissolveInfo.incoming)
-          if (inSrc && !pool.has(inSrc)) {
-            const v = document.createElement('video')
-            v.preload = 'auto'
-            v.playsInline = true
-            v.muted = true
-            v.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;z-index:0;'
-            v.src = inSrc
-            v.load()
-            pool.set(inSrc, v)
-            const container = document.getElementById('video-pool-container')
-            if (container) container.appendChild(v)
-          }
+          if (inSrc) getPooledVideo(inSrc)
         }
         
       } else if (syncClip && syncClip.asset?.type === 'video') {
         if (poolContainer) poolContainer.classList.remove('hidden')
         const clipSrc = resolveClipSrcRef(syncClip)
         if (clipSrc) {
-          let video = pool.get(clipSrc)
+          let video = getPooledVideo(clipSrc)
           
           // Ensure video is in the DOM
           if (video) {
@@ -457,12 +435,12 @@ export function usePlaybackEngine(params: UsePlaybackEngineParams) {
           ;(previewVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = video || null
           
           // ── 3. Pre-seek the NEXT clip so its first frame is decoded ──
-          const nextClip = getNextVideoClip(syncClip)
+          const nextClip = playbackIndex.nextVideoByClipId.get(syncClip.id)?.clip ?? null
           if (nextClip && nextClip.id !== preSeekDoneRef.current) {
             const remainingInCurrent = (syncClip.startTime + syncClip.duration) - next
             if (remainingInCurrent < 1.5 && remainingInCurrent > 0) {
               const nextSrc = resolveClipSrcRef(nextClip)
-              const nextVideo = nextSrc ? pool.get(nextSrc) : null
+              const nextVideo = nextSrc ? getPooledVideo(nextSrc) : null
               if (nextVideo && nextVideo.readyState >= 1) {
                 const nextTargetTime = nextClip.reversed
                   ? nextClip.trimStart + (nextVideo.duration || 0) - nextClip.trimStart - nextClip.trimEnd
@@ -493,22 +471,13 @@ export function usePlaybackEngine(params: UsePlaybackEngineParams) {
       //   4. Keep audio elements alive (just pause) so buffers are preserved.
       {
         const audioMap = audioElementsRef.current
-        const allClips = clipsRef.current
-        const trks = tracksRef.current
-        const activeAudioIds = new Set<string>()
-        const activeBufferedAudioIds = new Set<string>()
-        const anySoloed = trks.some(t => t.solo)
-        
-        for (const c of allClips) {
-          if (c.type === 'adjustment' || c.type === 'text' || c.type === 'image') continue
-          if (next < c.startTime || next >= c.startTime + c.duration) continue
-          if (trks[c.trackIndex]?.enabled === false) continue
-          // For video clips: only play audio if there's a linked audio clip on the timeline.
-          // If the video was added without a linked audio clip (e.g. audio tracks were unpatched),
-          // its embedded audio should not play.
-          if (c.type === 'video' && (!c.linkedClipIds || !c.linkedClipIds.some(lid => allClips.some(ac => ac.id === lid && ac.type === 'audio')))) continue
-          activeAudioIds.add(c.id)
-        }
+        const activeAudioClips = activeAudioClipsRef.current
+        const activeAudioIds = activeAudioIdsRef.current
+        const activeBufferedAudioIds = activeBufferedAudioIdsRef.current
+        activeAudioIds.clear()
+        activeBufferedAudioIds.clear()
+        selectActiveAudioAtTime(playbackIndex, next, activeAudioClips)
+        for (const { clip } of activeAudioClips) activeAudioIds.add(clip.id)
         
         // Pause clips no longer active (but keep the element for fast resume)
         for (const [id, el] of audioMap) {
@@ -522,13 +491,11 @@ export function usePlaybackEngine(params: UsePlaybackEngineParams) {
         }
         
         // Sync active audio clips
-        for (const c of allClips) {
-          if (!activeAudioIds.has(c.id)) continue
+        for (const { clip: c, sourceUrl: url } of activeAudioClips) {
           
-          const url = resolveClipSrcRef(c)
           if (!url) continue
-          const trackObj = trks[c.trackIndex]
-          const isSoloMuted = anySoloed && !trackObj?.solo
+          const trackObj = playbackIndex.trackByIndex.get(c.trackIndex)
+          const isSoloMuted = playbackIndex.anySoloed && !trackObj?.solo
           const isMuted = c.muted || trackObj?.muted || isSoloMuted || false
           if (isBufferedAudioClip(c)) {
             activeBufferedAudioIds.add(c.id)
@@ -649,9 +616,15 @@ export function usePlaybackEngine(params: UsePlaybackEngineParams) {
       const updateInterval = dissolveInfo ? DISSOLVE_STATE_UPDATE_INTERVAL : STATE_UPDATE_INTERVAL
       if (timestamp - lastStateUpdateRef.current >= updateInterval) {
         lastStateUpdateRef.current = timestamp
-        setCurrentTime(next)
+        if (publishedPlaybackTimeRef.current !== next) {
+          publishedPlaybackTimeRef.current = next
+          setCurrentTime(next)
+        }
         // Push active clip id to React so the monitor visibility stays correct
-        setPlaybackActiveClipId(rafActiveClipIdRef.current)
+        if (publishedActiveClipIdRef.current !== rafActiveClipIdRef.current) {
+          publishedActiveClipIdRef.current = rafActiveClipIdRef.current
+          setPlaybackActiveClipId(rafActiveClipIdRef.current)
+        }
       }
       
       animFrameId = requestAnimationFrame(tick)
@@ -661,8 +634,14 @@ export function usePlaybackEngine(params: UsePlaybackEngineParams) {
     return () => {
       cancelAnimationFrame(animFrameId)
       // Final sync: push authoritative time to React state
-      setCurrentTime(playbackTimeRef.current)
-      setPlaybackActiveClipId(null) // reset so React falls back to activeClip
+      if (publishedPlaybackTimeRef.current !== playbackTimeRef.current) {
+        publishedPlaybackTimeRef.current = playbackTimeRef.current
+        setCurrentTime(playbackTimeRef.current)
+      }
+      if (publishedActiveClipIdRef.current !== null) {
+        publishedActiveClipIdRef.current = null
+        setPlaybackActiveClipId(null) // reset so React falls back to activeClip
+      }
       rafActiveClipIdRef.current = null
       // Pause all hidden audio elements and reset sync flags
       for (const [, el] of audioElementsRef.current) {
@@ -672,7 +651,7 @@ export function usePlaybackEngine(params: UsePlaybackEngineParams) {
       for (const clipId of Array.from(audioNodesRef.current.keys())) stopBufferedAudio(clipId)
       audioNodeStartRef.current.clear()
     }
-  }, [isPlaying, totalDuration, shuttleSpeed, playingInOut, inPoint, outPoint, zoom])
+  }, [isPlaying, isActive, playbackIndex, totalDuration, shuttleSpeed, playingInOut, inPoint, outPoint, zoom])
   
   // Clear In/Out loop mode when playback stops
   useEffect(() => {
@@ -710,53 +689,6 @@ export function usePlaybackEngine(params: UsePlaybackEngineParams) {
     }
   }, [pixelsPerSecond, currentTime])
   
-  // Helper: resolve the playback URL for a clip (inline, safe to call in effects)
-  // --- Video pool management for gapless playback ---
-  // Collect all unique video source URLs used in the timeline
-  const timelineVideoSources = useMemo(() => {
-    const srcSet = new Set<string>()
-    for (const clip of clips) {
-      if (clip.type === 'audio' || clip.asset?.type !== 'video') continue
-      const src = resolveClipSrc(clip)
-      if (src) srcSet.add(src)
-    }
-    return srcSet
-  }, [clips, resolveClipSrc])
-  
-  // Maintain the video pool: create/remove <video> elements as sources change
-  // Eagerly attach ALL pool videos to the DOM so they begin buffering immediately.
-  useEffect(() => {
-    const pool = videoPoolRef.current
-    const container = document.getElementById('video-pool-container')
-    
-    // Add new sources
-    for (const src of timelineVideoSources) {
-      if (!pool.has(src)) {
-        const video = document.createElement('video')
-        video.preload = 'auto'
-        video.playsInline = true
-        video.muted = true // will be unmuted when active
-        video.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;z-index:0;pointer-events:none;'
-        video.src = src
-        video.load()
-        pool.set(src, video)
-        // Eagerly attach to DOM so the browser starts decoding
-        if (container) container.appendChild(video)
-      }
-    }
-    
-    // Remove sources no longer in timeline (keep pool clean)
-    for (const [src, video] of pool) {
-      if (!timelineVideoSources.has(src)) {
-        video.pause()
-        video.removeAttribute('src')
-        video.load()
-        if (video.parentElement) video.parentElement.removeChild(video)
-        pool.delete(src)
-      }
-    }
-  }, [timelineVideoSources])
-  
   // Apply playback resolution to pool video elements
   // CSS trick: shrink the video element's rendered size so the browser decodes at lower res
   useEffect(() => {
@@ -776,9 +708,27 @@ export function usePlaybackEngine(params: UsePlaybackEngineParams) {
         video.style.transformOrigin = ''
       }
     }
-  }, [playbackResolution, timelineVideoSources]) // re-apply when pool changes
+  }, [playbackResolution, playbackIndex]) // re-apply when a lazily-created pool entry appears
   
   // Cleanup pool on unmount
+  useEffect(() => {
+    if (isActive) return
+    if (isPlayingRef.current) setIsPlaying(false)
+    for (const [, element] of audioElementsRef.current) {
+      element.pause()
+      element.removeAttribute('src')
+      element.load()
+    }
+    audioElementsRef.current.clear()
+    for (const clipId of Array.from(audioNodesRef.current.keys())) stopBufferedAudio(clipId)
+    audioNodeStartRef.current.clear()
+    for (const [src, video] of videoPoolRef.current) releasePooledVideo(src, video)
+    activePoolSrcRef.current = ''
+    preSeekDoneRef.current = null
+    rafActiveClipIdRef.current = null
+    void suspendSharedAudioContext()
+  }, [isActive])
+
   useEffect(() => {
     return () => {
       for (const [, video] of videoPoolRef.current) {
@@ -795,7 +745,7 @@ export function usePlaybackEngine(params: UsePlaybackEngineParams) {
   // NOTE: During playback the rAF engine handles video sync directly for zero-latency.
   // This useEffect only runs when NOT playing (scrubbing, seeking, clip changes).
   useEffect(() => {
-    if (isPlaying) return // rAF engine handles sync during playback
+    if (!isActive || isPlaying) return // rAF engine handles sync during playback
     
     // During cross-dissolve, sync the incoming video overlay (previewVideoRef).
     // The outgoing clip continues to be handled by the pool below.
@@ -852,17 +802,7 @@ export function usePlaybackEngine(params: UsePlaybackEngineParams) {
     if (!clipSrc) return
     
     // Get or create the video element for this source
-    let video = pool.get(clipSrc)
-    if (!video) {
-      video = document.createElement('video')
-      video.preload = 'auto'
-      video.playsInline = true
-      video.muted = true
-      video.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;z-index:0;'
-      video.src = clipSrc
-      video.load()
-      pool.set(clipSrc, video)
-    }
+    const video = getPooledVideo(clipSrc)
     
     // Attach to the container if not already
     const container = document.getElementById('video-pool-container')
@@ -956,7 +896,7 @@ export function usePlaybackEngine(params: UsePlaybackEngineParams) {
         delete (video as any).__syncOnLoad
       }
     }
-  }, [currentTime, isPlaying, activeClip, crossDissolveState, tracks, resolveClipSrc])
+  }, [currentTime, isActive, isPlaying, activeClip, crossDissolveState, tracks, resolveClipSrc, playbackIndex])
   
   // Outgoing dissolve clip is handled by the video pool — no separate sync needed.
   
@@ -967,7 +907,7 @@ export function usePlaybackEngine(params: UsePlaybackEngineParams) {
   useEffect(() => {
     // During playback, the rAF loop handles audio sync directly for zero-latency.
     // This effect only handles scrubbing / seeking (when NOT playing).
-    if (isPlaying) return
+    if (!isActive || isPlaying) return
     
     // Pause all audio elements when not playing and reset sync flags.
     // IMPORTANT: Don't destroy elements (no el.src = '') — keep buffers alive

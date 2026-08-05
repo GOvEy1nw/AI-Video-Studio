@@ -111,6 +111,8 @@ import { useTimelineDrag } from "./editor/useTimelineDrag";
 import { useContextMenuEffects } from "./editor/useContextMenuEffects";
 import { buildMenuDefinitions } from "./editor/buildMenuDefinitions";
 import { usePlaybackEngine } from "./editor/usePlaybackEngine";
+import { buildPlaybackIndex, selectDissolveAtTime, selectVisualAtTime } from "./editor/playback-index";
+import { getCachedVideoThumbnail } from "../lib/video-thumbnail-service";
 import { GapGenerationModal } from "./editor/GapGenerationModal";
 import { GenerationErrorDialog } from "../components/GenerationErrorDialog";
 import { DeleteAssetDialog } from "../components/DeleteAssetDialog";
@@ -1227,36 +1229,19 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
     ],
   );
 
+  const playbackIndex = useMemo(
+    () => buildPlaybackIndex(clips, tracks, assets),
+    [clips, tracks, assets],
+  );
+
   // Find the clip at current playhead position
   // Priority: 1) upper tracks (lower trackIndex) win over lower tracks
   //           2) on the same track, the clip placed later (higher array index) wins
   const getClipAtTime = useCallback(
     (time: number): TimelineClip | null => {
-      // Only consider video/image clips for the visual preview — audio is heard, not seen
-      // Skip adjustment layers (they apply effects but don't have video content)
-      // Also skip clips on tracks with output disabled (enabled === false)
-      const clipsAtTime = clips
-        .map((clip, arrayIndex) => ({ clip, arrayIndex }))
-        .filter(
-          ({ clip }) =>
-            clip.type !== "audio" &&
-            clip.type !== "adjustment" &&
-            clip.type !== "text" &&
-            tracks[clip.trackIndex]?.enabled !== false &&
-            time >= clip.startTime &&
-            time < clip.startTime + clip.duration,
-        );
-      if (clipsAtTime.length === 0) return null;
-      // Sort: higher trackIndex first (NLE rule: V3 is above V2, higher tracks take priority)
-      // Then higher arrayIndex first (later clip wins on same track)
-      clipsAtTime.sort((a, b) => {
-        if (a.clip.trackIndex !== b.clip.trackIndex)
-          return b.clip.trackIndex - a.clip.trackIndex;
-        return b.arrayIndex - a.arrayIndex;
-      });
-      return clipsAtTime[0].clip;
+      return selectVisualAtTime(playbackIndex, time)?.clip ?? null;
     },
-    [clips, tracks],
+    [playbackIndex],
   );
 
   const activeClip = getClipAtTime(currentTime);
@@ -1268,10 +1253,10 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
   // so the preview doesn't flash black due to throttled currentTime being stale.
   const monitorClip = useMemo(() => {
     if (isPlaying && playbackActiveClipId) {
-      return clips.find((c) => c.id === playbackActiveClipId) ?? activeClip;
+      return playbackIndex.clipById.get(playbackActiveClipId)?.clip ?? activeClip;
     }
     return activeClip;
-  }, [isPlaying, playbackActiveClipId, activeClip, clips]);
+  }, [isPlaying, playbackActiveClipId, activeClip, playbackIndex]);
 
   // Compositing stack: all video/image clips at the playhead, sorted bottom-to-top (lowest track first)
   // Used to render clips underneath the active clip when it has opacity < 100%
@@ -1296,42 +1281,14 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
   // Cross-dissolve detection: scan ALL clip pairs for dissolve overlap at current time
   // Independent of activeClip to avoid flickering when getClipAtTime switches between clips
   const crossDissolveState = useMemo(() => {
-    for (const clipA of clips) {
-      // Check if clipA has a dissolve transition-out
-      if (
-        clipA.transitionOut?.type !== "dissolve" ||
-        clipA.transitionOut.duration <= 0
-      )
-        continue;
-
-      const clipAEnd = clipA.startTime + clipA.duration;
-      const dissolveStart = clipAEnd - clipA.transitionOut.duration;
-
-      // Is the playhead within the dissolve-out region of clipA?
-      if (currentTime < dissolveStart || currentTime >= clipAEnd) continue;
-
-      // Find the matching incoming clip (starts at clipA's end, has dissolve-in)
-      const clipB = clips.find(
-        (c) =>
-          c.id !== clipA.id &&
-          c.trackIndex === clipA.trackIndex &&
-          c.transitionIn?.type === "dissolve" &&
-          Math.abs(c.startTime - clipAEnd) < 0.05,
-      );
-      if (!clipB) continue;
-
-      // Compute progress: 0 = fully outgoing (clipA), 1 = fully incoming (clipB)
-      const dissolveDuration = clipA.transitionOut.duration;
-      const timeIntoDisssolve = currentTime - dissolveStart;
-      const progress = Math.max(
-        0,
-        Math.min(1, timeIntoDisssolve / dissolveDuration),
-      );
-
-      return { outgoing: clipA, incoming: clipB, progress };
-    }
-    return null;
-  }, [clips, currentTime]);
+    const dissolve = selectDissolveAtTime(playbackIndex, currentTime);
+    if (!dissolve) return null;
+    return {
+      outgoing: dissolve.outgoing.clip,
+      incoming: dissolve.incoming.clip,
+      progress: Math.max(0, Math.min(1, (currentTime - dissolve.start) / dissolve.duration)),
+    };
+  }, [playbackIndex, currentTime]);
 
   // Compute the maximum timeline duration for a video clip based on its actual media length
   const getMaxClipDuration = useCallback((clip: TimelineClip): number => {
@@ -1344,28 +1301,9 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
   const resolveClipSrc = useCallback(
     (clip: TimelineClip | null): string => {
       if (!clip) return "";
-      let src = clip.asset?.url || "";
-      if (clip.assetId) {
-        const liveAsset = assets.find((a) => a.id === clip.assetId);
-        if (liveAsset) {
-          if (
-            liveAsset.takes &&
-            liveAsset.takes.length > 0 &&
-            clip.takeIndex !== undefined
-          ) {
-            const idx = Math.max(
-              0,
-              Math.min(clip.takeIndex, liveAsset.takes.length - 1),
-            );
-            src = liveAsset.takes[idx].url;
-          } else {
-            src = liveAsset.url;
-          }
-        }
-      }
-      return src || clip.importedUrl || "";
+      return playbackIndex.clipById.get(clip.id)?.sourceUrl || clip.importedUrl || "";
     },
-    [assets],
+    [playbackIndex],
   );
 
   // Gap generation hook (state + logic extracted)
@@ -1657,6 +1595,8 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
 
   // Playback engine (extracted hook)
   usePlaybackEngine({
+    isActive,
+    playbackIndex,
     isPlaying,
     setIsPlaying,
     shuttleSpeed,
@@ -2180,24 +2120,9 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
   // Get the effective URL for a clip (considering its take index)
   const getClipUrl = useCallback(
     (clip: TimelineClip): string | null => {
-      if (!clip.assetId) return clip.importedUrl || null;
-      const asset = assets.find((a) => a.id === clip.assetId);
-      if (!asset) return null;
-
-      if (
-        asset.takes &&
-        asset.takes.length > 0 &&
-        clip.takeIndex !== undefined
-      ) {
-        const idx = Math.max(
-          0,
-          Math.min(clip.takeIndex, asset.takes.length - 1),
-        );
-        return asset.takes[idx].url;
-      }
-      return asset.url;
+      return playbackIndex.clipById.get(clip.id)?.sourceUrl || clip.importedUrl || null;
     },
-    [assets],
+    [playbackIndex],
   );
 
   // --- Resolution probing: detect actual video/image dimensions from the linked file ---
@@ -2215,59 +2140,87 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
   }, [clips, getClipUrl]);
 
   useEffect(() => {
-    // Collect all unique URLs that clips currently point to
-    const urlsToProbe = new Set<string>();
-    Object.values(clipUrlMap).forEach((url) => {
-      // Skip if already cached with valid dims, or currently probing
+    if (!isActive) return;
+    let cancelled = false;
+    let cursor = 0;
+    let inFlight = 0;
+    const activeMedia = new Map<HTMLMediaElement | HTMLImageElement, string>();
+    const videoUrls = new Set(
+      clips
+        .filter((clip) => clip.type === "video" || clip.asset?.type === "video")
+        .map((clip) => clipUrlMap[clip.id])
+        .filter((url): url is string => Boolean(url)),
+    );
+    const urls = [...new Set(Object.values(clipUrlMap))].filter((url) => {
       const cached = resolutionCache[url];
-      if (cached && cached.width > 0 && cached.height > 0) return;
-      if (probingUrlsRef.current.has(url)) return;
-      urlsToProbe.add(url);
+      return !(cached && cached.width > 0 && cached.height > 0) && !probingUrlsRef.current.has(url);
     });
-
-    urlsToProbe.forEach((url) => {
-      probingUrlsRef.current.add(url);
-
-      // Determine if this is a video or image based on the clip(s) using it
-      const isVideo = clips.some(
-        (c) =>
-          clipUrlMap[c.id] === url &&
-          (c.type === "video" || c.asset?.type === "video"),
-      );
-
-      if (isVideo) {
-        const video = document.createElement("video");
-        video.preload = "metadata";
-        video.muted = true;
-        video.onloadedmetadata = () => {
-          setResolutionCache((prev) => ({
-            ...prev,
-            [url]: { width: video.videoWidth, height: video.videoHeight },
-          }));
+    const startNext = () => {
+      while (!cancelled && inFlight < 2 && cursor < urls.length) {
+        const url = urls[cursor++];
+        inFlight += 1;
+        probingUrlsRef.current.add(url);
+        const finish = () => {
+          inFlight -= 1;
           probingUrlsRef.current.delete(url);
-          video.src = "";
+          startNext();
         };
-        video.onerror = () => {
-          probingUrlsRef.current.delete(url);
-          video.src = "";
-        };
-        video.src = url;
-      } else {
-        const img = new window.Image();
-        img.onload = () => {
-          setResolutionCache((prev) => ({
-            ...prev,
-            [url]: { width: img.naturalWidth, height: img.naturalHeight },
-          }));
-          probingUrlsRef.current.delete(url);
-        };
-        img.onerror = () => {
-          probingUrlsRef.current.delete(url);
-        };
-        img.src = url;
+        if (videoUrls.has(url)) {
+          const video = document.createElement("video");
+          activeMedia.set(video, url);
+          video.preload = "metadata";
+          video.muted = true;
+          video.onloadedmetadata = () => {
+            if (!cancelled) {
+              setResolutionCache((prev) => ({ ...prev, [url]: { width: video.videoWidth, height: video.videoHeight } }));
+            }
+            activeMedia.delete(video);
+            video.removeAttribute("src");
+            video.load();
+            finish();
+          };
+          video.onerror = () => {
+            activeMedia.delete(video);
+            video.removeAttribute("src");
+            video.load();
+            finish();
+          };
+          video.src = url;
+        } else {
+          const image = new window.Image();
+          activeMedia.set(image, url);
+          image.onload = () => {
+            if (!cancelled) {
+              setResolutionCache((prev) => ({ ...prev, [url]: { width: image.naturalWidth, height: image.naturalHeight } }));
+            }
+            activeMedia.delete(image);
+            finish();
+          };
+          image.onerror = () => {
+            activeMedia.delete(image);
+            finish();
+          };
+          image.src = url;
+        }
       }
-    });
-  }, [clipUrlMap, resolutionCache, clips]);
+    };
+    startNext();
+    return () => {
+      cancelled = true;
+      for (const [media, url] of activeMedia) {
+        probingUrlsRef.current.delete(url);
+        media.removeAttribute("src");
+        if (media instanceof HTMLVideoElement) {
+          media.onloadedmetadata = null;
+          media.onerror = null;
+          media.load();
+        } else {
+          media.onload = null;
+          media.onerror = null;
+        }
+      }
+    };
+  }, [isActive, clipUrlMap, clips]);
 
   // Helper: classify height into resolution category + color
   const classifyResolution = useCallback(
@@ -2698,6 +2651,7 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
               previewPanRef={previewPanRef}
               currentTime={currentTime}
               totalDuration={totalDuration}
+              isActive={isActive}
               isPlaying={isPlaying}
               setIsPlaying={setIsPlaying}
               setCurrentTime={setCurrentTime}
@@ -4365,17 +4319,27 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
                                 ) : (
                                   clip.asset &&
                                   (clip.asset.type === "video" ? (
-                                    <video
-                                      key={`thumb-${clip.id}-${clip.takeIndex ?? "default"}`}
-                                      src={getClipUrl(clip) || clip.asset.url}
-                                      className="h-8 aspect-video object-cover rounded-sm"
-                                      muted
-                                    />
+                                    (() => {
+                                      const source = getClipUrl(clip) || clip.asset!.url;
+                                      const thumbnail = clip.asset!.thumbnail || getCachedVideoThumbnail(source);
+                                      return thumbnail ? (
+                                        <img
+                                          key={`thumb-${clip.id}-${clip.takeIndex ?? "default"}`}
+                                          src={thumbnail}
+                                          alt=""
+                                          loading="lazy"
+                                          decoding="async"
+                                          className="h-8 aspect-video object-cover rounded-sm"
+                                        />
+                                      ) : <div className="h-8 aspect-video rounded-sm bg-zinc-800" />;
+                                    })()
                                   ) : (
                                     <img
                                       key={`thumb-${clip.id}-${clip.takeIndex ?? "default"}`}
                                       src={getClipUrl(clip) || clip.asset.url}
                                       alt=""
+                                      loading="lazy"
+                                      decoding="async"
                                       className="h-8 aspect-video object-cover rounded-sm"
                                     />
                                   ))
