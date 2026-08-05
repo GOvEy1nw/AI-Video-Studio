@@ -1,7 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type DragEvent, type MouseEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type DragEvent, type MouseEvent, type ReactNode, type Ref } from 'react'
 import { ArrowUpDown, ChevronDown, ChevronUp, Image, Layers, Music } from 'lucide-react'
 import type { Asset } from '../types/project'
 import { useVideoThumbnail } from '../lib/video-thumbnail-service'
+import { getAssetLibraryVirtualRange } from './asset-library-virtual'
+
+const EMPTY_SET = new Set<string>()
+const LIST_ROW_HEIGHT = 32
 
 type SortColumn = 'name' | 'type' | 'duration' | 'resolution' | 'date' | 'color'
 
@@ -24,6 +28,9 @@ type GalleryAssetListProps = {
   onAssetDragStart?: (event: DragEvent<HTMLDivElement>, asset: Asset) => void
   renderActions?: (asset: Asset) => ReactNode
   actionsWidthClass?: string
+  scrollTop?: number
+  viewportHeight?: number
+  assetBodyRef?: Ref<HTMLDivElement>
 }
 
 function VideoListThumbnail({ url, fallback, enabled }: { url: string; fallback?: string; enabled: boolean }) {
@@ -39,7 +46,7 @@ function VideoListThumbnail({ url, fallback, enabled }: { url: string; fallback?
     return () => observer.disconnect()
   }, [enabled])
   const thumbnail = useVideoThumbnail(url, { enabled: enabled && visible, fallback })
-  return <div ref={ref} className="h-full w-full">{thumbnail && <img src={thumbnail} alt="" className="h-full w-full object-cover" />}</div>
+  return <div ref={ref} className="h-full w-full">{thumbnail && <img src={thumbnail} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />}</div>
 }
 
 function assetName(asset: Asset) {
@@ -53,7 +60,7 @@ function resolutionHeight(resolution?: string) {
 
 export function GalleryAssetList({
   assets,
-  selectedAssetIds = new Set(),
+  selectedAssetIds = EMPTY_SET,
   multiSelectMode = false,
   onToggleSelection,
   getAssetColorLabel,
@@ -65,6 +72,9 @@ export function GalleryAssetList({
   onAssetDragStart,
   renderActions,
   actionsWidthClass = 'w-6',
+  scrollTop = 0,
+  viewportHeight = 0,
+  assetBodyRef,
 }: GalleryAssetListProps) {
   const [sortColumn, setSortColumn] = useState<SortColumn>('name')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
@@ -88,6 +98,15 @@ export function GalleryAssetList({
       }
     })
   }, [assets, getAssetColorLabel, sortColumn, sortDirection])
+  const range = getAssetLibraryVirtualRange(
+    sortedAssets.length,
+    LIST_ROW_HEIGHT,
+    scrollTop,
+    viewportHeight,
+  )
+  const virtualAssets = viewportHeight > 0
+    ? sortedAssets.slice(range.start, range.end)
+    : sortedAssets
 
   const toggleSort = (column: SortColumn) => {
     if (column === sortColumn) {
@@ -132,7 +151,8 @@ export function GalleryAssetList({
         <div className={`${actionsWidthClass} shrink-0`} />
       </div>
 
-      {sortedAssets.map((asset) => {
+      <div ref={assetBodyRef} className="relative" style={{ height: `${sortedAssets.length * LIST_ROW_HEIGHT}px` }}>
+      {virtualAssets.map((asset, index) => {
         const color = getAssetColorLabel?.(asset)
         const thumbnailUrl = getThumbnailUrl?.(asset) || asset.thumbnail
         return (
@@ -163,6 +183,7 @@ export function GalleryAssetList({
                 ? 'bg-blue-600/20 ring-1 ring-blue-500/50'
                 : 'hover:bg-zinc-800/60'
             }`}
+            style={{ position: 'absolute', top: `${(range.start + index) * LIST_ROW_HEIGHT}px`, left: 0, right: 0, height: `${LIST_ROW_HEIGHT - 2}px` }}
           >
             {color ? (
               <div className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color.color }} />
@@ -177,7 +198,7 @@ export function GalleryAssetList({
               ) : asset.type === 'adjustment' ? (
                 <div className="flex h-full w-full items-center justify-center bg-blue-900/30"><Layers className="h-2.5 w-2.5 text-blue-400" /></div>
               ) : asset.url ? (
-                <img src={asset.url} alt="" className="h-full w-full object-cover" />
+                <img src={asset.url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
               ) : (
                 <div className="flex h-full w-full items-center justify-center"><Image className="h-2.5 w-2.5 text-zinc-500" /></div>
               )}
@@ -199,6 +220,7 @@ export function GalleryAssetList({
           </div>
         )
       })}
+      </div>
     </div>
   )
 }

@@ -16,6 +16,16 @@ Product principles:
 Current integration baseline: `dev`.
 
 ## Recent issues
+- [DONE] #0643 AIVS-025 virtual-body measurement effect references displayAssets before declaration, breaking GalleryAssetLibrary renders. [frontend/components/GalleryAssetLibrary.tsx:409] -> Virtual-body measurement no longer references declarations before initialization; Gallery tests and strict TypeScript pass. [frontend/components/GalleryAssetLibrary.tsx] (fixed)
+  - Partial attempt: Removed early displayAssets dependency so virtual-body measurement runs only after component declarations initialize. [frontend/components/GalleryAssetLibrary.tsx]
+- [DONE] #0642 AIVS-025 leading content and list header are omitted from virtual scroll coordinates, causing asset rows to disappear after scrolling. [frontend/components/GalleryAssetLibrary.tsx; frontend/components/GalleryAssetList.tsx] -> Leading content retains grid/list layout and virtual ranges now use scroll position relative to each asset body; focused Gallery tests pass. [frontend/components/GalleryAssetLibrary.tsx; frontend/components/GalleryAssetList.tsx] (fixed)
+  - Partial attempt: Restored grid/list leading-content layout and derive virtual scroll offset from each virtual asset body. [frontend/components/GalleryAssetLibrary.tsx; frontend/components/GalleryAssetList.tsx]
+- [DONE] #0641 AIVS-025 Gallery virtualization assumes ResizeObserver exists, breaking jsdom and older renderer environments. [frontend/components/GalleryAssetLibrary.tsx:386] -> Gallery virtualization safely falls back when ResizeObserver is unavailable; focused Gallery tests pass. [frontend/components/GalleryAssetLibrary.tsx] (fixed)
+  - Partial attempt: Added ResizeObserver capability guard and deterministic initial scroll viewport fallback for unmeasured/jsdom surfaces. [frontend/components/GalleryAssetLibrary.tsx]
+- [DONE] #0640 AIVS-025 virtual range can return start beyond item count after a filtered collection shrinks. [frontend/components/asset-library-virtual.ts] -> Virtual range clamps stale scroll positions while retaining bounded end overscan; focused tests pass. [frontend/components/asset-library-virtual.ts] (fixed)
+  - Partial attempt: Clamped first visible row to item count so post-filter scroll positions produce an empty valid range. [frontend/components/asset-library-virtual.ts]
+  - Failed attempt: Range test still failed because expected empty tail discarded valid overscan rows; implementation correctly returns final overscan window. [frontend/components/asset-library-virtual.test.ts:14]
+  - Partial attempt: Corrected tail-range expectation to retain three overscan rows at the collection end. [frontend/components/asset-library-virtual.test.ts]
 - [DONE] #0639 AIVS-024 projectmem precheck_file call used unsupported path field; tool requires file_path. [projectmem precheck / audit documentation] -> Projectmem precheck completed with correct file_path argument before AIVS-024 audit documentation update. [projectmem precheck / audit documentation] (fixed)
   - Failed attempt: Called precheck_file with path instead of required file_path; validation rejected before file inspection. [projectmem precheck / audit documentation]
 - [DONE] #0638 AIVS-024 VideoThumbnailCard starts shared thumbnail decode for offscreen take cards because workspace enabled is not combined with card visibility. [frontend/views/editor/VideoThumbnailCard.tsx] -> VideoThumbnailCard acquires generated thumbnails only while enabled and intersecting; focused visibility test passes. [frontend/views/editor/VideoThumbnailCard.tsx] (fixed)
@@ -1440,6 +1450,7 @@ Current integration baseline: `dev`.
 - AIVS-023 converts large/user-visible Electron media reads, writes, imports, moves, searches, existence checks, and deletes to fs/promises while retaining synchronous canonical containment metadata in the hardened path-validation boundary. [electron IPC and project asset I/O]
 - AIVS-023 centralizes ElectronAPI in shared/electron-api.ts and returns typed Uint8Array media bytes; renderer copies exact backing-buffer range through one helper. [shared/electron-api.ts]
 - AIVS-024 uses two direct bounded renderer services: shared AudioContext/audio-envelope cache and thumbnail blob-URL cache; consumers request enabled URL results rather than retain project-wide maps. [frontend/lib/audio-decode-service.ts]
+- AIVS-025 virtualizes Asset Library in fixed rows with three-row overscan; leading content remains outside virtual asset height and marquee motion writes only a ref-backed overlay. [frontend/components/asset-library-virtual.ts]
 
 ## Notes
 - AIVS-019 measured Home static renderer closure fell from 1,084.00 kB raw / 284.22 kB gzip to 307.67 kB raw / 93.66 kB gzip / 80.97 kB brotli; structural bundle report is `pnpm bundle:report`. [docs/PERFORMANCE_BASELINES.md]

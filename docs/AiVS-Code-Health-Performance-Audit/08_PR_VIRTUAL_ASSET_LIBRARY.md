@@ -1,15 +1,21 @@
 ---
-suggested_backlog_id: AIVS-023
+suggested_backlog_id: AIVS-025
 title: Virtualize the Asset Library and eliminate eager media elements
-status: Draft
+status: Implemented
 priority: high
 type: performance
-baseline_commit: c405f8224a8a510140591a9b76a568f3a78b49ad
+baseline_commit: c952bd7
 dependencies:
-  - AIVS-022
+  - AIVS-024
 ---
 
 # PR 08 — Virtualize the Asset Library and eliminate eager media elements
+
+## Implementation result
+
+Implemented by AIVS-025 with Asset Library-specific fixed-row virtualization and three-row overscan; no dependency or general virtual-scroll framework was added. Grid and list ranges use scroll positions relative to their asset bodies so Quick Gen leading content and the sticky list header remain outside virtual-row coordinates. Marquee geometry now updates through one animation-frame DOM write and commits selection only on pointer-up.
+
+The deterministic 1,000-asset grid fixture mounts 44 cards in the standard sidebar calculation, and grid/list component probes remain below 200 mounted cards. Seven focused Vitest cases, strict TypeScript, production renderer/Electron/preload build, diff check, and independent `ship` review passed. Native Electron scroll/resize and leading-content visual smoke remains a manual validation boundary.
 
 ## Pull request intent
 
