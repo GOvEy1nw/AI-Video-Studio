@@ -1,11 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { Asset, Project } from "../../../types/project";
+import type { Asset } from "../../../types/project";
 import { useGenSpaceGallery } from "./useGenSpaceGallery";
-
-vi.mock("../../../contexts/ProjectContext", () => ({
-  useProjects: () => null,
-}));
 
 vi.mock("../../../hooks/use-asset-deletion", () => ({
   useAssetDeletion: ({
@@ -34,20 +30,14 @@ const asset: Asset = {
   resolution: "512 x 512",
   createdAt: 1_700_000_000_000,
 };
-
-const project: Project = {
-  id: "project-a",
-  name: "Test project",
-  createdAt: 1_700_000_000_000,
-  updatedAt: 1_700_000_000_000,
-  assets: [asset],
-  timelines: [],
-};
+const assets = [asset];
 
 function props(isGenerating: boolean) {
   return {
-    currentProject: project,
-    currentProjectId: project.id,
+    assets,
+    assetBins: [],
+    assetBinColors: {},
+    currentProjectId: "project-a",
     isActive: true,
     isGenerating,
     addAsset: vi.fn(() => asset),

@@ -42,7 +42,13 @@ import {
   LayoutGrid,
   PanelRight,
 } from "lucide-react";
-import { useProjects } from "../contexts/ProjectContext";
+import {
+  useEditorTimelines,
+  useGenSpaceHandoffs,
+  useProjectAssets,
+  useProjectMeta,
+  useProjectNavigation,
+} from "../contexts/ProjectContext";
 import { useKeyboardShortcuts } from "../contexts/KeyboardShortcutsContext";
 import { useGeneration } from "../hooks/use-generation";
 import { Button } from "../components/ui/button";
@@ -133,9 +139,12 @@ const TRACK_FWD_ONE_SVG = `<svg xmlns='http://www.w3.org/2000/svg' width='24' he
 const TRACK_FWD_ONE_CURSOR = `url("data:image/svg+xml,${encodeURIComponent(TRACK_FWD_ONE_SVG)}") 12 12, e-resize`;
 
 export function VideoEditor({ isActive }: { isActive: boolean }) {
+  const { currentProjectMeta } = useProjectMeta();
+  const { currentProjectId, setCurrentTab } = useProjectNavigation();
   const {
-    currentProject,
-    currentProjectId,
+    assets,
+    assetBins,
+    assetBinColors,
     addAsset,
     deleteAsset,
     updateAsset,
@@ -146,21 +155,25 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
     renameAssetBin,
     deleteAssetBin,
     setAssetBinColor,
+  } = useProjectAssets();
+  const {
+    timelines,
+    activeTimelineId: persistedActiveTimelineId,
     addTimeline,
     deleteTimeline,
     renameTimeline,
     duplicateTimeline,
     setActiveTimeline,
     updateTimeline,
-    getActiveTimeline,
-    setCurrentTab,
+  } = useEditorTimelines();
+  const {
     setGenSpaceEditImageUrl,
     setGenSpaceEditMode,
     setGenSpaceAudioUrl,
     setGenSpaceRetakeSource,
     pendingRetakeUpdate,
     setPendingRetakeUpdate,
-  } = useProjects();
+  } = useGenSpaceHandoffs();
 
   const {
     activeLayout: kbLayout,
@@ -190,7 +203,7 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
 
   // Get the active timeline from context
   const activeTimeline = currentProjectId
-    ? getActiveTimeline(currentProjectId)
+    ? timelines.find((timeline) => timeline.id === persistedActiveTimelineId) || timelines[0] || null
     : null;
 
   // Local working copies of clips and tracks (for responsive editing without saving on every frame)
@@ -632,8 +645,6 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [showLayoutMenu]);
 
-  const assets = currentProject?.assets || [];
-  const timelines = currentProject?.timelines || [];
 
   // Undo/redo/clipboard (extracted hook)
   const {
@@ -852,8 +863,8 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
   }, [assets]);
 
   const bins = useMemo(
-    () => collectGalleryBins(assets, currentProject?.assetBins),
-    [assets, currentProject?.assetBins],
+    () => collectGalleryBins(assets, assetBins),
+    [assetBins, assets],
   );
 
   // Filter assets by type + bin
@@ -2431,7 +2442,7 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
           selectedBin={selectedBin}
           setSelectedBin={setSelectedBin}
           bins={bins}
-          binColors={currentProject?.assetBinColors || {}}
+          binColors={assetBinColors}
           filteredAssets={filteredAssets}
           galleryFilter={galleryFilter}
           setGalleryFilter={setGalleryFilter}
@@ -5523,7 +5534,7 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
                 assetContextMenuRef={assetContextMenuRef}
                 assets={assets}
                 bins={bins}
-                binColors={currentProject?.assetBinColors}
+                binColors={assetBinColors}
                 isRegenerating={isRegenerating}
                 regeneratingAssetId={regeneratingAssetId}
                 currentProjectId={currentProjectId}
@@ -5691,7 +5702,7 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
           clips={clips}
           tracks={tracks}
           timeline={activeTimeline}
-          projectName={currentProject?.name || "Untitled"}
+          projectName={currentProjectMeta?.name || "Untitled"}
         />
 
         <ImportTimelineModal

@@ -6,7 +6,10 @@ import {
   Trash2,
   Pencil,
 } from "lucide-react";
-import { useProjects } from "../contexts/ProjectContext";
+import {
+  useProjectList,
+  useProjectNavigation,
+} from "../contexts/ProjectContext";
 import { AivsLogo } from "../components/AivsLogo";
 import { Button } from "../components/ui/button";
 import { FloatingMenu } from "../components/FloatingMenu";
@@ -135,13 +138,9 @@ function ProjectCard({
 }
 
 export function Home() {
-  const {
-    projects,
-    createProject,
-    deleteProject,
-    renameProject,
-    openProject,
-  } = useProjects();
+  const { projects, createProject, deleteProject, renameProject } =
+    useProjectList();
+  const { openProject } = useProjectNavigation();
   const [isCreating, setIsCreating] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [renamingId, setRenamingId] = useState<string | null>(null);

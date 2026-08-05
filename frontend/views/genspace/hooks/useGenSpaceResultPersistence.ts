@@ -5,8 +5,11 @@ import {
   type MutableRefObject,
   type SetStateAction,
 } from "react";
-import { useProjects } from "../../../contexts/ProjectContext";
-import type { GenSpaceRetakeSource } from "../../../contexts/ProjectContext";
+import type {
+  GenSpaceRetakeSource,
+  GenSpaceHandoffsContextType,
+  ProjectAssetsContextType,
+} from "../../../contexts/ProjectContext";
 import {
   generatedPathToFileUrl,
   type GenerateMusicResult,
@@ -30,7 +33,7 @@ import type {
   VideoSubmissionSnapshot,
 } from "../types";
 
-type Projects = ReturnType<typeof useProjects>;
+type Projects = ProjectAssetsContextType;
 
 export function useGenSpaceResultPersistence({
   videoUrl,
@@ -43,7 +46,7 @@ export function useGenSpaceResultPersistence({
   retakeResult,
   isRetaking,
   retakeSubmissionRef,
-  projects,
+  getProjectAssets,
   activeRetakeSource,
   setActiveRetakeSource,
   addTakeToAsset,
@@ -66,11 +69,11 @@ export function useGenSpaceResultPersistence({
   retakeResult: RetakeResult | null;
   isRetaking: boolean;
   retakeSubmissionRef: MutableRefObject<RetakeSubmissionSnapshot | null>;
-  projects: Projects["projects"];
+  getProjectAssets: Projects["getProjectAssets"];
   activeRetakeSource: GenSpaceRetakeSource | null;
   setActiveRetakeSource: Dispatch<SetStateAction<GenSpaceRetakeSource | null>>;
   addTakeToAsset: Projects["addTakeToAsset"];
-  setPendingRetakeUpdate: Projects["setPendingRetakeUpdate"];
+  setPendingRetakeUpdate: GenSpaceHandoffsContextType["setPendingRetakeUpdate"];
   resetRetake: () => void;
   imageUrls: string[];
   imagePaths: string[];
@@ -246,9 +249,7 @@ export function useGenSpaceResultPersistence({
         const finalPath = copied?.path ?? retakeResult.videoPath;
         const finalUrl = copied?.url ?? retakeResult.videoUrl;
         const sourceAsset = activeRetakeSource?.assetId
-          ? projects
-              .find(({ id }) => id === submission.projectId)
-              ?.assets.find(
+          ? getProjectAssets(submission.projectId).find(
               ({ id }) => id === activeRetakeSource.assetId,
             )
           : undefined;
@@ -293,7 +294,7 @@ export function useGenSpaceResultPersistence({
     addTakeToAsset,
     isRetaking,
     onAssetAdded,
-    projects,
+    getProjectAssets,
     resetRetake,
     retakeResult,
     retakeSubmissionRef,

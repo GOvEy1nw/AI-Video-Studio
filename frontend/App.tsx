@@ -6,7 +6,7 @@ import {
   FileText,
   RefreshCw,
 } from "lucide-react";
-import { ProjectProvider, useProjects } from "./contexts/ProjectContext";
+import { ProjectProvider, useProjectNavigation } from "./contexts/ProjectContext";
 import { KeyboardShortcutsProvider } from "./contexts/KeyboardShortcutsContext";
 import { AppSettingsProvider } from "./contexts/AppSettingsContext";
 import { BackendLifecycleProvider } from "./contexts/BackendLifecycleContext";
@@ -50,7 +50,7 @@ function LoadingPanel() {
 }
 
 function AppContent() {
-  const { currentView } = useProjects();
+  const { currentView } = useProjectNavigation();
   const { processStatus, checkHealth, restart } = useBackend();
 
   const [pythonReady, setPythonReady] = useState<boolean | null>(null);
