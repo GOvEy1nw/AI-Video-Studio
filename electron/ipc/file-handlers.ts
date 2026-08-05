@@ -1,6 +1,7 @@
 import { app, ipcMain, dialog, type OpenDialogOptions } from 'electron'
 import path from 'path'
 import fs from 'fs'
+import * as fsPromises from 'fs/promises'
 import os from 'os'
 import { randomUUID } from 'crypto'
 import { getAllowedRoots } from '../config'
@@ -27,6 +28,7 @@ import {
 } from '../dialog-paths'
 import { importProjectAsset, projectAssetCategoryDir, type DuplicateStrategy } from '../lib/project-asset-import'
 import { deleteProjectAssetFiles } from '../lib/project-asset-delete'
+import { searchDirectoryForFiles } from '../lib/directory-search'
 
 const MIME_TYPES: Record<string, string> = {
   '.png': 'image/png',
@@ -46,42 +48,11 @@ const MIME_TYPES: Record<string, string> = {
   '.mov': 'video/quicktime',
 }
 
-function readLocalFileAsBase64(filePath: string): { data: string; mimeType: string } {
-  const data = fs.readFileSync(filePath)
-  const base64 = data.toString('base64')
+async function readLocalFileBytes(filePath: string): Promise<{ bytes: Uint8Array; mimeType: string }> {
+  const data = await fsPromises.readFile(filePath)
   const ext = path.extname(filePath).toLowerCase()
   const mimeType = MIME_TYPES[ext] || 'application/octet-stream'
-  return { data: base64, mimeType }
-}
-
-function searchDirectoryForFiles(dir: string, filenames: string[]): Record<string, string> {
-  const results: Record<string, string> = {}
-  const remaining = new Set(filenames.map(f => f.toLowerCase()))
-
-  const walk = (currentDir: string, depth: number) => {
-    if (remaining.size === 0 || depth > 10) return // max depth to avoid infinite loops
-    try {
-      const entries = fs.readdirSync(currentDir, { withFileTypes: true })
-      for (const entry of entries) {
-        if (remaining.size === 0) break
-        const fullPath = path.join(currentDir, entry.name)
-        if (entry.isFile()) {
-          const lower = entry.name.toLowerCase()
-          if (remaining.has(lower)) {
-            results[lower] = fullPath
-            remaining.delete(lower)
-          }
-        } else if (entry.isDirectory() && !entry.name.startsWith('.')) {
-          walk(fullPath, depth + 1)
-        }
-      }
-    } catch {
-      // Skip directories we can't read (permissions, etc.)
-    }
-  }
-
-  walk(dir, 0)
-  return results
+  return { bytes: new Uint8Array(data.buffer, data.byteOffset, data.byteLength), mimeType }
 }
 
 function getDialogFallbackDirectory(): string {
@@ -131,15 +102,11 @@ export function registerFileHandlers(): void {
     shell.showItemInFolder(validatePath(filePath, getAllowedRoots()))
   })
 
-  ipcMain.handle('read-local-file', async (_event, filePath: string) => {
+  ipcMain.handle('read-local-file-bytes', async (_event, filePath: string) => {
     try {
       const normalizedPath = validatePath(filePath, getAllowedRoots())
 
-      if (!fs.existsSync(normalizedPath)) {
-        throw new Error(`File not found: ${normalizedPath}`)
-      }
-
-      return readLocalFileAsBase64(normalizedPath)
+      return await readLocalFileBytes(normalizedPath)
     } catch (error) {
       logger.error( `Error reading local file: ${error}`)
       throw error
@@ -199,9 +166,9 @@ export function registerFileHandlers(): void {
     try {
       const normalizedPath = validateExactWritePath(filePath)
       if (encoding === 'base64') {
-        fs.writeFileSync(normalizedPath, Buffer.from(data, 'base64'))
+        await fsPromises.writeFile(normalizedPath, Buffer.from(data, 'base64'))
       } else {
-        fs.writeFileSync(normalizedPath, data, 'utf-8')
+        await fsPromises.writeFile(normalizedPath, data, 'utf-8')
       }
       return { success: true, path: normalizedPath }
     } catch (error) {
@@ -213,7 +180,7 @@ export function registerFileHandlers(): void {
   ipcMain.handle('save-binary-file', async (_event, filePath: string, data: ArrayBuffer) => {
     try {
       const normalizedPath = validateExactWritePath(filePath)
-      fs.writeFileSync(normalizedPath, Buffer.from(data))
+      await fsPromises.writeFile(normalizedPath, Buffer.from(data))
       return { success: true, path: normalizedPath }
     } catch (error) {
       logger.error( `Error saving binary file: ${error}`)
@@ -245,7 +212,7 @@ export function registerFileHandlers(): void {
   })
 
   ipcMain.handle('search-directory-for-files', async (_event, dir: string, filenames: string[]) => {
-    return searchDirectoryForFiles(validatePath(dir, getAllowedRoots()), filenames)
+    return await searchDirectoryForFiles(validatePath(dir, getAllowedRoots()), filenames)
   })
 
   ipcMain.handle('recover-persisted-project-files', async (_event, candidates: string[]) => {
@@ -284,7 +251,7 @@ export function registerFileHandlers(): void {
     const safeExtension = /^\.[a-zA-Z0-9]+$/.test(extension) ? extension : '.bin'
     const temporaryPath = path.join(os.tmpdir(), `aivs-${randomUUID()}${safeExtension}`)
     const normalizedPath = canonicalizeForContainment(temporaryPath)
-    fs.writeFileSync(normalizedPath, encoding === 'base64' ? Buffer.from(data, 'base64') : data, encoding === 'base64' ? undefined : 'utf8')
+    await fsPromises.writeFile(normalizedPath, encoding === 'base64' ? Buffer.from(data, 'base64') : data, encoding === 'base64' ? undefined : 'utf8')
     approveExactFilePath(normalizedPath)
     return normalizedPath
   })
@@ -294,7 +261,7 @@ export function registerFileHandlers(): void {
       const resolvedSrc = validatePath(srcPath, getAllowedRoots())
       const assetsRoot = getProjectAssetsPath()
       const destDir = projectAssetCategoryDir(assetsRoot, projectId, 'generated')
-      const imported = importProjectAsset(resolvedSrc, destDir, 'overwrite', 'move')
+      const imported = await importProjectAsset(resolvedSrc, destDir, 'overwrite', 'move')
       return {
         success: true,
         path: imported.destPath,
@@ -320,7 +287,7 @@ export function registerFileHandlers(): void {
       const assetsRoot = getProjectAssetsPath()
       const destDir = projectAssetCategoryDir(assetsRoot, options.projectId, 'uploads')
       const strategy: DuplicateStrategy = options.onDuplicate ?? 'suffix'
-      const imported = importProjectAsset(resolvedSrc, destDir, strategy, 'copy')
+      const imported = await importProjectAsset(resolvedSrc, destDir, strategy, 'copy')
       return {
         success: true,
         path: imported.destPath,
@@ -396,7 +363,8 @@ export function registerFileHandlers(): void {
     const results: Record<string, boolean> = {}
     for (const p of filePaths) {
       try {
-        results[p] = fs.existsSync(validatePath(p, getAllowedRoots()))
+        await fsPromises.access(validatePath(p, getAllowedRoots()))
+        results[p] = true
       } catch {
         results[p] = false
       }

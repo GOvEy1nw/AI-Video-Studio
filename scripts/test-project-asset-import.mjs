@@ -4,56 +4,64 @@ import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createRequire } from 'node:module'
+import { build } from 'vite'
 
 const require = createRequire(import.meta.url)
-const distRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'dist-electron')
+const projectRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 
-function loadProjectAssetImport() {
-  const candidates = [
-    path.join(distRoot, 'lib', 'project-asset-import.js'),
-    path.join(distRoot, 'electron', 'lib', 'project-asset-import.js'),
-  ]
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) {
-      return require(candidate)
-    }
-  }
-  throw new Error(
-    `Standalone production Electron module build required: expected ${candidates.join(' or ')}`,
-  )
+async function loadProjectAssetImport() {
+  const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aivs-project-asset-build-'))
+  await build({
+    configFile: false,
+    build: {
+      ssr: true,
+      emptyOutDir: false,
+      lib: {
+        entry: path.join(projectRoot, 'electron', 'lib', 'project-asset-import.ts'),
+        formats: ['cjs'],
+        fileName: () => 'project-asset-import.js',
+      },
+      outDir: outputDir,
+      rollupOptions: { external: ['electron'] },
+    },
+  })
+  return { mod: require(path.join(outputDir, 'project-asset-import.cjs')), outputDir }
 }
 
-const mod = loadProjectAssetImport()
+const { mod, outputDir } = await loadProjectAssetImport()
 
 const { buildSuffixedFileName, resolveImportDestPlan, importProjectAsset } = mod
 assert.equal(buildSuffixedFileName('clip.mp4', 2), 'clip (2).mp4')
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aivs-import-test-'))
 try {
-  const srcPath = path.join(tmpDir, 'sample.mp4')
+  const sourceDir = path.join(tmpDir, 'source')
+  fs.mkdirSync(sourceDir)
+  const srcPath = path.join(sourceDir, 'sample.mp4')
   fs.writeFileSync(srcPath, 'video-bytes')
 
-  const first = resolveImportDestPlan(tmpDir, srcPath, 'sample.mp4', 'suffix')
+  const first = await resolveImportDestPlan(tmpDir, srcPath, 'sample.mp4', 'suffix')
   assert.equal(first.action, 'copy')
   assert.equal(first.fileName, 'sample.mp4')
 
   fs.copyFileSync(srcPath, path.join(tmpDir, 'sample.mp4'))
-  const second = resolveImportDestPlan(tmpDir, srcPath, 'sample.mp4', 'suffix')
+  const second = await resolveImportDestPlan(tmpDir, srcPath, 'sample.mp4', 'suffix')
   assert.equal(second.action, 'copy')
   assert.equal(second.fileName, 'sample (2).mp4')
 
-  const reuse = resolveImportDestPlan(tmpDir, srcPath, 'sample.mp4', 'reuse')
+  const reuse = await resolveImportDestPlan(tmpDir, srcPath, 'sample.mp4', 'reuse')
   assert.equal(reuse.action, 'reuse')
 
-  const prompt = resolveImportDestPlan(tmpDir, srcPath, 'sample.mp4', 'prompt')
+  const prompt = await resolveImportDestPlan(tmpDir, srcPath, 'sample.mp4', 'prompt')
   assert.equal(prompt.action, 'needs-choice')
 
-  const imported = importProjectAsset(srcPath, tmpDir, 'suffix')
-  assert.equal(imported.fileName, 'sample (3).mp4')
+  const imported = await importProjectAsset(srcPath, tmpDir, 'suffix')
+  assert.equal(imported.fileName, 'sample (2).mp4')
   assert.equal(imported.reusedExisting, false)
   assert.equal(fs.existsSync(imported.destPath), true)
 
   console.log('project-asset-import dist tests passed')
 } finally {
   fs.rmSync(tmpDir, { recursive: true, force: true })
+  fs.rmSync(outputDir, { recursive: true, force: true })
 }

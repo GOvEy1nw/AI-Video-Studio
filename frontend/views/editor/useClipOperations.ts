@@ -4,6 +4,7 @@ import { DEFAULT_COLOR_CORRECTION, DEFAULT_LETTERBOX, EFFECT_DEFINITIONS, DEFAUL
 import type { ParsedTimeline } from '../../lib/timeline-import'
 import { exportFcp7Xml } from '../../lib/timeline-import'
 import { getNativeFilePath } from '../../lib/native-file-path'
+import { readLocalMediaArrayBuffer } from '../../lib/local-media-bytes'
 import { resolveOverlaps, DEFAULT_DISSOLVE_DURATION } from './video-editor-utils'
 
 interface UseClipOperationsParams {
@@ -210,19 +211,7 @@ export function useClipOperations(params: UseClipOperationsParams) {
   const getMediaDuration = async (url: string, isAudio = false): Promise<number> => {
     if (isAudio) {
       try {
-        let arrayBuffer: ArrayBuffer
-        if (url.startsWith('file://') && window.electronAPI?.readLocalFile) {
-          const { data } = await window.electronAPI.readLocalFile(url)
-          const binaryString = atob(data)
-          const bytes = new Uint8Array(binaryString.length)
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i)
-          }
-          arrayBuffer = bytes.buffer
-        } else {
-          const response = await fetch(url)
-          arrayBuffer = await response.arrayBuffer()
-        }
+        const arrayBuffer = await readLocalMediaArrayBuffer(url)
         const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
         const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer)
         await audioCtx.close()

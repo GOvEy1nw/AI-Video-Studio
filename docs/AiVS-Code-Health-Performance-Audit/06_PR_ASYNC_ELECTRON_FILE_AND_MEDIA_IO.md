@@ -1,13 +1,13 @@
 ---
-suggested_backlog_id: AIVS-021
+suggested_backlog_id: AIVS-023
 title: Remove blocking Electron media and file I/O and base64 transport
-status: Draft
+status: Implemented
 priority: high
 type: enhancement
-baseline_commit: c405f8224a8a510140591a9b76a568f3a78b49ad
+baseline_commit: 50e76db
 dependencies:
-  - AIVS-016
-  - AIVS-028
+  - AIVS-017
+  - AIVS-018
 ---
 
 # PR 06 — Remove blocking Electron media/file I/O and base64 transport
@@ -18,7 +18,7 @@ Keep Electron’s main event loop responsive during media reads, imports, copies
 
 This PR is about AiVS application responsiveness; it does not change generation or WanGP.
 
-## Current blocking work
+## Baseline blocking work
 
 `electron/ipc/file-handlers.ts` and `electron/lib/project-asset-import.ts` currently use:
 
@@ -34,6 +34,16 @@ This PR is about AiVS application responsiveness; it does not change generation 
 An `ipcMain.handle` function being `async` does not make synchronous filesystem calls non-blocking.
 
 Renderer media code then runs `atob` and creates another byte array before decode.
+
+## Implemented outcome
+
+- `shared/electron-api.ts` is the single preload/renderer API contract.
+- Local media reads return `Uint8Array` bytes through IPC; renderer consumers use an exact backing-range `ArrayBuffer`.
+- Project imports, generated-asset moves, directory searches, existence checks, media writes, and deletion preflight use asynchronous filesystem APIs.
+- Per-destination import serialization preserves duplicate behavior under concurrent requests; asynchronous search preserves prior depth-first duplicate selection.
+- Synchronous canonical containment remains inside the hardened path-validation boundary; no renderer filesystem authority was broadened.
+- Focused path/import/byte tests, strict TypeScript, production renderer/Electron/preload build, and the production-module import test pass.
+- A 256 MiB event-loop benchmark measured maximum heartbeat gaps of 68.4 ms for the previous synchronous copy shape, 19.3 ms for production async import, and 15.7 ms for async read. Native window interaction smoke was inconclusive because the managed agent had no desktop-control surface.
 
 ## Design constraints
 
@@ -147,7 +157,7 @@ Overwrite semantics must remove/replace safely without leaving a partial destina
 
 ### 4. Make directory search asynchronous and bounded
 
-Replace recursive `readdirSync` with an iterative asynchronous queue:
+Replace recursive `readdirSync` with asynchronous depth-first traversal that preserves the original immediate-descent entry order:
 
 - `fs.readdir(dir, { withFileTypes: true })`;
 - maximum depth retained;

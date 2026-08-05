@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { Music } from "lucide-react";
 import { logger } from "../lib/logger";
+import { readLocalMediaArrayBuffer } from "../lib/local-media-bytes";
 
 interface AudioClipInfo {
   url: string;
@@ -20,16 +21,6 @@ export const waveformCache = new Map<string, Float32Array>();
 const MAX_WAVEFORM_CACHE_ENTRIES = 64;
 const pendingDecodes = new Set<string>();
 
-// Convert a base64 string to an ArrayBuffer
-function base64ToArrayBuffer(base64: string): ArrayBuffer {
-  const binaryString = atob(base64);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return bytes.buffer;
-}
-
 // Decode audio file and extract amplitude envelope
 export async function computeWaveform(
   url: string,
@@ -46,18 +37,7 @@ export async function computeWaveform(
 
   pendingDecodes.add(url);
   try {
-    let arrayBuffer: ArrayBuffer;
-
-    if (
-      url.startsWith("file://") &&
-      (window as any).electronAPI?.readLocalFile
-    ) {
-      const { data } = await (window as any).electronAPI.readLocalFile(url);
-      arrayBuffer = base64ToArrayBuffer(data);
-    } else {
-      const response = await fetch(url);
-      arrayBuffer = await response.arrayBuffer();
-    }
+    const arrayBuffer = await readLocalMediaArrayBuffer(url);
 
     const audioCtx = new (
       window.AudioContext || (window as any).webkitAudioContext
