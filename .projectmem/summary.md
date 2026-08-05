@@ -1413,7 +1413,6 @@ Current integration baseline: `dev`.
 - AIVS-023 centralizes ElectronAPI in shared/electron-api.ts and returns typed Uint8Array media bytes; renderer copies exact backing-buffer range through one helper. [shared/electron-api.ts]
 
 ## Notes
-- gotcha: Electron appData isolation needs existing LOCALAPPDATA and APPDATA directories while preserving USERPROFILE/HOMEDRIVE/HOMEPATH; overriding Windows profile breaks app.getPath('appData'). [native Electron smoke environment]
 - AIVS-019 measured Home static renderer closure fell from 1,084.00 kB raw / 284.22 kB gzip to 307.67 kB raw / 93.66 kB gzip / 80.97 kB brotli; structural bundle report is `pnpm bundle:report`. [docs/PERFORMANCE_BASELINES.md]
 - AIVS-019 user-approved completion committed as 86df2c3 (perf(renderer): lazy-load project workspaces) and pushed; clean local branch matches origin. [AIVS-019; codex/aivs-019-lazy-renderer]
 - AIVS-020 implementation in codex/aivs-020-shared-backend-lifecycle centralizes lifecycle/profile ownership; 161 frontend tests, strict TypeScript, production frontend/Electron build, diff check, and independent ship review pass. Native restart/model-pack IPC smoke remains unrun. [AIVS-020; frontend/contexts]
@@ -1423,6 +1422,7 @@ Current integration baseline: `dev`.
 - AIVS-030 fixes permanent model loading in development React Strict Mode by restoring ModelProfilesProvider mountedRef in effect setup; task is Human Review in C:\tmp\AI-Video-Studio-AIVS-030 and remains uncommitted [AIVS-030]
 - User approved AIVS-030; committed 8bf108e, pushed codex/aivs-030-model-profiles-strictmode, merged into dev as e01f216, and pushed origin/dev. Local dev and origin/dev match; unrelated projectmem changes remain untouched. [AIVS-030 publish]
 - AIVS-022 auto-approved, committed as 78909de, pushed on codex/aivs-022-project-persistence, merged into dev as 9263393, and pushed; 175 frontend tests, TypeScript, production build, diff check, and final ship review passed [AIVS-022; project persistence]
+- AIVS-023 auto-approved, committed as 6b19332, pushed on codex/aivs-023-async-electron-io, merged into dev as 245e129, and pushed; 30 focused tests, TypeScript, production build, production import test, responsiveness benchmark, and ship review passed. [AIVS-023 publish]
 
 ## Key files
 - `LTX-2.3_Cinematic_hardcut.safetensors`
