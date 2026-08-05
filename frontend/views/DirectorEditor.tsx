@@ -6,7 +6,12 @@ import {
   useState,
   type MouseEvent,
 } from "react";
-import { useProjects } from "@/contexts/ProjectContext";
+import {
+  useDirectorTimelines,
+  useProjectAssets,
+  useProjectMeta,
+  useProjectNavigation,
+} from "@/contexts/ProjectContext";
 import { useVideoProfiles } from "@/hooks/use-image-profiles";
 import { createDirectorSequence } from "@/lib/director-timeline";
 import { DirectorSidebar } from "./director/DirectorSidebar";
@@ -54,9 +59,12 @@ function clamp(value: number, min: number, max: number) {
 }
 
 export function DirectorEditor({ isActive }: { isActive: boolean }) {
+  const { currentProjectMeta } = useProjectMeta();
+  const { currentProjectId } = useProjectNavigation();
   const {
-    currentProject,
-    currentProjectId,
+    assets,
+    assetBins,
+    assetBinColors,
     addAsset,
     updateAsset,
     addTakeToAsset,
@@ -67,13 +75,17 @@ export function DirectorEditor({ isActive }: { isActive: boolean }) {
     renameAssetBin,
     deleteAssetBin,
     setAssetBinColor,
+  } = useProjectAssets();
+  const {
+    directorTimelines: timelines,
+    activeDirectorTimelineId,
     addDirectorTimeline,
     deleteDirectorTimeline,
     renameDirectorTimeline,
     duplicateDirectorTimeline,
     setActiveDirectorTimeline,
     updateDirectorTimeline,
-  } = useProjects();
+  } = useDirectorTimelines();
   const { profiles } = useVideoProfiles();
   const [layout, setLayout] = useState(loadLayout);
   const [openTimelineIds, setOpenTimelineIds] = useState<Set<string>>(
@@ -84,10 +96,9 @@ export function DirectorEditor({ isActive }: { isActive: boolean }) {
     () => profiles.filter((profile) => profile.director.enabled),
     [profiles],
   );
-  const timelines = currentProject?.directorTimelines || [];
   const activeTimeline =
     timelines.find(
-      (timeline) => timeline.id === currentProject?.activeDirectorTimelineId,
+      (timeline) => timeline.id === activeDirectorTimelineId,
     ) ||
     timelines[0] ||
     null;
@@ -166,7 +177,7 @@ export function DirectorEditor({ isActive }: { isActive: boolean }) {
     [layout],
   );
 
-  if (!currentProject || !currentProjectId) return null;
+  if (!currentProjectMeta || !currentProjectId) return null;
 
   const addTimeline = () => {
     const profile = enabledProfiles[0];
@@ -198,9 +209,9 @@ export function DirectorEditor({ isActive }: { isActive: boolean }) {
         <DirectorSidebar
           isActive={isActive}
           projectId={currentProjectId}
-          assets={currentProject.assets}
-          assetBins={currentProject.assetBins || []}
-          assetBinColors={currentProject.assetBinColors || {}}
+          assets={assets}
+          assetBins={assetBins}
+          assetBinColors={assetBinColors}
           timelines={timelines}
           activeTimelineId={activeTimeline?.id}
           assetsHeight={layout.assetsHeight}
@@ -267,7 +278,7 @@ export function DirectorEditor({ isActive }: { isActive: boolean }) {
         projectId={currentProjectId}
         timeline={activeTimeline}
         timelines={timelines}
-        assets={currentProject.assets}
+        assets={assets}
         updateDirectorTimeline={updateDirectorTimeline}
         addAsset={addAsset}
         updateAsset={updateAsset}

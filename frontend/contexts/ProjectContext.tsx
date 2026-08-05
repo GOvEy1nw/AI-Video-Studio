@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import type { Project, Asset, AssetTake, ViewType, ProjectTab, Timeline, DirectorTimelineDocument } from '../types/project'
 import { createDefaultTimeline } from '../types/project'
 import { recoverGenerationParamsMedia } from '../lib/apply-generation-params'
@@ -21,7 +21,7 @@ function createProjectId(name: string, createdAt: number, existingIds: Set<strin
   return id
 }
 
-interface ProjectContextType {
+export interface ProjectContextType {
   // Navigation
   currentView: ViewType
   setCurrentView: (view: ViewType) => void
@@ -89,6 +89,82 @@ interface ProjectContextType {
   setPendingRetakeUpdate: (update: PendingRetakeUpdate | null) => void
 }
 
+type ProjectMeta = Pick<
+  Project,
+  'id' | 'name' | 'createdAt' | 'thumbnail' | 'genSpaceSeedLocked' | 'genSpaceLockedSeed'
+>
+
+export type NavigationContextType = Pick<
+  ProjectContextType,
+  'currentView' | 'setCurrentView' | 'currentProjectId' | 'setCurrentProjectId' | 'currentTab' | 'setCurrentTab' | 'openProject' | 'goHome'
+>
+export type ProjectListContextType = Pick<
+  ProjectContextType,
+  'projects' | 'createProject' | 'deleteProject' | 'renameProject'
+>
+export type ProjectMetaContextType = {
+  currentProjectMeta: ProjectMeta | null
+  updateProjectGenSpaceSeed: ProjectContextType['updateProjectGenSpaceSeed']
+}
+export type ProjectAssetsContextType = Pick<
+  ProjectContextType,
+  | 'addAsset'
+  | 'deleteAsset'
+  | 'updateAsset'
+  | 'addTakeToAsset'
+  | 'deleteTakeFromAsset'
+  | 'setAssetActiveTake'
+  | 'toggleFavorite'
+  | 'createAssetBin'
+  | 'renameAssetBin'
+  | 'deleteAssetBin'
+  | 'setAssetBinColor'
+> & {
+  assets: Asset[]
+  assetBins: string[]
+  assetBinColors: Record<string, string>
+  getProjectAssets: (projectId: string) => Asset[]
+}
+export type EditorTimelinesContextType = Pick<
+  ProjectContextType,
+  | 'addTimeline'
+  | 'deleteTimeline'
+  | 'renameTimeline'
+  | 'duplicateTimeline'
+  | 'setActiveTimeline'
+  | 'updateTimeline'
+  | 'getActiveTimeline'
+> & {
+  timelines: Timeline[]
+  activeTimelineId: string | undefined
+}
+export type DirectorTimelinesContextType = Pick<
+  ProjectContextType,
+  | 'addDirectorTimeline'
+  | 'deleteDirectorTimeline'
+  | 'renameDirectorTimeline'
+  | 'duplicateDirectorTimeline'
+  | 'setActiveDirectorTimeline'
+  | 'updateDirectorTimeline'
+  | 'getActiveDirectorTimeline'
+> & {
+  directorTimelines: DirectorTimelineDocument[]
+  activeDirectorTimelineId: string | undefined
+}
+export type GenSpaceHandoffsContextType = Pick<
+  ProjectContextType,
+  | 'genSpaceEditImageUrl'
+  | 'setGenSpaceEditImageUrl'
+  | 'genSpaceEditMode'
+  | 'setGenSpaceEditMode'
+  | 'genSpaceAudioUrl'
+  | 'setGenSpaceAudioUrl'
+  | 'genSpaceRetakeSource'
+  | 'setGenSpaceRetakeSource'
+  | 'pendingRetakeUpdate'
+  | 'setPendingRetakeUpdate'
+>
+
 export interface GenSpaceRetakeSource {
   videoUrl: string
   videoPath: string
@@ -105,6 +181,24 @@ export interface PendingRetakeUpdate {
 }
 
 const ProjectContext = createContext<ProjectContextType | null>(null)
+const NavigationContext = createContext<NavigationContextType | null>(null)
+const ProjectListContext = createContext<ProjectListContextType | null>(null)
+const ProjectMetaContext = createContext<ProjectMetaContextType | null>(null)
+const ProjectAssetsContext = createContext<ProjectAssetsContextType | null>(null)
+const EditorTimelinesContext = createContext<EditorTimelinesContextType | null>(null)
+const DirectorTimelinesContext = createContext<DirectorTimelinesContextType | null>(null)
+const GenSpaceHandoffsContext = createContext<GenSpaceHandoffsContextType | null>(null)
+
+const EMPTY_ASSETS: Asset[] = []
+const EMPTY_BINS: string[] = []
+const EMPTY_BIN_COLORS: Record<string, string> = {}
+const EMPTY_TIMELINES: Timeline[] = []
+const EMPTY_DIRECTOR_TIMELINES: DirectorTimelineDocument[] = []
+Object.freeze(EMPTY_ASSETS)
+Object.freeze(EMPTY_BINS)
+Object.freeze(EMPTY_BIN_COLORS)
+Object.freeze(EMPTY_TIMELINES)
+Object.freeze(EMPTY_DIRECTOR_TIMELINES)
 
 const STORAGE_KEY = 'ltx-projects'
 
@@ -269,6 +363,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const [genSpaceRetakeSource, setGenSpaceRetakeSource] = useState<GenSpaceRetakeSource | null>(null)
   const [pendingRetakeUpdate, setPendingRetakeUpdate] = useState<PendingRetakeUpdate | null>(null)
   const [projects, setProjects] = useState<Project[]>([])
+  const projectsRef = useRef(projects)
   const [recoveryRevision, setRecoveryRevision] = useState(0)
   const storageReadyRef = useRef(false)
   const persistedProjectsRef = useRef<Map<string, Project>>(new Map())
@@ -279,6 +374,10 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const recoveryProjectRef = useRef<string | null>(null)
   const recoveryInFlightRef = useRef<string | null>(null)
   const persistenceFailureReportedRef = useRef(false)
+
+  useEffect(() => {
+    projectsRef.current = projects
+  }, [projects])
 
   const reportPersistenceFailure = useCallback((error: unknown) => {
     const message = error instanceof Error ? error.message : String(error)
@@ -418,7 +517,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     const createdAt = Date.now()
     const defaultTimeline = createDefaultTimeline('Timeline 1')
     const newProject: Project = {
-      id: createProjectId(name, createdAt, new Set(projects.map(project => project.id))),
+      id: createProjectId(name, createdAt, new Set(projectsRef.current.map(project => project.id))),
       name,
       createdAt,
       updatedAt: createdAt,
@@ -431,7 +530,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     }
     setProjects(prev => [newProject, ...prev])
     return newProject
-  }, [projects])
+  }, [])
   
   const deleteProject = useCallback((id: string) => {
     setProjects(prev => prev.filter(p => p.id !== id))
@@ -601,7 +700,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   // --- Timeline CRUD ---
   
   const addTimeline = useCallback((projectId: string, name?: string): Timeline => {
-    const project = projects.find(p => p.id === projectId)
+    const project = projectsRef.current.find(p => p.id === projectId)
     const count = (project?.timelines?.length || 0) + 1
     const newTimeline = createDefaultTimeline(name || `Timeline ${count}`)
     
@@ -616,7 +715,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
         : p
     ))
     return newTimeline
-  }, [projects])
+  }, [])
   
   const deleteTimeline = useCallback((projectId: string, timelineId: string) => {
     setProjects(prev => prev.map(p => {
@@ -649,7 +748,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   }, [])
   
   const duplicateTimeline = useCallback((projectId: string, timelineId: string): Timeline | null => {
-    const project = projects.find(p => p.id === projectId)
+    const project = projectsRef.current.find(p => p.id === projectId)
     const source = project?.timelines?.find(t => t.id === timelineId)
     if (!source) return null
     
@@ -680,7 +779,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
         : p
     ))
     return newTimeline
-  }, [projects])
+  }, [])
   
   const setActiveTimeline = useCallback((projectId: string, timelineId: string) => {
     setProjects(prev => prev.map(p => 
@@ -703,16 +802,16 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   }, [])
   
   const getActiveTimeline = useCallback((projectId: string): Timeline | null => {
-    const project = projects.find(p => p.id === projectId)
+    const project = projectsRef.current.find(p => p.id === projectId)
     if (!project || !project.timelines || project.timelines.length === 0) return null
     
     // Find the active timeline, or fall back to the first one
     const active = project.timelines.find(t => t.id === project.activeTimelineId)
     return active || project.timelines[0]
-  }, [projects])
+  }, [])
 
   const addDirectorTimeline = useCallback((projectId: string, sequence: DirectorSequenceV1, name?: string): DirectorTimelineDocument => {
-    const project = projects.find(p => p.id === projectId)
+    const project = projectsRef.current.find(p => p.id === projectId)
     const count = (project?.directorTimelines?.length || 0) + 1
     const now = Date.now()
     const timeline: DirectorTimelineDocument = {
@@ -729,7 +828,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       updatedAt: now,
     } : p))
     return timeline
-  }, [projects])
+  }, [])
 
   const deleteDirectorTimeline = useCallback((projectId: string, timelineId: string) => {
     setProjects(prev => prev.map(p => {
@@ -811,7 +910,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const duplicateDirectorTimeline = useCallback((projectId: string, timelineId: string): DirectorTimelineDocument | null => {
-    const project = projects.find(p => p.id === projectId)
+    const project = projectsRef.current.find(p => p.id === projectId)
     const source = project?.directorTimelines?.find(timeline => timeline.id === timelineId)
     if (!source) return null
     const now = Date.now()
@@ -830,7 +929,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       updatedAt: now,
     } : p))
     return duplicate
-  }, [projects])
+  }, [])
 
   const setActiveDirectorTimeline = useCallback((projectId: string, timelineId: string) => {
     setProjects(prev => prev.map(p => p.id === projectId ? { ...p, activeDirectorTimelineId: timelineId } : p))
@@ -847,11 +946,11 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const getActiveDirectorTimeline = useCallback((projectId: string): DirectorTimelineDocument | null => {
-    const project = projects.find(p => p.id === projectId)
+    const project = projectsRef.current.find(p => p.id === projectId)
     if (!project?.directorTimelines?.length) return null
     return project.directorTimelines.find(timeline => timeline.id === project.activeDirectorTimelineId)
       || project.directorTimelines[0]
-  }, [projects])
+  }, [])
   
   const openProject = useCallback((id: string) => {
     setCurrentProjectId(id)
@@ -863,60 +962,175 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     setCurrentView('home')
     setCurrentProjectId(null)
   }, [])
+
+  const navigationValue = useMemo<NavigationContextType>(() => ({
+    currentView,
+    setCurrentView,
+    currentProjectId,
+    setCurrentProjectId,
+    currentTab,
+    setCurrentTab,
+    openProject,
+    goHome,
+  }), [currentProjectId, currentTab, currentView, goHome, openProject])
+  const projectListValue = useMemo<ProjectListContextType>(() => ({
+    projects,
+    createProject,
+    deleteProject,
+    renameProject,
+  }), [createProject, deleteProject, projects, renameProject])
+  const currentProjectMeta = useMemo<ProjectMeta | null>(() => currentProject ? {
+    id: currentProject.id,
+    name: currentProject.name,
+    createdAt: currentProject.createdAt,
+    thumbnail: currentProject.thumbnail,
+    genSpaceSeedLocked: currentProject.genSpaceSeedLocked,
+    genSpaceLockedSeed: currentProject.genSpaceLockedSeed,
+  } : null, [
+    currentProject?.createdAt,
+    currentProject?.genSpaceLockedSeed,
+    currentProject?.genSpaceSeedLocked,
+    currentProject?.id,
+    currentProject?.name,
+    currentProject?.thumbnail,
+  ])
+  const projectMetaValue = useMemo<ProjectMetaContextType>(() => ({
+    currentProjectMeta,
+    updateProjectGenSpaceSeed,
+  }), [currentProjectMeta, updateProjectGenSpaceSeed])
+  const getProjectAssets = useCallback((projectId: string) => (
+    projectsRef.current.find((project) => project.id === projectId)?.assets ?? EMPTY_ASSETS
+  ), [])
+  const projectAssetsValue = useMemo<ProjectAssetsContextType>(() => ({
+    assets: currentProject?.assets ?? EMPTY_ASSETS,
+    assetBins: currentProject?.assetBins ?? EMPTY_BINS,
+    assetBinColors: currentProject?.assetBinColors ?? EMPTY_BIN_COLORS,
+    getProjectAssets,
+    addAsset,
+    deleteAsset,
+    updateAsset,
+    addTakeToAsset,
+    deleteTakeFromAsset,
+    setAssetActiveTake,
+    toggleFavorite,
+    createAssetBin,
+    renameAssetBin,
+    deleteAssetBin,
+    setAssetBinColor,
+  }), [
+    addAsset,
+    addTakeToAsset,
+    createAssetBin,
+    currentProject?.assetBinColors,
+    currentProject?.assetBins,
+    currentProject?.assets,
+    deleteAsset,
+    deleteAssetBin,
+    deleteTakeFromAsset,
+    getProjectAssets,
+    renameAssetBin,
+    setAssetActiveTake,
+    setAssetBinColor,
+    toggleFavorite,
+    updateAsset,
+  ])
+  const editorTimelinesValue = useMemo<EditorTimelinesContextType>(() => ({
+    timelines: currentProject?.timelines ?? EMPTY_TIMELINES,
+    activeTimelineId: currentProject?.activeTimelineId,
+    addTimeline,
+    deleteTimeline,
+    renameTimeline,
+    duplicateTimeline,
+    setActiveTimeline,
+    updateTimeline,
+    getActiveTimeline,
+  }), [
+    addTimeline,
+    currentProject?.activeTimelineId,
+    currentProject?.timelines,
+    deleteTimeline,
+    duplicateTimeline,
+    getActiveTimeline,
+    renameTimeline,
+    setActiveTimeline,
+    updateTimeline,
+  ])
+  const directorTimelinesValue = useMemo<DirectorTimelinesContextType>(() => ({
+    directorTimelines: currentProject?.directorTimelines ?? EMPTY_DIRECTOR_TIMELINES,
+    activeDirectorTimelineId: currentProject?.activeDirectorTimelineId,
+    addDirectorTimeline,
+    deleteDirectorTimeline,
+    renameDirectorTimeline,
+    duplicateDirectorTimeline,
+    setActiveDirectorTimeline,
+    updateDirectorTimeline,
+    getActiveDirectorTimeline,
+  }), [
+    addDirectorTimeline,
+    currentProject?.activeDirectorTimelineId,
+    currentProject?.directorTimelines,
+    deleteDirectorTimeline,
+    duplicateDirectorTimeline,
+    getActiveDirectorTimeline,
+    renameDirectorTimeline,
+    setActiveDirectorTimeline,
+    updateDirectorTimeline,
+  ])
+  const genSpaceHandoffsValue = useMemo<GenSpaceHandoffsContextType>(() => ({
+    genSpaceEditImageUrl,
+    setGenSpaceEditImageUrl,
+    genSpaceEditMode,
+    setGenSpaceEditMode,
+    genSpaceAudioUrl,
+    setGenSpaceAudioUrl,
+    genSpaceRetakeSource,
+    setGenSpaceRetakeSource,
+    pendingRetakeUpdate,
+    setPendingRetakeUpdate,
+  }), [
+    genSpaceAudioUrl,
+    genSpaceEditImageUrl,
+    genSpaceEditMode,
+    genSpaceRetakeSource,
+    pendingRetakeUpdate,
+  ])
+  const compatibilityValue = useMemo<ProjectContextType>(() => ({
+    ...navigationValue,
+    ...projectListValue,
+    currentProject,
+    updateProjectGenSpaceSeed,
+    ...projectAssetsValue,
+    ...editorTimelinesValue,
+    ...directorTimelinesValue,
+    ...genSpaceHandoffsValue,
+  }), [
+    currentProject,
+    directorTimelinesValue,
+    editorTimelinesValue,
+    genSpaceHandoffsValue,
+    navigationValue,
+    projectAssetsValue,
+    projectListValue,
+    updateProjectGenSpaceSeed,
+  ])
   
   return (
-    <ProjectContext.Provider value={{
-      currentView,
-      setCurrentView,
-      currentProjectId,
-      setCurrentProjectId,
-      currentTab,
-      setCurrentTab,
-      projects,
-      currentProject,
-      createProject,
-      deleteProject,
-      renameProject,
-      updateProjectGenSpaceSeed,
-      addAsset,
-      deleteAsset,
-      updateAsset,
-      addTakeToAsset,
-      deleteTakeFromAsset,
-      setAssetActiveTake,
-      toggleFavorite,
-      createAssetBin,
-      renameAssetBin,
-      deleteAssetBin,
-      setAssetBinColor,
-      addTimeline,
-      deleteTimeline,
-      renameTimeline,
-      duplicateTimeline,
-      setActiveTimeline,
-      updateTimeline,
-      getActiveTimeline,
-      addDirectorTimeline,
-      deleteDirectorTimeline,
-      renameDirectorTimeline,
-      duplicateDirectorTimeline,
-      setActiveDirectorTimeline,
-      updateDirectorTimeline,
-      getActiveDirectorTimeline,
-      openProject,
-      goHome,
-      genSpaceEditImageUrl,
-      setGenSpaceEditImageUrl,
-      genSpaceEditMode,
-      setGenSpaceEditMode,
-      genSpaceAudioUrl,
-      setGenSpaceAudioUrl,
-      genSpaceRetakeSource,
-      setGenSpaceRetakeSource,
-      pendingRetakeUpdate,
-      setPendingRetakeUpdate,
-    }}>
-      {children}
+    <ProjectContext.Provider value={compatibilityValue}>
+      <NavigationContext.Provider value={navigationValue}>
+        <ProjectListContext.Provider value={projectListValue}>
+          <ProjectMetaContext.Provider value={projectMetaValue}>
+            <ProjectAssetsContext.Provider value={projectAssetsValue}>
+              <EditorTimelinesContext.Provider value={editorTimelinesValue}>
+                <DirectorTimelinesContext.Provider value={directorTimelinesValue}>
+                  <GenSpaceHandoffsContext.Provider value={genSpaceHandoffsValue}>
+                    {children}
+                  </GenSpaceHandoffsContext.Provider>
+                </DirectorTimelinesContext.Provider>
+              </EditorTimelinesContext.Provider>
+            </ProjectAssetsContext.Provider>
+          </ProjectMetaContext.Provider>
+        </ProjectListContext.Provider>
+      </NavigationContext.Provider>
     </ProjectContext.Provider>
   )
 }
@@ -927,4 +1141,40 @@ export function useProjects() {
     throw new Error('useProjects must be used within a ProjectProvider')
   }
   return context
+}
+
+function useProjectContextValue<T>(context: React.Context<T | null>, hookName: string): T {
+  const value = useContext(context)
+  if (!value) {
+    throw new Error(`${hookName} must be used within a ProjectProvider`)
+  }
+  return value
+}
+
+export function useProjectNavigation() {
+  return useProjectContextValue(NavigationContext, 'useProjectNavigation')
+}
+
+export function useProjectList() {
+  return useProjectContextValue(ProjectListContext, 'useProjectList')
+}
+
+export function useProjectMeta() {
+  return useProjectContextValue(ProjectMetaContext, 'useProjectMeta')
+}
+
+export function useProjectAssets() {
+  return useProjectContextValue(ProjectAssetsContext, 'useProjectAssets')
+}
+
+export function useEditorTimelines() {
+  return useProjectContextValue(EditorTimelinesContext, 'useEditorTimelines')
+}
+
+export function useDirectorTimelines() {
+  return useProjectContextValue(DirectorTimelinesContext, 'useDirectorTimelines')
+}
+
+export function useGenSpaceHandoffs() {
+  return useProjectContextValue(GenSpaceHandoffsContext, 'useGenSpaceHandoffs')
 }

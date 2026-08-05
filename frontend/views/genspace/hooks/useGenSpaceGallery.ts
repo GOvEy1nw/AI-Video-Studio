@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { GalleryBinContextMenuState } from "../../../components/GalleryBinBar";
 import type { GalleryGridColumns } from "../../../components/GalleryViewControls";
-import { useProjects } from "../../../contexts/ProjectContext";
+import type { ProjectAssetsContextType } from "../../../contexts/ProjectContext";
 import { useAssetDeletion } from "../../../hooks/use-asset-deletion";
 import {
   collectGalleryBins,
@@ -19,10 +19,12 @@ import {
 import type { Asset } from "../../../types/project";
 import type { GenSpaceGalleryProps } from "../GenSpaceGallery";
 
-type Projects = ReturnType<typeof useProjects>;
+type Projects = ProjectAssetsContextType;
 
 export function useGenSpaceGallery({
-  currentProject,
+  assets: projectAssets,
+  assetBins,
+  assetBinColors,
   currentProjectId,
   isActive,
   isGenerating,
@@ -37,7 +39,9 @@ export function useGenSpaceGallery({
   setAssetActiveTake,
   onCopySettings,
 }: {
-  currentProject: Projects["currentProject"];
+  assets: Asset[];
+  assetBins: string[];
+  assetBinColors: Record<string, string>;
   currentProjectId: string | null;
   isActive: boolean;
   isGenerating: boolean;
@@ -54,10 +58,10 @@ export function useGenSpaceGallery({
 }) {
   const assets = useMemo(
     () =>
-      (currentProject?.assets ?? []).filter(
+      projectAssets.filter(
         ({ type }) => type === "image" || type === "video" || type === "audio",
       ),
-    [currentProject?.assets],
+    [projectAssets],
   );
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
@@ -162,14 +166,14 @@ export function useGenSpaceGallery({
         ? ensureGalleryAssetForInputFile(
             currentProjectId,
             file,
-            currentProject?.assets ?? [],
+            projectAssets,
             addAsset,
             requestDuplicateChoice,
           )
         : Promise.resolve(null),
     [
       addAsset,
-      currentProject?.assets,
+      projectAssets,
       currentProjectId,
       requestDuplicateChoice,
     ],
@@ -229,8 +233,8 @@ export function useGenSpaceGallery({
     return result;
   }, [assets, filter, selectedBin, showFavorites]);
   const bins = useMemo(
-    () => collectGalleryBins(assets, currentProject?.assetBins),
-    [assets, currentProject?.assetBins],
+    () => collectGalleryBins(assets, assetBins),
+    [assetBins, assets],
   );
   const contextAsset = assetContextMenu
     ? assets.find(({ id }) => id === assetContextMenu.assetId)
@@ -287,7 +291,7 @@ export function useGenSpaceGallery({
       assets,
       visibleAssets,
       bins,
-      binColors: currentProject?.assetBinColors ?? {},
+      binColors: assetBinColors,
       filter,
       onFilterChange: setFilter,
       selectedBin,
@@ -370,7 +374,7 @@ export function useGenSpaceGallery({
       bins,
       createAssetBin,
       creatingBin,
-      currentProject?.assetBinColors,
+      assetBinColors,
       currentProjectId,
       isActive,
       deleteAssetBin,

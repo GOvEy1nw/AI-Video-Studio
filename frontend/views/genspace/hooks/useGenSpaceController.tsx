@@ -11,7 +11,12 @@ import {
   Expand,
   Wrench,
 } from "lucide-react";
-import { useProjects } from "../../../contexts/ProjectContext";
+import {
+  useGenSpaceHandoffs,
+  useProjectAssets,
+  useProjectMeta,
+  useProjectNavigation,
+} from "../../../contexts/ProjectContext";
 import type { GenSpaceRetakeSource } from "../../../contexts/ProjectContext";
 import { useGeneration } from "../../../hooks/use-generation";
 import { useRetake } from "../../../hooks/use-retake";
@@ -84,10 +89,13 @@ export function usePromptEnhancementPreference(
 }
 
 export function useGenSpaceController(isActive: boolean) {
+  const { currentProjectMeta, updateProjectGenSpaceSeed } = useProjectMeta();
+  const { currentProjectId } = useProjectNavigation();
   const {
-    currentProject,
-    currentProjectId,
-    projects,
+    assets: projectAssets,
+    assetBins,
+    assetBinColors,
+    getProjectAssets,
     addAsset,
     addTakeToAsset,
     deleteTakeFromAsset,
@@ -99,6 +107,8 @@ export function useGenSpaceController(isActive: boolean) {
     renameAssetBin,
     deleteAssetBin,
     setAssetBinColor,
+  } = useProjectAssets();
+  const {
     genSpaceEditImageUrl,
     setGenSpaceEditImageUrl,
     setGenSpaceEditMode,
@@ -107,8 +117,7 @@ export function useGenSpaceController(isActive: boolean) {
     genSpaceRetakeSource,
     setGenSpaceRetakeSource,
     setPendingRetakeUpdate,
-    updateProjectGenSpaceSeed,
-  } = useProjects();
+  } = useGenSpaceHandoffs();
   const { updateSettings, isLoaded: appSettingsLoaded } = useAppSettings();
   const {
     prompt,
@@ -286,9 +295,9 @@ export function useGenSpaceController(isActive: boolean) {
     setError: setLocalError,
   });
 
-  const seedLocked = currentProject?.genSpaceSeedLocked ?? false;
+  const seedLocked = currentProjectMeta?.genSpaceSeedLocked ?? false;
   const lockedSeed = clampGenSpaceSeed(
-    currentProject?.genSpaceLockedSeed ?? DEFAULT_GENSPACE_LOCKED_SEED,
+    currentProjectMeta?.genSpaceLockedSeed ?? DEFAULT_GENSPACE_LOCKED_SEED,
   );
 
   const handleSeedChange = useCallback(
@@ -325,17 +334,17 @@ export function useGenSpaceController(isActive: boolean) {
     setEditMask(null);
     setEditOutpaint(null);
     const projectSeed = {
-      seedLocked: currentProject?.genSpaceSeedLocked ?? false,
+      seedLocked: currentProjectMeta?.genSpaceSeedLocked ?? false,
       lockedSeed: clampGenSpaceSeed(
-        currentProject?.genSpaceLockedSeed ?? DEFAULT_GENSPACE_LOCKED_SEED,
+        currentProjectMeta?.genSpaceLockedSeed ?? DEFAULT_GENSPACE_LOCKED_SEED,
       ),
     };
     updateSettings(projectSeed);
   }, [
     appSettingsLoaded,
     currentProjectId,
-    currentProject?.genSpaceSeedLocked,
-    currentProject?.genSpaceLockedSeed,
+    currentProjectMeta?.genSpaceSeedLocked,
+    currentProjectMeta?.genSpaceLockedSeed,
     updateSettings,
   ]);
 
@@ -355,7 +364,7 @@ export function useGenSpaceController(isActive: boolean) {
     framingSettings,
     promptEnhancementEnabled,
     currentProjectId,
-    projectAssets: currentProject?.assets ?? [],
+    projectAssets,
     settings,
     setSettings,
     musicSettings,
@@ -517,7 +526,7 @@ export function useGenSpaceController(isActive: boolean) {
   const clearLocalError = useCallback(() => setLocalError(null), []);
 
   const handleCopySettings = useGenSpaceSettingsRestore({
-    assets: currentProject?.assets ?? [],
+    assets: projectAssets,
     settings,
     musicSettings,
     imageProfiles,
@@ -542,7 +551,9 @@ export function useGenSpaceController(isActive: boolean) {
     clearError: clearLocalError,
   });
   const gallery = useGenSpaceGallery({
-    currentProject,
+    assets: projectAssets,
+    assetBins,
+    assetBinColors,
     currentProjectId,
     isActive,
     isGenerating,
@@ -582,7 +593,7 @@ export function useGenSpaceController(isActive: boolean) {
     retakeResult,
     isRetaking,
     retakeSubmissionRef,
-    projects,
+    getProjectAssets,
     activeRetakeSource,
     setActiveRetakeSource,
     addTakeToAsset,
@@ -924,7 +935,7 @@ export function useGenSpaceController(isActive: boolean) {
       contextMenuRef: galleryOverlays.contextMenuRef,
       assets,
       bins: galleryOverlays.bins,
-      binColors: currentProject?.assetBinColors,
+      binColors: assetBinColors,
       currentProjectId,
       onToggleFavorite: (asset: Asset) => {
         if (currentProjectId) toggleFavorite(currentProjectId, asset.id);

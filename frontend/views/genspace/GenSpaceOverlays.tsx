@@ -10,14 +10,14 @@ import type {
 import { DeleteAssetDialog } from "../../components/DeleteAssetDialog";
 import { DuplicateFilenameDialog } from "../../components/DuplicateFilenameDialog";
 import { GenerationErrorDialog } from "../../components/GenerationErrorDialog";
-import { useProjects } from "../../contexts/ProjectContext";
+import type { ProjectAssetsContextType } from "../../contexts/ProjectContext";
 import type { DuplicateFilenameChoice } from "../../lib/media-import";
 import type { Asset } from "../../types/project";
 import type { ImageUseTarget } from "../../components/UseImageDropdown";
 import type { VideoUseTarget } from "../../components/UseVideoDropdown";
 import { AssetContextMenu } from "../editor/AssetContextMenu";
 
-type Projects = ReturnType<typeof useProjects>;
+type Projects = ProjectAssetsContextType;
 
 export interface GenSpaceOverlaysProps {
   duplicateFilenameChoice: {

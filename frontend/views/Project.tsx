@@ -1,6 +1,9 @@
 import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { ArrowLeft, Sparkles, Film, Clapperboard } from "lucide-react";
-import { useProjects } from "../contexts/ProjectContext";
+import {
+  useProjectMeta,
+  useProjectNavigation,
+} from "../contexts/ProjectContext";
 import { AivsLogo } from "../components/AivsLogo";
 import { Button } from "../components/ui/button";
 import type { ProjectTab } from "../types/project";
@@ -43,7 +46,8 @@ function WorkspaceFallback() {
 }
 
 export function Project() {
-  const { currentProject, currentTab, setCurrentTab, goHome } = useProjects();
+  const { currentProjectMeta } = useProjectMeta();
+  const { currentTab, setCurrentTab, goHome } = useProjectNavigation();
   const [visitedTabs, setVisitedTabs] = useState<ReadonlySet<ProjectTab>>(
     () => new Set([currentTab]),
   );
@@ -52,7 +56,7 @@ export function Project() {
     setVisitedTabs((current) => addVisitedTab(current, currentTab));
   }, [currentTab]);
 
-  if (!currentProject) {
+  if (!currentProjectMeta) {
     return (
       <div className="h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -97,7 +101,7 @@ export function Project() {
           <AivsLogo className="h-6 w-auto text-white" />
 
           {/* Project name */}
-          <span className="text-white font-medium">{currentProject.name}</span>
+          <span className="text-white font-medium">{currentProjectMeta.name}</span>
         </div>
 
         {/* Center - Tabs */}

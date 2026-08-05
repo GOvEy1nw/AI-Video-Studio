@@ -1,8 +1,18 @@
 import React from 'react'
-import { act, renderHook, waitFor } from '@testing-library/react'
+import { act, render, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Project } from '../types/project'
-import { ProjectProvider, recoverPersistedMediaBatches, useProjects } from './ProjectContext'
+import { createDirectorSequence } from '../lib/director-timeline'
+import {
+  ProjectProvider,
+  recoverPersistedMediaBatches,
+  useDirectorTimelines,
+  useEditorTimelines,
+  useProjectAssets,
+  useProjectList,
+  useProjectNavigation,
+  useProjects,
+} from './ProjectContext'
 
 const originalElectronAPI = window.electronAPI
 
@@ -102,5 +112,124 @@ describe('persisted media recovery', () => {
     await waitFor(() => expect(firstCalls).toBe(2))
     act(() => result.current.setCurrentProjectId('project-b'))
     await waitFor(() => expect(secondCalls).toBe(2))
+  })
+})
+
+describe('project-state render isolation', () => {
+  it('keeps unrelated domain consumers and action callbacks stable', () => {
+    let assetRenders = 0
+    let editorRenders = 0
+    let directorRenders = 0
+    let observedActiveTimelineId: string | undefined
+    type ControlsState = {
+      createProject: ReturnType<typeof useProjectList>['createProject']
+      openProject: ReturnType<typeof useProjectNavigation>['openProject']
+      setCurrentTab: ReturnType<typeof useProjectNavigation>['setCurrentTab']
+      addAsset: ReturnType<typeof useProjectAssets>['addAsset']
+      toggleFavorite: ReturnType<typeof useProjectAssets>['toggleFavorite']
+      createAssetBin: ReturnType<typeof useProjectAssets>['createAssetBin']
+      addTimeline: ReturnType<typeof useEditorTimelines>['addTimeline']
+      setActiveTimeline: ReturnType<typeof useEditorTimelines>['setActiveTimeline']
+      updateTimeline: ReturnType<typeof useEditorTimelines>['updateTimeline']
+      addDirectorTimeline: ReturnType<typeof useDirectorTimelines>['addDirectorTimeline']
+      assetAction: ReturnType<typeof useProjectAssets>['addAsset']
+      timelineAction: ReturnType<typeof useEditorTimelines>['updateTimeline']
+    }
+    const controlsRef: { current: ControlsState | null } = { current: null }
+
+    function AssetProbe() {
+      useProjectAssets()
+      assetRenders += 1
+      return null
+    }
+
+    function EditorProbe() {
+      observedActiveTimelineId = useEditorTimelines().activeTimelineId
+      editorRenders += 1
+      return null
+    }
+
+    function DirectorProbe() {
+      useDirectorTimelines()
+      directorRenders += 1
+      return null
+    }
+
+    function Controls() {
+      const projectList = useProjectList()
+      const navigation = useProjectNavigation()
+      const assets = useProjectAssets()
+      const timelines = useEditorTimelines()
+      const directorTimelines = useDirectorTimelines()
+      controlsRef.current = {
+        createProject: projectList.createProject,
+        openProject: navigation.openProject,
+        setCurrentTab: navigation.setCurrentTab,
+        addAsset: assets.addAsset,
+        toggleFavorite: assets.toggleFavorite,
+        createAssetBin: assets.createAssetBin,
+        addTimeline: timelines.addTimeline,
+        setActiveTimeline: timelines.setActiveTimeline,
+        updateTimeline: timelines.updateTimeline,
+        addDirectorTimeline: directorTimelines.addDirectorTimeline,
+        assetAction: assets.addAsset,
+        timelineAction: timelines.updateTimeline,
+      }
+      return null
+    }
+
+    render(React.createElement(
+      ProjectProvider,
+      null,
+      React.createElement(AssetProbe),
+      React.createElement(EditorProbe),
+      React.createElement(DirectorProbe),
+      React.createElement(Controls),
+    ))
+
+    if (!controlsRef.current) throw new Error('Project controls were not mounted')
+    const project = controlsRef.current.createProject('Isolation')
+    act(() => controlsRef.current?.openProject(project.id))
+    let secondTimelineId = ''
+    act(() => {
+      secondTimelineId = controlsRef.current?.addTimeline(project.id, 'Timeline 2').id ?? ''
+    })
+    act(() => controlsRef.current?.setActiveTimeline(project.id, secondTimelineId))
+    expect(observedActiveTimelineId).toBe(secondTimelineId)
+    const initialAssetAction = controlsRef.current.assetAction
+    const initialTimelineAction = controlsRef.current.timelineAction
+    const assetRendersBeforeTimeline = assetRenders
+
+    act(() => controlsRef.current?.addDirectorTimeline(
+      project.id,
+      createDirectorSequence('ltx2_22b_distilled', '720p', '16:9'),
+    ))
+    expect(assetRenders).toBe(assetRendersBeforeTimeline)
+    const directorRendersAfterDirector = directorRenders
+
+    act(() => controlsRef.current?.updateTimeline(project.id, project.timelines[0].id, { clips: [] }))
+    expect(assetRenders).toBe(assetRendersBeforeTimeline)
+    expect(directorRenders).toBe(directorRendersAfterDirector)
+    expect(controlsRef.current?.assetAction).toBe(initialAssetAction)
+
+    let addedAssetId = ''
+    act(() => {
+      addedAssetId = controlsRef.current?.addAsset(project.id, {
+        type: 'image',
+        path: 'C:\\asset.png',
+        url: 'file:///C:/asset.png',
+        prompt: '',
+        resolution: '512x512',
+      }).id ?? ''
+    })
+    const editorRendersAfterAsset = editorRenders
+    act(() => controlsRef.current?.toggleFavorite(project.id, addedAssetId))
+    expect(editorRenders).toBe(editorRendersAfterAsset)
+    act(() => controlsRef.current?.createAssetBin(project.id, 'Favorites'))
+    expect(editorRenders).toBe(editorRendersAfterAsset)
+
+    act(() => controlsRef.current?.setCurrentTab('director'))
+    expect(controlsRef.current?.assetAction).toBe(initialAssetAction)
+    expect(controlsRef.current?.timelineAction).toBe(initialTimelineAction)
   })
 })
