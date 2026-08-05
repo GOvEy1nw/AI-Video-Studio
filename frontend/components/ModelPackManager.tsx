@@ -7,6 +7,7 @@ import {
   formatTransferRate,
 } from "../lib/transfer-format";
 import { Button } from "./ui/button";
+import { useModelProfiles } from "@/contexts/ModelProfilesContext";
 
 interface ModelPack {
   id: string;
@@ -55,6 +56,7 @@ export function ModelPackManager({
   firstRun = false,
   onContinue,
 }: ModelPackManagerProps) {
+  const { refreshAfterModelPackMutation } = useModelProfiles();
   const [packs, setPacks] = useState<ModelPack[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [progress, setProgress] = useState<ModelPackProgress | null>(null);
@@ -141,6 +143,7 @@ export function ModelPackManager({
     try {
       const complete = await window.electronAPI.downloadModelPacks(downloadIds);
       await refresh();
+      await refreshAfterModelPackMutation();
       setSelected((current) =>
         current.filter((id) => !downloadIds.includes(id)),
       );
@@ -192,6 +195,7 @@ export function ModelPackManager({
         removedIds.push(pack.id);
       }
       await refresh();
+      await refreshAfterModelPackMutation();
       setSelected((current) =>
         current.filter((id) => !removedIds.includes(id)),
       );
@@ -200,6 +204,7 @@ export function ModelPackManager({
         current.filter((id) => !removedIds.includes(id)),
       );
       void refresh().catch(() => undefined);
+      void refreshAfterModelPackMutation();
       setError(
         reason instanceof Error ? reason.message : "Model-pack deletion failed.",
       );

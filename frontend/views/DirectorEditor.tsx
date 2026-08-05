@@ -263,6 +263,7 @@ export function DirectorEditor({ isActive }: { isActive: boolean }) {
       />
       <DirectorWorkspacePanel
         isActive={isActive}
+        enabledProfiles={enabledProfiles}
         projectId={currentProjectId}
         timeline={activeTimeline}
         timelines={timelines}

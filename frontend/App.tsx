@@ -9,6 +9,8 @@ import {
 import { ProjectProvider, useProjects } from "./contexts/ProjectContext";
 import { KeyboardShortcutsProvider } from "./contexts/KeyboardShortcutsContext";
 import { AppSettingsProvider } from "./contexts/AppSettingsContext";
+import { BackendLifecycleProvider } from "./contexts/BackendLifecycleContext";
+import { ModelProfilesProvider } from "./contexts/ModelProfilesContext";
 import { KeyboardShortcutsModal } from "./components/KeyboardShortcutsModal";
 import { useBackend } from "./hooks/use-backend";
 import { logger } from "./lib/logger";
@@ -49,7 +51,7 @@ function LoadingPanel() {
 
 function AppContent() {
   const { currentView } = useProjects();
-  const { processStatus, checkHealth } = useBackend();
+  const { processStatus, checkHealth, restart } = useBackend();
 
   const [pythonReady, setPythonReady] = useState<boolean | null>(null);
   const [backendStarted, setBackendStarted] = useState(false);
@@ -65,7 +67,7 @@ function AppContent() {
   const handleReconnect = async () => {
     setIsReconnecting(true);
     try {
-      await window.electronAPI.restartPythonBackend();
+      await restart();
       // Attempt health checks in a loop to establish connection quickly
       for (let i = 0; i < 15; i++) {
         const healthy = await checkHealth();
@@ -301,13 +303,17 @@ function AppContent() {
 
 export default function App() {
   return (
-    <ProjectProvider>
-      <KeyboardShortcutsProvider>
-        <AppSettingsProvider>
+    <BackendLifecycleProvider>
+      <AppSettingsProvider>
+        <ModelProfilesProvider>
+          <ProjectProvider>
+            <KeyboardShortcutsProvider>
           <AppContent />
           <KeyboardShortcutsModal />
-        </AppSettingsProvider>
-      </KeyboardShortcutsProvider>
-    </ProjectProvider>
+            </KeyboardShortcutsProvider>
+          </ProjectProvider>
+        </ModelProfilesProvider>
+      </AppSettingsProvider>
+    </BackendLifecycleProvider>
   );
 }

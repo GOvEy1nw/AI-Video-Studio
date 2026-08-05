@@ -1,5 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { backendFetch, resetBackendCredentials } from '../lib/backend'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { backendFetch } from '../lib/backend'
+import { useBackendLifecycle } from './BackendLifecycleContext'
 
 export interface InferenceSettings {
   steps: number
@@ -60,8 +61,6 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   outputSettings: DEFAULT_OUTPUT_SETTINGS,
 }
 
-type BackendProcessStatus = 'alive' | 'restarting' | 'dead'
-
 interface AppSettingsContextValue {
   settings: AppSettings
   isLoaded: boolean
@@ -71,18 +70,6 @@ interface AppSettingsContextValue {
 }
 
 const AppSettingsContext = createContext<AppSettingsContextValue | null>(null)
-
-function toBackendProcessStatus(value: unknown): BackendProcessStatus | null {
-  if (!value || typeof value !== 'object') {
-    return null
-  }
-
-  const record = value as { status?: unknown }
-  if (record.status === 'alive' || record.status === 'restarting' || record.status === 'dead') {
-    return record.status
-  }
-  return null
-}
 
 function normalizeAppSettings(data: Partial<AppSettings>): AppSettings {
   return {
@@ -107,60 +94,36 @@ function normalizeAppSettings(data: Partial<AppSettings>): AppSettings {
 export function AppSettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_APP_SETTINGS)
   const [isLoaded, setIsLoaded] = useState(false)
-  const [backendProcessStatus, setBackendProcessStatus] = useState<BackendProcessStatus | null>(null)
+  const { processStatus } = useBackendLifecycle()
+  const settingsLifecycleVersionRef = useRef(0)
 
-  useEffect(() => {
-    let cancelled = false
-
-    const applyStatus = (value: unknown) => {
-      const nextStatus = toBackendProcessStatus(value)
-      if (!nextStatus || cancelled) {
-        return
-      }
-      if (nextStatus === 'alive') {
-        resetBackendCredentials()
-      }
-      setBackendProcessStatus(nextStatus)
-    }
-
-    const unsubscribe = window.electronAPI.onBackendHealthStatus((data) => {
-      applyStatus(data)
-    })
-
-    void window.electronAPI.getBackendHealthStatus()
-      .then((snapshot) => {
-        applyStatus(snapshot)
-      })
-      .catch(() => {
-        // Snapshot is optional at startup; subscription continues to listen for pushes.
-      })
-
-    return () => {
-      cancelled = true
-      unsubscribe()
-    }
-  }, [])
-
-  const refreshSettings = useCallback(async () => {
+  const loadSettings = useCallback(async (): Promise<AppSettings> => {
     const response = await backendFetch('/api/settings')
     if (!response.ok) {
       throw new Error(`Settings fetch failed with status ${response.status}`)
     }
-    const data = await response.json()
-    setSettings(normalizeAppSettings(data))
-    setIsLoaded(true)
+    return normalizeAppSettings(await response.json())
   }, [])
 
+  const refreshSettings = useCallback(async () => {
+    setSettings(await loadSettings())
+    setIsLoaded(true)
+  }, [loadSettings])
+
   useEffect(() => {
-    if (isLoaded || backendProcessStatus !== 'alive') return
+    const lifecycleVersion = settingsLifecycleVersionRef.current + 1
+    settingsLifecycleVersionRef.current = lifecycleVersion
+    if (isLoaded || processStatus !== 'alive') return
 
     let cancelled = false
     let retryTimer: ReturnType<typeof setTimeout> | null = null
 
     const fetchSettings = async () => {
       try {
-        await refreshSettings()
-        if (cancelled) return
+        const nextSettings = await loadSettings()
+        if (cancelled || lifecycleVersion !== settingsLifecycleVersionRef.current) return
+        setSettings(nextSettings)
+        setIsLoaded(true)
       } catch {
         if (!cancelled) {
           retryTimer = setTimeout(fetchSettings, 1000)
@@ -174,10 +137,10 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
       cancelled = true
       if (retryTimer) clearTimeout(retryTimer)
     }
-  }, [backendProcessStatus, isLoaded, refreshSettings])
+  }, [isLoaded, loadSettings, processStatus])
 
   useEffect(() => {
-    if (!isLoaded || backendProcessStatus !== 'alive') return
+    if (!isLoaded || processStatus !== 'alive') return
     const syncTimer = setTimeout(async () => {
       try {
         await backendFetch('/api/settings', {
@@ -190,7 +153,7 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
       }
     }, 150)
     return () => clearTimeout(syncTimer)
-  }, [backendProcessStatus, isLoaded, settings])
+  }, [processStatus, isLoaded, settings])
 
   const updateSettings = useCallback((patch: Partial<AppSettings> | ((prev: AppSettings) => AppSettings)) => {
     if (typeof patch === 'function') {
