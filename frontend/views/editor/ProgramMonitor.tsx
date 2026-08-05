@@ -30,6 +30,7 @@ export interface ProgramMonitorProps {
   // Playback state
   currentTime: number
   totalDuration: number
+  isActive: boolean
   isPlaying: boolean
   setIsPlaying: (v: boolean) => void
   setCurrentTime: React.Dispatch<React.SetStateAction<number>>
@@ -107,6 +108,7 @@ export function ProgramMonitor({
   previewPanRef,
   currentTime,
   totalDuration,
+  isActive,
   isPlaying,
   setIsPlaying,
   setCurrentTime,
@@ -156,6 +158,17 @@ export function ProgramMonitor({
   const clickedTextOverlayRef = React.useRef(false)
   const previewZoomTriggerRef = React.useRef<HTMLButtonElement>(null)
   const playbackResolutionTriggerRef = React.useRef<HTMLButtonElement>(null)
+
+  React.useEffect(() => {
+    if (isActive) return
+    const container = previewContainerRef.current
+    if (!container) return
+    for (const video of container.querySelectorAll('video')) {
+      video.pause()
+      video.removeAttribute('src')
+      video.load()
+    }
+  }, [isActive, previewContainerRef])
 
   // Sync mask video elements to the pool video's currentTime on every time update
   React.useEffect(() => {
@@ -265,12 +278,12 @@ export function ProgramMonitor({
                       <video
                         key={`comp-${lowerClip.id}`}
                         id={`comp-video-${lowerClip.id}`}
-                        src={lowerSrc}
+                        src={isActive ? lowerSrc : undefined}
                         className="absolute inset-0 w-full h-full object-contain pointer-events-none z-1"
                         style={lowerStyles}
                         muted
                         playsInline
-                        preload="auto"
+                        preload={isActive ? "auto" : "none"}
                         ref={(el) => {
                           if (!el) return
                           el.muted = true
@@ -344,12 +357,12 @@ export function ProgramMonitor({
                         <video
                           ref={previewVideoRef as React.RefObject<HTMLVideoElement | null>}
                           key={`dissolve-in-${incoming.id}`}
-                          src={inSrc}
+                          src={isActive ? inSrc : undefined}
                           className="absolute inset-0 w-full h-full object-contain pointer-events-none"
                           style={inStyle}
                           playsInline
                           muted
-                          preload="auto"
+                          preload={isActive ? "auto" : "none"}
                         />
                       )
                     }

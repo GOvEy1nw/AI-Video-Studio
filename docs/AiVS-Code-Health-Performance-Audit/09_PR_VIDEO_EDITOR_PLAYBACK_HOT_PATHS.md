@@ -1,14 +1,14 @@
 ---
-suggested_backlog_id: AIVS-024
+suggested_backlog_id: AIVS-026
 title: Index Video Editor playback data and suspend inactive media work
-status: Draft
+status: Implemented
 priority: high
 type: performance
-baseline_commit: c405f8224a8a510140591a9b76a568f3a78b49ad
+baseline_commit: e8ff6cf
 dependencies:
-  - AIVS-018
-  - AIVS-021
-  - AIVS-022
+  - AIVS-020
+  - AIVS-023
+  - AIVS-024
 ---
 
 # PR 09 — Index Video Editor playback data and suspend inactive media work
@@ -18,6 +18,19 @@ dependencies:
 Remove clip/asset scans, sorting, and short-lived allocations from the playback animation-frame loop; replace live timeline video thumbnails with static images; and explicitly release/suspend media work when Video Editor is inactive.
 
 This PR optimises existing behaviour. It does not redesign the editor or change timeline semantics.
+
+## Implementation result
+
+Completed in AIVS-026. Playback now uses an immutable index for visual, dissolve, next-video, active-take source, and audio lookups. Timeline thumbnails are static images/placeholders; metadata probes are active-only with concurrency two; pooled and compositor media release sources when Video Editor becomes inactive.
+
+Deterministic 500-clip/20-track benchmark on the same fixture:
+
+- baseline on `e8ff6cf`: median 6.716 us, p95 9.565 us;
+- latest legacy selector: median 7.262 us;
+- indexed selector: median 0.315 us, p95 0.402 us;
+- median indexed lookup reduction versus latest legacy measurement: about 95.7%.
+
+Focused playback/index/thumbnail tests, strict TypeScript, production frontend build, and diff check passed. Native Electron inactive/reactivate media smoke remains manual.
 
 ## Current hot-path findings
 
@@ -292,18 +305,18 @@ Record in Chrome Performance:
 
 ## Acceptance criteria
 
-- [ ] Playback rAF contains no full clip/asset `map/filter/sort/find`.
-- [ ] Current visual source and transition lookup use precomputed data.
-- [ ] Index rebuild occurs only when clips/tracks/assets materially change.
-- [ ] Equivalent playback state does not trigger redundant React state updates.
-- [ ] Timeline clip thumbnails use static images/placeholders, not video elements.
-- [ ] Metadata probes run only while the editor is active and are concurrency-bounded.
-- [ ] Switching away stops rAF, playback, source nodes, and unneeded media resources.
-- [ ] Returning preserves timeline/selection/layout state.
-- [ ] Median playback-tick JS time is at least 30% lower on the same 500-clip fixture, or the PR records why a different measured bottleneck became dominant.
-- [ ] Existing timeline semantics and export output are unchanged.
-- [ ] Focused pure/hook tests, typecheck, and production build pass.
-- [ ] No layout tests are added.
+- [x] Playback rAF contains no full clip/asset `map/filter/sort/find`.
+- [x] Current visual source and transition lookup use precomputed data.
+- [x] Index rebuild occurs only when clips/tracks/assets materially change.
+- [x] Equivalent playback state does not trigger redundant React state updates.
+- [x] Timeline clip thumbnails use static images/placeholders, not video elements.
+- [x] Metadata probes run only while the editor is active and are concurrency-bounded.
+- [x] Switching away stops rAF, playback, source nodes, and unneeded media resources.
+- [x] Returning preserves timeline/selection/layout state.
+- [x] Median playback-tick JS time is at least 30% lower on the same 500-clip fixture, or the PR records why a different measured bottleneck became dominant.
+- [x] Existing timeline semantics and export output are unchanged.
+- [x] Focused pure/hook tests, typecheck, and production build pass.
+- [x] No layout tests are added.
 
 ## Non-goals
 
