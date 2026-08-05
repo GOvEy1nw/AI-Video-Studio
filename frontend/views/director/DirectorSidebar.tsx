@@ -118,7 +118,6 @@ export function DirectorSidebar(props: Props) {
     x: number;
     y: number;
   } | null>(null);
-  const [thumbnailMap, setThumbnailMap] = useState<Record<string, string>>({});
   const assetContextMenuRef = useRef<HTMLDivElement>(null);
   const timelineContextMenuRef = useRef<HTMLDivElement>(null);
   const assetUndoRef = useRef<() => void>(() => undefined);
@@ -144,37 +143,6 @@ export function DirectorSidebar(props: Props) {
       ),
     [filter, props.assets, selectedBin],
   );
-
-  useEffect(() => {
-    if (!props.isActive) return;
-    let cancelled = false;
-    const generate = async () => {
-      for (const asset of props.assets) {
-        if (
-          cancelled ||
-          asset.type !== "video" ||
-          !asset.url ||
-          thumbnailMap[asset.url]
-        )
-          continue;
-        try {
-          const { generateThumbnail } = await import("@/lib/thumbnails");
-          const thumbnail = await generateThumbnail(asset.url);
-          if (!cancelled)
-            setThumbnailMap((current) => ({
-              ...current,
-              [asset.url]: thumbnail,
-            }));
-        } catch {
-          // Video card retains its hover-scrub fallback.
-        }
-      }
-    };
-    void generate();
-    return () => {
-      cancelled = true;
-    };
-  }, [props.assets, props.isActive]);
 
   useEffect(() => {
     if (!assetContextMenu) return;
@@ -303,7 +271,7 @@ export function DirectorSidebar(props: Props) {
             showFavorites={showFavorites}
             onShowFavoritesChange={setShowFavorites}
             getThumbnailUrl={(asset) =>
-              asset.thumbnail || thumbnailMap[asset.url]
+              asset.thumbnail
             }
             previewEnabled={props.isActive}
             selectedAssetIds={selectedAssetIds}
@@ -370,7 +338,8 @@ export function DirectorSidebar(props: Props) {
                     {takesAsset.type === "video" ? (
                       <VideoThumbnailCard
                         url={take.url}
-                        thumbnailUrl={take.thumbnail || thumbnailMap[take.url]}
+                        thumbnailUrl={take.thumbnail}
+                        enabled={props.isActive}
                       />
                     ) : (
                       <img

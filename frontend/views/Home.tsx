@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Plus,
   Folder,
@@ -41,13 +41,10 @@ function ProjectCard({
   const [imgError, setImgError] = useState(false);
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
 
-  // Get thumbnail: use stored thumbnail, or first asset's URL as fallback
-  const thumbnailUrl =
-    project.thumbnail ||
-    (project.assets.length > 0 ? project.assets[0].url : null);
-  // For videos, try to find the first image asset for a better thumbnail
   const bestThumbnail =
-    project.assets.find((a) => a.type === "image")?.url || thumbnailUrl;
+    project.thumbnail ||
+    project.assets.find((asset) => asset.type === "image")?.url ||
+    project.assets.find((asset) => asset.type === "video")?.thumbnail;
 
   return (
     <div
@@ -57,24 +54,14 @@ function ProjectCard({
       {/* Thumbnail */}
       <div className="aspect-video bg-zinc-800 flex items-center justify-center relative overflow-hidden">
         {bestThumbnail && !imgError ? (
-          project.assets.find(
-            (a) => a.type === "video" && a.url === bestThumbnail,
-          ) ? (
-            <video
-              src={bestThumbnail}
-              className="w-full h-full object-cover"
-              muted
-              preload="metadata"
-              onError={() => setImgError(true)}
-            />
-          ) : (
-            <img
-              src={bestThumbnail}
-              alt={project.name}
-              className="w-full h-full object-cover"
-              onError={() => setImgError(true)}
-            />
-          )
+          <img
+            src={bestThumbnail}
+            alt={project.name}
+            loading="lazy"
+            decoding="async"
+            className="w-full h-full object-cover"
+            onError={() => setImgError(true)}
+          />
         ) : (
           <Folder className="h-12 w-12 text-zinc-600" />
         )}
@@ -145,6 +132,25 @@ export function Home() {
   const [newProjectName, setNewProjectName] = useState("");
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const heroVideoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const video = heroVideoRef.current;
+    if (!video) return;
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => {
+      if (document.hidden || mediaQuery.matches) video.pause();
+      else void video.play().catch(() => undefined);
+    };
+    sync();
+    document.addEventListener("visibilitychange", sync);
+    mediaQuery.addEventListener("change", sync);
+    return () => {
+      document.removeEventListener("visibilitychange", sync);
+      mediaQuery.removeEventListener("change", sync);
+      video.pause();
+    };
+  }, []);
 
   const handleCreateProject = () => {
     if (newProjectName.trim()) {
@@ -217,8 +223,8 @@ export function Home() {
         {/* Header Banner with video background */}
         <div className="relative h-72 overflow-hidden">
           <video
+            ref={heroVideoRef}
             src="./hero-video.mp4"
-            autoPlay
             loop
             muted
             playsInline

@@ -26,6 +26,7 @@ import {
 import type { Asset } from "../types/project";
 import type { GalleryFilterState } from "../lib/gallery-filters";
 import { ClipWaveform } from "./AudioWaveform";
+import { useVideoThumbnail } from "../lib/video-thumbnail-service";
 import { GalleryAssetList } from "./GalleryAssetList";
 import { GalleryFilters } from "./GalleryFilters";
 import {
@@ -121,11 +122,13 @@ function AudioVariationRow({
   url,
   index,
   active,
+  enabled,
   onSelect,
 }: {
   url: string;
   index: number;
   active: boolean;
+  enabled: boolean;
   onSelect?: () => void;
 }) {
   return (
@@ -141,6 +144,7 @@ function AudioVariationRow({
     >
       <ClipWaveform
         url={url}
+        enabled={enabled}
         color={active ? "rgba(110, 231, 183, 0.9)" : "rgba(52, 211, 153, 0.65)"}
       />
       <span className="absolute bottom-1 right-1 z-10 rounded-sm bg-black/70 px-1.5 py-0.5 text-[9px] font-medium text-emerald-200">
@@ -178,11 +182,29 @@ export function GalleryAssetCard({
   onSelectTake?: (takeIndex: number) => void;
 }) {
   const [isHovered, setIsHovered] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+  useEffect(() => {
+    if (!("IntersectionObserver" in window)) {
+      setIsVisible(true);
+      return;
+    }
+    const card = cardRef.current;
+    if (!card) return;
+    const observer = new IntersectionObserver(([entry]) => setIsVisible(entry.isIntersecting));
+    observer.observe(card);
+    return () => observer.disconnect();
+  }, []);
+  const generatedThumbnail = useVideoThumbnail(asset.type === "video" ? asset.url : undefined, {
+    enabled: previewEnabled && isVisible,
+    fallback: thumbnailUrl,
+  });
   const hasStackedAudioTakes =
     asset.type === "audio" && (asset.takes?.length ?? 0) > 1;
 
   return (
     <div
+      ref={cardRef}
       data-asset-card
       data-asset-id={asset.id}
       role={multiSelectMode ? "checkbox" : undefined}
@@ -218,20 +240,11 @@ export function GalleryAssetCard({
     >
       <div className="relative aspect-square overflow-hidden rounded-[10px] bg-zinc-900">
         {asset.type === "video" ? (
-          thumbnailUrl ? (
+          generatedThumbnail ? (
             <img
-              src={thumbnailUrl}
+              src={generatedThumbnail}
               alt=""
               className="absolute inset-0 h-full w-full object-cover"
-            />
-          ) : previewEnabled ? (
-            <video
-              key={asset.url}
-              src={asset.url}
-              preload="metadata"
-              className="absolute inset-0 h-full w-full object-cover"
-              muted
-              playsInline
             />
           ) : null
         ) : hasStackedAudioTakes ? (
@@ -242,13 +255,14 @@ export function GalleryAssetCard({
                 url={take.url}
                 index={index}
                 active={(asset.activeTakeIndex ?? 0) === index}
+                enabled={previewEnabled}
                 onSelect={() => onSelectTake?.(index)}
               />
             ))}
           </div>
         ) : asset.type === "audio" ? (
           <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-zinc-950 transition-colors hover:bg-emerald-950/40">
-            <ClipWaveform url={asset.url} />
+            <ClipWaveform url={asset.url} enabled={previewEnabled} />
           </div>
         ) : asset.type === "adjustment" ? (
           <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 border border-dashed border-blue-500/30 bg-linear-to-br from-blue-900/40 to-zinc-900">
@@ -732,6 +746,7 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
               multiSelectMode={multiSelectMode}
               onToggleSelection={toggleMultiSelectedAsset}
               getThumbnailUrl={props.getThumbnailUrl}
+              previewEnabled={props.previewEnabled && documentVisible}
               getAssetColorLabel={(asset) =>
                 getColorLabel(
                   asset.bin ? props.binColors[asset.bin] : undefined,

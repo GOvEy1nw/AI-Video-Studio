@@ -1,7 +1,7 @@
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Music } from "lucide-react";
+import { getWaveform } from "../lib/audio-decode-service";
 import { logger } from "../lib/logger";
-import { readLocalMediaArrayBuffer } from "../lib/local-media-bytes";
 
 interface AudioClipInfo {
   url: string;
@@ -14,306 +14,137 @@ interface AudioWaveformProps {
   audioClips: AudioClipInfo[];
   currentTime: number;
   isPlaying: boolean;
+  enabled?: boolean;
 }
 
-// Global waveform cache: URL → Float32Array of peak amplitudes (one per pixel-bucket)
-export const waveformCache = new Map<string, Float32Array>();
-const MAX_WAVEFORM_CACHE_ENTRIES = 64;
-const pendingDecodes = new Set<string>();
+export { getWaveform as computeWaveform } from "../lib/audio-decode-service";
 
-// Decode audio file and extract amplitude envelope
-export async function computeWaveform(
-  url: string,
-  buckets: number = 800,
-): Promise<Float32Array> {
-  if (waveformCache.has(url)) return waveformCache.get(url)!;
-
-  if (pendingDecodes.has(url)) {
-    while (pendingDecodes.has(url)) {
-      await new Promise((r) => setTimeout(r, 50));
-    }
-    if (waveformCache.has(url)) return waveformCache.get(url)!;
+function drawPeaks(
+  canvas: HTMLCanvasElement,
+  peaks: Float32Array,
+  color: string,
+  heightFactor = 1,
+) {
+  const rect = canvas.getBoundingClientRect();
+  const width = Math.floor(rect.width);
+  const height = Math.floor(rect.height * heightFactor);
+  if (!width || !height) return;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  canvas.style.width = `${width}px`;
+  canvas.style.height = `${height}px`;
+  const context = canvas.getContext("2d");
+  if (!context) return;
+  context.scale(dpr, dpr);
+  context.clearRect(0, 0, width, height);
+  const center = height / 2;
+  const amplitude = height * 0.45;
+  context.fillStyle = color;
+  context.beginPath();
+  for (let index = 0; index < width; index += 1) {
+    const peak = peaks[Math.min(peaks.length - 1, Math.floor((index / width) * peaks.length))];
+    if (index === 0) context.moveTo(index, center - peak * amplitude);
+    else context.lineTo(index, center - peak * amplitude);
   }
-
-  pendingDecodes.add(url);
-  try {
-    const arrayBuffer = await readLocalMediaArrayBuffer(url);
-
-    const audioCtx = new (
-      window.AudioContext || (window as any).webkitAudioContext
-    )();
-    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-    audioCtx.close();
-
-    const channelData = audioBuffer.getChannelData(0);
-    const samplesPerBucket = Math.floor(channelData.length / buckets);
-    const peaks = new Float32Array(buckets);
-
-    for (let i = 0; i < buckets; i++) {
-      let max = 0;
-      const start = i * samplesPerBucket;
-      const end = Math.min(start + samplesPerBucket, channelData.length);
-      for (let j = start; j < end; j++) {
-        const abs = Math.abs(channelData[j]);
-        if (abs > max) max = abs;
-      }
-      peaks[i] = max;
-    }
-
-    if (waveformCache.size >= MAX_WAVEFORM_CACHE_ENTRIES) {
-      const oldest = waveformCache.keys().next().value;
-      if (oldest) waveformCache.delete(oldest);
-    }
-    waveformCache.set(url, peaks);
-    return peaks;
-  } finally {
-    pendingDecodes.delete(url);
+  for (let index = width - 1; index >= 0; index -= 1) {
+    const peak = peaks[Math.min(peaks.length - 1, Math.floor((index / width) * peaks.length))];
+    context.lineTo(index, center + peak * amplitude);
   }
+  context.closePath();
+  context.fill();
 }
 
-export function AudioWaveform({
-  audioClips,
-  currentTime,
-  isPlaying,
-}: AudioWaveformProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+function useVisible(ref: React.RefObject<Element | null>, enabled: boolean) {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    if (!enabled) return;
+    if (!("IntersectionObserver" in window)) {
+      setVisible(true);
+      return;
+    }
+    const target = ref.current;
+    if (!target) return;
+    const observer = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting));
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [enabled, ref]);
+  return enabled && visible;
+}
+
+function StaticWaveform({
+  peaks,
+  color,
+  playedColor,
+  progress,
+  className,
+}: {
+  peaks: Float32Array;
+  color: string;
+  playedColor?: string;
+  progress?: number;
+  className?: string;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [waveforms, setWaveforms] = useState<Map<string, Float32Array>>(
-    new Map(),
-  );
-  const animRef = useRef<number>(0);
-
-  // Load waveform data for all clips
-  useEffect(() => {
-    let cancelled = false;
-    const loadAll = async () => {
-      const newMap = new Map<string, Float32Array>();
-      for (const clip of audioClips) {
-        if (!clip.url) continue;
-        try {
-          const peaks = await computeWaveform(clip.url);
-          if (cancelled) return;
-          newMap.set(clip.url, peaks);
-        } catch (e) {
-          logger.warn(`Failed to decode audio waveform: ${clip.url} ${e}`);
-        }
-      }
-      if (!cancelled) setWaveforms(newMap);
-    };
-    loadAll();
-    return () => {
-      cancelled = true;
-    };
-  }, [audioClips.map((c) => c.url).join(",")]);
-
-  // Draw waveform on canvas
+  const baseRef = useRef<HTMLCanvasElement>(null);
+  const playedRef = useRef<HTMLCanvasElement>(null);
   const draw = useCallback(() => {
-    const canvas = canvasRef.current;
-    const container = containerRef.current;
-    if (!canvas || !container) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    const rect = container.getBoundingClientRect();
-    const w = rect.width;
-    const h = rect.height;
-
-    canvas.width = w * dpr;
-    canvas.height = h * dpr;
-    canvas.style.width = `${w}px`;
-    canvas.style.height = `${h}px`;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.scale(dpr, dpr);
-
-    // Background
-    ctx.fillStyle = "#0a0a0a";
-    ctx.fillRect(0, 0, w, h);
-
-    // Grid lines (subtle)
-    ctx.strokeStyle = "rgba(255,255,255,0.04)";
-    ctx.lineWidth = 1;
-    const centerY = h / 2;
-    // Horizontal center line
-    ctx.beginPath();
-    ctx.moveTo(0, centerY);
-    ctx.lineTo(w, centerY);
-    ctx.stroke();
-    // Quarter lines
-    for (const frac of [0.25, 0.75]) {
-      ctx.beginPath();
-      ctx.moveTo(0, h * frac);
-      ctx.lineTo(w, h * frac);
-      ctx.stroke();
-    }
-
-    if (audioClips.length === 0) return;
-
-    // For simplicity, render the first (or longest) audio clip's waveform
-    // filling the entire monitor width. If multiple clips, overlay them.
-    const maxAmplitude = h * 0.4; // 40% of height above and below center
-
-    for (let ci = 0; ci < audioClips.length; ci++) {
-      const clip = audioClips[ci];
-      const peaks = waveforms.get(clip.url);
-      if (!peaks || peaks.length === 0) continue;
-
-      // Map clip's time range to screen
-      const clipProgress = (currentTime - clip.startTime) / clip.duration;
-
-      // Color: emerald with some alpha for overlapping
-      const alpha = audioClips.length > 1 ? 0.6 : 0.9;
-      const gradient = ctx.createLinearGradient(
-        0,
-        centerY - maxAmplitude,
-        0,
-        centerY + maxAmplitude,
-      );
-      gradient.addColorStop(0, `rgba(52, 211, 153, ${alpha})`); // emerald-400
-      gradient.addColorStop(0.5, `rgba(16, 185, 129, ${alpha})`); // emerald-500
-      gradient.addColorStop(1, `rgba(52, 211, 153, ${alpha})`);
-
-      // Draw filled waveform (mirrored around center)
-      ctx.fillStyle = gradient;
-      ctx.beginPath();
-
-      // Top half (positive)
-      for (let i = 0; i < w; i++) {
-        const peakIdx = Math.floor((i / w) * peaks.length);
-        const amp = peaks[Math.min(peakIdx, peaks.length - 1)];
-        const y = centerY - amp * maxAmplitude;
-        if (i === 0) ctx.moveTo(i, y);
-        else ctx.lineTo(i, y);
-      }
-
-      // Bottom half (negative, traced backwards)
-      for (let i = w - 1; i >= 0; i--) {
-        const peakIdx = Math.floor((i / w) * peaks.length);
-        const amp = peaks[Math.min(peakIdx, peaks.length - 1)];
-        const y = centerY + amp * maxAmplitude;
-        ctx.lineTo(i, y);
-      }
-
-      ctx.closePath();
-      ctx.fill();
-
-      // Played region: brighter overlay
-      if (clipProgress > 0 && clipProgress <= 1) {
-        const playedX = clipProgress * w;
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(0, 0, playedX, h);
-        ctx.clip();
-
-        const brightGradient = ctx.createLinearGradient(
-          0,
-          centerY - maxAmplitude,
-          0,
-          centerY + maxAmplitude,
-        );
-        brightGradient.addColorStop(0, "rgba(52, 211, 153, 0.3)");
-        brightGradient.addColorStop(0.5, "rgba(16, 185, 129, 0.3)");
-        brightGradient.addColorStop(1, "rgba(52, 211, 153, 0.3)");
-
-        ctx.fillStyle = brightGradient;
-        ctx.beginPath();
-        for (let i = 0; i < w; i++) {
-          const peakIdx = Math.floor((i / w) * peaks.length);
-          const amp = peaks[Math.min(peakIdx, peaks.length - 1)];
-          const y = centerY - amp * maxAmplitude;
-          if (i === 0) ctx.moveTo(i, y);
-          else ctx.lineTo(i, y);
-        }
-        for (let i = w - 1; i >= 0; i--) {
-          const peakIdx = Math.floor((i / w) * peaks.length);
-          const amp = peaks[Math.min(peakIdx, peaks.length - 1)];
-          const y = centerY + amp * maxAmplitude;
-          ctx.lineTo(i, y);
-        }
-        ctx.closePath();
-        ctx.fill();
-        ctx.restore();
-      }
-
-      // Playhead line
-      if (clipProgress >= 0 && clipProgress <= 1) {
-        const px = clipProgress * w;
-        ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(px, 4);
-        ctx.lineTo(px, h - 4);
-        ctx.stroke();
-
-        // Small triangle at top
-        ctx.fillStyle = "#ffffff";
-        ctx.beginPath();
-        ctx.moveTo(px, 2);
-        ctx.lineTo(px - 4, 8);
-        ctx.lineTo(px + 4, 8);
-        ctx.closePath();
-        ctx.fill();
-      }
-    }
-
-    // If no waveform data loaded yet, show loading indicator
-    if (waveforms.size === 0) {
-      ctx.fillStyle = "rgba(255,255,255,0.3)";
-      ctx.font = "12px system-ui, sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText("Loading waveform...", w / 2, centerY);
-    }
-  }, [audioClips, currentTime, waveforms]);
-
-  // Animate during playback
+    if (!baseRef.current) return;
+    drawPeaks(baseRef.current, peaks, color);
+    if (playedColor && playedRef.current) drawPeaks(playedRef.current, peaks, playedColor);
+  }, [color, peaks, playedColor]);
   useEffect(() => {
-    if (isPlaying) {
-      const animate = () => {
-        draw();
-        animRef.current = requestAnimationFrame(animate);
-      };
-      animRef.current = requestAnimationFrame(animate);
-      return () => cancelAnimationFrame(animRef.current);
-    } else {
-      draw();
-    }
-  }, [isPlaying, draw]);
-
-  // Redraw on resize
-  useEffect(() => {
-    const observer = new ResizeObserver(() => draw());
+    draw();
+    const observer = new ResizeObserver(draw);
     if (containerRef.current) observer.observe(containerRef.current);
     return () => observer.disconnect();
   }, [draw]);
-
+  const clampedProgress = Math.max(0, Math.min(1, progress ?? 0));
   return (
-    <div ref={containerRef} className="w-full h-full flex flex-col">
-      {/* Canvas fills available space */}
-      <div className="flex-1 relative min-h-0">
-        <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
-        {/* Small music icon badge */}
-        <div className="absolute top-3 left-3 flex items-center gap-2 px-2 py-1 rounded-sm bg-black/60">
-          <Music className="h-3 w-3 text-emerald-400" />
-          <span className="text-[10px] text-emerald-400 font-medium">
-            Audio
-          </span>
-        </div>
-      </div>
-      {/* Clip names */}
-      {audioClips.length > 0 && (
-        <div className="shrink-0 px-3 py-1.5 bg-zinc-950 border-t border-zinc-800">
-          {audioClips.map((clip, i) => (
-            <p key={i} className="text-2xs text-zinc-500 truncate">
-              {clip.name}
-            </p>
-          ))}
-        </div>
+    <div ref={containerRef} className={`absolute inset-0 overflow-hidden ${className ?? ""}`}>
+      <canvas ref={baseRef} className="absolute inset-0 h-full w-full" />
+      {playedColor && (
+        <canvas
+          ref={playedRef}
+          className="absolute inset-0 h-full w-full"
+          style={{ clipPath: `inset(0 ${100 - clampedProgress * 100}% 0 0)` }}
+        />
+      )}
+      {progress !== undefined && (
+        <div className="absolute inset-y-0 w-px bg-white" style={{ left: `${clampedProgress * 100}%` }} />
       )}
     </div>
   );
 }
 
-// --- Compact inline waveform for timeline audio clips ---
+export function AudioWaveform({ audioClips, currentTime, enabled = true }: AudioWaveformProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const active = useVisible(containerRef, enabled);
+  const [waveforms, setWaveforms] = useState<Map<string, Float32Array>>(new Map());
+  useEffect(() => {
+    if (!active) return;
+    let cancelled = false;
+    void Promise.all(audioClips.filter((clip) => clip.url).map(async (clip) => {
+      try { return [clip.url, await getWaveform(clip.url)] as const; }
+      catch (error) { logger.warn(`Failed to decode audio waveform: ${clip.url} ${error}`); return null; }
+    })).then((results) => {
+      if (!cancelled) setWaveforms(new Map(results.filter((value): value is readonly [string, Float32Array] => value !== null)));
+    });
+    return () => { cancelled = true; };
+  }, [active, audioClips]);
+  return (
+    <div ref={containerRef} className="w-full h-full flex flex-col">
+      <div className="flex-1 relative min-h-0 bg-[#0a0a0a]">
+        {audioClips.map((clip) => {
+          const peaks = waveforms.get(clip.url);
+          return peaks ? <StaticWaveform key={clip.url} peaks={peaks} color="rgba(16, 185, 129, 0.9)" playedColor="rgba(110, 231, 183, 0.9)" progress={(currentTime - clip.startTime) / clip.duration} /> : null;
+        })}
+        <div className="absolute top-3 left-3 flex items-center gap-2 px-2 py-1 rounded-sm bg-black/60"><Music className="h-3 w-3 text-emerald-400" /><span className="text-[10px] text-emerald-400 font-medium">Audio</span></div>
+      </div>
+      {audioClips.length > 0 && <div className="shrink-0 px-3 py-1.5 bg-zinc-950 border-t border-zinc-800">{audioClips.map((audioClip, index) => <p key={`${audioClip.url}-${index}`} className="text-2xs text-zinc-500 truncate">{audioClip.name}</p>)}</div>}
+    </div>
+  );
+}
 
 interface ClipWaveformProps {
   url: string;
@@ -321,104 +152,18 @@ interface ClipWaveformProps {
   color?: string;
   playedColor?: string;
   progress?: number;
+  enabled?: boolean;
 }
 
-export function ClipWaveform({
-  url,
-  className = "",
-  color = "rgba(52, 211, 153, 0.7)",
-  playedColor = "rgba(110, 231, 183, 0.9)",
-  progress,
-}: ClipWaveformProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+export function ClipWaveform({ url, className = "", color = "rgba(52, 211, 153, 0.7)", playedColor, progress, enabled = true }: ClipWaveformProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const active = useVisible(containerRef, enabled);
   const [peaks, setPeaks] = useState<Float32Array | null>(null);
-
   useEffect(() => {
-    if (!url) return;
+    if (!active || !url) return;
     let cancelled = false;
-    computeWaveform(url, 200)
-      .then((p) => {
-        if (!cancelled) setPeaks(p);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [url]);
-
-  const draw = useCallback(() => {
-    const canvas = canvasRef.current;
-    const container = containerRef.current;
-    if (!canvas || !container || !peaks) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    const rect = container.getBoundingClientRect();
-    const w = rect.width;
-    const h = rect.height / 3;
-    if (w === 0 || h === 0) return;
-
-    canvas.width = w * dpr;
-    canvas.height = h * dpr;
-    canvas.style.width = `${w}px`;
-    canvas.style.height = `${h}px`;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.scale(dpr, dpr);
-    ctx.clearRect(0, 0, w, h);
-
-    const centerY = h / 2;
-    const maxAmp = h * 0.45;
-
-    const drawPeaks = (fillStyle: string) => {
-      ctx.fillStyle = fillStyle;
-      ctx.beginPath();
-      for (let i = 0; i < w; i++) {
-        const peakIdx = Math.floor((i / w) * peaks.length);
-        const amp = peaks[Math.min(peakIdx, peaks.length - 1)];
-        const y = centerY - amp * maxAmp;
-        if (i === 0) ctx.moveTo(i, y);
-        else ctx.lineTo(i, y);
-      }
-      for (let i = w - 1; i >= 0; i--) {
-        const peakIdx = Math.floor((i / w) * peaks.length);
-        const amp = peaks[Math.min(peakIdx, peaks.length - 1)];
-        const y = centerY + amp * maxAmp;
-        ctx.lineTo(i, y);
-      }
-      ctx.closePath();
-      ctx.fill();
-    };
-
-    drawPeaks(color);
-
-    if (progress !== undefined && progress > 0) {
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(0, 0, Math.min(1, progress) * w, h);
-      ctx.clip();
-      drawPeaks(playedColor);
-      ctx.restore();
-    }
-  }, [peaks, color, playedColor, progress]);
-
-  useEffect(() => {
-    draw();
-  }, [draw]);
-
-  useEffect(() => {
-    const observer = new ResizeObserver(() => draw());
-    if (containerRef.current) observer.observe(containerRef.current);
-    return () => observer.disconnect();
-  }, [draw]);
-
-  return (
-    <div ref={containerRef} className={`absolute inset-0 ${className}`}>
-      <canvas
-        ref={canvasRef}
-        className="absolute inset-0 w-full h-full m-auto"
-      />
-    </div>
-  );
+    void getWaveform(url, 200).then((result) => { if (!cancelled) setPeaks(result); }).catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [active, url]);
+  return <div ref={containerRef} className={`absolute inset-0 ${className}`}>{peaks && <StaticWaveform peaks={peaks} color={color} playedColor={playedColor} progress={progress} />}</div>;
 }

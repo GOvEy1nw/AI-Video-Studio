@@ -1,15 +1,21 @@
 ---
-suggested_backlog_id: AIVS-022
+suggested_backlog_id: AIVS-024
 title: Unify bounded audio and thumbnail decoding and caches
-status: Draft
+status: Implemented
 priority: high
 type: performance
-baseline_commit: c405f8224a8a510140591a9b76a568f3a78b49ad
+baseline_commit: 94abf44
 dependencies:
-  - AIVS-021
+  - AIVS-023
 ---
 
 # PR 07 — Unify bounded audio/thumbnail decoding and caches
+
+## Implementation result
+
+Implemented by AIVS-024 with direct bounded audio-decode/waveform and video-thumbnail services. Playback and waveform consumers share one promise-deduplicated decode path; thumbnail consumers use visibility-gated leases so eviction revokes blob URLs only after mounted users release them. Director and Video Editor no longer keep project-wide thumbnail maps, Asset Library cards remain static-thumbnail-first, and Home project cards never mount video elements.
+
+Validation: 9 focused Vitest cases passed, strict TypeScript passed, production renderer/Electron/preload build passed, and independent review returned `ship`. Native Electron decoding, hover-scrub, and hero-video smoke remains a manual validation boundary.
 
 ## Pull request intent
 
