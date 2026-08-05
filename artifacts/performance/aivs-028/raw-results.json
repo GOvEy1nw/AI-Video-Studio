@@ -1,0 +1,208 @@
+{
+  "recordedAt": "2026-08-05T20:05:34.934Z",
+  "mode": "Node storage-only fallback; exact V1 index + Promise.all file read/JSON.parse algorithm, not renderer timing",
+  "fixtureRoot": "C:\\Users\\rais\\AppData\\Local\\Temp\\aivs-028-localappdata",
+  "machine": {
+    "platform": "win32",
+    "release": "10.0.26100",
+    "cpu": "Intel(R) Core(TM) i9-14900K",
+    "cpuCount": 32,
+    "totalMemoryBytes": 137197457408,
+    "gpu": "NVIDIA GeForce RTX 4070 Ti SUPER, 16376 MiB",
+    "storage": {
+      "fixturePath": "C:\\Users\\rais\\AppData\\Local\\Temp\\aivs-028-localappdata",
+      "drive": "C:\\",
+      "driveType": "Fixed",
+      "fileSystem": "NTFS"
+    }
+  },
+  "node": "v24.18.0",
+  "pnpm": "10.30.3",
+  "electron": "43.2.0 (package baseline; native package launch blocked)",
+  "nativeHeapGate": {
+    "mode": "Vite dev + Electron via pnpm dev:debug; one isolated Project L observation after CDP garbage collection",
+    "rendererRuntimeHeap": {
+      "usedSize": 16192972,
+      "totalSize": 17412096,
+      "embedderHeapUsedSize": 3244088,
+      "backingStorageSize": 9067900
+    },
+    "rendererPerformanceMemory": {
+      "usedJSHeapSize": 25266088,
+      "totalJSHeapSize": 26742140,
+      "jsHeapSizeLimit": 4395630592
+    },
+    "home": { "projectCards": 50, "videoElements": 1, "imageElements": 18 },
+    "processWorkingSet": {
+      "cdpOwnerBytes": 124157952,
+      "allElectronProcesses": 9,
+      "allElectronWorkingSetBytes": 1015058432,
+      "note": "App-wide process total is not renderer heap; only renderer heap is gate evidence."
+    }
+  },
+  "nativeFiveRunMeasurement": {
+    "status": "blocked-before-first-valid-sample",
+    "attemptedModes": [
+      "Vite dev + Electron via pnpm dev:debug",
+      "isolated unpacked Windows package"
+    ],
+    "blockers": [
+      "Clean dev launches reached CDP but the preload bridge was unavailable, so BackendLifecycleProvider crashed before Home.",
+      "A complete isolated unpacked package launched and wrote session logs but did not expose its requested CDP port, so renderer/Home timing could not be observed.",
+      "Persistent environment-controlled remote-debug instrumentation was rejected as security-sensitive and was reverted without build or execution."
+    ],
+    "note": "No app-start-to-Home or native loadProjects timing samples were collected. Existing exact-algorithm five-run storage samples and one-shot native renderer heap observation are retained separately."
+  },
+  "variants": {
+    "1": {
+      "samples": [
+        {
+          "run": 1,
+          "loadProjectsMs": 9.782699999999998,
+          "parsedBytes": 1389862,
+          "nodeHeapDeltaBytes": 17720784,
+          "largestOpenMs": 15.078299999999999,
+          "largestDocumentBytes": 1389862,
+          "loadedProjectCount": 1
+        },
+        {
+          "run": 2,
+          "loadProjectsMs": 21.809199999999997,
+          "parsedBytes": 1389862,
+          "nodeHeapDeltaBytes": 4188424,
+          "largestOpenMs": 14.531300000000002,
+          "largestDocumentBytes": 1389862,
+          "loadedProjectCount": 1
+        },
+        {
+          "run": 3,
+          "loadProjectsMs": 20.18289999999999,
+          "parsedBytes": 1389862,
+          "nodeHeapDeltaBytes": 16038376,
+          "largestOpenMs": 7.941900000000004,
+          "largestDocumentBytes": 1389862,
+          "loadedProjectCount": 1
+        },
+        {
+          "run": 4,
+          "loadProjectsMs": 18.546200000000013,
+          "parsedBytes": 1389862,
+          "nodeHeapDeltaBytes": 17278568,
+          "largestOpenMs": 12.595700000000022,
+          "largestDocumentBytes": 1389862,
+          "loadedProjectCount": 1
+        },
+        {
+          "run": 5,
+          "loadProjectsMs": 13.084599999999995,
+          "parsedBytes": 1389862,
+          "nodeHeapDeltaBytes": 19043512,
+          "largestOpenMs": 6.941599999999994,
+          "largestDocumentBytes": 1389862,
+          "loadedProjectCount": 1
+        }
+      ],
+      "medianLoadProjectsMs": 18.546200000000013
+    },
+    "10": {
+      "samples": [
+        {
+          "run": 1,
+          "loadProjectsMs": 12.179199999999998,
+          "parsedBytes": 1551656,
+          "nodeHeapDeltaBytes": 16885664,
+          "largestOpenMs": 21.959700000000005,
+          "largestDocumentBytes": 1389862,
+          "loadedProjectCount": 10
+        },
+        {
+          "run": 2,
+          "loadProjectsMs": 14.732000000000006,
+          "parsedBytes": 1551656,
+          "nodeHeapDeltaBytes": 5110536,
+          "largestOpenMs": 16.29050000000001,
+          "largestDocumentBytes": 1389862,
+          "loadedProjectCount": 10
+        },
+        {
+          "run": 3,
+          "loadProjectsMs": 18.42139999999999,
+          "parsedBytes": 1551656,
+          "nodeHeapDeltaBytes": 9932200,
+          "largestOpenMs": 14.8005,
+          "largestDocumentBytes": 1389862,
+          "loadedProjectCount": 10
+        },
+        {
+          "run": 4,
+          "loadProjectsMs": 14.079099999999997,
+          "parsedBytes": 1551656,
+          "nodeHeapDeltaBytes": 5426208,
+          "largestOpenMs": 15.084100000000007,
+          "largestDocumentBytes": 1389862,
+          "loadedProjectCount": 10
+        },
+        {
+          "run": 5,
+          "loadProjectsMs": 10.93210000000002,
+          "parsedBytes": 1551656,
+          "nodeHeapDeltaBytes": 21310864,
+          "largestOpenMs": 7.078899999999976,
+          "largestDocumentBytes": 1389862,
+          "loadedProjectCount": 10
+        }
+      ],
+      "medianLoadProjectsMs": 14.079099999999997
+    },
+    "50": {
+      "samples": [
+        {
+          "run": 1,
+          "loadProjectsMs": 15.286999999999999,
+          "parsedBytes": 2270776,
+          "nodeHeapDeltaBytes": 18355816,
+          "largestOpenMs": 12.839199999999998,
+          "largestDocumentBytes": 1389862,
+          "loadedProjectCount": 50
+        },
+        {
+          "run": 2,
+          "loadProjectsMs": 12.027799999999992,
+          "parsedBytes": 2270776,
+          "nodeHeapDeltaBytes": 19229592,
+          "largestOpenMs": 10.91149999999999,
+          "largestDocumentBytes": 1389862,
+          "loadedProjectCount": 50
+        },
+        {
+          "run": 3,
+          "loadProjectsMs": 15.789599999999993,
+          "parsedBytes": 2270776,
+          "nodeHeapDeltaBytes": 11765208,
+          "largestOpenMs": 4.969099999999997,
+          "largestDocumentBytes": 1389862,
+          "loadedProjectCount": 50
+        },
+        {
+          "run": 4,
+          "loadProjectsMs": 17.7663,
+          "parsedBytes": 2270776,
+          "nodeHeapDeltaBytes": 3742760,
+          "largestOpenMs": 8.729899999999986,
+          "largestDocumentBytes": 1389862,
+          "loadedProjectCount": 50
+        },
+        {
+          "run": 5,
+          "loadProjectsMs": 13.482799999999997,
+          "parsedBytes": 2270776,
+          "nodeHeapDeltaBytes": 4370488,
+          "largestOpenMs": 15.100799999999992,
+          "largestDocumentBytes": 1389862,
+          "loadedProjectCount": 50
+        }
+      ],
+      "medianLoadProjectsMs": 15.286999999999999
+    }
+  }
+}

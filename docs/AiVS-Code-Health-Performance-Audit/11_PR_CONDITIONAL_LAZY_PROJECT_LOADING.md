@@ -1,14 +1,14 @@
 ---
-suggested_backlog_id: AIVS-026
+suggested_backlog_id: AIVS-028
 title: Conditionally lazy-load full project documents from a summary index
-status: Draft
+status: Not Planned — Measurement Gate Failed
 priority: medium
 type: performance
-baseline_commit: c405f8224a8a510140591a9b76a568f3a78b49ad
+baseline_commit: 291d69b
 dependencies:
-  - AIVS-019
-  - AIVS-020
+  - AIVS-021
   - AIVS-022
+  - AIVS-024
 conditional: true
 ---
 
@@ -19,6 +19,30 @@ conditional: true
 Stop reading/parsing every historical project document before Home can show the project list.
 
 **Do not start implementation until the measurement gate passes.** This PR adds meaningful storage/state complexity and is unnecessary for users with a small project collection.
+
+## Gate result — 2026-08-05
+
+Gate failed on the target Windows development machine. No production implementation was made.
+
+Measurement used repository Project L: 50 projects with one active large project containing 2,000 assets, 1,000 clips across 20 tracks, and 1,000 audio variations. The largest project document was 1,389,862 bytes. Raw samples and machine metadata are retained at `artifacts/performance/aivs-028/raw-results.json`.
+
+Five-run measurements of the exact V1 concurrent document-read and JSON-parse path:
+
+- 1 project: 18.5462 ms median; 1,389,862 parsed bytes;
+- 10 projects: 14.0791 ms median; 1,551,656 parsed bytes;
+- 50 projects: 15.2870 ms median; 2,270,776 parsed bytes.
+
+Native Electron/CDP validation rendered Home with all 50 project cards. After explicit renderer garbage collection, `performance.memory.usedJSHeapSize` was 25,266,088 bytes and runtime heap used size was 16,192,972 bytes. Home contained 50 project cards, one intentional hero video, and 18 lazy/static images. App-wide Electron process working set was excluded because it is not renderer-heap gate evidence.
+
+Environment: Windows `10.0.26100`, Intel i9-14900K, 32 logical CPUs, 127.8 GiB RAM, NVIDIA RTX 4070 Ti SUPER 16 GiB, fixed NTFS storage, Node 24.18.0, pnpm 10.30.3, Electron 43.2.0, dev baseline `291d69b`.
+
+Threshold comparison:
+
+- 15.2870 ms is far below the 250 ms V1 load/parse threshold;
+- 25,266,088 bytes (25.27 MB decimal) is far below the 100 MB closed-project renderer-heap threshold;
+- no demonstrated user-pain evidence is recorded.
+
+Native startup-to-Home and native `loadProjects` timing were not captured. Clean dev launches reached CDP without a preload bridge, while a complete isolated unpacked build did not expose its requested CDP port. Security review rejected persistent environment-controlled remote-debug instrumentation; temporary source was reverted before any instrumented build ran. The exact V1 storage algorithm still measured 15.2870 ms at 50 projects, leaving over 234 ms of margin to the 250 ms gate, and native renderer heap independently failed the other gate by 74.73 MB. Existing V1 storage remains the simpler owner, so no production lazy-loading implementation was performed. Re-open only with real evidence crossing a documented threshold.
 
 ## Measurement gate
 
@@ -69,7 +93,7 @@ Home needs primarily:
 - static thumbnail;
 - perhaps asset/timeline counts.
 
-Home currently scans full asset arrays to choose a thumbnail and can mount video fallbacks.
+Home currently scans full asset arrays to choose a thumbnail. Project cards already render static images/placeholders only; the separate Home hero remains the sole intentional video element.
 
 ## Target storage model
 
