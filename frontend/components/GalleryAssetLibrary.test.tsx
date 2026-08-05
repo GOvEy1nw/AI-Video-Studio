@@ -111,4 +111,31 @@ describe("Asset Library", () => {
     expect(setPointerCapture).not.toHaveBeenCalled();
   });
 
+  it("bounds mounted cards for a 1,000-asset library while retaining leading content", () => {
+    const assets = Array.from({ length: 1_000 }, (_, index) => makeAsset(`asset-${index}`, "image"));
+    const { container } = render(
+      <GalleryAssetLibrary
+        {...makeLibraryProps({
+          assets,
+          visibleAssets: assets,
+          leadingContent: <p>Generation in progress</p>,
+        })}
+      />,
+    );
+
+    expect(screen.getByText("Generation in progress")).toBeTruthy();
+    expect(container.querySelectorAll("[data-asset-card]").length).toBeLessThan(200);
+  });
+
+  it("bounds mounted list rows for a 1,000-asset library", () => {
+    const assets = Array.from({ length: 1_000 }, (_, index) => makeAsset(`asset-${index}`, "image"));
+    const { container } = render(
+      <GalleryAssetLibrary
+        {...makeLibraryProps({ assets, visibleAssets: assets, viewMode: "list" })}
+      />,
+    );
+
+    expect(container.querySelectorAll("[data-asset-card]").length).toBeLessThan(200);
+  });
+
 });
