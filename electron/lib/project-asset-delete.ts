@@ -1,4 +1,4 @@
-import fs from 'fs'
+import * as fs from 'fs/promises'
 import path from 'path'
 import { shell } from 'electron'
 import { projectAssetCategoryDir, validateProjectId } from './project-asset-import'
@@ -64,11 +64,7 @@ export async function deleteProjectAssetFiles(
     }
 
     try {
-      if (!fs.existsSync(rawPath)) {
-        skipped.push(rawPath)
-        continue
-      }
-      const stat = fs.statSync(rawPath)
+      const stat = await fs.stat(rawPath)
       if (!stat.isFile()) {
         skipped.push(rawPath)
         continue
@@ -76,6 +72,10 @@ export async function deleteProjectAssetFiles(
       await trashFileWithRetry(rawPath)
       deleted.push(rawPath)
     } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        skipped.push(rawPath)
+        continue
+      }
       failed.push({ path: rawPath, error: String(error) })
     }
   }

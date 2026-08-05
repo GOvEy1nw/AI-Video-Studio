@@ -1,4 +1,4 @@
-import fs from 'fs'
+import * as fsPromises from 'fs/promises'
 import path from 'path'
 import { canonicalizeForContainment } from '../path-validation'
 
@@ -9,6 +9,8 @@ export const PROJECT_ASSET_SUBFOLDERS = {
   uploads: 'uploads',
   generated: 'generated',
 } as const
+
+const importOperationsByDirectory = new Map<string, Promise<void>>()
 
 export type ProjectAssetCategory = keyof typeof PROJECT_ASSET_SUBFOLDERS
 
@@ -64,22 +66,31 @@ export function buildSuffixedFileName(fileName: string, suffix: number): string 
   return `${stem} (${suffix})${ext}`
 }
 
-export function findAvailableFileName(destDir: string, fileName: string): string {
+export async function findAvailableFileName(destDir: string, fileName: string): Promise<string> {
   let candidate = fileName
   let suffix = 2
-  while (fs.existsSync(path.join(destDir, candidate))) {
+  while (await fileExists(path.join(destDir, candidate))) {
     candidate = buildSuffixedFileName(fileName, suffix)
     suffix += 1
   }
   return candidate
 }
 
-export function resolveImportDestPlan(
+async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    await fsPromises.access(filePath)
+    return true
+  } catch {
+    return false
+  }
+}
+
+export async function resolveImportDestPlan(
   destDir: string,
   srcPath: string,
   fileName: string,
   strategy: DuplicateStrategy,
-): ResolveImportPlan {
+): Promise<ResolveImportPlan> {
   const initialDestPath = path.join(destDir, fileName)
   const srcResolved = path.resolve(srcPath)
   const initialDestResolved = path.resolve(initialDestPath)
@@ -93,7 +104,7 @@ export function resolveImportDestPlan(
     }
   }
 
-  if (!fs.existsSync(initialDestPath)) {
+  if (!await fileExists(initialDestPath)) {
     return {
       action: 'copy',
       destPath: initialDestPath,
@@ -118,7 +129,7 @@ export function resolveImportDestPlan(
         alreadyExisted: true,
       }
     case 'suffix': {
-      const availableName = findAvailableFileName(destDir, fileName)
+      const availableName = await findAvailableFileName(destDir, fileName)
       return {
         action: 'copy',
         destPath: path.join(destDir, availableName),
@@ -136,40 +147,66 @@ export function resolveImportDestPlan(
   }
 }
 
-function transferFile(src: string, dest: string, mode: TransferMode): void {
+export async function transferFile(
+  src: string,
+  dest: string,
+  mode: TransferMode,
+  operations: Pick<typeof fsPromises, 'copyFile' | 'rename' | 'unlink'> = fsPromises,
+): Promise<void> {
   if (mode === 'copy') {
-    fs.copyFileSync(src, dest)
+    await operations.copyFile(src, dest)
     return
   }
 
-  if (fs.existsSync(dest)) {
-    fs.unlinkSync(dest)
+  if (await fileExists(dest)) {
+    await fsPromises.unlink(dest)
   }
 
   try {
-    fs.renameSync(src, dest)
+    await operations.rename(src, dest)
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code
     if (code === 'EXDEV') {
-      fs.copyFileSync(src, dest)
-      fs.unlinkSync(src)
+      await operations.copyFile(src, dest)
+      await operations.unlink(src)
       return
     }
     throw error
   }
 }
 
-export function importProjectAsset(
+export async function importProjectAsset(
   resolvedSrc: string,
   destDir: string,
   strategy: DuplicateStrategy,
   transferMode: TransferMode = 'copy',
-): ImportProjectAssetResult {
+): Promise<ImportProjectAssetResult> {
   const resolvedDestDir = canonicalizeForContainment(destDir)
   const resolvedSrcPath = canonicalizeForContainment(resolvedSrc)
-  fs.mkdirSync(resolvedDestDir, { recursive: true })
+  const previous = importOperationsByDirectory.get(resolvedDestDir) ?? Promise.resolve()
+  const operation = previous.then(
+    () => importProjectAssetIntoDirectory(resolvedSrcPath, resolvedDestDir, strategy, transferMode),
+    () => importProjectAssetIntoDirectory(resolvedSrcPath, resolvedDestDir, strategy, transferMode),
+  )
+  const settled = operation.then(() => undefined, () => undefined)
+  importOperationsByDirectory.set(resolvedDestDir, settled)
+  void settled.then(() => {
+    if (importOperationsByDirectory.get(resolvedDestDir) === settled) {
+      importOperationsByDirectory.delete(resolvedDestDir)
+    }
+  })
+  return await operation
+}
+
+async function importProjectAssetIntoDirectory(
+  resolvedSrcPath: string,
+  resolvedDestDir: string,
+  strategy: DuplicateStrategy,
+  transferMode: TransferMode,
+): Promise<ImportProjectAssetResult> {
+  await fsPromises.mkdir(resolvedDestDir, { recursive: true })
   const fileName = path.basename(resolvedSrcPath)
-  const plan = resolveImportDestPlan(resolvedDestDir, resolvedSrcPath, fileName, strategy)
+  const plan = await resolveImportDestPlan(resolvedDestDir, resolvedSrcPath, fileName, strategy)
   const safeDestPath = canonicalizeForContainment(plan.destPath)
   if (!isPathWithin(safeDestPath, resolvedDestDir)) {
     throw new Error('Project asset destination is outside the project root')
@@ -177,34 +214,12 @@ export function importProjectAsset(
   const safePlan = { ...plan, destPath: safeDestPath }
 
   if (safePlan.action === 'needs-choice') {
-    return {
-      destPath: safePlan.destPath,
-      url: pathToFileUrl(safePlan.destPath),
-      fileName: safePlan.fileName,
-      alreadyExisted: true,
-      reusedExisting: false,
-      needsDuplicateChoice: true,
-    }
+    return { destPath: safePlan.destPath, url: pathToFileUrl(safePlan.destPath), fileName: safePlan.fileName, alreadyExisted: true, reusedExisting: false, needsDuplicateChoice: true }
   }
-
   if (safePlan.action === 'reuse') {
-    return {
-      destPath: safePlan.destPath,
-      url: pathToFileUrl(safePlan.destPath),
-      fileName: safePlan.fileName,
-      alreadyExisted: true,
-      reusedExisting: true,
-      needsDuplicateChoice: false,
-    }
+    return { destPath: safePlan.destPath, url: pathToFileUrl(safePlan.destPath), fileName: safePlan.fileName, alreadyExisted: true, reusedExisting: true, needsDuplicateChoice: false }
   }
 
-  transferFile(resolvedSrc, safePlan.destPath, transferMode)
-  return {
-    destPath: safePlan.destPath,
-    url: pathToFileUrl(safePlan.destPath),
-    fileName: safePlan.fileName,
-    alreadyExisted: safePlan.alreadyExisted,
-    reusedExisting: false,
-    needsDuplicateChoice: false,
-  }
+  await transferFile(resolvedSrcPath, safePlan.destPath, transferMode)
+  return { destPath: safePlan.destPath, url: pathToFileUrl(safePlan.destPath), fileName: safePlan.fileName, alreadyExisted: safePlan.alreadyExisted, reusedExisting: false, needsDuplicateChoice: false }
 }

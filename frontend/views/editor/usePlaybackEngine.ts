@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react'
 import type { TimelineClip, Track, Asset } from '../../types/project'
+import { readLocalMediaArrayBuffer } from '../../lib/local-media-bytes'
 
 export interface UsePlaybackEngineParams {
   isPlaying: boolean
@@ -73,15 +74,7 @@ export function usePlaybackEngine(params: UsePlaybackEngineParams) {
   }
 
   const readAudioArrayBuffer = async (url: string): Promise<ArrayBuffer> => {
-    if (url.startsWith('file://') && window.electronAPI?.readLocalFile) {
-      const { data } = await window.electronAPI.readLocalFile(url)
-      const binary = atob(data)
-      const bytes = new Uint8Array(binary.length)
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-      return bytes.buffer
-    }
-    const response = await fetch(url)
-    return await response.arrayBuffer()
+    return await readLocalMediaArrayBuffer(url)
   }
 
   const getAudioBuffer = async (url: string): Promise<AudioBuffer> => {
