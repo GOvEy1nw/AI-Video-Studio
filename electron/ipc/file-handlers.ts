@@ -158,6 +158,20 @@ export function registerFileHandlers(): void {
     }
   })
 
+  ipcMain.handle('approve-persisted-project-files', async (_event, candidates: string[]) => {
+    const approved: string[] = []
+    const rejected: string[] = []
+    for (const candidate of [...new Set(candidates)]) {
+      try {
+        validatePath(candidate, getAllowedRoots())
+        approved.push(candidate)
+      } catch {
+        rejected.push(candidate)
+      }
+    }
+    return { approved, rejected }
+  })
+
   ipcMain.handle('show-save-dialog', async (_event, options: {
     title?: string
     defaultPath?: string

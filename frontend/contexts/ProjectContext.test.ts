@@ -115,6 +115,248 @@ describe('persisted media recovery', () => {
   })
 })
 
+describe('incremental persisted path approval', () => {
+  it('approves loaded paths once, skips timeline edits, and handles only a new asset path', async () => {
+    const loadedPath = 'C:\\AiVS\\project-a\\uploads\\loaded.mp4'
+    const addedPath = 'C:\\AiVS\\project-a\\generated\\added.png'
+    const approvePersistedProjectFiles = vi.fn().mockResolvedValue({ approved: [loadedPath], rejected: [] })
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        loadProjects: vi.fn().mockResolvedValue([
+          createProject('project-a', loadedPath),
+          createProject('project-b', loadedPath),
+        ]),
+        saveProject: vi.fn().mockResolvedValue(undefined),
+        approvePersistedProjectFiles,
+      } as unknown as Window['electronAPI'],
+    })
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      React.createElement(ProjectProvider, null, children)
+    )
+    const { result } = renderHook(() => useProjects(), { wrapper })
+    await waitFor(() => expect(result.current.projects).toHaveLength(2))
+    await waitFor(() => expect(approvePersistedProjectFiles).toHaveBeenCalledWith([loadedPath]))
+
+    act(() => result.current.updateTimeline('project-a', 'missing', { clips: [] }))
+    expect(approvePersistedProjectFiles).toHaveBeenCalledTimes(1)
+
+    act(() => result.current.addAsset('project-a', {
+      type: 'image',
+      path: addedPath,
+      url: 'file:///C:/AiVS/project-a/generated/added.png',
+      prompt: '',
+      resolution: '512x512',
+    }))
+    await waitFor(() => expect(approvePersistedProjectFiles).toHaveBeenLastCalledWith([addedPath]))
+    expect(approvePersistedProjectFiles).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('project storage startup', () => {
+  it('persists a project created before async loading completes', async () => {
+    let resolveLoad!: (projects: Project[]) => void
+    const loadProjects = vi.fn(() => new Promise<Project[]>((resolve) => {
+      resolveLoad = resolve
+    }))
+    const saveProject = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: { loadProjects, saveProject } as unknown as Window['electronAPI'],
+    })
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      React.createElement(ProjectProvider, null, children)
+    )
+    const { result } = renderHook(() => useProjects(), { wrapper })
+    let localProject!: Project
+    act(() => { localProject = result.current.createProject('Local') })
+    act(() => resolveLoad([createProject('stored', 'C:\\AiVS\\stored.mp4')]))
+
+    await waitFor(() => expect(saveProject).toHaveBeenCalledWith(
+      expect.objectContaining({ id: localProject.id, name: 'Local' }),
+      0,
+    ))
+  })
+
+  it('only active Strict Mode load validates loaded paths', async () => {
+    const loadedPath = 'C:\\AiVS\\strict\\clip.mp4'
+    const approvePersistedProjectFiles = vi.fn().mockResolvedValue({ approved: [loadedPath], rejected: [] })
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        loadProjects: vi.fn().mockResolvedValue([createProject('strict', loadedPath)]),
+        approvePersistedProjectFiles,
+      } as unknown as Window['electronAPI'],
+    })
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      React.createElement(React.StrictMode, null, React.createElement(ProjectProvider, null, children))
+    )
+    const { result } = renderHook(() => useProjects(), { wrapper })
+
+    await waitFor(() => expect(result.current.projects).toHaveLength(1))
+    expect(approvePersistedProjectFiles).toHaveBeenCalledTimes(1)
+    expect(approvePersistedProjectFiles).toHaveBeenCalledWith([loadedPath])
+  })
+})
+
+describe('deleted project recovery', () => {
+  it('does not apply an old recovery result after same-second project ID reuse', async () => {
+    const projectId = 'Reuse_20260201_030405'
+    const rejectedPath = 'C:\\external\\old.mp4'
+    let resolveRecovery!: (outcome: { status: 'cancelled'; approved: [] }) => void
+    const recoverPersistedProjectFiles = vi.fn(() => new Promise<{ status: 'cancelled'; approved: [] }>((resolve) => {
+      resolveRecovery = resolve
+    }))
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        loadProjects: vi.fn().mockResolvedValue([createProject(projectId, rejectedPath)]),
+        approvePersistedProjectFiles: vi.fn().mockResolvedValue({ approved: [], rejected: [rejectedPath] }),
+        recoverPersistedProjectFiles,
+      } as unknown as Window['electronAPI'],
+    })
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      React.createElement(ProjectProvider, null, children)
+    )
+    const { result } = renderHook(() => useProjects(), { wrapper })
+    await waitFor(() => expect(result.current.projects).toHaveLength(1))
+    act(() => result.current.setCurrentProjectId(projectId))
+    await waitFor(() => expect(recoverPersistedProjectFiles).toHaveBeenCalledWith([rejectedPath]))
+
+    const now = vi.spyOn(Date, 'now').mockReturnValue(new Date(2026, 0, 2, 3, 4, 5).valueOf())
+    act(() => {
+      result.current.deleteProject(projectId)
+      expect(result.current.createProject('Reuse').id).toBe(projectId)
+      result.current.setCurrentProjectId(projectId)
+    })
+    await act(async () => {
+      resolveRecovery({ status: 'cancelled', approved: [] })
+      await Promise.resolve()
+    })
+    now.mockRestore()
+
+    expect(recoverPersistedProjectFiles).toHaveBeenCalledTimes(1)
+  })
+
+  it('ignores a delayed approval rejection from a deleted project lifetime', async () => {
+    const projectId = 'Reuse_20260201_030405'
+    const oldPath = 'C:\\external\\old.mp4'
+    let resolveApproval!: (outcome: { approved: string[]; rejected: string[] }) => void
+    const approvePersistedProjectFiles = vi.fn(() => new Promise<{ approved: string[]; rejected: string[] }>((resolve) => {
+      resolveApproval = resolve
+    }))
+    const recoverPersistedProjectFiles = vi.fn()
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        loadProjects: vi.fn().mockResolvedValue([createProject(projectId, oldPath)]),
+        approvePersistedProjectFiles,
+        recoverPersistedProjectFiles,
+      } as unknown as Window['electronAPI'],
+    })
+    const wrapper = ({ children }: { children: React.ReactNode }) => React.createElement(ProjectProvider, null, children)
+    const { result } = renderHook(() => useProjects(), { wrapper })
+    await waitFor(() => expect(approvePersistedProjectFiles).toHaveBeenCalledWith([oldPath]))
+
+    const now = vi.spyOn(Date, 'now').mockReturnValue(new Date(2026, 0, 2, 3, 4, 5).valueOf())
+    act(() => {
+      result.current.deleteProject(projectId)
+      expect(result.current.createProject('Reuse').id).toBe(projectId)
+      result.current.openProject(projectId)
+    })
+    await act(async () => {
+      resolveApproval({ approved: [], rejected: [oldPath] })
+      await Promise.resolve()
+    })
+    now.mockRestore()
+
+    expect(recoverPersistedProjectFiles).not.toHaveBeenCalled()
+  })
+
+  it('does not let an old recovery finally release a replacement recovery', async () => {
+    const projectId = 'Reuse_20260201_030405'
+    const oldPath = 'C:\\external\\old.mp4'
+    const newPath = 'C:\\external\\new.mp4'
+    let resolveOld!: (outcome: { status: 'cancelled'; approved: [] }) => void
+    let resolveNew!: (outcome: { status: 'cancelled'; approved: [] }) => void
+    const recoverPersistedProjectFiles = vi.fn((paths: string[]) => new Promise<{ status: 'cancelled'; approved: [] }>((resolve) => {
+      if (paths[0] === oldPath) resolveOld = resolve
+      else resolveNew = resolve
+    }))
+    const approvePersistedProjectFiles = vi.fn()
+      .mockResolvedValueOnce({ approved: [], rejected: [oldPath] })
+      .mockResolvedValueOnce({ approved: [], rejected: [newPath] })
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        loadProjects: vi.fn().mockResolvedValue([createProject(projectId, oldPath)]),
+        approvePersistedProjectFiles,
+        recoverPersistedProjectFiles,
+      } as unknown as Window['electronAPI'],
+    })
+    const wrapper = ({ children }: { children: React.ReactNode }) => React.createElement(ProjectProvider, null, children)
+    const { result } = renderHook(() => useProjects(), { wrapper })
+    await waitFor(() => expect(result.current.projects).toHaveLength(1))
+    act(() => result.current.openProject(projectId))
+    await waitFor(() => expect(recoverPersistedProjectFiles).toHaveBeenCalledWith([oldPath]))
+
+    const now = vi.spyOn(Date, 'now').mockReturnValue(new Date(2026, 0, 2, 3, 4, 5).valueOf())
+    act(() => {
+      result.current.deleteProject(projectId)
+      const replacement = result.current.createProject('Reuse')
+      result.current.addAsset(replacement.id, { type: 'video', path: newPath, url: 'file:///C:/external/new.mp4', prompt: '', resolution: '1920x1080' })
+      result.current.openProject(replacement.id)
+    })
+    await waitFor(() => expect(recoverPersistedProjectFiles).toHaveBeenCalledWith([newPath]))
+    await act(async () => {
+      resolveOld({ status: 'cancelled', approved: [] })
+      await Promise.resolve()
+    })
+    expect(recoverPersistedProjectFiles).toHaveBeenCalledTimes(2)
+    await act(async () => {
+      resolveNew({ status: 'cancelled', approved: [] })
+      await Promise.resolve()
+    })
+    now.mockRestore()
+  })
+})
+
+describe('project persistence retry', () => {
+  it('retains a failed latest snapshot until explicit retry persists it', async () => {
+    vi.useFakeTimers()
+    const saveProject = vi.fn()
+      .mockRejectedValueOnce(new Error('disk full'))
+      .mockRejectedValueOnce(new Error('disk full'))
+      .mockResolvedValueOnce(undefined)
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        loadProjects: vi.fn().mockResolvedValue([]),
+        migrateProjectsFromLocalStorage: vi.fn().mockResolvedValue([]),
+        saveProject,
+      } as unknown as Window['electronAPI'],
+    })
+    const alert = vi.spyOn(window, 'alert').mockImplementation(() => undefined)
+    const wrapper = ({ children }: { children: React.ReactNode }) => React.createElement(ProjectProvider, null, children)
+    const { result } = renderHook(() => useProjects(), { wrapper })
+    await act(async () => { await Promise.resolve() })
+    let project!: Project
+    act(() => { project = result.current.createProject('Retry') })
+    await act(async () => { await vi.runAllTimersAsync() })
+    expect(result.current.persistenceStatus).toMatchObject({ pendingCount: 1, saving: false, lastError: 'disk full' })
+
+    await act(async () => {
+      result.current.retryProjectPersistence()
+      await Promise.resolve()
+    })
+    expect(saveProject).toHaveBeenCalledTimes(3)
+    expect(saveProject).toHaveBeenLastCalledWith(expect.objectContaining({ id: project.id, name: 'Retry' }), 0)
+    expect(result.current.persistenceStatus).toEqual({ pendingCount: 0, saving: false, lastError: null })
+    alert.mockRestore()
+    vi.useRealTimers()
+  })
+})
+
 describe('project-state render isolation', () => {
   it('keeps unrelated domain consumers and action callbacks stable', () => {
     let assetRenders = 0

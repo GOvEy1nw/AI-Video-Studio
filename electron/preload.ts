@@ -19,6 +19,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   recoverPersistedProjectFiles: (candidates: string[]): Promise<{ status: 'approved' | 'cancelled' | 'no-pending'; approved: string[] }> =>
     ipcRenderer.invoke('recover-persisted-project-files', candidates),
+  approvePersistedProjectFiles: (candidates: string[]): Promise<{ approved: string[]; rejected: string[] }> =>
+    ipcRenderer.invoke('approve-persisted-project-files', candidates),
   getPathForFile: (file: File): string => webUtils.getPathForFile(file),
   
   // Check GPU availability
@@ -192,6 +194,7 @@ declare global {
       readLocalFile: (filePath: string) => Promise<{ data: string; mimeType: string }>
       approveFile: (file: File) => Promise<boolean>
       recoverPersistedProjectFiles: (candidates: string[]) => Promise<{ status: 'approved' | 'cancelled' | 'no-pending'; approved: string[] }>
+      approvePersistedProjectFiles: (candidates: string[]) => Promise<{ approved: string[]; rejected: string[] }>
       getPathForFile: (file: File) => string
       checkGpu: () => Promise<{ available: boolean; name?: string; vram?: number }>
       getAppInfo: () => Promise<{ version: string; isPackaged: boolean; modelsPath: string; userDataPath: string }>

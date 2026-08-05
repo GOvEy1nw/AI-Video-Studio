@@ -16,6 +16,14 @@ const EMPTY_INDEX: ProjectIndex = {
   projectIds: [],
 }
 
+let storageOperation = Promise.resolve()
+
+function enqueueStorageOperation<T>(operation: () => Promise<T>): Promise<T> {
+  const result = storageOperation.then(operation, operation)
+  storageOperation = result.then(() => undefined, () => undefined)
+  return result
+}
+
 function getStorageDir(): string {
   return path.join(app.getPath('userData'), 'projects')
 }
@@ -33,7 +41,7 @@ function projectPath(id: string): string {
 
 async function writeJsonAtomically(filePath: string, value: unknown): Promise<void> {
   const temporaryPath = `${filePath}.${process.pid}.${Date.now()}.tmp`
-  await fs.writeFile(temporaryPath, JSON.stringify(value, null, 2), 'utf-8')
+  await fs.writeFile(temporaryPath, JSON.stringify(value), 'utf-8')
   await fs.rename(temporaryPath, filePath)
 }
 
@@ -84,53 +92,55 @@ export async function saveStoredProject(project: unknown, position?: number): Pr
   }
 
   const id = (project as { id: string }).id
-  await ensureStorageDir()
-  await writeJsonAtomically(projectPath(id), project)
+  await enqueueStorageOperation(async () => {
+    await ensureStorageDir()
+    await writeJsonAtomically(projectPath(id), project)
 
-  const index = await readIndex()
-  if (!index.projectIds.includes(id)) {
-    const insertionIndex = position === undefined
-      ? index.projectIds.length
-      : Math.max(0, Math.min(position, index.projectIds.length))
-    index.projectIds.splice(insertionIndex, 0, id)
-    await writeIndex(index)
-  }
+    const index = await readIndex()
+    if (!index.projectIds.includes(id)) {
+      const insertionIndex = position === undefined
+        ? index.projectIds.length
+        : Math.max(0, Math.min(position, index.projectIds.length))
+      index.projectIds.splice(insertionIndex, 0, id)
+      await writeIndex(index)
+    }
+  })
 }
 
 export async function deleteStoredProject(id: string): Promise<void> {
-  await ensureStorageDir()
-  await fs.rm(projectPath(id), { force: true })
+  await enqueueStorageOperation(async () => {
+    await ensureStorageDir()
+    await fs.rm(projectPath(id), { force: true })
 
-  const index = await readIndex()
-  const projectIds = index.projectIds.filter((projectId) => projectId !== id)
-  if (projectIds.length !== index.projectIds.length) {
-    await writeIndex({ ...index, projectIds })
-  }
+    const index = await readIndex()
+    const projectIds = index.projectIds.filter((projectId) => projectId !== id)
+    if (projectIds.length !== index.projectIds.length) {
+      await writeIndex({ ...index, projectIds })
+    }
+  })
 }
 
 export async function migrateLegacyProjects(projects: unknown[]): Promise<unknown[]> {
-  const index = await readIndex()
-  if (index.migratedLocalStorageVersion >= STORAGE_VERSION) {
-    return loadStoredProjects()
-  }
+  await enqueueStorageOperation(async () => {
+    const index = await readIndex()
+    if (index.migratedLocalStorageVersion >= STORAGE_VERSION) return
 
-  await ensureStorageDir()
-  for (const project of projects) {
-    if (!project || typeof project !== 'object' || typeof (project as { id?: unknown }).id !== 'string') {
-      continue
+    await ensureStorageDir()
+    for (const project of projects) {
+      if (!project || typeof project !== 'object' || typeof (project as { id?: unknown }).id !== 'string') continue
+      await writeJsonAtomically(projectPath((project as { id: string }).id), project)
     }
-    await writeJsonAtomically(projectPath((project as { id: string }).id), project)
-  }
 
-  const projectIds = projects.flatMap((project) => (
-    project && typeof project === 'object' && typeof (project as { id?: unknown }).id === 'string'
-      ? [(project as { id: string }).id]
-      : []
-  ))
-  await writeIndex({
-    version: STORAGE_VERSION,
-    migratedLocalStorageVersion: STORAGE_VERSION,
-    projectIds,
+    const projectIds = projects.flatMap((project) => (
+      project && typeof project === 'object' && typeof (project as { id?: unknown }).id === 'string'
+        ? [(project as { id: string }).id]
+        : []
+    ))
+    await writeIndex({
+      version: STORAGE_VERSION,
+      migratedLocalStorageVersion: STORAGE_VERSION,
+      projectIds,
+    })
   })
   return loadStoredProjects()
 }
