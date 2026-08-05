@@ -1,9 +1,10 @@
 ---
 id: AIVS-029
 title: Compact project memory and refresh current-state documentation
-status: Backlog
+status: Ready
 assignee: []
 created_date: '2026-08-05 08:37'
+updated_date: '2026-08-05 14:24'
 labels:
   - audit
 dependencies:
@@ -13,7 +14,7 @@ documentation:
     docs/AiVS-Code-Health-Performance-Audit/12_PR_PROJECT_MEMORY_AND_DOCS_HYGIENE.md
 priority: low
 type: docs
-ordinal: 33000
+ordinal: 7000
 ---
 
 ## Description

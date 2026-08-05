@@ -1,9 +1,10 @@
 ---
 id: AIVS-026
 title: Index Video Editor playback data and suspend inactive media work
-status: Backlog
+status: Ready
 assignee: []
 created_date: '2026-08-05 08:37'
+updated_date: '2026-08-05 14:24'
 labels:
   - audit
 dependencies:
@@ -15,7 +16,7 @@ documentation:
     docs/AiVS-Code-Health-Performance-Audit/09_PR_VIDEO_EDITOR_PLAYBACK_HOT_PATHS.md
 priority: high
 type: enhancement
-ordinal: 30000
+ordinal: 4000
 ---
 
 ## Description

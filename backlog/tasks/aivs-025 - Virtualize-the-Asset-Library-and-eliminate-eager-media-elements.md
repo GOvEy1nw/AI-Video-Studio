@@ -1,9 +1,10 @@
 ---
 id: AIVS-025
 title: Virtualize the Asset Library and eliminate eager media elements
-status: Backlog
+status: Ready
 assignee: []
 created_date: '2026-08-05 08:37'
+updated_date: '2026-08-05 14:24'
 labels:
   - audit
 dependencies:
@@ -12,7 +13,7 @@ documentation:
   - docs/AiVS-Code-Health-Performance-Audit/08_PR_VIRTUAL_ASSET_LIBRARY.md
 priority: high
 type: enhancement
-ordinal: 29000
+ordinal: 3500
 ---
 
 ## Description

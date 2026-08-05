@@ -1,9 +1,10 @@
 ---
 id: AIVS-024
 title: Unify bounded audio and thumbnail decoding and caches
-status: Backlog
+status: Ready
 assignee: []
 created_date: '2026-08-05 08:37'
+updated_date: '2026-08-05 14:24'
 labels:
   - audit
 dependencies:
@@ -13,7 +14,7 @@ documentation:
     docs/AiVS-Code-Health-Performance-Audit/07_PR_SHARED_MEDIA_DECODE_AND_CACHE.md
 priority: high
 type: enhancement
-ordinal: 28000
+ordinal: 3000
 ---
 
 ## Description

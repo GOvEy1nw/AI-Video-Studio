@@ -1,9 +1,10 @@
 ---
 id: AIVS-027
 title: Remove dormant Video Editor residue and finish structural decomposition
-status: Backlog
+status: Ready
 assignee: []
 created_date: '2026-08-05 08:37'
+updated_date: '2026-08-05 14:24'
 labels:
   - audit
 dependencies:
@@ -13,7 +14,7 @@ documentation:
     docs/AiVS-Code-Health-Performance-Audit/10_PR_VIDEO_EDITOR_STRUCTURAL_CLEANUP.md
 priority: medium
 type: enhancement
-ordinal: 31000
+ordinal: 5000
 ---
 
 ## Description

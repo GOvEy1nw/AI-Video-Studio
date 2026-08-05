@@ -1,9 +1,10 @@
 ---
 id: AIVS-028
 title: Conditionally lazy-load full project documents from a summary index
-status: Backlog
+status: Ready
 assignee: []
 created_date: '2026-08-05 08:37'
+updated_date: '2026-08-05 14:24'
 labels:
   - audit
 dependencies:
@@ -15,7 +16,7 @@ documentation:
     docs/AiVS-Code-Health-Performance-Audit/11_PR_CONDITIONAL_LAZY_PROJECT_LOADING.md
 priority: medium
 type: enhancement
-ordinal: 32000
+ordinal: 6000
 ---
 
 ## Description

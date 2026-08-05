@@ -1,9 +1,10 @@
 ---
 id: AIVS-022
 title: Serialize and coalesce project persistence and approve paths incrementally
-status: Backlog
+status: Ready
 assignee: []
 created_date: '2026-08-05 08:37'
+updated_date: '2026-08-05 14:24'
 labels:
   - audit
 dependencies:
@@ -13,7 +14,7 @@ documentation:
     docs/AiVS-Code-Health-Performance-Audit/05_PR_PROJECT_PERSISTENCE_AND_PATH_APPROVAL.md
 priority: high
 type: enhancement
-ordinal: 26000
+ordinal: 1000
 ---
 
 ## Description

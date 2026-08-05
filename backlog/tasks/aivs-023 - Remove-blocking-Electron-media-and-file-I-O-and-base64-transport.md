@@ -1,9 +1,10 @@
 ---
 id: AIVS-023
 title: Remove blocking Electron media and file I/O and base64 transport
-status: Backlog
+status: Ready
 assignee: []
 created_date: '2026-08-05 08:37'
+updated_date: '2026-08-05 14:24'
 labels:
   - audit
 dependencies:
@@ -14,7 +15,7 @@ documentation:
     docs/AiVS-Code-Health-Performance-Audit/06_PR_ASYNC_ELECTRON_FILE_AND_MEDIA_IO.md
 priority: high
 type: enhancement
-ordinal: 27000
+ordinal: 2000
 ---
 
 ## Description
