@@ -72,7 +72,6 @@ export interface LeftPanelProps {
     } | null>
   >;
   assets: Asset[];
-  thumbnailMap: Record<string, string>;
   currentProjectId: string | null;
   pushAssetUndoRef: React.MutableRefObject<() => void>;
   updateAsset: (
@@ -164,7 +163,6 @@ export function LeftPanel(props: LeftPanelProps) {
     onSetBinColor,
     setTakeContextMenu,
     assets,
-    thumbnailMap,
     currentProjectId,
     pushAssetUndoRef,
     updateAsset,
@@ -266,7 +264,7 @@ export function LeftPanel(props: LeftPanelProps) {
               showFavorites={showFavorites}
               onShowFavoritesChange={setShowFavorites}
               getThumbnailUrl={(asset) =>
-                asset.thumbnail || thumbnailMap[asset.url]
+                asset.thumbnail
               }
               previewEnabled={previewEnabled}
               selectedAssetIds={selectedAssetIds}
@@ -441,7 +439,8 @@ export function LeftPanel(props: LeftPanelProps) {
                     {takesAsset.type === "video" ? (
                       <VideoThumbnailCard
                         url={take.url}
-                        thumbnailUrl={take.thumbnail || thumbnailMap[take.url]}
+                        thumbnailUrl={take.thumbnail}
+                        enabled={previewEnabled}
                       />
                     ) : (
                       <img

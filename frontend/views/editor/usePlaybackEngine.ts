@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react'
 import type { TimelineClip, Track, Asset } from '../../types/project'
-import { readLocalMediaArrayBuffer } from '../../lib/local-media-bytes'
+import { acquireAudioBuffer, getSharedAudioContext, suspendSharedAudioContext } from '../../lib/audio-decode-service'
 
 export interface UsePlaybackEngineParams {
   isPlaying: boolean
@@ -61,49 +61,17 @@ export function usePlaybackEngine(params: UsePlaybackEngineParams) {
   } = params
 
   const audioElementsRef = useRef<Map<string, HTMLAudioElement>>(new Map())
-  const audioContextRef = useRef<AudioContext | null>(null)
-  const audioBufferCacheRef = useRef<Map<string, Promise<AudioBuffer> | AudioBuffer>>(new Map())
-  const audioNodesRef = useRef<Map<string, { source: AudioBufferSourceNode; gain: GainNode; startedAt: number; offsetAtStart: number; playbackRate: number; url: string }>>(new Map())
+  const audioNodesRef = useRef<Map<string, { source: AudioBufferSourceNode; gain: GainNode; startedAt: number; offsetAtStart: number; playbackRate: number; url: string; release: () => void }>>(new Map())
   const audioNodeStartRef = useRef<Map<string, { url: string; playbackRate: number }>>(new Map())
 
-  const getAudioContext = () => {
-    const Ctor = window.AudioContext || (window as any).webkitAudioContext
-    if (!Ctor) return null
-    if (!audioContextRef.current) audioContextRef.current = new Ctor()
-    return audioContextRef.current
-  }
-
-  const readAudioArrayBuffer = async (url: string): Promise<ArrayBuffer> => {
-    return await readLocalMediaArrayBuffer(url)
-  }
-
-  const getAudioBuffer = async (url: string): Promise<AudioBuffer> => {
-    const cached = audioBufferCacheRef.current.get(url)
-    if (cached instanceof Promise) return await cached
-    if (cached) return cached
-    const promise = (async () => {
-      const ctx = getAudioContext()
-      if (!ctx) throw new Error('Web Audio is unavailable')
-      const arrayBuffer = await readAudioArrayBuffer(url)
-      const buffer = await ctx.decodeAudioData(arrayBuffer)
-      audioBufferCacheRef.current.set(url, buffer)
-      return buffer
-    })()
-    audioBufferCacheRef.current.set(url, promise)
-    try {
-      return await promise
-    } catch (error) {
-      audioBufferCacheRef.current.delete(url)
-      throw error
-    }
-  }
-
   const stopBufferedAudio = (clipId: string) => {
+    audioNodeStartRef.current.delete(clipId)
     const node = audioNodesRef.current.get(clipId)
     if (!node) return
     try { node.source.stop() } catch {}
     try { node.source.disconnect() } catch {}
     try { node.gain.disconnect() } catch {}
+    node.release()
     audioNodesRef.current.delete(clipId)
   }
 
@@ -126,8 +94,8 @@ export function usePlaybackEngine(params: UsePlaybackEngineParams) {
       stopBufferedAudio(clip.id)
       return
     }
-    const ctx = getAudioContext()
-    if (!ctx) return
+    let ctx: AudioContext
+    try { ctx = getSharedAudioContext() } catch { return }
     const desiredRate = clip.speed
     const existing = audioNodesRef.current.get(clip.id)
     if (existing && existing.url === url && Math.abs(existing.playbackRate - desiredRate) < 0.001) {
@@ -143,15 +111,17 @@ export function usePlaybackEngine(params: UsePlaybackEngineParams) {
     }
     const pending = audioNodeStartRef.current.get(clip.id)
     if (pending && pending.url === url && Math.abs(pending.playbackRate - desiredRate) < 0.001) return
-    audioNodeStartRef.current.set(clip.id, { url, playbackRate: desiredRate })
+    const startToken = { url, playbackRate: desiredRate }
+    audioNodeStartRef.current.set(clip.id, startToken)
     void (async () => {
+      let acquired: Awaited<ReturnType<typeof acquireAudioBuffer>> | null = null
+      let ownershipTransferred = false
       try {
-        const buffer = await getAudioBuffer(url)
-        if (!isPlayingRef.current) return
-        const pendingStart = audioNodeStartRef.current.get(clip.id)
-        if (!pendingStart || pendingStart.url !== url || Math.abs(pendingStart.playbackRate - desiredRate) >= 0.001) return
-        if (audioNodesRef.current.has(clip.id)) return
+        acquired = await acquireAudioBuffer(url)
+        const buffer = acquired.buffer
+        if (!isPlayingRef.current || audioNodeStartRef.current.get(clip.id) !== startToken || audioNodesRef.current.has(clip.id)) return
         if (ctx.state === 'suspended') await ctx.resume()
+        if (!isPlayingRef.current || audioNodeStartRef.current.get(clip.id) !== startToken || audioNodesRef.current.has(clip.id)) return
         const source = ctx.createBufferSource()
         const gain = ctx.createGain()
         source.buffer = buffer
@@ -162,15 +132,19 @@ export function usePlaybackEngine(params: UsePlaybackEngineParams) {
         const target = Math.max(0, Math.min(buffer.duration, getBufferedAudioTarget(clip, buffer.duration, playbackTimeRef.current)))
         const startedAt = ctx.currentTime
         source.start(0, target)
-        audioNodesRef.current.set(clip.id, { source, gain, startedAt, offsetAtStart: target, playbackRate: desiredRate, url })
+        audioNodesRef.current.set(clip.id, { source, gain, startedAt, offsetAtStart: target, playbackRate: desiredRate, url, release: acquired.release })
+        ownershipTransferred = true
         source.onended = () => {
           const active = audioNodesRef.current.get(clip.id)
-          if (active?.source === source) audioNodesRef.current.delete(clip.id)
+          if (active?.source === source) {
+            active.release()
+            audioNodesRef.current.delete(clip.id)
+          }
         }
       } catch {
       } finally {
-        const pendingStart = audioNodeStartRef.current.get(clip.id)
-        if (pendingStart?.url === url && Math.abs(pendingStart.playbackRate - desiredRate) < 0.001) {
+        if (!ownershipTransferred) acquired?.release()
+        if (audioNodeStartRef.current.get(clip.id) === startToken) {
           audioNodeStartRef.current.delete(clip.id)
         }
       }
@@ -696,6 +670,7 @@ export function usePlaybackEngine(params: UsePlaybackEngineParams) {
         ;(el as any).__audioPlaying = false
       }
       for (const clipId of Array.from(audioNodesRef.current.keys())) stopBufferedAudio(clipId)
+      audioNodeStartRef.current.clear()
     }
   }, [isPlaying, totalDuration, shuttleSpeed, playingInOut, inPoint, outPoint, zoom])
   
@@ -1002,6 +977,7 @@ export function usePlaybackEngine(params: UsePlaybackEngineParams) {
       ;(el as any).__audioPlaying = false
     }
     for (const clipId of Array.from(audioNodesRef.current.keys())) stopBufferedAudio(clipId)
+    audioNodeStartRef.current.clear()
     
     // Helper to get the live URL for a clip (from project context, respecting takes)
     const getAudioClipUrl = (clip: TimelineClip): string | null => {
@@ -1084,8 +1060,7 @@ export function usePlaybackEngine(params: UsePlaybackEngineParams) {
       }
       audioElementsRef.current.clear()
       audioNodeStartRef.current.clear()
-      if (audioContextRef.current) void audioContextRef.current.close().catch(() => {})
-      audioContextRef.current = null
+      void suspendSharedAudioContext()
     }
   }, [])
 

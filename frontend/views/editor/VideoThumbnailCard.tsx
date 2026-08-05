@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { Video } from 'lucide-react'
 import { needsBlurredBackdrop } from '../../lib/media-aspect'
+import { useVideoThumbnail } from '../../lib/video-thumbnail-service'
 
-export function VideoThumbnailCard({ url, thumbnailUrl }: { url: string; thumbnailUrl?: string }) {
+export function VideoThumbnailCard({ url, thumbnailUrl, enabled = true }: { url: string; thumbnailUrl?: string; enabled?: boolean }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -11,7 +12,36 @@ export function VideoThumbnailCard({ url, thumbnailUrl }: { url: string; thumbna
   const [showBackdrop, setShowBackdrop] = useState(false)
   const [scrubProgress, setScrubProgress] = useState(0)
   const [scrubTime, setScrubTime] = useState('')
+  const [isVisible, setIsVisible] = useState(false)
   const rafRef = useRef<number>(0)
+  const sharedThumbnail = useVideoThumbnail(url, { enabled: enabled && isVisible, fallback: thumbnailUrl })
+
+  useEffect(() => {
+    if (!enabled || thumbnailUrl) return
+    if (!("IntersectionObserver" in window)) {
+      setIsVisible(true)
+      return
+    }
+    const container = containerRef.current
+    if (!container) return
+    const observer = new IntersectionObserver(([entry]) => setIsVisible(entry.isIntersecting))
+    observer.observe(container)
+    return () => observer.disconnect()
+  }, [enabled, thumbnailUrl])
+
+  const resetHoverPreview = useCallback(() => {
+    cancelAnimationFrame(rafRef.current)
+    setIsHovering(false)
+    setVideoReady(false)
+    setScrubProgress(0)
+    setScrubTime('')
+    const video = videoRef.current
+    if (video) {
+      video.currentTime = 0
+      video.removeAttribute('src')
+      video.load()
+    }
+  }, [])
 
   const drawFrame = useCallback(() => {
     const video = videoRef.current
@@ -69,6 +99,7 @@ export function VideoThumbnailCard({ url, thumbnailUrl }: { url: string; thumbna
   }, [])
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!enabled) return
     const video = videoRef.current
     const container = containerRef.current
     if (!video || !container || !video.duration || isNaN(video.duration)) return
@@ -84,27 +115,23 @@ export function VideoThumbnailCard({ url, thumbnailUrl }: { url: string; thumbna
     setScrubTime(`${mins}:${secs.toString().padStart(2, '0')}:${frames.toString().padStart(2, '0')}`)
     cancelAnimationFrame(rafRef.current)
     rafRef.current = requestAnimationFrame(drawFrame)
-  }, [drawFrame])
+  }, [drawFrame, enabled])
 
   const handleMouseEnter = useCallback(() => {
+    if (!enabled) return
     setIsHovering(true)
-  }, [])
+  }, [enabled])
 
   const handleMouseLeave = useCallback(() => {
-    setIsHovering(false)
-    setVideoReady(false)
-    setScrubProgress(0)
-    setScrubTime('')
-    const video = videoRef.current
-    if (video) {
-      video.currentTime = 0
-      video.removeAttribute('src')
-      video.load()
-    }
-  }, [])
+    resetHoverPreview()
+  }, [resetHoverPreview])
 
   useEffect(() => {
-    if (!isHovering) return
+    if (!enabled && isHovering) resetHoverPreview()
+  }, [enabled, isHovering, resetHoverPreview])
+
+  useEffect(() => {
+    if (!enabled || !isHovering) return
     const video = videoRef.current
     if (!video) return
     video.src = url
@@ -117,15 +144,15 @@ export function VideoThumbnailCard({ url, thumbnailUrl }: { url: string; thumbna
     }
     video.addEventListener('loadeddata', onLoaded, { once: true })
     return () => video.removeEventListener('loadeddata', onLoaded)
-  }, [isHovering, url, drawFrame])
+  }, [enabled, isHovering, url, drawFrame])
 
   useEffect(() => {
     const video = videoRef.current
-    if (!video || !isHovering) return
+    if (!video || !enabled || !isHovering) return
     const onSeeked = () => requestAnimationFrame(drawFrame)
     video.addEventListener('seeked', onSeeked)
     return () => video.removeEventListener('seeked', onSeeked)
-  }, [isHovering, drawFrame])
+  }, [enabled, isHovering, drawFrame])
 
   return (
     <div
@@ -133,20 +160,20 @@ export function VideoThumbnailCard({ url, thumbnailUrl }: { url: string; thumbna
       className="w-full aspect-video relative overflow-hidden bg-zinc-900"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      onMouseMove={isHovering ? handleMouseMove : undefined}
+      onMouseMove={enabled && isHovering ? handleMouseMove : undefined}
     >
-      {thumbnailUrl ? (
+      {sharedThumbnail ? (
         <>
           {showBackdrop && (
             <img
-              src={thumbnailUrl}
+              src={sharedThumbnail}
               alt=""
               aria-hidden
               className={`absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-xl ${isHovering && videoReady ? 'invisible' : ''}`}
             />
           )}
           <img
-            src={thumbnailUrl}
+            src={sharedThumbnail}
             alt=""
             onLoad={(event) =>
               setShowBackdrop(

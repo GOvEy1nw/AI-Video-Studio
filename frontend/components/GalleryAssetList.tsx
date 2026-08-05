@@ -1,6 +1,7 @@
-import { useMemo, useState, type DragEvent, type MouseEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type DragEvent, type MouseEvent, type ReactNode } from 'react'
 import { ArrowUpDown, ChevronDown, ChevronUp, Image, Layers, Music } from 'lucide-react'
 import type { Asset } from '../types/project'
+import { useVideoThumbnail } from '../lib/video-thumbnail-service'
 
 type SortColumn = 'name' | 'type' | 'duration' | 'resolution' | 'date' | 'color'
 
@@ -16,12 +17,29 @@ type GalleryAssetListProps = {
   onToggleSelection?: (asset: Asset) => void
   getAssetColorLabel?: (asset: Asset) => ColorLabel | undefined
   getThumbnailUrl?: (asset: Asset) => string | undefined
+  previewEnabled?: boolean
   onAssetClick?: (event: MouseEvent<HTMLDivElement>, asset: Asset) => void
   onAssetDoubleClick?: (event: MouseEvent<HTMLDivElement>, asset: Asset) => void
   onAssetContextMenu?: (event: MouseEvent<HTMLDivElement>, asset: Asset) => void
   onAssetDragStart?: (event: DragEvent<HTMLDivElement>, asset: Asset) => void
   renderActions?: (asset: Asset) => ReactNode
   actionsWidthClass?: string
+}
+
+function VideoListThumbnail({ url, fallback, enabled }: { url: string; fallback?: string; enabled: boolean }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    if (!enabled) return
+    if (!("IntersectionObserver" in window)) { setVisible(true); return }
+    const target = ref.current
+    if (!target) return
+    const observer = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting))
+    observer.observe(target)
+    return () => observer.disconnect()
+  }, [enabled])
+  const thumbnail = useVideoThumbnail(url, { enabled: enabled && visible, fallback })
+  return <div ref={ref} className="h-full w-full">{thumbnail && <img src={thumbnail} alt="" className="h-full w-full object-cover" />}</div>
 }
 
 function assetName(asset: Asset) {
@@ -40,6 +58,7 @@ export function GalleryAssetList({
   onToggleSelection,
   getAssetColorLabel,
   getThumbnailUrl,
+  previewEnabled = false,
   onAssetClick,
   onAssetDoubleClick,
   onAssetContextMenu,
@@ -152,7 +171,7 @@ export function GalleryAssetList({
             )}
             <div className="h-6 w-8 shrink-0 overflow-hidden rounded-sm bg-zinc-800">
               {asset.type === 'video' ? (
-                thumbnailUrl ? <img src={thumbnailUrl} alt="" className="h-full w-full object-cover" /> : <video src={asset.url} preload="metadata" muted playsInline className="h-full w-full object-cover" />
+                <VideoListThumbnail url={asset.url} fallback={thumbnailUrl} enabled={previewEnabled} />
               ) : asset.type === 'audio' ? (
                 <div className="flex h-full w-full items-center justify-center bg-emerald-900/40"><Music className="h-2.5 w-2.5 text-emerald-400" /></div>
               ) : asset.type === 'adjustment' ? (

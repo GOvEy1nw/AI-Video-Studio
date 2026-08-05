@@ -875,37 +875,6 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
     );
   }, [assets, galleryFilter, selectedBin]);
 
-  // --- Thumbnail generation for video assets ---
-  const [thumbnailMap, setThumbnailMap] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    if (!isActive) return;
-    // Generate thumbnails for all video assets that don't have one yet
-    let cancelled = false;
-    const videoAssets = assets.filter((a) => a.type === "video" && a.url);
-
-    const genAll = async () => {
-      for (const asset of videoAssets) {
-        if (cancelled) break;
-        const url = asset.url;
-        if (thumbnailMap[url]) continue;
-        try {
-          const { generateThumbnail } = await import("../lib/thumbnails");
-          const thumb = await generateThumbnail(url);
-          if (!cancelled) {
-            setThumbnailMap((prev) => ({ ...prev, [url]: thumb }));
-          }
-        } catch {
-          // skip – will show fallback
-        }
-      }
-    };
-    genAll();
-    return () => {
-      cancelled = true;
-    };
-  }, [assets, isActive]); // re-run when assets or active workspace changes
-
   // For the properties panel: show properties when a single clip (or a single linked group) is selected.
   // When all selected clips belong to the same linked group, show the primary clip (prefer video/image over audio).
   const selectedClip = (() => {
@@ -2475,7 +2444,6 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
           }}
           setTakeContextMenu={setTakeContextMenu}
           assets={assets}
-          thumbnailMap={thumbnailMap}
           currentProjectId={currentProjectId}
           pushAssetUndoRef={pushAssetUndoRef}
           updateAsset={updateAsset}
