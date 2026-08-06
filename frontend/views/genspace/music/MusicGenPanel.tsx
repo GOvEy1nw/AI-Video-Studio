@@ -35,9 +35,13 @@ export function MusicGenPanel({
     <>
       <GenPanelSection
         title=""
-        className="text-xs text-zinc-400"
+        className="text-xs text-zinc-400 flex gap-2 justify-between items-center"
         collapsible={false}
       >
+        <MusicVocalModeTabs
+          settings={music.settings}
+          onChange={music.setSettings}
+        />
         {selectedProfile ? (
           <ModelPicker
             profiles={installedProfiles}
@@ -53,10 +57,6 @@ export function MusicGenPanel({
           <ModelDownloadButton />
         )}
       </GenPanelSection>
-      <MusicVocalModeTabs
-        settings={music.settings}
-        onChange={music.setSettings}
-      />
       <MusicMediaInputs
         coverInput={music.settings.coverAudioInput}
         referenceTimbreInput={music.settings.referenceTimbreAudioInput}

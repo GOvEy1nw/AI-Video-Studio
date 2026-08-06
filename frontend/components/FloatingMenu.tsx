@@ -83,9 +83,7 @@ function placementCoordinates(
   }
   return {
     left:
-      side === "right"
-        ? anchor.right + gap
-        : anchor.left - menu.width - gap,
+      side === "right" ? anchor.right + gap : anchor.left - menu.width - gap,
     top: align === "start" ? anchor.top : anchor.bottom - menu.height,
   };
 }
@@ -162,6 +160,7 @@ export interface FloatingMenuProps extends HTMLAttributes<HTMLDivElement> {
   anchorRect?: FloatingMenuAnchorRect;
   anchorRef?: RefObject<HTMLElement | null>;
   gap?: number;
+  matchAnchorWidth?: boolean;
   placement?: FloatingMenuPlacement;
   viewportPadding?: number;
 }
@@ -175,6 +174,7 @@ export const FloatingMenu = forwardRef<HTMLDivElement, FloatingMenuProps>(
       children,
       className,
       gap = 6,
+      matchAnchorWidth = false,
       placement = "bottom-start",
       style,
       viewportPadding = 8,
@@ -184,6 +184,7 @@ export const FloatingMenu = forwardRef<HTMLDivElement, FloatingMenuProps>(
   ) {
     const menuRef = useRef<HTMLDivElement>(null);
     const [position, setPosition] = useState<FloatingMenuPosition | null>(null);
+    const [anchorWidth, setAnchorWidth] = useState<number | null>(null);
     const setMenuRef = useCallback(
       (node: HTMLDivElement | null) => {
         menuRef.current = node;
@@ -196,8 +197,7 @@ export const FloatingMenu = forwardRef<HTMLDivElement, FloatingMenuProps>(
       const menu = menuRef.current;
       const anchorElement = anchorRef?.current;
       if (!menu || (!anchorElement && !anchorRect && !anchorPoint)) return;
-      const anchor =
-        anchorElement?.getBoundingClientRect() ??
+      const anchor = anchorElement?.getBoundingClientRect() ??
         anchorRect ?? {
           bottom: anchorPoint!.y,
           height: 0,
@@ -206,11 +206,15 @@ export const FloatingMenu = forwardRef<HTMLDivElement, FloatingMenuProps>(
           top: anchorPoint!.y,
           width: 0,
         };
+      setAnchorWidth(matchAnchorWidth ? anchor.width : null);
       const menuRect = menu.getBoundingClientRect();
       setPosition(
         getFloatingMenuPosition({
           anchor,
-          menu: { height: menuRect.height, width: menuRect.width },
+          menu: {
+            height: menuRect.height,
+            width: matchAnchorWidth ? anchor.width : menuRect.width,
+          },
           placement,
           viewport: { height: window.innerHeight, width: window.innerWidth },
           gap,
@@ -222,6 +226,7 @@ export const FloatingMenu = forwardRef<HTMLDivElement, FloatingMenuProps>(
       anchorRect,
       anchorRef,
       gap,
+      matchAnchorWidth,
       placement,
       viewportPadding,
     ]);
@@ -252,6 +257,9 @@ export const FloatingMenu = forwardRef<HTMLDivElement, FloatingMenuProps>(
       position: "fixed",
       top: position?.top ?? 0,
       visibility: position ? "visible" : "hidden",
+      ...(matchAnchorWidth && anchorWidth !== null
+        ? { width: anchorWidth }
+        : {}),
     };
 
     return createPortal(

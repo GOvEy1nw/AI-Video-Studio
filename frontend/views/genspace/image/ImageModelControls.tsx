@@ -65,6 +65,7 @@ export function ImageModelControls({
   }, [section, selectedProfile, settings, onSettingsChange]);
 
   if (!selectedProfile) {
+    if (section === "output") return null;
     if (imageProfiles.length) return <ModelDownloadButton />;
 
     // Profiles not loaded yet — show a placeholder.

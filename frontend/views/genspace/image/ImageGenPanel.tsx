@@ -96,12 +96,12 @@ export function ImageGenPanel({
 
   return (
     <>
-      <ImageModeTabs mode={imageTools.mode} onChange={imageTools.setMode} />
       <GenPanelSection
         title=""
-        className="text-xs text-zinc-400"
+        className="text-xs text-zinc-400 flex gap-2 justify-between items-center"
         collapsible={false}
       >
+        <ImageModeTabs mode={imageTools.mode} onChange={imageTools.setMode} />
         <ImageModelControls
           settings={settings.value}
           onSettingsChange={settings.patch}

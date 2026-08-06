@@ -4,7 +4,6 @@ import {
   Heart,
   ListFilter,
   LoaderCircle,
-  Sparkles,
   Trash2,
 } from "lucide-react";
 import { memo, type HTMLAttributes, type RefObject } from "react";
@@ -96,20 +95,6 @@ function GenSpaceGalleryView({
           </p>
         </div>
       ) : null}
-      {assets.length === 0 && !generation.isRunning ? (
-        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-          <div className="mb-4 flex h-24 w-24 items-center justify-center rounded-2xl border-2 border-dashed border-zinc-700">
-            <Sparkles className="h-10 w-10 text-zinc-600" />
-          </div>
-          <h3 className="mb-2 text-xl font-semibold text-white">
-            Start Creating
-          </h3>
-          <p className="max-w-md text-zinc-500">
-            Use the sidebar to generate images, videos, and music, or drop
-            image, video, and audio files here to add them to your gallery.
-          </p>
-        </div>
-      ) : null}
       {showFavorites && visibleAssets.length === 0 && assets.length > 0 ? (
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
           <Heart className="mb-4 h-12 w-12 text-zinc-700" />
@@ -152,8 +137,7 @@ function GenSpaceGalleryView({
           </p>
         </div>
       ) : null}
-      {assets.length > 0 || generation.isRunning ? (
-        <GalleryAssetLibrary
+      <GalleryAssetLibrary
           {...library}
           className="absolute inset-0 pl-2 pt-4"
           headerAction={
@@ -173,6 +157,18 @@ function GenSpaceGalleryView({
                 }}
               />
             </>
+          }
+          emptyContent={
+            assets.length === 0 ? (
+              <div className="py-8 text-center">
+                <p className="text-sm text-zinc-500">No assets yet</p>
+                <p className="mt-1 text-xs text-zinc-600">
+                  Generate in Gen Space or import
+                </p>
+              </div>
+            ) : (
+              library.emptyContent
+            )
           }
           listActions={(asset) => (
             <>
@@ -292,7 +288,6 @@ function GenSpaceGalleryView({
             </>
           }
         />
-      ) : null}
     </div>
   );
 }

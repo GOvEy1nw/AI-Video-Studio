@@ -36,7 +36,7 @@ export function SettingsDropdown({
   onChange: (value: string) => void;
   title: string;
   placement?: "top" | "bottom";
-  variant?: "default" | "model";
+  variant?: "default" | "model" | "mode";
   disabled?: boolean;
   optionLayout?: "list" | "aspect-grid";
   align?: "left" | "right";
@@ -47,14 +47,15 @@ export function SettingsDropdown({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const modelTriggerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const preferredPlacement: FloatingMenuPlacement =
     placement === "bottom"
-      ? align === "right" || variant === "model"
+      ? align === "right" || variant === "model" || variant === "mode"
         ? "bottom-end"
         : "bottom-start"
-      : align === "right" || variant === "model"
-        ? "top-end"
+      : align === "right" || variant === "model" || variant === "mode"
+        ? "bottom-start"
         : "top-start";
 
   useEffect(() => {
@@ -108,6 +109,13 @@ export function SettingsDropdown({
     >
       <button
         type="button"
+        aria-label={
+          option.disabled && option.tooltip
+            ? `${option.label}: ${option.tooltip}`
+            : undefined
+        }
+        disabled={option.disabled}
+        title={option.disabled ? option.tooltip : undefined}
         onClick={() => selectOption(option)}
         className={`flex w-full items-center justify-between rounded-md px-2 py-2 text-2xs text-left transition-colors ${
           option.disabled
@@ -150,12 +158,15 @@ export function SettingsDropdown({
   return (
     <div
       ref={dropdownRef}
-      data-genspace-theme-ignore={variant === "model" ? "" : undefined}
-      className={`relative ${variant === "model" ? "w-full mx-auto" : ""}`}
+      data-genspace-theme-ignore={
+        variant === "model" || variant === "mode" ? "" : undefined
+      }
+      className={`relative ${variant === "model" ? "" : ""}`}
     >
       {variant === "model" ? (
         <div
-          className={`flex w-full max-w-[320px] mx-auto items-center justify-between rounded-xl border bg-zinc-800/70 transition-colors ${
+          ref={modelTriggerRef}
+          className={`flex w-fit min-w-[165px] items-center justify-between rounded-xl border bg-zinc-800/70 transition-colors ${
             disabled
               ? "cursor-not-allowed border-zinc-700 opacity-50"
               : isOpen
@@ -180,7 +191,7 @@ export function SettingsDropdown({
             aria-expanded={isOpen}
             onClick={() => setIsOpen(!isOpen)}
             disabled={disabled}
-            className="flex h-10 w-10 shrink-0 items-center justify-center text-zinc-500 transition-colors hover:text-zinc-300 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-zinc-400"
+            className="flex h-8 w-8 shrink-0 items-center justify-center text-zinc-500 transition-colors hover:text-zinc-300 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-zinc-400"
           >
             <ChevronDown
               className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`}
@@ -191,10 +202,19 @@ export function SettingsDropdown({
         <button
           type="button"
           aria-label={triggerLabel}
+          aria-expanded={isOpen}
           onClick={() => setIsOpen(!isOpen)}
           disabled={disabled}
-          className={`flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md bg-zinc-900 px-1 py-1 text-2xs font-medium leading-none tracking-wider text-zinc-200 transition-colors ${
-            disabled ? "cursor-not-allowed opacity-50" : "hover:bg-blue-500"
+          className={`${
+            variant === "mode"
+              ? "flex items-center overflow-hidden rounded-xl border border-zinc-700 bg-zinc-800/70 text-xs font-medium text-zinc-200 transition-colors hover:border-zinc-600 hover:bg-zinc-800"
+              : "flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md bg-zinc-900 px-1 py-1 text-2xs font-medium leading-none tracking-wider text-zinc-200 transition-colors"
+          } ${
+            disabled
+              ? "cursor-not-allowed opacity-50"
+              : variant === "mode"
+                ? ""
+                : "hover:bg-blue-500"
           } ${isOpen && !disabled ? "border-zinc-600 bg-zinc-700 hover:bg-zinc-700" : ""}`}
         >
           {trigger}
@@ -204,7 +224,8 @@ export function SettingsDropdown({
       {isOpen && (
         <FloatingMenu
           ref={menuRef}
-          anchorRef={dropdownRef}
+          anchorRef={variant === "model" ? modelTriggerRef : dropdownRef}
+          matchAnchorWidth={variant === "model"}
           placement={preferredPlacement}
           gap={8}
           className="w-fit text-nowrap rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl"
@@ -219,7 +240,7 @@ export function SettingsDropdown({
               className={
                 optionLayout === "aspect-grid"
                   ? "grid max-h-60 min-w-36 grid-cols-2 gap-1 overflow-y-auto pr-1"
-                  : "max-h-60 space-y-1 overflow-y-auto pr-1"
+                  : "max-h-60 space-y-1 overflow-y-auto overflow-x-hidden pr-1"
               }
             >
               {variant === "model"

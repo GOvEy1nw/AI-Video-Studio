@@ -17,6 +17,7 @@ import {
 } from "../contexts/AppSettingsContext";
 import { AivsLogo } from "./AivsLogo";
 import { ModelPackManager } from "./ModelPackManager";
+import { useModelProfiles } from "../contexts/ModelProfilesContext";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -53,6 +54,7 @@ export function SettingsModal({
   initialTab,
 }: SettingsModalProps) {
   const { settings, updateSettings, saveSettings } = useAppSettings();
+  const { refreshAfterModelPackMutation } = useModelProfiles();
   const [activeTab, setActiveTab] = useState<TabId>("general");
   const [appVersion, setAppVersion] = useState("");
   const [noticesText, setNoticesText] = useState<string | null>(null);
@@ -176,6 +178,8 @@ export function SettingsModal({
         setSavedLorasLocation(savedLocation);
       }
       await window.electronAPI.restartPythonBackend();
+      await window.electronAPI.refreshModelPacks();
+      await refreshAfterModelPackMutation();
       setAdvancedReloaded(true);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

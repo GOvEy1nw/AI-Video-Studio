@@ -16,6 +16,10 @@ Product principles:
 Current integration baseline: `dev`.
 
 ## Recent issues
+- [DONE] #0680 Disabled mode options lacked native disabled semantics and accessible unavailable reason. [frontend/components/SettingsDropdown.tsx] -> Verified unavailable Retake is natively disabled with accessible reason and focused interaction test. [frontend/components/SettingsDropdown.tsx] (fixed)
+- [DONE] #0679 Model availability in shared frontend profile state remains stale after Model Manager refresh and after checkpoint/LoRA Save & Reload. [frontend/components/ModelPackManager.tsx; frontend/components/SettingsModal.tsx; frontend/contexts/ModelProfilesContext.tsx] -> Verified refresh flows rescan packs then refresh shared model-profile availability; context tests pass. [frontend/components/ModelPackManager.tsx] (fixed)
+- [DONE] #0678 Model dropdown briefly positions at bottom-end before snapping under its trigger because matched trigger width is applied after initial floating-menu placement. [frontend/components/FloatingMenu.tsx; frontend/components/SettingsDropdown.tsx] -> Verified first model-menu position uses final matched width; focused FloatingMenu tests pass. [frontend/components/FloatingMenu.tsx] (fixed)
+- [DONE] #0677 Video Quick Gen shows an unavailable LTX profile as selected when no video model files are installed instead of presenting the Download Models action. [frontend/views/genspace/video/VideoGenPanel.tsx] -> Verified Video shows Download Models when no video profile is installed while retaining normal layout metadata. [frontend/views/genspace/video/VideoGenPanel.tsx] (fixed)
 - [OPEN] #0676 AIVS-027 native editor smoke remains unavailable: repository Vite config enters Electron watch builds without an HTTP renderer, and browser control cannot drive the Electron window. [AIVS-027 native Electron smoke environment] (open)
 - [OPEN] #0241 Installed app log reports resources/icon.ico missing; window still displays executable icon [electron/main.ts; electron-builder.yml; Backlog AIVS-033] (open)
 - [OPEN] #0240 Installed app updater check logs GitHub releases HTTP 406 but remains stable and usable [electron/updater.ts; Backlog AIVS-032] (open)
@@ -25,7 +29,6 @@ Current integration baseline: `dev`.
 - AiVS environment variables are canonical (AIVS_APP_DATA_DIR, AIVS_AUTH_TOKEN, AIVS_PORT, AIVS_BACKEND_PYTHON); LTX equivalents are read-only fallbacks for one compatibility period.
 - AiVS stores no cloud API credentials; all generation routes use WanGP only. [backend]
 - Model downloads are optional WanGP-defined packs: first-run setup installs only runtime dependencies; the renderer controls an Electron-owned Python child downloader for live sanitized progress and cancellation, reused by Settings Model Manager. [electron/python-setup.ts; frontend/components/PythonSetup.tsx]
-- First-run order is runtime setup, optional model packs, then project storage confirmation. New projects default to Documents\\AiVS; runtime and updater remain per-user app data because they are executable/cache/update state, not user project content. [frontend/components/PythonSetup.tsx; electron/app-state.ts]
 - GenSpace video generation no longer exposes Timing/multi-shot editing or sends shotPrompts; standalone Director Mode is the canonical multi-segment prompt-timing workflow. Legacy backend shotPrompts compatibility remains internal. [frontend/views/GenSpace.tsx]
 - Director Mode is a standalone workspace between GenSpace and Video Editor: shared asset library and bins at left, multiple Director timelines, global/contextual settings, preview transport, and Director timeline at bottom. It visually reuses editor primitives but owns separate frame-based state and behavior. [frontend/views/director/]
 - Director V1 supports the Prompt track only; Guide Audio and Control Media remain visible and locked. V1 is fixed at 24 fps, uses 8n+1 output lengths, caps timelines at 20 seconds, and sends all key frames through image_refs plus frames_positions. [frontend/types/director.ts]
@@ -61,6 +64,7 @@ Current integration baseline: `dev`.
 - AIVS-028 keeps V1 eager project loading because representative storage and native Home heap measurements remain below the 250 ms and 100 MB gates. Repeated native Home timing remains blocked by the preload/CDP environment; no security-boundary weakening is accepted. [electron/project-storage.ts]
 - Backlog owns actionable work/status/evidence; ProjectMem retains only current architecture decisions, unresolved product/code defects, security/data risks, durable constraints, cross-task baselines, and upstream incompatibilities. Routine agent/tool failures stay in Backlog or ignored .projectmem/runtime/. [AGENTS.md; .projectmem/AI_INSTRUCTIONS.md; .projectmem/]
 - Bundled WanGP source is pinned to GOvEy1nw/Wan2GP AiVS revision a599200d96a2e3c934991bb5fcbddb821d3550dc, manifest version 12.3456; transactional source-update and rollback rules remain. [scripts/wangp-source.json; .projectmem/PROJECT_MAP.md]
+- First-run setup installs the runtime, then confirms project, checkpoint, and LoRA storage together; model-pack downloads are available in-app after setup rather than as an onboarding stage. [frontend/components/PythonSetup.tsx; frontend/components/SettingsModal.tsx]
 
 ## Notes
 - No notes logged yet.

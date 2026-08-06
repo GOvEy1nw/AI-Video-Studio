@@ -28,7 +28,7 @@ export function MusicVocalModeTabs({
     <div
       role="tablist"
       aria-label="Vocal mode"
-      className="mx-auto mt-2 mb-2 flex w-fit flex-row justify-center gap-2 rounded-lg bg-zinc-800/35 p-2"
+      className="flex w-fit flex-row justify-center gap-2 rounded-lg bg-zinc-800/35 p-2"
     >
       {(
         [

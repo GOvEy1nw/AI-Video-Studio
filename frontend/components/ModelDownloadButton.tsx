@@ -1,6 +1,6 @@
 import { Download } from "lucide-react";
 
-export function ModelDownloadButton() {
+export function ModelDownloadButton({ className }: { className?: string }) {
   return (
     <button
       type="button"
@@ -9,10 +9,12 @@ export function ModelDownloadButton() {
           new CustomEvent("open-settings", { detail: { tab: "models" } }),
         )
       }
-      className="flex w-full items-center justify-center gap-2 rounded-lg border border-blue-500/60 bg-blue-500/10 px-3 py-2 text-xs font-medium text-blue-200 transition-colors hover:bg-blue-500/20"
+      className={`flex w-fit items-center gap-2 rounded-lg border border-blue-500/60 bg-blue-500/10 px-3 py-2 text-xs font-medium text-blue-200 transition-colors hover:bg-blue-500/20 ${className}`}
     >
-      <Download className="h-3.5 w-3.5" />
-      Download models
+      <div className="flex justify-center mx-auto gap-2">
+        <Download className="h-3.5 w-3.5" />
+        Download models
+      </div>
     </button>
   );
 }

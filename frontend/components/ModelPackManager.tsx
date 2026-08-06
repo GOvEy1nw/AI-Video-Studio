@@ -276,7 +276,10 @@ export function ModelPackManager({
               onClick={() => {
                 setError(null);
                 setChecking(true);
-                void refresh(true)
+                void (async () => {
+                  await refresh(true);
+                  await refreshAfterModelPackMutation();
+                })()
                   .catch((reason: unknown) =>
                     setError(
                       reason instanceof Error

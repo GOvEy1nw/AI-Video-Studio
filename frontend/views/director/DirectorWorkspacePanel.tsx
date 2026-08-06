@@ -10,6 +10,7 @@ import {
   Film,
   ImageIcon,
   Lock,
+  Monitor,
   SettingsIcon,
   Pause,
   Play,
@@ -31,8 +32,11 @@ import type {
   DirectorTimelineDocument,
 } from "@/types/project";
 import type { DirectorSequenceV1 } from "@/types/director";
+import { ModelPicker } from "@/components/ModelPicker";
 import { SeedSettings } from "@/components/SeedControl";
+import { SettingsDropdown } from "@/components/SettingsDropdown";
 import { FloatingMenu } from "../../components/FloatingMenu";
+import { AspectRatioDropdown } from "../genspace/components/AspectRatioDropdown";
 import { useAppSettings } from "@/contexts/AppSettingsContext";
 import type { ModelProfile } from "@/types/model-profiles";
 import { useGeneration } from "@/hooks/use-generation";
@@ -267,6 +271,10 @@ export function DirectorWorkspacePanel(props: Props) {
   const validation = sequence
     ? validateDirectorSequence(sequence, profile, props.assets)
     : null;
+  const displayedValidationErrors =
+    validation?.errors.filter(
+      (issue) => issue.code !== "DIRECTOR_MODEL_UNAVAILABLE",
+    ) ?? [];
   const latestAsset = sequence?.latestGenerationAssetId
     ? props.assets.find(
         (asset) => asset.id === sequence.latestGenerationAssetId,
@@ -788,12 +796,13 @@ export function DirectorWorkspacePanel(props: Props) {
                       )}
                     </div>
                   </div>
-                  <span className="flex gap-2 justify-between">
-                    <select
+                  <div className="flex min-w-0 items-center gap-1">
+                    <ModelPicker
+                      profiles={enabledProfiles}
                       value={sequence.output.modelProfileId}
-                      onChange={(event) => {
+                      onChange={(profileId) => {
                         const next = enabledProfiles.find(
-                          (item) => item.id === event.target.value,
+                          (item) => item.id === profileId,
                         );
                         if (next)
                           commit({
@@ -806,49 +815,49 @@ export function DirectorWorkspacePanel(props: Props) {
                             },
                           });
                       }}
-                      className="max-w-44 rounded-sm border border-zinc-700 bg-zinc-900 px-2 py-1 text-[11px] text-zinc-200"
-                    >
-                      {enabledProfiles.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.displayName}
-                        </option>
-                      ))}
-                    </select>
-                    <select
+                      placement="bottom"
+                      icon={<Film className="h-5 w-5" />}
+                    />
+                    <SettingsDropdown
+                      title="RESOLUTION"
                       value={sequence.output.resolutionTier}
-                      onChange={(event) =>
+                      onChange={(resolutionTier) =>
                         commit({
                           ...sequence,
                           output: {
                             ...sequence.output,
-                            resolutionTier: event.target.value,
+                            resolutionTier,
                           },
                         })
                       }
-                      className="rounded-sm border border-zinc-700 bg-zinc-900 px-2 py-1 text-[11px] text-zinc-200"
-                    >
-                      {profile?.ui.allowedResolutionTiers.map((value) => (
-                        <option key={value}>{value}</option>
-                      ))}
-                    </select>
-                    <select
+                      options={(profile?.ui.allowedResolutionTiers ?? []).map(
+                        (value) => ({ value, label: value }),
+                      )}
+                      placement="bottom"
+                      trigger={
+                        <>
+                          <Monitor className="h-3.5 w-3.5" />
+                          <span>
+                            {sequence.output.resolutionTier.replace("p", "")}
+                          </span>
+                        </>
+                      }
+                    />
+                    <AspectRatioDropdown
                       value={sequence.output.aspectRatio}
-                      onChange={(event) =>
+                      onChange={(aspectRatio) =>
                         commit({
                           ...sequence,
                           output: {
                             ...sequence.output,
-                            aspectRatio: event.target.value,
+                            aspectRatio,
                           },
                         })
                       }
-                      className="rounded-sm border border-zinc-700 bg-zinc-900 px-2 py-1 text-[11px] text-zinc-200"
-                    >
-                      {profile?.ui.allowedAspectRatios.map((value) => (
-                        <option key={value}>{value}</option>
-                      ))}
-                    </select>
-                  </span>
+                      allowedAspectRatios={profile?.ui.allowedAspectRatios}
+                      placement="bottom"
+                    />
+                  </div>
                 </div>
                 <textarea
                   value={sequence.globalPrompt}
@@ -1186,9 +1195,9 @@ export function DirectorWorkspacePanel(props: Props) {
                     {warning}
                   </div>
                 ))}
-                {validation && validation.errors.length > 0 && (
+                {displayedValidationErrors.length > 0 && (
                   <div className="rounded-sm border border-amber-800/60 bg-amber-950/20 p-2 text-[11px] text-amber-300">
-                    {validation.errors.map((issue) => (
+                    {displayedValidationErrors.map((issue) => (
                       <div key={`${issue.code}-${issue.segmentId || ""}`}>
                         {issue.message}
                       </div>

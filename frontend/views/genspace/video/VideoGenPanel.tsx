@@ -1,4 +1,4 @@
-import { AlertCircle, Clock, Image, Monitor, Music, X } from "lucide-react";
+import { Clock, Image, Monitor, Music, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ModelDownloadButton } from "../../../components/ModelDownloadButton";
 import { ModelPicker } from "../../../components/ModelPicker";
@@ -189,10 +189,15 @@ export function VideoGenPanel({
   const installedProfiles = profiles.options.filter((profile) =>
     isModelProfileInstalled(profile.availability),
   );
-  const selectedProfile =
-    installedProfiles.find(
+  const curatedSelectedProfile =
+    profiles.options.find(
       (profile) => profile.id === videoSettings.profileId,
-    ) ?? installedProfiles[0];
+    ) ?? profiles.options[0];
+  const selectedProfile = installedProfiles.length
+    ? (installedProfiles.find(
+        (profile) => profile.id === videoSettings.profileId,
+      ) ?? installedProfiles[0])
+    : curatedSelectedProfile;
   const isRetake = videoTools.mode === "retake";
   const isTools = videoTools.mode === "reframe";
   const isReframe = isTools && videoTools.selectedTool === "reframe";
@@ -343,18 +348,18 @@ export function VideoGenPanel({
 
   return (
     <>
-      <VideoModeTabs
-        mode={videoTools.mode}
-        onChange={videoTools.setMode}
-        selectedTool={videoTools.selectedTool}
-        onToolChange={videoTools.setSelectedTool}
-      />
       <GenPanelSection
         title=""
-        className="text-xs text-zinc-400"
+        className="text-xs text-zinc-400 flex gap-2 justify-between items-center"
         collapsible={false}
       >
-        {selectedProfile ? (
+        <VideoModeTabs
+          mode={videoTools.mode}
+          onChange={videoTools.setMode}
+          selectedTool={videoTools.selectedTool}
+          onToolChange={videoTools.setSelectedTool}
+        />
+        {installedProfiles.length ? (
           <ModelPicker
             profiles={installedProfiles}
             value={selectedProfile.id}
@@ -367,7 +372,6 @@ export function VideoGenPanel({
           <ModelDownloadButton />
         ) : (
           <div className="flex items-center gap-1.5 rounded-md bg-zinc-800/50 px-2 py-1.5 text-zinc-500">
-            <AlertCircle className="h-3.5 w-3.5" />
             <span>Loading models…</span>
           </div>
         )}

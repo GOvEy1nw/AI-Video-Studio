@@ -127,7 +127,7 @@ export function ModelPicker({
       )}
       placement={placement}
       variant="model"
-      footer={<ModelDownloadButton />}
+      footer={<ModelDownloadButton className="w-full mx-auto" />}
       trigger={
         <ModelDropdownTrigger
           profile={selectedProfile}
