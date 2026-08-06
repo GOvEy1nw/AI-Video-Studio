@@ -151,11 +151,11 @@ export function SettingsDropdown({
     <div
       ref={dropdownRef}
       data-genspace-theme-ignore={variant === "model" ? "" : undefined}
-      className={`relative ${variant === "model" ? "min-w-1/2 w-fit max-w-[350px] mx-auto" : ""}`}
+      className={`relative ${variant === "model" ? "w-full mx-auto" : ""}`}
     >
       {variant === "model" ? (
         <div
-          className={`flex w-full items-center rounded-xl border bg-zinc-800/70 transition-colors ${
+          className={`flex w-full max-w-[320px] mx-auto items-center justify-between rounded-xl border bg-zinc-800/70 transition-colors ${
             disabled
               ? "cursor-not-allowed border-zinc-700 opacity-50"
               : isOpen
@@ -169,7 +169,7 @@ export function SettingsDropdown({
             aria-expanded={isOpen}
             onClick={() => setIsOpen(!isOpen)}
             disabled={disabled}
-            className="flex min-w-0 flex-1 items-center px-3 py-2.5 text-left"
+            className="flex min-w-0 flex-1 items-center px-3 py-1 text-left"
           >
             {trigger}
           </button>

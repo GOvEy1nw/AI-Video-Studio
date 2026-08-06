@@ -50,7 +50,9 @@ function groupFamilyProfiles(
     label: names[index].slice(commonWords.length).join(" "),
   }));
   if (!commonWords.length || variants.some((variant) => !variant.label)) {
-    return profiles.flatMap((profile) => groupFamilyProfiles(profile.id, [profile]));
+    return profiles.flatMap((profile) =>
+      groupFamilyProfiles(profile.id, [profile]),
+    );
   }
 
   return [
@@ -63,7 +65,9 @@ function groupFamilyProfiles(
   ];
 }
 
-export function groupModelProfiles(profiles: ModelProfile[]): ModelProfileGroup[] {
+export function groupModelProfiles(
+  profiles: ModelProfile[],
+): ModelProfileGroup[] {
   const families = new Map<string, ModelProfile[]>();
   for (const profile of profiles) {
     const family = profile.wangpMetadata?.family || profile.id;
@@ -96,7 +100,9 @@ export function ModelPicker({
   const selectedProfile =
     profiles.find((profile) => profile.id === value) ?? profiles[0];
   const selectedGroup = groups.find((group) =>
-    group.variants.some((variant) => variant.profile.id === selectedProfile?.id),
+    group.variants.some(
+      (variant) => variant.profile.id === selectedProfile?.id,
+    ),
   );
 
   if (!selectedProfile || !selectedGroup) return null;
@@ -111,7 +117,9 @@ export function ModelPicker({
           value: variant.profile.id,
           label:
             variant.profile.displayName +
-            (variant.profile.status === "experimental" ? " (experimental)" : ""),
+            (variant.profile.status === "experimental"
+              ? " (experimental)"
+              : ""),
           modelGroup: group.grouped ? group.key : undefined,
           modelGroupLabel: group.grouped ? group.label : undefined,
           variantLabel: group.grouped ? variant.label : undefined,

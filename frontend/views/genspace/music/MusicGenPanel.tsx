@@ -34,7 +34,7 @@ export function MusicGenPanel({
   return (
     <>
       <GenPanelSection
-        title="Model"
+        title=""
         className="text-xs text-zinc-400"
         collapsible={false}
       >
