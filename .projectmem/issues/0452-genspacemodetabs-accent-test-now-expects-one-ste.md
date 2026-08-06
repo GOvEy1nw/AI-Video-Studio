@@ -1,6 +1,0 @@
-# #0452 GenSpaceModeTabs accent test now expects one-step-lighter hover tokens, but current on-disk mode-accent mapping supplies base tokens for hover after out-of-band user edits.
-
-- 2026-08-01T16:22:39Z `issue`: GenSpaceModeTabs accent test now expects one-step-lighter hover tokens, but current on-disk mode-accent mapping supplies base tokens for hover after out-of-band user edits. [frontend/views/genspace/mode-accent.ts; frontend/views/genspace/GenSpaceModeTabs.test.tsx:31]
-- 2026-08-01T16:22:42Z `attempt`: Ran theme-ignore focused tests with mode-accent regression coverage; SettingsDropdown and ignore-hook tests passed, while pre-existing hover-token assertion failed because current mapping uses base token. [frontend focused validation] (partial)
-- 2026-08-01T16:50:01Z `attempt`: Full frontend suite after AIVS-004 still fails only the known GenSpace mode hover-token expectation; model-picker focused tests pass. [frontend/views/genspace/GenSpaceModeTabs.test.tsx:31] (partial)
-- 2026-08-01T17:58:18Z `attempt`: AIVS-004 family-label follow-up full frontend suite still fails known GenSpace mode hover-token expectation; model-picker focused tests pass. [frontend/views/genspace/GenSpaceModeTabs.test.tsx:31] (partial)

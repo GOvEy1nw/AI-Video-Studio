@@ -1,7 +1,0 @@
-# #0371 Framing carousel controls feel unnatural; Camera/Lens should be dropdowns and numeric exposure fields should use stepped sliders.
-
-- 2026-07-29T12:53:18Z `issue`: Framing carousel controls feel unnatural; Camera/Lens should be dropdowns and numeric exposure fields should use stepped sliders. [frontend/views/genspace/components/FramingControl.tsx]
-- 2026-07-29T12:55:18Z `attempt`: Added regressions requiring Camera/Lens comboboxes and four discrete range sliders; current carousel implementation fails both new tests as expected. [frontend/views/genspace/components/FramingControl.test.tsx] (failed)
-- 2026-07-29T12:57:17Z `attempt`: Replaced Camera/Lens carousels with native dropdowns and four numeric carousels with discrete index-backed range sliders in compact 2x2 grid; focused tests pass 4/4. [frontend/views/genspace/components/FramingControl.tsx; frontend/views/genspace/components/FramingControl.test.tsx] (worked)
-- 2026-07-29T12:58:27Z `attempt`: TypeScript and frontend build pass; full frontend suite is 100/103 with only existing GenPanelSection disclosure and GenSpaceGallery 360px/480px baseline failures. [frontend/views/genspace/components/FramingControl.tsx] (partial)
-- 2026-07-29T12:59:55Z `fix`: Replaced unnatural framing carousels with Camera/Lens dropdowns and four compact stepped sliders; focused tests, TypeScript, build, and diff check pass. [frontend/views/genspace/components/FramingControl.tsx; frontend/views/genspace/components/FramingControl.test.tsx]

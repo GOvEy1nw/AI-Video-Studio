@@ -92,3 +92,5 @@ Wan2GP/loras/
 .projectmem/events.jsonl
 .projectmem/watch.pid
 .projectmem/watch.log
+.projectmem/runtime/
+.projectmem/local/

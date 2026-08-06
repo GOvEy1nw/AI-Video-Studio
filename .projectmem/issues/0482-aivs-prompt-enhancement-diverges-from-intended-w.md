@@ -1,6 +1,0 @@
-# #0482 AiVS prompt enhancement diverges from intended WanGP-native request contract: image/video run a separate /api/enhance-prompt preflight, and music auto lyrics precompose before generation instead of setting prompt_enhancer='T'
-
-- 2026-08-02T15:46:19Z `issue`: AiVS prompt enhancement diverges from intended WanGP-native request contract: image/video run a separate /api/enhance-prompt preflight, and music auto lyrics precompose before generation instead of setting prompt_enhancer='T' [frontend/views/genspace/hooks/useGenSpacePromptEnhancement.ts; backend/handlers/music_generation_handler.py]
-- 2026-08-02T16:19:14Z `attempt`: Replaced AiVS prompt-enhancement preflight with semantic enhancePrompt transport and backend WanGP manifest mapping; focused tests still need updates and verification. [frontend + backend generation request flow] (partial)
-- 2026-08-02T16:28:12Z `attempt`: Native enhancer implementation passes 24 focused frontend tests, 136 focused backend regressions, and strict backend Pyright; full-suite validation remains. [frontend + backend generation request flow] (worked)
-- 2026-08-02T16:30:23Z `fix`: Verified WanGP-native prompt enhancement matrix and ACE-Step lyrics semantics with focused frontend/backend tests, full backend suite, Pyright, and production build. [frontend + backend generation request flow]
