@@ -1,5 +1,0 @@
-# #0479 Video Tools switch reset clears mounted ReframePanel video dimensions, so returning to Reframe loses overlay/zoom and source-only layout falls back to square aspect.
-
-- 2026-08-02T13:36:08Z `issue`: Video Tools switch reset clears mounted ReframePanel video dimensions, so returning to Reframe loses overlay/zoom and source-only layout falls back to square aspect. [frontend/views/genspace/video/ReframePanel.tsx reset effect]
-- 2026-08-02T13:38:00Z `attempt`: Removed ReframePanel reset-time clearing of videoWidth/videoHeight and added VideoGenPanel regression covering metadata dimensions, mounted video identity, Reframe zoom after Tool switches, rounded canvas, and source-only aspect. (partial)
-- 2026-08-02T13:39:36Z `fix`: Video Tool switches no longer clear ReframePanel video dimensions while the shared video element stays mounted. Reframe overlay/border and zoom remain active after returning to Reframe; source-only tools retain source aspect. Added regression coverage in VideoGenPanel.test.tsx. [frontend/views/genspace/video/ReframePanel.tsx; frontend/views/genspace/video/VideoGenPanel.test.tsx]

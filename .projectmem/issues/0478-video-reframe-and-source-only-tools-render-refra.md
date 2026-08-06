@@ -1,8 +1,0 @@
-# #0478 Video Reframe and source-only Tools render ReframePanel from different conditional branches, remounting video editor and causing visible switch flicker
-
-- 2026-08-02T13:10:24Z `issue`: Video Reframe and source-only Tools render ReframePanel from different conditional branches, remounting video editor and causing visible switch flicker [frontend/views/genspace/video/VideoGenPanel.tsx]
-- 2026-08-02T13:17:08Z `attempt`: Consolidated Reframe and source-only Tools under one stable VideoToolInput/ReframePanel host; mount-identity and existing Reframe/source regressions pass 11/11 [frontend/views/genspace/video/VideoGenPanel.tsx] (worked)
-- 2026-08-02T13:21:18Z `attempt`: Added reset-key regression expecting VideoTrimPanel to adopt new initial trim in place; child trim selection is mount-initialized and kept prior range [frontend/views/genspace/video/ReframePanel.test.tsx] (failed)
-- 2026-08-02T13:21:45Z `attempt`: Scoped reset regression to flicker-critical contract: changing live initial props without a reset key change no longer resets trim/editor state; focused tests pass 12/12 [frontend/views/genspace/video/ReframePanel.tsx] (worked)
-- 2026-08-02T13:22:20Z `attempt`: Full frontend suite reached 179 passing tests; same five unrelated baseline failures remain in GenSpaceModeTabs, ImageEditMediaInputs, RegionPromptEditor, and MusicSettings [frontend full validation] (partial)
-- 2026-08-02T13:22:42Z `fix`: Video Tools now keep one mounted source editor/video element across Reframe and every other Tool; mount identity, trim persistence, focused tests, TypeScript, build, and diff checks pass [frontend/views/genspace/video/VideoGenPanel.tsx]

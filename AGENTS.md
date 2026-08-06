@@ -637,11 +637,18 @@ Any persistence rewrite requires explicit schema/version migration, existing-pro
 
 - `AGENTS_PRD.md` describes current product intent and guardrails.
 - `AGENTS.md` describes current engineering rules.
+- `backlog/tasks/` is the source of truth for actionable work, acceptance, status, implementation plans, and completion evidence.
 - `.projectmem/PROJECT_MAP.md` describes current ownership/navigation.
 - `.projectmem/summary.md` is a concise current-state brief.
-- `.projectmem/issues/` retains granular resolved issues, failed attempts, and tooling history.
+- `.projectmem/issues/` retains only unresolved product/code defects, data/security risks, durable platform constraints, non-obvious architectural gotchas, cross-task baseline limitations, or upstream incompatibilities.
 - Focused current behaviour belongs in focused docs such as GenSpace, Director, Reframe, backend, and WanGP contracts.
 - Completed implementation plans remain historical rationale and parity evidence.
+
+Routine shell quoting, search, patch-anchor, guessed-path, command, one-off sandbox, and
+expected red-test failures are not permanent project-memory issues. Record material
+task-specific implementation evidence in the active Backlog task. Use ignored
+`.projectmem/runtime/` or `.projectmem/local/` for optional transient notes; never store
+secrets, user data, or large logs there.
 
 Update the current-state documents when a change alters:
 
@@ -653,7 +660,9 @@ Update the current-state documents when a change alters:
 - an architectural invariant;
 - a subsystem migration or replacement boundary.
 
-Do not append every bug fix or command transcript to the summary or project map.
+Do not duplicate full acceptance criteria, validation transcripts, or completed-task
+narratives across Backlog, project memory, and architecture docs. Update summary/map only
+when current product state, ownership, constraints, pins, or architectural contracts change.
 
 ## 15. Dependency upgrade rules
 

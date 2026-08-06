@@ -44,7 +44,24 @@ Prefer the MCP tools when available — they're cheaper (~500 tokens) than readi
 
 **Step 4 — Treat `.projectmem/events.jsonl` as the append-only raw log.** Do not edit it by hand unless repairing corruption. Use write tools.
 
-## MANDATORY Triggers — You MUST act on these automatically
+## Retention boundary
+
+ProjectMem stores durable project judgment, not a transcript of agent execution. Before
+using a write trigger, confirm the record captures at least one of:
+
+- an unresolved user-visible defect;
+- a data-loss or security risk;
+- a durable platform/environment constraint;
+- an architectural gotcha with a non-obvious failure mode;
+- a validated baseline limitation affecting multiple tasks;
+- an upstream incompatibility requiring follow-up.
+
+Do not create permanent events or issue files for quoting/escaping errors, patch-anchor
+misses, guessed paths, command typos, one-off sandbox denials, expected red tests, stale
+assertions already removed, or failed searches with no product impact. Put useful
+transient detail in the active Backlog task or ignored `.projectmem/runtime/` instead.
+
+## MANDATORY durable triggers — You MUST act on these automatically
 
 When a trigger fires, you MUST call the corresponding tool IMMEDIATELY, before continuing any other work. **Prefer MCP tools** (left column) when you're connected via an MCP-capable client; **fall back to CLI** (right column) otherwise.
 
@@ -66,25 +83,26 @@ All write tools auto-append to `events.jsonl` AND auto-regenerate `summary.md`. 
 1. **Log BEFORE you fix.** When you see a bug, call `log_issue` (or `pjm log`) BEFORE writing fix code. The issue survives interruptions and session boundaries; in-flight fix work does not.
 2. **Record IMMEDIATELY after each attempt.** Do not batch multiple attempts into one entry. Each distinct approach gets its own `record_attempt` call.
 3. **Close with `record_fix` only after evidence.** Test passes, error is gone, or the user confirms — anything less and the issue stays open.
-4. **Never skip logging because it feels minor.** A small fix today is a mystery regression tomorrow. Log it.
+4. **Apply the retention boundary first.** Small product defects still matter; routine agent/tool mistakes do not become project memory.
 5. **NEVER edit `.projectmem/summary.md` or `.projectmem/events.jsonl` directly via filesystem write.** Both are derived/append-only. Use the write tools. (You MAY edit `PROJECT_MAP.md` directly when restructuring it; it's not derived from events.)
 
 ## What to track
 
 Use projectmem to preserve the development story that would otherwise be lost between chats, terminal sessions, and commits.
 
-Track:
+Track when the record meets the retention boundary:
 
 - new issues, bugs, regressions, unclear behavior, or investigation topics
 - hypotheses about causes
-- attempted fixes or experiments (each as its own `record_attempt`)
+- attempted fixes or experiments that materially affect a retained issue (each as its own `record_attempt`)
 - whether each attempt worked, failed, or partially helped
 - final fixes and the files involved
 - architectural, product, or implementation decisions and their reasons
 - gotchas, setup requirements, flaky tests, environment notes, important constraints
 - key files future contributors or AI agents should read first
 
-Do NOT track secrets, credentials, private customer data, access tokens, or large transcripts.
+Do NOT track secrets, credentials, private customer data, access tokens, large transcripts,
+routine command failures, patch/search mistakes, or task publish history.
 
 ## Auto-Capture (active)
 
@@ -109,7 +127,7 @@ Every `git commit` automatically runs `pjm precheck` against the staged files. I
 ## Rules summary
 
 - **MANDATORY: Log before you exit.** Work is not finished until project memory reflects what happened.
-- **MANDATORY: Record failed and partial attempts.** Negative and partial-credit knowledge is often the most valuable part of project memory.
+- **MANDATORY: Record failed and partial attempts for retained issues.** Keep transient execution noise in ignored runtime notes or the active Backlog task.
 - Keep entries concise but specific enough that another person or AI can avoid repeating work. Include file paths, error names, test names.
 - Prefer several small accurate entries over one vague long entry.
 - Do not claim something is fixed until tests, reproduction, or user confirmation supports it.

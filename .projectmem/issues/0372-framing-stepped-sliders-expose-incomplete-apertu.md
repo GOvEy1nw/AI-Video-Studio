@@ -1,8 +1,0 @@
-# #0372 Framing stepped sliders expose incomplete aperture, ISO, focal-length, and shutter option scales.
-
-- 2026-07-29T13:18:33Z `issue`: Framing stepped sliders expose incomplete aperture, ISO, focal-length, and shutter option scales. [frontend/views/genspace/logic/framing.ts; frontend/views/genspace/components/FramingControl.tsx]
-- 2026-07-29T13:20:48Z `attempt`: Added exact-scale, valid-preset, and UI label regressions for requested slider options; current short scales fail three tests as expected. [frontend/views/genspace/logic/framing.test.ts; frontend/views/genspace/components/FramingControl.test.tsx] (failed)
-- 2026-07-29T13:21:44Z `attempt`: Added requested scales, updated presets to valid nearest steps, and normalized ISO/shutter display labels; option tests pass but one interaction test still used old aperture index. [frontend/views/genspace/logic/framing.ts; frontend/views/genspace/components/FramingControl.tsx] (partial)
-- 2026-07-29T13:22:06Z `attempt`: Updated aperture interaction regression to new f/4 step index; focused framing logic and component suites now pass 7/7. [frontend/views/genspace/components/FramingControl.test.tsx] (worked)
-- 2026-07-29T13:22:58Z `attempt`: TypeScript, frontend build, focused 7-test suites, and diff check pass; full suite is 101/104 with only three known unrelated baseline failures. [frontend/views/genspace/logic/framing.ts; frontend/views/genspace/components/FramingControl.tsx] (partial)
-- 2026-07-29T13:23:11Z `fix`: Expanded all four stepped sliders to requested scales, kept preset values valid, and displayed concise ISO/shutter labels; focused tests and static/build checks pass. [frontend/views/genspace/logic/framing.ts; frontend/views/genspace/components/FramingControl.tsx; framing tests]

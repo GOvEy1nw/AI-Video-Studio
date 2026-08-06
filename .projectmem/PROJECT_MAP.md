@@ -1,6 +1,6 @@
 # Project Map — AI Video Studio
 
-_Last reviewed: 2026-07-26 against the `dev` branch._
+_Last reviewed: 2026-08-06 against `dev` at `4c246b8`._
 
 > This file is a current-state navigation map for coding agents. It is not a chronological implementation log. Completed phase plans remain useful historical references, but current code, tests, and the focused architecture documents listed near the end of this file are the source of truth.
 
@@ -38,7 +38,6 @@ Not yet implemented or intentionally unavailable:
 - TTS generation is not implemented.
 - User-facing LoRA selection/strength controls are not implemented.
 - Director Guide Audio and Control Media authoring remain locked in V1.
-- The frontend/Electron dependency modernisation is planned separately; this map records the pre-upgrade stack.
 
 ## Current stack
 
@@ -46,14 +45,14 @@ The values below reflect the current lock/runtime configuration on `dev`.
 
 | Layer | Current stack |
 | --- | --- |
-| Renderer | React 18.3.1, TypeScript 5.9.3, Vite 5.4.21, Tailwind CSS 3.4.19 |
-| Frontend tests | Vitest 2.1.9, jsdom 24.1.3, Testing Library |
-| Desktop shell | Electron 31.7.7 with a context-isolated CommonJS preload |
+| Renderer | React 19.2.8, TypeScript 6.0.3, Vite 8.1.5, Tailwind CSS 4.3.3 |
+| Frontend tests | Vitest 4.1.10, jsdom 30.0.0, Testing Library |
+| Desktop shell | Electron 43.2.0 with a context-isolated CommonJS preload |
 | Package manager | pnpm 10.30.3 |
-| Packaging/updating | electron-builder 26.x, electron-updater 6.x, NSIS on Windows |
+| Packaging/updating | electron-builder 26.8.1, electron-updater 6.x, NSIS on Windows |
 | Backend | Python 3.11.9, FastAPI, Pydantic 2, uvicorn, uv |
 | GPU runtime | Torch 2.10.0 + CUDA 13.0 with curated hardware-specific kernels |
-| Generation runtime | Bundled WanGP 12.34 through an in-process `WanGPSession` |
+| Generation runtime | Bundled WanGP 12.3456 through an in-process `WanGPSession` |
 
 ## Top-level architecture
 
@@ -89,7 +88,7 @@ The renderer never imports Node or Electron APIs directly. Native access must go
 | `docs/` | Current contracts plus completed implementation plans retained for history |
 | `resources/` | App, installer, icon, and bootstrap resources |
 | `Wan2GP/` | Bundled WanGP checkout pinned by `scripts/wangp-source.json` |
-| `.projectmem/` | Curated current-state summary/map plus granular historical issue records |
+| `.projectmem/` | Curated current-state summary/map plus durable open issues and cross-task constraints |
 
 ## Frontend map
 
@@ -98,13 +97,17 @@ The renderer never imports Node or Electron APIs directly. Native access must go
 | Path | Responsibility |
 | --- | --- |
 | `frontend/main.tsx` | React root and Strict Mode |
-| `frontend/App.tsx` | App-level setup/readiness and top-level routing |
+| `frontend/App.tsx` | App-level setup/readiness, shared backend/model-profile providers, and top-level routing |
 | `frontend/views/Home.tsx` | Project home/create/open surface |
 | `frontend/views/Project.tsx` | Project header and Quick Gen / Director / Video Editor tabs |
-| `frontend/contexts/ProjectContext.tsx` | Projects, assets, timelines, active view/tab, persistence, and cross-workspace hand-offs |
+| `frontend/contexts/ProjectContext.tsx` | Single project-state owner exposing memoized navigation, list/meta, asset, Editor, Director, and GenSpace hand-off contexts |
 | `frontend/types/project.ts` | Project, asset, bin, take, generation metadata, and timeline persistence types |
 
 `Project.tsx` keeps all three workspaces mounted to preserve state. Inactive workspaces are hidden and must stop playback, keyboard shortcuts, media decoding, and compositor work.
+
+`BackendLifecycleProvider` and `ModelProfilesProvider` own app-wide backend readiness and
+curated profile loading. Existing focused hooks remain compatibility consumers; feature
+surfaces must not create parallel lifecycle or profile pollers.
 
 ### GenSpace composition
 
@@ -276,8 +279,15 @@ Supporting files include:
 - `frontend/lib/gallery-filters.ts`
 - `frontend/components/GalleryBinBar.tsx`
 - `frontend/views/editor/AssetContextMenu.tsx`
+- `frontend/components/asset-library-virtual.ts`
+- `frontend/lib/audio-decode-service.ts`
+- `frontend/lib/video-thumbnail-service.ts`
 
 GenSpace imports are copied to `{projectAssetsRoot}/{projectId}/uploads/`; generated outputs are moved to `generated/`. The Video Editor may still reference heavy editing imports in place.
+
+Grid/list bodies use fixed-row virtualization with three-row overscan. Shared audio
+envelopes and video thumbnail blob URLs are bounded renderer services; consumers request
+enabled results and inactive workspaces release decode/media activity.
 
 ### Director V1
 
@@ -315,6 +325,16 @@ Key files:
 ### Video Editor
 
 `frontend/views/VideoEditor.tsx` and `frontend/views/editor/` contain the inherited editing workspace. It remains a separate project tab and uses shared Asset Library presentation and shared domain-neutral timeline primitives where appropriate.
+
+`frontend/views/VideoEditor.tsx` remains the domain, command, persistence, and playback
+container. Focused owners under `frontend/views/editor/` include `EditorLayout`,
+`EditorPreviewWorkspace`, `frontend/views/editor/EditorTimelinePanel.tsx`, `TimelineTrackHeaders`,
+`TimelineTrackCanvas`, `EditorTimelineTabs`, `EditorTimelineToolRail`, and
+`EditorInspector`.
+
+`frontend/views/editor/playback-index.ts` builds immutable interval segments and O(1)
+source maps. `usePlaybackEngine.ts` uses binary visual/dissolve/audio selectors and a
+lazy media pool capped at three sources; inactive workspaces detach playback media.
 
 Do not merge Director recipe objects into NLE `TimelineClip` objects. They deliberately use different time models and editing semantics.
 
@@ -445,8 +465,8 @@ Current source manifest:
 
 - Repository: `GOvEy1nw/Wan2GP`
 - Branch: `AiVS`
-- Revision: `4f441a12f3a33f4466ed422428bf667d9651bc55`
-- WanGP version: `12.34`
+- Revision: `a599200d96a2e3c934991bb5fcbddb821d3550dc`
+- WanGP version: `12.3456`
 
 Source-of-truth files:
 
@@ -510,26 +530,18 @@ Do not bulk-upgrade or automate this stack as ordinary Python dependencies. It i
 - Frontend focused tests live beside extracted GenSpace components/hooks/logic and under `frontend/hooks/generation/`.
 - Backend integration tests live in `backend/tests/`.
 - Backend tests use real FastAPI app wiring with fake heavy services.
-- `backend/tests/test_pyright.py` enforces strict Pyright.
+- Pyright runs independently through `pnpm typecheck:py`; pytest does not enforce it.
 - Director, Reframe, model-profile, music, model-pack, progress, source-pin, and bridge contracts have dedicated test coverage.
 
-Last recorded validation after the current GenSpace/Music work:
-
-- TypeScript: 0 errors.
-- Pyright: 0 errors.
-- Frontend: 56 tests passed.
-- Backend: 278 passed, 1 skipped.
-- Production renderer/Electron/preload build: passed.
-- `git diff --check`: clean.
-
-These are historical evidence, not a substitute for rerunning the relevant gates after new changes.
+Validation evidence belongs in its Backlog task and commit/CI history. Rerun the
+narrowest current checks required by the affected layer; this map does not preserve
+historical pass counts.
 
 ## Current constraints and risks
 
 - **Primary platform:** Windows 10/11 with NVIDIA RTX hardware. Other platforms are secondary/source-development targets.
 - **Runtime floor:** current Windows stack requires NVIDIA driver 580+.
-- **Frontend age:** Electron 31, Vite 5, Tailwind 3, and React 18 are scheduled for a phased modernisation.
-- **Electron migration hazard:** `frontend/lib/media-import.ts` still relies on Electron's removed non-standard `File.path`; the Electron upgrade must migrate this through preload `webUtils.getPathForFile`.
+- **Native file boundary:** Electron 43 resolves dropped-file paths only through the narrow preload `webUtils.getPathForFile(file)` bridge; renderer `File.path` casts are forbidden.
 - **Installer signing:** the current Windows installer is not Authenticode-signed.
 - **Retake:** route/legacy structures exist, but the user-facing workflow remains disabled.
 - **Manual media QA:** drag/drop, waveform/video playback, seeking, Reframe geometry, real model download, and generation output still require native Electron checks.
@@ -542,13 +554,12 @@ Near-term work should be tracked by current implementation plans, not the old nu
 
 Current known directions:
 
-1. Phased frontend/Electron dependency modernisation on a dedicated branch.
-2. Real-runtime regression testing for image, video, Reframe, Director, music, and model-download workflows.
-3. Retake when the WanGP integration is reliable enough to expose.
-4. User-facing LoRA selection and strength controls.
-5. TTS generation.
-6. Later Director Guide Audio and Control Media authoring.
-7. Continued curated model additions through backend profiles and model packs.
+1. Real-runtime regression testing for image, video, Reframe, Director, music, and model-download workflows.
+2. Retake when the WanGP integration is reliable enough to expose.
+3. User-facing LoRA selection and strength controls.
+4. TTS generation.
+5. Later Director Guide Audio and Control Media authoring.
+6. Continued curated model additions through backend profiles and model packs.
 
 ## Documentation source-of-truth order
 
@@ -570,4 +581,7 @@ Completed implementation plans such as the full GenSpace split and Music V2 plan
 
 ## Maintenance rule for this map
 
-Update this file when code ownership, visible product capabilities, runtime pins, or major constraints change. Do not append individual bug-fix stories or completed task transcripts; those belong in `.projectmem/issues/`, commits, tests, and focused implementation documents.
+Update this file when code ownership, visible product capabilities, runtime pins, or major
+constraints change. Do not append individual bug-fix stories or completed task
+transcripts; those belong in Backlog and Git history. ProjectMem issues retain only
+durable open defects and cross-task constraints that meet the retention rubric.

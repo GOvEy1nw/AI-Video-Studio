@@ -1,9 +1,0 @@
-# #0349 Video End Frame input is hidden until Start Frame exists, preventing direct end-frame assignment
-
-- 2026-07-28T12:28:53Z `issue`: Video End Frame input is hidden until Start Frame exists, preventing direct end-frame assignment [frontend/views/genspace/video/VideoMediaInputs.tsx]
-- 2026-07-28T12:32:37Z `attempt`: Render First Frame, Last Frame, and Ref slots from empty state; track clicked frame slot so direct Last Frame file selection targets end_image [frontend/views/genspace/video/VideoMediaInputs.tsx] (partial)
-- 2026-07-28T12:35:00Z `attempt`: Initial frontend validation ran full suite: new chip test used ambiguous Subject text; three unrelated known gallery/disclosure failures also remained [frontend/views/genspace/components/GenSpaceControls.test.tsx] (failed)
-- 2026-07-28T12:35:20Z `attempt`: Tried direct Corepack pnpm vitest focused invocation; Windows could not resolve local vitest binary [focused frontend validation] (failed)
-- 2026-07-28T12:35:41Z `attempt`: Full frontend suite confirms all new Use Image, role-chip, and immediate Last Frame tests pass; only three pre-existing GenPanelSection/gallery width failures remain [frontend/views/genspace/video/VideoMediaInputs.tsx] (partial)
-- 2026-07-28T12:40:55Z `attempt`: Always rendered First/Last/Ref slots, tracked clicked empty frame role, and added clickable bottom-center usage chips; TypeScript/build passed and Electron QA confirmed direct Last Frame plus role changes [frontend/views/genspace/video/VideoMediaInputs.tsx; frontend/views/genspace/components/MediaInputSlot.tsx] (worked)
-- 2026-07-28T12:40:58Z `fix`: Video mode now exposes First Frame, Last Frame, and Ref immediately; empty Last Frame assignment and thumbnail role-chip changes are verified [frontend/views/genspace/video/VideoMediaInputs.tsx; frontend/views/genspace/components/MediaInputSlot.tsx]
