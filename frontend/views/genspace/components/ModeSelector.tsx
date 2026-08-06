@@ -1,4 +1,4 @@
-import { ChevronDown, Wrench, type LucideIcon } from "lucide-react";
+import { ChevronDown, type LucideIcon } from "lucide-react";
 import { SettingsDropdown } from "../../../components/SettingsDropdown";
 
 export interface ModeSelectorOption {
@@ -10,10 +10,12 @@ export interface ModeSelectorOption {
 }
 
 export function ModeSelector({
+  label = "Tools",
   options,
   value,
   onChange,
 }: {
+  label?: string;
   options: readonly ModeSelectorOption[];
   value: string;
   onChange: (value: string) => void;
@@ -42,7 +44,7 @@ export function ModeSelector({
       trigger={
         <>
           <span className="flex items-center gap-1.5 border-r border-zinc-700 px-2.5 py-2 text-zinc-400">
-            Tools
+            {label}
             <ChevronDown className="h-3.5 w-3.5" />
           </span>
           <span className="flex items-center gap-1.5 px-2.5 py-2 text-white">

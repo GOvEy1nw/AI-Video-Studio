@@ -24,9 +24,12 @@ describe("MusicSettings", () => {
       />,
     );
 
-    expect(screen.getAllByRole("tab")).toHaveLength(3);
+    expect(screen.getByText("Mode")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Choose mode" }));
+    expect(screen.getByRole("button", { name: "Instrumental" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Auto Lyrics" })).toBeTruthy();
     await userEvent.click(
-      screen.getByRole("tab", { name: "Custom Lyrics" }),
+      screen.getByRole("button", { name: "Custom Lyrics" }),
     );
     expect(onChange).toHaveBeenCalledWith({
       ...DEFAULT_MUSIC_SETTINGS,

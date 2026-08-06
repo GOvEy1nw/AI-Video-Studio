@@ -65,6 +65,7 @@ Current integration baseline: `dev`.
 - Backlog owns actionable work/status/evidence; ProjectMem retains only current architecture decisions, unresolved product/code defects, security/data risks, durable constraints, cross-task baselines, and upstream incompatibilities. Routine agent/tool failures stay in Backlog or ignored .projectmem/runtime/. [AGENTS.md; .projectmem/AI_INSTRUCTIONS.md; .projectmem/]
 - Bundled WanGP source is pinned to GOvEy1nw/Wan2GP AiVS revision a599200d96a2e3c934991bb5fcbddb821d3550dc, manifest version 12.3456; transactional source-update and rollback rules remain. [scripts/wangp-source.json; .projectmem/PROJECT_MAP.md]
 - First-run setup installs the runtime, then confirms project, checkpoint, and LoRA storage together; model-pack downloads are available in-app after setup rather than as an onboarding stage. [frontend/components/PythonSetup.tsx; frontend/components/SettingsModal.tsx]
+- Image, Video, and Music use the shared split ModeSelector; Image/Video leading label is Tools, Music leading label is Mode. [frontend/views/genspace/]
 
 ## Notes
 - No notes logged yet.

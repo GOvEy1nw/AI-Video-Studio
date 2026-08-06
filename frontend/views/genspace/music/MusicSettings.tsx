@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react";
+import { FileText, Music2, Sparkles } from "lucide-react";
 import { SeedControl } from "../../../components/SeedControl";
 import type { ModelProfile } from "../../../types/model-profiles";
 import type {
@@ -7,7 +7,14 @@ import type {
   MusicVocalMode,
 } from "../../../types/music";
 import { GenPanelSection } from "../components/GenPanelSection";
+import { ModeSelector } from "../components/ModeSelector";
 import { resolveMusicVocalMode } from "./compile-music-request";
+
+const VOCAL_MODES = [
+  { value: "instrumental", label: "Instrumental", icon: Music2 },
+  { value: "auto-lyrics", label: "Auto Lyrics", icon: Sparkles },
+  { value: "custom-lyrics", label: "Custom Lyrics", icon: FileText },
+] as const;
 
 export function MusicVocalModeTabs({
   settings,
@@ -25,34 +32,12 @@ export function MusicVocalModeTabs({
     });
 
   return (
-    <div
-      role="tablist"
-      aria-label="Vocal mode"
-      className="flex w-fit flex-row justify-center gap-2 rounded-lg bg-zinc-800/35 p-2"
-    >
-      {(
-        [
-          ["instrumental", "Instrumental"],
-          ["auto-lyrics", "Auto Lyrics"],
-          ["custom-lyrics", "Custom Lyrics"],
-        ] as const
-      ).map(([value, label]) => (
-        <button
-          key={value}
-          type="button"
-          role="tab"
-          aria-selected={vocalMode === value}
-          onClick={() => setVocalMode(value)}
-          className={`rounded-md px-1.5 py-1.5 text-xs font-medium ${
-            vocalMode === value
-              ? "bg-emerald-600 text-white"
-              : "text-zinc-500 hover:bg-zinc-900 hover:text-white"
-          }`}
-        >
-          {label}
-        </button>
-      ))}
-    </div>
+    <ModeSelector
+      label="Mode"
+      value={vocalMode}
+      options={VOCAL_MODES}
+      onChange={(value) => setVocalMode(value as MusicVocalMode)}
+    />
   );
 }
 
