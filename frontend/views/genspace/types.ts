@@ -21,8 +21,10 @@ import type { ReframePanelState } from "./video/ReframePanel";
 import type { ReframeAspectMode } from "./video/reframe-outpaint";
 import type { VideoToolId } from "../../types/video-tools";
 import type { GenSpaceSettings } from "./constants";
+import type { SfxGenerationRecipeV1, SfxSettings } from "../../types/sfx";
 
 export type GenSpaceMode = "image" | "video" | "music";
+export type AudioSubMode = "music" | "speech" | "sfx" | "mixer";
 export type ImageProcessMode = "create" | "edit" | "region";
 export type VideoProcessMode = "generate" | "reframe" | "retake";
 export type GenSpaceMediaKind = "image" | "video" | "audio";
@@ -199,12 +201,32 @@ export interface MusicGenPanelController {
   music: GenSpaceMusicController;
 }
 
+export interface AudioGenPanelController {
+  submode: AudioSubMode;
+  setSubmode: (submode: AudioSubMode) => void;
+  music: MusicGenPanelController;
+  sfx?: SfxGenPanelController;
+}
+
+export interface SfxGenPanelController {
+  prompt: GenSpacePromptController;
+  settings: SfxSettings;
+  setSettings: (settings: SfxSettings) => void;
+  profiles: GenSpacePanelProfiles;
+  media: Pick<
+    GenSpaceMediaController,
+    "resolveInputFileUrl" | "syncInputFileToGallery"
+  >;
+  isRunning: boolean;
+  submit: () => void;
+}
+
 export interface GenSpaceSidebarController {
   mode: GenSpaceMode;
   setMode: (mode: GenSpaceMode) => void;
   image: ImageGenPanelController;
   video: VideoGenPanelController;
-  music: MusicGenPanelController;
+  audio: AudioGenPanelController;
 }
 
 export interface ImageSubmissionSnapshot {
@@ -230,6 +252,13 @@ export interface MusicSubmissionSnapshot {
   submittedAt?: number;
   prompt: string;
   recipe: SubmittedMusicRecipe;
+}
+
+export interface SfxSubmissionSnapshot {
+  projectId: string;
+  submittedAt?: number;
+  prompt: string;
+  recipe: SfxGenerationRecipeV1;
 }
 
 export interface ReframeSubmissionSnapshot {

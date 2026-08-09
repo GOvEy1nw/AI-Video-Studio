@@ -43,16 +43,16 @@ Not yet implemented or intentionally unavailable:
 
 The values below reflect the current lock/runtime configuration on `dev`.
 
-| Layer | Current stack |
-| --- | --- |
-| Renderer | React 19.2.8, TypeScript 6.0.3, Vite 8.1.5, Tailwind CSS 4.3.3 |
-| Frontend tests | Vitest 4.1.10, jsdom 30.0.0, Testing Library |
-| Desktop shell | Electron 43.2.0 with a context-isolated CommonJS preload |
-| Package manager | pnpm 10.30.3 |
-| Packaging/updating | electron-builder 26.8.1, electron-updater 6.x, NSIS on Windows |
-| Backend | Python 3.11.9, FastAPI, Pydantic 2, uvicorn, uv |
-| GPU runtime | Torch 2.10.0 + CUDA 13.0 with curated hardware-specific kernels |
-| Generation runtime | Bundled WanGP 12.3456 through an in-process `WanGPSession` |
+| Layer              | Current stack                                                   |
+| ------------------ | --------------------------------------------------------------- |
+| Renderer           | React 19.2.8, TypeScript 6.0.3, Vite 8.1.5, Tailwind CSS 4.3.3  |
+| Frontend tests     | Vitest 4.1.10, jsdom 30.0.0, Testing Library                    |
+| Desktop shell      | Electron 43.2.0 with a context-isolated CommonJS preload        |
+| Package manager    | pnpm 10.30.3                                                    |
+| Packaging/updating | electron-builder 26.8.1, electron-updater 6.x, NSIS on Windows  |
+| Backend            | Python 3.11.9, FastAPI, Pydantic 2, uvicorn, uv                 |
+| GPU runtime        | Torch 2.10.0 + CUDA 13.0 with curated hardware-specific kernels |
+| Generation runtime | Bundled WanGP 12.3456 through an in-process `WanGPSession`      |
 
 ## Top-level architecture
 
@@ -74,34 +74,34 @@ The renderer never imports Node or Electron APIs directly. Native access must go
 
 ## Main folders
 
-| Path | Responsibility |
-| --- | --- |
-| `frontend/` | React renderer, project state, GenSpace, Director, Video Editor, shared UI, types, and tests |
-| `frontend/views/genspace/` | Current GenSpace implementation split by mode and responsibility |
-| `frontend/hooks/generation/` | Shared generation job lifecycle, request builders, progress normalisation, and tests |
-| `frontend/views/director/` | Director workspace, preview, controls, timeline, persistence, and takes |
-| `frontend/views/editor/` | Video Editor implementation and timeline primitives shared visually with Director |
-| `electron/` | Electron main process, preload bridge, IPC, project storage, setup, export, and updater |
-| `backend/` | FastAPI routes, domain handlers, services, state, model profiles, runtime configuration, and tests |
-| `backend/model_profiles/` | Backend-owned curated product model registry and image resolution policy |
-| `scripts/` | Setup/build scripts, WanGP source management, and GPU stack installation |
-| `docs/` | Current contracts plus completed implementation plans retained for history |
-| `resources/` | App, installer, icon, and bootstrap resources |
-| `Wan2GP/` | Bundled WanGP checkout pinned by `scripts/wangp-source.json` |
-| `.projectmem/` | Curated current-state summary/map plus durable open issues and cross-task constraints |
+| Path                         | Responsibility                                                                                     |
+| ---------------------------- | -------------------------------------------------------------------------------------------------- |
+| `frontend/`                  | React renderer, project state, GenSpace, Director, Video Editor, shared UI, types, and tests       |
+| `frontend/views/genspace/`   | Current GenSpace implementation split by mode and responsibility                                   |
+| `frontend/hooks/generation/` | Shared generation job lifecycle, request builders, progress normalisation, and tests               |
+| `frontend/views/director/`   | Director workspace, preview, controls, timeline, persistence, and takes                            |
+| `frontend/views/editor/`     | Video Editor implementation and timeline primitives shared visually with Director                  |
+| `electron/`                  | Electron main process, preload bridge, IPC, project storage, setup, export, and updater            |
+| `backend/`                   | FastAPI routes, domain handlers, services, state, model profiles, runtime configuration, and tests |
+| `backend/model_profiles/`    | Backend-owned curated product model registry and image resolution policy                           |
+| `scripts/`                   | Setup/build scripts, WanGP source management, and GPU stack installation                           |
+| `docs/`                      | Current contracts plus completed implementation plans retained for history                         |
+| `resources/`                 | App, installer, icon, and bootstrap resources                                                      |
+| `Wan2GP/`                    | Bundled WanGP checkout pinned by `scripts/wangp-source.json`                                       |
+| `.projectmem/`               | Curated current-state summary/map plus durable open issues and cross-task constraints              |
 
 ## Frontend map
 
 ### Application and project navigation
 
-| Path | Responsibility |
-| --- | --- |
-| `frontend/main.tsx` | React root and Strict Mode |
-| `frontend/App.tsx` | App-level setup/readiness, shared backend/model-profile providers, and top-level routing |
-| `frontend/views/Home.tsx` | Project home/create/open surface |
-| `frontend/views/Project.tsx` | Project header and Quick Gen / Director / Video Editor tabs |
+| Path                                   | Responsibility                                                                                                              |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `frontend/main.tsx`                    | React root and Strict Mode                                                                                                  |
+| `frontend/App.tsx`                     | App-level setup/readiness, shared backend/model-profile providers, and top-level routing                                    |
+| `frontend/views/Home.tsx`              | Project home/create/open surface                                                                                            |
+| `frontend/views/Project.tsx`           | Project header and Quick Gen / Director / Video Editor tabs                                                                 |
 | `frontend/contexts/ProjectContext.tsx` | Single project-state owner exposing memoized navigation, list/meta, asset, Editor, Director, and GenSpace hand-off contexts |
-| `frontend/types/project.ts` | Project, asset, bin, take, generation metadata, and timeline persistence types |
+| `frontend/types/project.ts`            | Project, asset, bin, take, generation metadata, and timeline persistence types                                              |
 
 `Project.tsx` keeps all three workspaces mounted to preserve state. Inactive workspaces are hidden and must stop playback, keyboard shortcuts, media decoding, and compositor work.
 
@@ -132,25 +132,25 @@ GenSpace
 
 Primary ownership:
 
-| Area | Current owner |
-| --- | --- |
-| Composition | `frontend/views/genspace/GenSpaceWorkspace.tsx` |
-| Controller aggregation | `frontend/views/genspace/hooks/useGenSpaceController.tsx` |
-| Mode transitions | `frontend/views/genspace/hooks/useGenSpaceModeState.ts` |
-| Image/video/music settings state | `frontend/views/genspace/hooks/useGenSpaceSettingsState.ts` |
-| Prompt and attached media | `frontend/views/genspace/hooks/useGenSpaceMediaInputs.ts` |
-| Reframe/Retake state | `frontend/views/genspace/hooks/useGenSpaceVideoTools.tsx` |
-| Per-mode command construction | `frontend/views/genspace/logic/generation-requests.ts` |
-| Submission snapshots/actions | `frontend/views/genspace/hooks/useGenSpaceGenerationActions.ts` |
-| Generated asset construction | `frontend/views/genspace/logic/generation-assets.ts` |
-| Completion/idempotent persistence | `frontend/views/genspace/hooks/useGenSpaceResultPersistence.ts` |
-| Copy Settings restoration | `frontend/views/genspace/logic/settings-restore.ts` and `hooks/useGenSpaceSettingsRestore.ts` |
-| Gallery state/actions | `frontend/views/genspace/hooks/useGenSpaceGallery.ts` |
-| Gallery/overlay presentation | `GenSpaceGallery.tsx` and `GenSpaceOverlays.tsx` |
-| Shared mode controls | `frontend/views/genspace/components/` |
-| Image-owned UI | `frontend/views/genspace/image/` |
-| Video/Reframe/Retake-owned UI | `frontend/views/genspace/video/` |
-| Music-owned UI and compiler | `frontend/views/genspace/music/` |
+| Area                              | Current owner                                                                                 |
+| --------------------------------- | --------------------------------------------------------------------------------------------- |
+| Composition                       | `frontend/views/genspace/GenSpaceWorkspace.tsx`                                               |
+| Controller aggregation            | `frontend/views/genspace/hooks/useGenSpaceController.tsx`                                     |
+| Mode transitions                  | `frontend/views/genspace/hooks/useGenSpaceModeState.ts`                                       |
+| Image/video/music settings state  | `frontend/views/genspace/hooks/useGenSpaceSettingsState.ts`                                   |
+| Prompt and attached media         | `frontend/views/genspace/hooks/useGenSpaceMediaInputs.ts`                                     |
+| Reframe/Retake state              | `frontend/views/genspace/hooks/useGenSpaceVideoTools.tsx`                                     |
+| Per-mode command construction     | `frontend/views/genspace/logic/generation-requests.ts`                                        |
+| Submission snapshots/actions      | `frontend/views/genspace/hooks/useGenSpaceGenerationActions.ts`                               |
+| Generated asset construction      | `frontend/views/genspace/logic/generation-assets.ts`                                          |
+| Completion/idempotent persistence | `frontend/views/genspace/hooks/useGenSpaceResultPersistence.ts`                               |
+| Copy Settings restoration         | `frontend/views/genspace/logic/settings-restore.ts` and `hooks/useGenSpaceSettingsRestore.ts` |
+| Gallery state/actions             | `frontend/views/genspace/hooks/useGenSpaceGallery.ts`                                         |
+| Gallery/overlay presentation      | `GenSpaceGallery.tsx` and `GenSpaceOverlays.tsx`                                              |
+| Shared mode controls              | `frontend/views/genspace/components/`                                                         |
+| Image-owned UI                    | `frontend/views/genspace/image/`                                                              |
+| Video/Reframe/Retake-owned UI     | `frontend/views/genspace/video/`                                                              |
+| Music-owned UI and compiler       | `frontend/views/genspace/music/`                                                              |
 
 Mode panels receive typed controller contracts. They must not create their own project context, polling loop, persistence path, or `useGeneration` instance.
 
@@ -387,37 +387,37 @@ lock -> publish result/error -> unlock
 
 ### Main API routes
 
-| Endpoint | Owner |
-| --- | --- |
-| `POST /api/generate-image` | `ImageGenerationHandler` |
-| `POST /api/generate` | `VideoGenerationHandler` |
-| `POST /api/generate-music` | `MusicGenerationHandler` |
-| `POST /api/music/compose-lyrics` | `MusicGenerationHandler` |
-| `POST /api/director/generate` | `DirectorGenerationHandler` |
-| `POST /api/enhance-prompt` | `PromptEnhancementHandler` |
-| `GET /api/generation/progress` | shared `GenerationHandler` |
-| `POST /api/generate/cancel` | shared `GenerationHandler` |
-| `GET /api/model-profiles` | `ModelProfilesHandler` |
-| health/settings/retake compatibility routes | their matching handlers |
+| Endpoint                                    | Owner                       |
+| ------------------------------------------- | --------------------------- |
+| `POST /api/generate-image`                  | `ImageGenerationHandler`    |
+| `POST /api/generate`                        | `VideoGenerationHandler`    |
+| `POST /api/generate-music`                  | `MusicGenerationHandler`    |
+| `POST /api/music/compose-lyrics`            | `MusicGenerationHandler`    |
+| `POST /api/director/generate`               | `DirectorGenerationHandler` |
+| `POST /api/enhance-prompt`                  | `PromptEnhancementHandler`  |
+| `GET /api/generation/progress`              | shared `GenerationHandler`  |
+| `POST /api/generate/cancel`                 | shared `GenerationHandler`  |
+| `GET /api/model-profiles`                   | `ModelProfilesHandler`      |
+| health/settings/retake compatibility routes | their matching handlers     |
 
 `backend/app_factory.py` owns CORS, per-session auth middleware, route registration, and exception/logging boundaries.
 
 ### Important backend files
 
-| Path | Responsibility |
-| --- | --- |
-| `backend/api_types.py` | Pydantic HTTP contracts |
-| `backend/state/` | discriminated state types, settings, and dependency access |
-| `backend/handlers/generation_handler.py` | shared job/progress/cancel state |
-| `backend/handlers/image_generation_handler.py` | image profile validation and WanGP mapping |
-| `backend/handlers/video_generation_handler.py` | video, continuation, controls, and Reframe mapping |
-| `backend/handlers/music_generation_handler.py` | ACE-Step request resolution, lyric composition, generation, and outputs |
-| `backend/handlers/director_generation_handler.py` | semantic Director validation and generation |
-| `backend/handlers/model_profiles_handler.py` | curated profile API and availability |
-| `backend/services/wangp_bridge.py` | in-process WanGP session, manifest execution, progress normalisation |
-| `backend/model_profiles/profiles.py` | product-facing model source of truth |
-| `backend/wangp_model_packs.py` | model-pack discovery/download/delete without GPU model loading |
-| `backend/tests/fakes/fake_wangp_bridge.py` | test boundary for WanGP side effects |
+| Path                                              | Responsibility                                                          |
+| ------------------------------------------------- | ----------------------------------------------------------------------- |
+| `backend/api_types.py`                            | Pydantic HTTP contracts                                                 |
+| `backend/state/`                                  | discriminated state types, settings, and dependency access              |
+| `backend/handlers/generation_handler.py`          | shared job/progress/cancel state                                        |
+| `backend/handlers/image_generation_handler.py`    | image profile validation and WanGP mapping                              |
+| `backend/handlers/video_generation_handler.py`    | video, continuation, controls, and Reframe mapping                      |
+| `backend/handlers/music_generation_handler.py`    | ACE-Step request resolution, lyric composition, generation, and outputs |
+| `backend/handlers/director_generation_handler.py` | semantic Director validation and generation                             |
+| `backend/handlers/model_profiles_handler.py`      | curated profile API and availability                                    |
+| `backend/services/wangp_bridge.py`                | in-process WanGP session, manifest execution, progress normalisation    |
+| `backend/model_profiles/profiles.py`              | product-facing model source of truth                                    |
+| `backend/wangp_model_packs.py`                    | model-pack discovery/download/delete without GPU model loading          |
+| `backend/tests/fakes/fake_wangp_bridge.py`        | test boundary for WanGP side effects                                    |
 
 Tests use service fakes rather than `unittest.mock`.
 
@@ -427,11 +427,11 @@ WanGP discovery answers what exists and whether files are available. AiVS decide
 
 Visible profiles currently are:
 
-| Media | AiVS profile IDs |
-| --- | --- |
+| Media | AiVS profile IDs                                                   |
+| ----- | ------------------------------------------------------------------ |
 | Image | `z_image_turbo`, `krea2_turbo`, `flux2_klein_4b`, `hidream_o1_dev` |
-| Video | `ltx2_22b_distilled` |
-| Music | `ace_step_15_turbo`, `ace_step_15_xl_turbo` |
+| Video | `ltx2_22b_distilled`                                               |
+| Music | `ace_step_15_turbo`, `ace_step_15_xl_turbo`                        |
 
 Rules:
 
@@ -443,19 +443,19 @@ Rules:
 
 ## Electron map
 
-| Path | Responsibility |
-| --- | --- |
-| `electron/main.ts` | single-instance lifecycle, handler registration, startup/shutdown |
-| `electron/window.ts` | BrowserWindow creation and renderer loading |
-| `electron/preload.ts` | typed, context-isolated renderer API |
-| `electron/ipc/` | file, app, project, video-processing, logging, and storage handlers |
-| `electron/app-state.ts` | per-user project/checkpoint/LoRA path settings |
-| `electron/python-setup.ts` | Python/GPU runtime setup, model-pack process, backend readiness |
-| `electron/python-backend.ts` | backend process supervision |
-| `electron/lib/project-asset-import.ts` | project upload/generated asset movement and duplicate policy |
-| `electron/export/` | native ffmpeg export |
-| `electron/updater.ts` | GitHub release update checks |
-| `electron-builder.yml` | packaged resources and Windows/macOS targets |
+| Path                                   | Responsibility                                                      |
+| -------------------------------------- | ------------------------------------------------------------------- |
+| `electron/main.ts`                     | single-instance lifecycle, handler registration, startup/shutdown   |
+| `electron/window.ts`                   | BrowserWindow creation and renderer loading                         |
+| `electron/preload.ts`                  | typed, context-isolated renderer API                                |
+| `electron/ipc/`                        | file, app, project, video-processing, logging, and storage handlers |
+| `electron/app-state.ts`                | per-user project/checkpoint/LoRA path settings                      |
+| `electron/python-setup.ts`             | Python/GPU runtime setup, model-pack process, backend readiness     |
+| `electron/python-backend.ts`           | backend process supervision                                         |
+| `electron/lib/project-asset-import.ts` | project upload/generated asset movement and duplicate policy        |
+| `electron/export/`                     | native ffmpeg export                                                |
+| `electron/updater.ts`                  | GitHub release update checks                                        |
+| `electron-builder.yml`                 | packaged resources and Windows/macOS targets                        |
 
 Native filesystem operations must validate or explicitly approve paths before reading, copying, deleting, or exposing them.
 
@@ -465,8 +465,8 @@ Current source manifest:
 
 - Repository: `GOvEy1nw/Wan2GP`
 - Branch: `AiVS`
-- Revision: `a599200d96a2e3c934991bb5fcbddb821d3550dc`
-- WanGP version: `12.3456`
+- Revision: `c220292252d21aff667b50d5edabc1b388ed5bee`
+- WanGP version: `12.432`
 
 Source-of-truth files:
 
@@ -508,22 +508,22 @@ Do not bulk-upgrade or automate this stack as ordinary Python dependencies. It i
 
 ### Commands
 
-| Command | Purpose |
-| --- | --- |
-| `pnpm dev` | Start Vite, Electron, and the Python backend |
-| `pnpm dev:debug` | Start with Electron and Python debugging |
-| `pnpm typecheck:ts` | Strict TypeScript |
-| `pnpm typecheck:py` | Strict Pyright |
-| `pnpm typecheck` | Both type checks |
-| `pnpm test:frontend` | Full Vitest suite |
-| `pnpm test:frontend:watch` | Watch-mode frontend tests |
-| `pnpm backend:test` | Backend pytest suite |
-| `pnpm build:frontend` | Renderer, Electron main, and preload production build |
-| `pnpm build:fast:win` | Unpacked Windows build without rebuilding Python |
-| `pnpm build:win` | Full Windows installer build |
-| `pnpm wangp:check` | Compare bundled pin with fork head |
-| `pnpm wangp:update` | Transactional WanGP update |
-| `pnpm wangp:update:full` | WanGP update plus full validation |
+| Command                    | Purpose                                               |
+| -------------------------- | ----------------------------------------------------- |
+| `pnpm dev`                 | Start Vite, Electron, and the Python backend          |
+| `pnpm dev:debug`           | Start with Electron and Python debugging              |
+| `pnpm typecheck:ts`        | Strict TypeScript                                     |
+| `pnpm typecheck:py`        | Strict Pyright                                        |
+| `pnpm typecheck`           | Both type checks                                      |
+| `pnpm test:frontend`       | Full Vitest suite                                     |
+| `pnpm test:frontend:watch` | Watch-mode frontend tests                             |
+| `pnpm backend:test`        | Backend pytest suite                                  |
+| `pnpm build:frontend`      | Renderer, Electron main, and preload production build |
+| `pnpm build:fast:win`      | Unpacked Windows build without rebuilding Python      |
+| `pnpm build:win`           | Full Windows installer build                          |
+| `pnpm wangp:check`         | Compare bundled pin with fork head                    |
+| `pnpm wangp:update`        | Transactional WanGP update                            |
+| `pnpm wangp:update:full`   | WanGP update plus full validation                     |
 
 ### Test ownership
 

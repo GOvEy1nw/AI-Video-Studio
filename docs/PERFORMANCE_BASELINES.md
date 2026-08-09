@@ -19,3 +19,22 @@ tree: AIVS-019 renderer split. Commands: `pnpm build:frontend` and
 
 Rows are independent static closures. Shared runtime modules therefore appear in
 more than one row and must not be summed.
+
+## AIVS-037 primary-path hybrid
+
+Native review found that the fully lazy AIVS-019 boundary still exposed several
+seconds of workspace loading in development. AIVS-037 therefore keeps the primary
+desktop journey eager—Home, Project, Quick Gen, and Settings—while Director and
+Video Editor remain intent-prefetched dynamic workspaces.
+
+Measured on Windows with Node 24.18.0, pnpm 10.30.3, and Vite 8.1.5 using
+`pnpm build:frontend` followed by `pnpm bundle:report`.
+
+| Measurement | Raw | Gzip | Brotli |
+| --- | ---: | ---: | ---: |
+| Eager Home + primary project path | 649.42 kB | 184.14 kB | 152.14 kB |
+| Director static closure | 733.84 kB | 207.11 kB | 172.34 kB |
+| Video Editor static closure | 1,023.52 kB | 274.02 kB | 223.52 kB |
+
+The hybrid primary path remains substantially smaller than the 1,084.00 kB
+pre-split renderer while removing the default Project/Quick Gen/Settings lazy wait.

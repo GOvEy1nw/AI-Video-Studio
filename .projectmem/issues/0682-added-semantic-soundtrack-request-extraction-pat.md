@@ -1,0 +1,5 @@
+# #0682 Added semantic Soundtrack request/extraction path and fixed strict type compatibility errors from the initial implementation.
+
+- 2026-08-06T17:08:13Z `issue`: Added semantic Soundtrack request/extraction path and fixed strict type compatibility errors from the initial implementation. [frontend/types/video-audio.ts; backend/services/audio_extract.py; backend/handlers/video_generation_handler.py; frontend/views/genspace]
+- 2026-08-06T17:08:13Z `attempt`: Added semantic Soundtrack request/extraction path and fixed strict type compatibility errors from the initial implementation. [frontend/types/video-audio.ts; backend/services/audio_extract.py; backend/handlers/video_generation_handler.py; frontend/views/genspace] (worked)
+- 2026-08-06T17:19:33Z `fix`: Verified semantic Soundtrack transport, local video-audio extraction, cleanup, deterministic duration, recipe persistence/restore, and legacy compatibility with focused tests, full backend tests, strict type checks, and production build.

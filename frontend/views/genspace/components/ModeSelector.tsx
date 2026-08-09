@@ -11,11 +11,13 @@ export interface ModeSelectorOption {
 
 export function ModeSelector({
   label = "Tools",
+  triggerLabel = "Choose mode",
   options,
   value,
   onChange,
 }: {
   label?: string;
+  triggerLabel?: string;
   options: readonly ModeSelectorOption[];
   value: string;
   onChange: (value: string) => void;
@@ -40,7 +42,7 @@ export function ModeSelector({
         }),
       )}
       variant="mode"
-      triggerLabel="Choose mode"
+      triggerLabel={triggerLabel}
       trigger={
         <>
           <span className="flex items-center gap-1.5 border-r border-zinc-700 px-2.5 py-2 text-zinc-400">

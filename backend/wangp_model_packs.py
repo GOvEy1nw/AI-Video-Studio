@@ -49,6 +49,7 @@ PACKS: dict[str, dict[str, str]] = {
     "ltx2_turbo": {"name": "LTX 2.3 Turbo 1.1", "kind": "model", "model_type": "ltx2_22B_distilled_1_1"},
     "ace_step_15_turbo": {"name": "ACE-Step 1.5 Fast", "kind": "model", "model_type": "ace_step_v1_5_turbo_lm_1_7b"},
     "ace_step_15_xl_turbo": {"name": "ACE-Step 1.5 XL", "kind": "model", "model_type": "ace_step_v1_5_xl_turbo_lm_1_7b"},
+    "mmaudio": {"name": "MMAudio Sound Effects", "kind": "audio_processor", "processor": "mmaudio"},
     "prompt_enhancer": {"name": "Prompt Enhancer", "kind": "prompt"},
 }
 
@@ -401,6 +402,12 @@ def _download_pack(
         assets = import_module("shared.prompt_enhancer.assets")
         definitions = cast(list[dict[str, Any]], assets.query_prompt_enhancer_download_defs())
         _process_download_definitions(wgp, definitions, progress_callback)
+    elif kind == "audio_processor":
+        processors = import_module("postprocessing.audio_processors")
+        handler = processors.find_processor(pack["processor"])
+        if handler is None:
+            raise RuntimeError(f"WanGP audio processor is not registered: {pack['processor']}")
+        _process_download_definitions(wgp, handler.query_download_defs(), progress_callback)
     else:
         _download_model_dependencies(wgp, pack["model_type"], progress_callback)
     return _validate_paths(pack_id, _resolve_pack_paths(wgp, manager, pack_id))
@@ -416,6 +423,12 @@ def _resolve_pack_paths(wgp: Any, manager: Any, pack_id: str) -> set[Path]:
         assets = import_module("shared.prompt_enhancer.assets")
         definitions = cast(list[dict[str, Any]], assets.query_prompt_enhancer_download_defs())
         return _download_def_paths(manager, definitions)
+    if kind == "audio_processor":
+        processors = import_module("postprocessing.audio_processors")
+        handler = processors.find_processor(pack["processor"])
+        if handler is None:
+            raise RuntimeError(f"WanGP audio processor is not registered: {pack['processor']}")
+        return _download_def_paths(manager, handler.query_download_defs())
 
     return _model_paths(manager, pack["model_type"])
 

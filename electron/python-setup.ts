@@ -182,6 +182,14 @@ const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
     mediaTypes: ['audio'],
     features: ['generate'],
   },
+  {
+    id: 'mmaudio',
+    name: 'MMAudio Sound Effects',
+    estimatedSize: '13.9 GB',
+    modelType: 'mmaudio',
+    mediaTypes: ['audio'],
+    features: ['generate'],
+  },
   { id: 'prompt_enhancer', name: 'Prompt Enhancer', estimatedSize: '36.0 GB' },
 ]
 

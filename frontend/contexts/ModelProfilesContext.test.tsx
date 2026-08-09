@@ -77,6 +77,7 @@ const profile = (mediaType: "image" | "video" | "audio"): ModelProfile => ({
     allowKeyframesWithVideoGuidance: false,
     allowKeyframesWithIngredients: false,
     allowGuideAudioWithGuidance: false,
+    renderStrategies: [],
   },
   music: {
     enabled: false,
@@ -112,6 +113,35 @@ const profile = (mediaType: "image" | "video" | "audio"): ModelProfile => ({
     defaultWeirdness: 0,
     defaultPromptInfluence: 0,
   },
+  requiredPackIds: [],
+  systemDependencies: [],
+  videoAudio: {
+    status: "hidden",
+    handler: null,
+    requiredPackIds: [],
+    soundtrack: false,
+    audioConditioning: false,
+    controlVideoAudio: false,
+    outputAudio: false,
+    maxAudioInputs: 0,
+  },
+  speech: {
+    status: "hidden",
+    handler: null,
+    requiredPackIds: [],
+    referenceVoice: false,
+    tts: false,
+    maxReferenceInputs: 0,
+  },
+  sfx: {
+    status: "hidden",
+    handler: null,
+    requiredPackIds: [],
+    text: false,
+    controlVideoAudio: false,
+    maxDurationSeconds: null,
+  },
+  videoEdits: { operations: [] },
   license: null,
   availability: "available",
 });
@@ -164,6 +194,38 @@ afterEach(() => {
 });
 
 describe("ModelProfilesProvider", () => {
+  it("normalizes older profile responses to disabled policy defaults", async () => {
+    installElectronApi();
+    const current = profile("video");
+    const {
+      requiredPackIds: _requiredPackIds,
+      systemDependencies: _systemDependencies,
+      videoAudio: _videoAudio,
+      speech: _speech,
+      sfx: _sfx,
+      videoEdits: _videoEdits,
+      ...olderProfile
+    } = current;
+    const { renderStrategies: _renderStrategies, ...olderDirector } = olderProfile.director;
+    fetchMock.mockImplementation(async (path) => {
+      if (path === "/health") return new Response(JSON.stringify({ models_loaded: true }));
+      if (path === "/api/settings") return new Response(JSON.stringify({ lockedSeed: 1 }));
+      return new Response(JSON.stringify({
+        profiles: [{ ...olderProfile, director: olderDirector }],
+      }));
+    });
+
+    const { result } = renderHook(() => useModelProfiles(), { wrapper });
+    await waitFor(() => expect(result.current.all).toHaveLength(1));
+    expect(result.current.all[0]).toMatchObject({
+      requiredPackIds: [],
+      systemDependencies: [],
+      videoEdits: { operations: [] },
+      director: { renderStrategies: [] },
+      videoAudio: { status: "hidden", handler: null },
+    });
+  });
+
   it("loads profiles after Strict Mode replays effect cleanup and setup", async () => {
     installElectronApi();
     installSuccessfulFetch();

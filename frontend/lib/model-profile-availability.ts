@@ -3,6 +3,7 @@ import type { ModelProfileAvailability } from "../types/model-profiles";
 interface ProfileAvailability {
   availability: ModelProfileAvailability;
   wangpModelType: string;
+  requiredPackIds?: readonly string[];
 }
 
 export function isModelProfileInstalled(
@@ -16,15 +17,19 @@ export function applyModelPackAvailability<T extends ProfileAvailability>(
   packs: readonly unknown[],
 ): T[] {
   const installedByModelType = new Map<string, boolean>();
+  const installedByPackId = new Map<string, boolean>();
 
   for (const value of packs) {
     if (!value || typeof value !== "object") continue;
-    const pack = value as { installed?: unknown; modelType?: unknown };
+    const pack = value as { id?: unknown; installed?: unknown; modelType?: unknown };
     if (
       typeof pack.modelType === "string" &&
       typeof pack.installed === "boolean"
     ) {
       installedByModelType.set(pack.modelType, pack.installed);
+    }
+    if (typeof pack.id === "string" && typeof pack.installed === "boolean") {
+      installedByPackId.set(pack.id, pack.installed);
     }
   }
 
@@ -35,13 +40,21 @@ export function applyModelPackAvailability<T extends ProfileAvailability>(
     ) {
       return profile;
     }
-    const installed = installedByModelType.get(profile.wangpModelType);
-    return installed === undefined
-      ? profile
-      : {
-          ...profile,
-          availability: installed ? "available" : "missing_model_files",
-        };
+    const requiredPacks = profile.requiredPackIds ?? [];
+    const installations = requiredPacks.length > 0
+      ? requiredPacks.map((packId) => installedByPackId.get(packId))
+      : [installedByModelType.get(profile.wangpModelType)];
+    if (installations.every((installed) => installed === undefined)) return profile;
+
+    const installedCount = installations.filter((installed) => installed === true).length;
+    return {
+      ...profile,
+      availability: installedCount === installations.length
+        ? "available"
+        : installedCount > 0
+          ? "partially_installed"
+          : "missing_model_files",
+    };
   });
 }
 

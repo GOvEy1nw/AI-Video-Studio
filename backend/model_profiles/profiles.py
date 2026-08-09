@@ -16,6 +16,18 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal
 
+from model_profiles.policies import (
+    DirectorRenderStrategyPolicy,
+    SpeechPolicy,
+    SfxPolicy,
+    SystemDependency,
+    VideoAudioPolicy,
+    VideoEditOperationPolicy,
+    VideoEditPolicy,
+    validate_model_profile_policies,
+)
+from wangp_model_packs import PACKS
+
 MediaType = Literal["image", "video", "audio", "tts"]
 AspectRatio = Literal[
     "1:1",
@@ -89,6 +101,7 @@ class DirectorPolicy:
     allow_keyframes_with_video_guidance: bool = False
     allow_keyframes_with_ingredients: bool = False
     allow_guide_audio_with_guidance: bool = False
+    render_strategies: tuple[DirectorRenderStrategyPolicy, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -224,6 +237,12 @@ class ModelProfile:
     wangp_resolution_categories: tuple[str, ...] = ()
     max_parallel_images: int = 1
     max_total_variations: int = 12
+    required_pack_ids: tuple[str, ...] = ()
+    system_dependencies: tuple[SystemDependency, ...] = ()
+    video_audio: VideoAudioPolicy = field(default_factory=VideoAudioPolicy)
+    speech: SpeechPolicy = field(default_factory=SpeechPolicy)
+    sfx: SfxPolicy = field(default_factory=SfxPolicy)
+    video_edits: VideoEditPolicy = field(default_factory=VideoEditPolicy)
     director: DirectorPolicy = field(default_factory=DirectorPolicy)
     music: MusicPolicy = field(default_factory=MusicPolicy)
     license: ModelLicenseInfo | None = None
@@ -1640,6 +1659,82 @@ VIDEO_PROFILES: tuple[ModelProfile, ...] = (
         default_resolution_tier="540p",
         allowed_aspect_ratios=CURATED_ASPECT_RATIOS,
         allowed_resolution_tiers=("540p", "720p", "1080p"),
+        required_pack_ids=("ltx2_turbo",),
+        system_dependencies=(
+            SystemDependency("video_tool_lora_relight", "lora", ("relight",)),
+            SystemDependency("video_tool_lora_colorize", "lora", ("colorize",)),
+            SystemDependency("video_tool_lora_clean_plate", "lora", ("clean_plate",)),
+            SystemDependency("video_tool_lora_lip_dub", "lora", ("lip_dub",)),
+            SystemDependency("video_tool_lora_decompression", "lora", ("decompression",)),
+            SystemDependency("video_tool_lora_sdr_to_hdr", "lora", ("sdr_to_hdr",)),
+            SystemDependency("video_tool_lora_remove_glare", "lora", ("remove_glare",)),
+            SystemDependency("video_tool_lora_deblur", "lora", ("deblur",)),
+        ),
+        video_audio=VideoAudioPolicy(
+            status="stable",
+            handler="video_generation",
+            required_pack_ids=("ltx2_turbo",),
+            soundtrack=True,
+            audio_conditioning=True,
+            control_video_audio=True,
+            output_audio=True,
+            max_audio_inputs=1,
+        ),
+        speech=SpeechPolicy(
+            status="experimental",
+            handler="video_generation",
+            required_pack_ids=("ltx2_turbo",),
+            reference_voice=True,
+            max_reference_inputs=1,
+        ),
+        sfx=SfxPolicy(
+            status="experimental",
+            handler="video_generation",
+            required_pack_ids=("ltx2_turbo",),
+            text=True,
+            control_video_audio=True,
+            max_duration_seconds=20,
+        ),
+        video_edits=VideoEditPolicy(
+            operations=(
+                VideoEditOperationPolicy("reframe", "stable", "video_generation", ("ltx2_turbo",)),
+                VideoEditOperationPolicy(
+                    "extend",
+                    "stable",
+                    "video_generation",
+                    ("ltx2_turbo",),
+                    source_behavior="continue_video",
+                    duration_behavior="extend_by",
+                ),
+                *(
+                    VideoEditOperationPolicy(
+                        operation_id,
+                        "experimental",
+                        "video_generation",
+                        ("ltx2_turbo",),
+                        (f"video_tool_lora_{operation_id}",),
+                    )
+                    for operation_id in (
+                        "relight",
+                        "colorize",
+                        "clean_plate",
+                        "lip_dub",
+                        "decompression",
+                        "sdr_to_hdr",
+                        "remove_glare",
+                        "deblur",
+                    )
+                ),
+                VideoEditOperationPolicy(
+                    "retake",
+                    "hidden",
+                    "retake",
+                    ("ltx2_turbo",),
+                    source_behavior="source_video",
+                    disabled_reason="Retake is unavailable while the WanGP path is not reliable.",
+                ),
+            )
+        ),
         director=DirectorPolicy(
             enabled=True,
             prompt_relay=True,
@@ -1653,6 +1748,15 @@ VIDEO_PROFILES: tuple[ModelProfile, ...] = (
             allow_keyframes_with_video_guidance=False,
             allow_keyframes_with_ingredients=False,
             allow_guide_audio_with_guidance=False,
+            render_strategies=(
+                DirectorRenderStrategyPolicy(
+                    "single_pass",
+                    "stable",
+                    "director_generation",
+                    ("ltx2_turbo",),
+                    max_duration_seconds=20,
+                ),
+            ),
         ),
     ),
 )
@@ -1775,8 +1879,32 @@ _ACE_STEP_MUSIC_POLICY = MusicPolicy(
     supports_compose_thinking=True,
 )
 
+_MMAUDIO_LICENSE = ModelLicenseInfo(
+    project_license="MIT",
+    weights_license="Not declared by the DeepBeepMeep/Wan2.1 repository",
+    commercial_use="unknown",
+    attribution_required=True,
+    source_project="MMAudio / DeepBeepMeep Wan2.1",
+    notes="Optional processor checkpoints are downloaded by WanGP and are not bundled with AiVS; no weights rights are inferred.",
+)
+
+_MMAUDIO_METADATA = WanGPModelMetadata(
+    family="audio_processor", family_label="Sound Effects", base_model_type="mmaudio", finetune=False,
+    main_output=("audio",), outputs=("audio",), inputs=("text", "video"),
+    media_inputs={"image": {}, "video": {"control": True}, "audio": {"output": True}},
+    capabilities={"text_to_audio": True, "video_to_audio": True, "audio_output": True},
+    setting_values={"duration_seconds": {"min": 1, "max": 20, "default": 8}},
+)
+
 
 MUSIC_PROFILES: tuple[ModelProfile, ...] = (
+    ModelProfile(
+        id="mmaudio_sfx", display_name="MMAudio Sound Effects", media_type="audio", visible=True,
+        status="experimental", wangp_model_type="mmaudio", wangp_metadata=_MMAUDIO_METADATA,
+        text_to_audio=True, audio_output=True, required_pack_ids=("mmaudio",),
+        sfx=SfxPolicy(status="experimental", handler="sfx_generation", required_pack_ids=("mmaudio",), text=True, control_video_audio=True, max_duration_seconds=20),
+        license=_MMAUDIO_LICENSE,
+    ),
     ModelProfile(
         id="ace_step_15_turbo",
         display_name="ACE-Step 1.5 Fast",
@@ -1818,6 +1946,11 @@ MUSIC_PROFILES: tuple[ModelProfile, ...] = (
 )
 
 
+validate_model_profile_policies(
+    [*IMAGE_PROFILES, *VIDEO_PROFILES, *MUSIC_PROFILES], pack_ids=PACKS
+)
+
+
 def get_image_profile(profile_id: str) -> ModelProfile | None:
     """Return the image profile with the given id, or None if not curated."""
     for profile in IMAGE_PROFILES:
@@ -1854,4 +1987,15 @@ def get_visible_video_profiles() -> list[ModelProfile]:
 
 def get_visible_music_profiles() -> list[ModelProfile]:
     """Return visible music profiles in display order."""
-    return [profile for profile in MUSIC_PROFILES if profile.visible]
+    return [
+        profile for profile in MUSIC_PROFILES if profile.visible and profile.music.enabled
+    ]
+
+
+def get_visible_sfx_profiles() -> list[ModelProfile]:
+    """Return visible dedicated SFX profiles in display order."""
+    return [
+        profile
+        for profile in MUSIC_PROFILES
+        if profile.visible and profile.sfx.handler == "sfx_generation"
+    ]

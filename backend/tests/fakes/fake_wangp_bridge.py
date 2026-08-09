@@ -105,6 +105,15 @@ class FakeWangpComposeMusicLyricsCall:
 
 
 @dataclass
+class FakeWangpSfxCall:
+    video_path: str
+    prompt: str
+    negative_prompt: str
+    seed: int | None
+    duration_seconds: int
+
+
+@dataclass
 class FakeWanGPBridge:
     """Test stand-in for ``WanGPBridge``.
 
@@ -139,6 +148,7 @@ class FakeWanGPBridge:
     compose_music_lyrics_calls: list[FakeWangpComposeMusicLyricsCall] = field(
         default_factory=list
     )
+    sfx_calls: list[FakeWangpSfxCall] = field(default_factory=list)
     raise_on_video: Exception | None = None
     raise_on_images: Exception | None = None
     raise_on_enhance_prompt: Exception | None = None
@@ -378,6 +388,20 @@ class FakeWanGPBridge:
         if self.raise_on_compose_music_lyrics is not None:
             raise self.raise_on_compose_music_lyrics
         return "[Verse]\nLocally composed lyrics"
+
+    def generate_sfx(
+        self, *, video_path: str, prompt: str, negative_prompt: str, seed: int | None,
+        duration_seconds: int, output_path: Path, on_progress: ProgressCallback,
+    ) -> str:
+        self.sfx_calls.append(FakeWangpSfxCall(video_path, prompt, negative_prompt, seed, duration_seconds))
+        if self.raise_on_music is not None:
+            raise self.raise_on_music
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with wave.open(str(output_path), "wb") as output:
+            output.setnchannels(1); output.setsampwidth(2); output.setframerate(8_000); output.writeframes(b"\x00\x00" * 800)
+        on_progress("generating_sfx", 100)
+        return str(output_path)
 
     def enhance_prompt(
         self,

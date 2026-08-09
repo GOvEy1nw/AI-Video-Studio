@@ -10,6 +10,7 @@ import type { UseGenerationReturn } from "../../../hooks/use-generation";
 import type { RetakeSubmitParams } from "../../../hooks/use-retake";
 import type { ModelProfile } from "../../../types/model-profiles";
 import type { MusicSettings } from "../../../types/music";
+import type { SfxSettings } from "../../../types/sfx";
 import type { Asset } from "../../../types/project";
 import type {
   ImageEditMaskRecipe,
@@ -24,6 +25,7 @@ import type {
   ImageProcessMode,
   ImageSubmissionSnapshot,
   MusicSubmissionSnapshot,
+  SfxSubmissionSnapshot,
   ReframeSubmissionSnapshot,
   RetakeSubmissionSnapshot,
   VideoSubmissionSnapshot,
@@ -43,6 +45,7 @@ import {
   buildVideoToolGenerationCommand,
   buildVideoGenerationCommand,
 } from "../logic/generation-requests";
+import { buildSfxGenerationCommand } from "../logic/sfx-request";
 
 interface RetakeInput {
   videoPath: string | null;
@@ -66,6 +69,8 @@ export function useGenSpaceGenerationActions({
   settings,
   setSettings,
   musicSettings,
+  audioSubmode = "music",
+  sfxSettings,
   musicProfiles,
   imageInputs,
   editImage = null,
@@ -83,6 +88,7 @@ export function useGenSpaceGenerationActions({
   generate,
   generateImage,
   generateMusic,
+  generateSfx,
   submitRetake,
 }: {
   mode: GenSpaceMode;
@@ -99,6 +105,8 @@ export function useGenSpaceGenerationActions({
   settings: GenSpaceSettings;
   setSettings: Dispatch<SetStateAction<GenSpaceSettings>>;
   musicSettings: MusicSettings;
+  audioSubmode?: "music" | "speech" | "sfx" | "mixer";
+  sfxSettings?: SfxSettings;
   musicProfiles: ModelProfile[];
   imageInputs: GenSpaceMediaInput[];
   editImage?: GenSpaceMediaInput | null;
@@ -116,11 +124,13 @@ export function useGenSpaceGenerationActions({
   generate: UseGenerationReturn["generate"];
   generateImage: UseGenerationReturn["generateImage"];
   generateMusic: UseGenerationReturn["generateMusic"];
+  generateSfx?: UseGenerationReturn["generateSfx"];
   submitRetake: (params: RetakeSubmitParams) => Promise<void>;
 }) {
   const imageSubmissionRef = useRef<ImageSubmissionSnapshot | null>(null);
   const videoSubmissionRef = useRef<VideoSubmissionSnapshot | null>(null);
   const musicSubmissionRef = useRef<MusicSubmissionSnapshot | null>(null);
+  const sfxSubmissionRef = useRef<SfxSubmissionSnapshot | null>(null);
   const submit = useCallback(async () => {
     if (
       mode === "video" &&
@@ -175,6 +185,16 @@ export function useGenSpaceGenerationActions({
       ? serializeRegionPrompt(regionPrompt)
       : prompt;
     if (!authoredPrompt.trim()) return;
+
+    if (mode === "music" && audioSubmode === "sfx") {
+      if (!currentProjectId) return;
+      if (!sfxSettings || !generateSfx) return;
+      const command = buildSfxGenerationCommand(prompt, sfxSettings);
+      if (!command) return;
+      sfxSubmissionRef.current = { projectId: currentProjectId, submittedAt: Date.now(), prompt: command.request.prompt, recipe: command.recipe };
+      await generateSfx(command.request);
+      return;
+    }
 
     if (mode === "music") {
       if (!currentProjectId) return;
@@ -372,6 +392,8 @@ export function useGenSpaceGenerationActions({
     generate,
     generateImage,
     generateMusic,
+    generateSfx,
+    audioSubmode,
     imageInputs,
     imageMode,
     editImage,
@@ -385,6 +407,7 @@ export function useGenSpaceGenerationActions({
     framingSettings,
     musicProfiles,
     musicSettings,
+    sfxSettings,
     prompt,
     promptEnhancementEnabled,
     projectAssets,
@@ -406,5 +429,6 @@ export function useGenSpaceGenerationActions({
     imageSubmissionRef,
     videoSubmissionRef,
     musicSubmissionRef,
+    sfxSubmissionRef,
   };
 }

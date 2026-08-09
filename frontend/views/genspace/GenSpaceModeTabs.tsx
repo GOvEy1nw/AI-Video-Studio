@@ -20,7 +20,7 @@ export function GenSpaceModeTabs({
           [
             ["image", "Image", Image],
             ["video", "Video", Video],
-            ["music", "Music", Music],
+            ["music", "Audio", Music],
           ] as const
         ).map(([value, label, Icon]) => (
           <button

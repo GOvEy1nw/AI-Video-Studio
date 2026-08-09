@@ -1,5 +1,10 @@
 import { Scissors, Sparkles, Wrench } from "lucide-react";
-import { RETAKE_AVAILABLE } from "../constants";
+import { useEffect } from "react";
+import {
+  getPolicyDisabledReason,
+  selectVideoEditOperations,
+} from "../../../lib/model-profile-policy";
+import type { ModelProfile } from "../../../types/model-profiles";
 import { ModeSelector } from "../components/ModeSelector";
 import type { VideoProcessMode } from "../types";
 import { VIDEO_TOOL_OPTIONS, type VideoToolId } from "./video-tools";
@@ -9,17 +14,37 @@ export function VideoModeTabs({
   onChange,
   selectedTool = "reframe",
   onToolChange,
+  profile,
 }: {
   mode: VideoProcessMode;
   onChange: (mode: VideoProcessMode) => void;
   selectedTool?: VideoToolId;
   onToolChange?: (tool: VideoToolId) => void;
+  profile?: ModelProfile;
 }) {
-  const selectedValue =
-    mode === "reframe" ? `tool:${selectedTool}` : mode;
+  const operations = profile?.videoEdits.operations ?? [];
+  const availableToolIds = new Set(
+    profile ? selectVideoEditOperations(profile).map(({ id }) => id) : [],
+  );
+  const availableTools = VIDEO_TOOL_OPTIONS.filter(({ value }) =>
+    availableToolIds.has(value),
+  );
+  const retake = operations.find(({ id }) => id === "retake");
+  const retakeReason = retake
+    ? getPolicyDisabledReason(retake, profile?.availability)
+    : "This capability is unavailable.";
+
+  useEffect(() => {
+    if (!profile || mode !== "reframe" || availableToolIds.has(selectedTool)) return;
+    const fallback = availableTools[0]?.value;
+    if (fallback) onToolChange?.(fallback);
+    else onChange("generate");
+  }, [mode, onChange, onToolChange, profile, selectedTool]);
+
+  const selectedValue = mode === "reframe" ? `tool:${selectedTool}` : mode;
   const options = [
     { value: "generate", label: "Generate", icon: Sparkles },
-    ...VIDEO_TOOL_OPTIONS.map(({ value, label }) => ({
+    ...availableTools.map(({ value, label }) => ({
       value: `tool:${value}`,
       label,
       icon: Wrench,
@@ -28,8 +53,8 @@ export function VideoModeTabs({
       value: "retake",
       label: "Retake",
       icon: Scissors,
-      disabled: !RETAKE_AVAILABLE,
-      tooltip: "Retake is not yet compatible with WanGP",
+      disabled: retakeReason !== null,
+      tooltip: retakeReason ?? undefined,
     },
   ];
 

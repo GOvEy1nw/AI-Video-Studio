@@ -474,6 +474,38 @@ class WanGPBridge:
             raise RuntimeError("WanGP completed without producing music")
         return self._select_final_output(outputs)
 
+    def generate_sfx(
+        self,
+        *,
+        video_path: str,
+        prompt: str,
+        negative_prompt: str,
+        seed: int | None,
+        duration_seconds: int,
+        output_path: Path,
+        on_progress: ProgressCallback,
+    ) -> str:
+        """Run WanGP's registered MMAudio processor with an explicit output path."""
+        session = self._get_session()
+        runtime = session._ensure_runtime()
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        on_progress("generating_sfx", 0)
+        with self._load_api_module()._pushd(runtime.root):
+            processors = importlib.import_module("postprocessing.audio_processors")
+            processors.generate_soundtrack(
+                "mmaudio",
+                video_path=str(Path(video_path).resolve()),
+                prompt=prompt,
+                negative_prompt=negative_prompt,
+                seed=seed if seed is not None else -1,
+                duration=duration_seconds,
+                output_path=str(output_path.resolve()),
+            )
+        if not output_path.is_file():
+            raise RuntimeError("MMAudio completed without producing sound effects")
+        on_progress("generating_sfx", 100)
+        return str(output_path.resolve())
+
     def compose_music_lyrics(
         self,
         *,

@@ -24,6 +24,14 @@ def test_music_packs_use_verified_wangp_model_types() -> None:
     )
 
 
+def test_mmaudio_pack_uses_registered_audio_processor() -> None:
+    assert PACKS["mmaudio"] == {
+        "name": "MMAudio Sound Effects",
+        "kind": "audio_processor",
+        "processor": "mmaudio",
+    }
+
+
 def test_ideogram4_packs_use_requested_wangp_model_profiles() -> None:
     assert PACKS["ideogram4_int8"]["model_type"] == "ideogram4_int8"
     assert (

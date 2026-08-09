@@ -24,6 +24,8 @@ import type {
   VideoProcessMode,
 } from "../types";
 import type { VideoToolId } from "../../../types/video-tools";
+import type { AudioSubMode } from "../types";
+import type { SfxSettings } from "../../../types/sfx";
 import {
   parseRegionPrompt,
   type RegionPromptState,
@@ -42,6 +44,8 @@ export function useGenSpaceSettingsRestore({
   setRegionPrompt,
   setSettings,
   setMusicSettings,
+  setAudioSubmode,
+  setSfxSettings,
   setInputs,
   setEditImage,
   setEditToolMode,
@@ -66,6 +70,8 @@ export function useGenSpaceSettingsRestore({
   setRegionPrompt: (value: RegionPromptState) => void;
   setSettings: Dispatch<SetStateAction<GenSpaceSettings>>;
   setMusicSettings: Dispatch<SetStateAction<MusicSettings>>;
+  setAudioSubmode: (mode: AudioSubMode) => void;
+  setSfxSettings: Dispatch<SetStateAction<SfxSettings>>;
   setInputs: Dispatch<SetStateAction<GenSpaceMediaInput[]>>;
   setEditImage: (image: GenSpaceMediaInput | null) => void;
   setEditToolMode: (mode: ImageEditToolMode) => void;
@@ -128,6 +134,12 @@ export function useGenSpaceSettingsRestore({
       setEditOutpaint(plan.editOutpaint);
       setSettings(plan.settings);
       if (plan.musicSettings) setMusicSettings(plan.musicSettings);
+      if (plan.sfxSettings) {
+        setAudioSubmode("sfx");
+        setSfxSettings(plan.sfxSettings);
+      } else if (plan.mode === "music") {
+        setAudioSubmode("music");
+      }
       if (plan.reframe) setReframeSource(plan.reframe);
       setVersion((current) => current + 1);
     },
@@ -145,6 +157,8 @@ export function useGenSpaceSettingsRestore({
       setImageMode,
       setMode,
       setMusicSettings,
+      setAudioSubmode,
+      setSfxSettings,
       setPrompt,
       setRegionPrompt,
       setReframeSource,

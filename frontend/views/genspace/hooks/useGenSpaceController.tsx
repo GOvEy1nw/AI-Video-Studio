@@ -23,6 +23,7 @@ import { useRetake } from "../../../hooks/use-retake";
 import {
   useImageProfiles,
   useMusicProfiles,
+  useSfxProfiles,
   useVideoProfiles,
 } from "../../../hooks/use-image-profiles";
 import type { Asset } from "../../../types/project";
@@ -39,6 +40,7 @@ import {
   replaceGuideInput,
   replaceInputForRole,
 } from "../logic/media-inputs";
+import { getActiveGenerationProfileId } from "../logic/active-generation-profile";
 import {
   compileMusicRequest,
 } from "../music/compile-music-request";
@@ -51,6 +53,7 @@ import type { GenSpaceGalleryProps } from "../GenSpaceGallery";
 import type { GenSpaceOverlaysProps } from "../GenSpaceOverlays";
 import type { GenSpaceSelectedGenerationProps } from "../GenSpaceSelectedGeneration";
 import { useGenSpaceModeState } from "./useGenSpaceModeState";
+import { useGenSpaceAudioState } from "./useGenSpaceAudioState";
 import { useGenSpaceSettingsState } from "./useGenSpaceSettingsState";
 import { useGenSpaceGenerationActions } from "./useGenSpaceGenerationActions";
 import { useGenSpaceResultPersistence } from "./useGenSpaceResultPersistence";
@@ -162,6 +165,7 @@ export function useGenSpaceController(isActive: boolean) {
   const { profiles: imageProfiles } = useImageProfiles();
   const { profiles: videoProfiles } = useVideoProfiles();
   const { profiles: musicProfiles } = useMusicProfiles();
+  const { profiles: sfxProfiles } = useSfxProfiles();
   const {
     settings,
     setSettings,
@@ -172,6 +176,8 @@ export function useGenSpaceController(isActive: boolean) {
     musicSettings,
     setMusicSettings,
   } = useGenSpaceSettingsState(musicProfiles);
+  const { submode: audioSubmode, setSubmode: setAudioSubmode, sfxSettings, setSfxSettings } =
+    useGenSpaceAudioState();
   useEffect(() => {
     if (imageMode !== "edit" || editToolMode === "edit") return;
     const editProfiles = getImageProfilesForMode(imageProfiles, "edit");
@@ -195,12 +201,11 @@ export function useGenSpaceController(isActive: boolean) {
   const profileNames = useMemo(
     () =>
       new Map(
-        [...imageProfiles, ...videoProfiles, ...musicProfiles].map((profile) => [
-          profile.id,
-          profile.displayName,
-        ]),
+        [...imageProfiles, ...videoProfiles, ...musicProfiles, ...sfxProfiles].map(
+          (profile) => [profile.id, profile.displayName],
+        ),
       ),
-    [imageProfiles, musicProfiles, videoProfiles],
+    [imageProfiles, musicProfiles, sfxProfiles, videoProfiles],
   );
   const getAssetModelName = useCallback(
     (asset: Asset) => {
@@ -215,6 +220,7 @@ export function useGenSpaceController(isActive: boolean) {
     generate,
     generateImage,
     generateMusic,
+    generateSfx,
     composeMusicLyrics,
     isComposingLyrics,
     isGenerating,
@@ -236,6 +242,7 @@ export function useGenSpaceController(isActive: boolean) {
     imageUrls,
     imagePaths,
     musicResult,
+    sfxResult,
     error,
     cancel,
     reset,
@@ -353,6 +360,7 @@ export function useGenSpaceController(isActive: boolean) {
     imageSubmissionRef,
     videoSubmissionRef,
     musicSubmissionRef,
+    sfxSubmissionRef,
   } = useGenSpaceGenerationActions({
     mode,
     imageMode,
@@ -368,6 +376,8 @@ export function useGenSpaceController(isActive: boolean) {
     settings,
     setSettings,
     musicSettings,
+    audioSubmode,
+    sfxSettings,
     musicProfiles,
     imageInputs,
     editImage,
@@ -385,6 +395,7 @@ export function useGenSpaceController(isActive: boolean) {
     generate,
     generateImage,
     generateMusic,
+    generateSfx,
     submitRetake,
   });
   const handleUseImage = useCallback(
@@ -538,6 +549,8 @@ export function useGenSpaceController(isActive: boolean) {
     setRegionPrompt,
     setSettings,
     setMusicSettings,
+    setAudioSubmode,
+    setSfxSettings,
     setInputs: setImageInputs,
     setEditImage,
     setEditToolMode,
@@ -604,9 +617,10 @@ export function useGenSpaceController(isActive: boolean) {
     imageSubmissionRef,
     musicResult,
     musicSubmissionRef,
+    sfxResult,
+    sfxSubmissionRef,
     onAssetAdded: selectAsset,
   });
-
   const isPanelMode = isRetakeMode || isToolsMode;
   const selectedMusicProfile =
     musicProfiles.find(
@@ -639,7 +653,11 @@ export function useGenSpaceController(isActive: boolean) {
     : isRetakeMode
       ? retakeInput.ready && !!retakeInput.videoPath && !isRetaking
       : mode === "music"
-      ? musicCanSubmit
+      ? audioSubmode === "music"
+        ? musicCanSubmit
+        : audioSubmode === "sfx"
+          ? !!prompt.trim() && !isGenerating
+          : false
       : mode === "image" && imageMode === "region"
         ? isRegionPromptReady(regionPrompt)
         : mode === "image" && imageMode === "edit"
@@ -765,23 +783,42 @@ export function useGenSpaceController(isActive: boolean) {
         setValue: setFramingSettings,
       },
     },
-    music: {
-      prompt: promptController,
-      generation: generationController,
-      media: {
-        resolveInputFileUrl,
-        syncInputFileToGallery,
-      },
-      profiles: {
-        options: musicProfiles,
-        modelDownload,
-      },
+    audio: {
+      submode: audioSubmode,
+      setSubmode: setAudioSubmode,
       music: {
-        settings: musicSettings,
-        setSettings: setMusicSettings,
-        composeLyrics: composeMusicLyrics,
-        isComposingLyrics,
+        prompt: promptController,
+        generation: generationController,
+        media: {
+          resolveInputFileUrl,
+          syncInputFileToGallery,
+        },
+        profiles: {
+          options: musicProfiles,
+          modelDownload,
+        },
+        music: {
+          settings: musicSettings,
+          setSettings: setMusicSettings,
+          composeLyrics: composeMusicLyrics,
+          isComposingLyrics,
+        },
       },
+      sfx:
+        sfxProfiles.length > 0
+          ? {
+              prompt: promptController,
+              settings: sfxSettings,
+              setSettings: setSfxSettings,
+              profiles: { options: sfxProfiles, modelDownload },
+              media: {
+                resolveInputFileUrl,
+                syncInputFileToGallery,
+              },
+              isRunning: isGenerating,
+              submit: handleGenerate,
+            }
+          : undefined,
     },
   };
 
@@ -814,16 +851,48 @@ export function useGenSpaceController(isActive: boolean) {
       transferActive,
     ],
   );
-  const activeProfileId =
-    imageSubmissionRef.current?.settings.imageProfileId ??
-    videoSubmissionRef.current?.settings.videoProfileId ??
-    reframeSubmissionRef.current?.settings.videoProfileId ??
-    musicSubmissionRef.current?.recipe.profileId ??
-    (mode === "image"
-      ? imageSettings.profileId
-      : mode === "video"
-        ? videoSettings.profileId
-        : musicSettings.profileId);
+  const activeProfileId = getActiveGenerationProfileId({
+    mode,
+    audioSubmode,
+    submitted: {
+      image: imageSubmissionRef.current
+        ? {
+            profileId: imageSubmissionRef.current.settings.imageProfileId,
+            submittedAt: imageSubmissionRef.current.submittedAt ?? 0,
+          }
+        : undefined,
+      video: videoSubmissionRef.current
+        ? {
+            profileId: videoSubmissionRef.current.settings.videoProfileId,
+            submittedAt: videoSubmissionRef.current.submittedAt ?? 0,
+          }
+        : undefined,
+      reframe: reframeSubmissionRef.current
+        ? {
+            profileId: reframeSubmissionRef.current.settings.videoProfileId,
+            submittedAt: reframeSubmissionRef.current.submittedAt ?? 0,
+          }
+        : undefined,
+      music: musicSubmissionRef.current
+        ? {
+            profileId: musicSubmissionRef.current.recipe.profileId,
+            submittedAt: musicSubmissionRef.current.submittedAt ?? 0,
+          }
+        : undefined,
+      sfx: sfxSubmissionRef.current
+        ? {
+            profileId: sfxSubmissionRef.current.recipe.modelProfileId,
+            submittedAt: sfxSubmissionRef.current.submittedAt ?? 0,
+          }
+        : undefined,
+    },
+    selected: {
+      image: imageSettings.profileId,
+      video: videoSettings.profileId,
+      music: musicSettings.profileId,
+      sfx: sfxSettings.profileId,
+    },
+  });
   const activeGenerationModelName =
     profileNames.get(activeProfileId) ??
     activeProfileId.split("_").join(" ");

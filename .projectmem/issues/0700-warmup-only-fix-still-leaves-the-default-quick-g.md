@@ -1,0 +1,6 @@
+# #0700 Warmup-only fix still leaves the default Quick Gen workspace behind a multi-second lazy boundary during native project entry.
+
+- 2026-08-08T13:20:26Z `issue`: Warmup-only fix still leaves the default Quick Gen workspace behind a multi-second lazy boundary during native project entry. [frontend/App.tsx; frontend/views/Project.tsx; vite.config.ts]
+- 2026-08-08T13:26:08Z `attempt`: Made Project, Quick Gen, and Settings static in the initial renderer graph; retained Director/Video lazy prefetch and removed redundant Vite warmup. [frontend/App.tsx; frontend/views/Project.tsx; vite.config.ts; scripts/check-renderer-bundle.mjs] (partial)
+- 2026-08-08T13:28:55Z `attempt`: Hybrid eager primary path passes TypeScript/build/bundle guard and preserves lazy Director/Video; initial graph is 649.42 kB versus 1,084 kB pre-split. [frontend/App.tsx; frontend/views/Project.tsx; scripts/check-renderer-bundle.mjs] (worked)
+- 2026-08-08T13:30:07Z `fix`: Replaced asynchronous warmup with a hybrid eager primary path: Project, Quick Gen, and Settings are immediate while Director/Video remain lazy; build and bundle guard pass. [frontend/App.tsx; frontend/views/Project.tsx; scripts/check-renderer-bundle.mjs]

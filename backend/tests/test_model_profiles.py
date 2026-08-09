@@ -2,25 +2,32 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+import json
 from pathlib import Path
+from typing import Literal, cast
 
 import pytest
 from PIL import Image
 
 from _routes._errors import HTTPError
+from handlers.video_generation_handler import VIDEO_TOOL_LORA_URLS
 from model_profiles import (
     get_image_profile,
     get_video_profile,
     get_visible_image_profiles,
+    get_visible_music_profiles,
     get_visible_video_profiles,
     is_combination_supported,
     resolve_resolution,
 )
+from model_profiles.policies import HandlerOwner, validate_model_profile_policies
 from model_profiles.profiles import (
     CURATED_ASPECT_RATIOS,
     IMAGE_PROFILES,
     VIDEO_PROFILES,
 )
+from wangp_model_packs import PACKS
 
 
 def _write_test_image(path: Path) -> Path:
@@ -162,6 +169,63 @@ class TestCuratedProfiles:
         assert profile.sliding_window is True
         assert profile.default_resolution_tier == "540p"
         assert profile.allowed_aspect_ratios == CURATED_ASPECT_RATIOS
+
+    def test_visible_profile_policies_reference_known_packs_and_handlers(self) -> None:
+        validate_model_profile_policies(
+            [
+                *get_visible_image_profiles(),
+                *get_visible_video_profiles(),
+                *get_visible_music_profiles(),
+            ],
+            pack_ids=PACKS,
+        )
+
+    def test_ltx_system_dependencies_match_backend_video_tools(self) -> None:
+        profile = get_video_profile("ltx2_22b_distilled")
+        assert profile is not None
+        dependency_ids = {
+            dependency.id.removeprefix("video_tool_lora_")
+            for dependency in profile.system_dependencies
+        }
+        assert dependency_ids == set(VIDEO_TOOL_LORA_URLS)
+        assert all(dependency.user_selectable is False for dependency in profile.system_dependencies)
+
+    @pytest.mark.parametrize(
+        "replacement",
+        [
+            lambda profile: replace(profile, required_pack_ids=("missing_pack",)),
+            lambda profile: replace(
+                profile,
+                video_audio=replace(
+                    profile.video_audio,
+                    handler=cast(HandlerOwner, "missing_handler"),
+                ),
+            ),
+            lambda profile: replace(
+                profile,
+                video_audio=replace(profile.video_audio, handler=None),
+            ),
+            lambda profile: replace(
+                profile,
+                video_audio=replace(profile.video_audio, max_audio_inputs=-1),
+            ),
+            lambda profile: replace(
+                profile,
+                system_dependencies=(
+                    replace(
+                        profile.system_dependencies[0],
+                        user_selectable=cast(Literal[False], True),
+                    ),
+                    *profile.system_dependencies[1:],
+                ),
+            ),
+        ],
+    )
+    def test_policy_validation_rejects_invalid_runtime_references(self, replacement) -> None:
+        profile = get_video_profile("ltx2_22b_distilled")
+        assert profile is not None
+        with pytest.raises(ValueError):
+            validate_model_profile_policies([replacement(profile)], pack_ids=PACKS)
 
     def test_no_krea2_raw_exposed(self) -> None:
         # Phase 4 brief: do not expose Krea 2 Raw in this phase.
@@ -319,6 +383,37 @@ class TestModelProfilesEndpoint:
         assert ltx["capabilities"]["slidingWindow"] is True
         assert ltx["wangpMetadata"]["mediaInputs"]["video"]["control"] is True
         assert ltx["ui"]["allowedAspectRatios"] == list(CURATED_ASPECT_RATIOS)
+        assert ltx["requiredPackIds"] == ["ltx2_turbo"]
+        assert ltx["videoAudio"] == {
+            "status": "stable",
+            "handler": "video_generation",
+            "requiredPackIds": ["ltx2_turbo"],
+            "soundtrack": True,
+            "audioConditioning": True,
+            "controlVideoAudio": True,
+            "outputAudio": True,
+            "maxAudioInputs": 1,
+        }
+        assert ltx["speech"]["referenceVoice"] is True
+        assert ltx["speech"]["tts"] is False
+        assert ltx["sfx"]["maxDurationSeconds"] == 20
+        assert {operation["id"] for operation in ltx["videoEdits"]["operations"]} >= {
+            "reframe",
+            "extend",
+            *VIDEO_TOOL_LORA_URLS,
+        }
+        assert ltx["director"]["renderStrategies"] == [{
+            "id": "single_pass",
+            "status": "stable",
+            "handler": "director_generation",
+            "requiredPackIds": ["ltx2_turbo"],
+            "maxDurationSeconds": 20,
+        }]
+        assert all(not dependency["userSelectable"] for dependency in ltx["systemDependencies"])
+        assert "https://" not in json.dumps({
+            key: ltx[key]
+            for key in ("systemDependencies", "videoAudio", "speech", "sfx", "videoEdits", "director")
+        })
 
     def test_ltx2_video_square_resolution_supported(self) -> None:
         profile = get_video_profile("ltx2_22b_distilled")

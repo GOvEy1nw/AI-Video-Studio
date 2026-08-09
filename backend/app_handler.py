@@ -16,6 +16,7 @@ from handlers import (
     PromptEnhancementHandler,
     RetakeHandler,
     SettingsHandler,
+    SfxGenerationHandler,
     VideoGenerationHandler,
 )
 from runtime_config.runtime_config import RuntimeConfig
@@ -120,6 +121,11 @@ class AppHandler:
             generation_handler=self.generation,
             outputs_dir=config.outputs_dir,
             wangp_bridge=self.wangp_bridge,
+        )
+
+        self.sfx_generation = SfxGenerationHandler(
+            state=self.state, lock=self._lock, generation_handler=self.generation,
+            outputs_dir=config.outputs_dir, wangp_bridge=self.wangp_bridge,
         )
 
         self.health = HealthHandler(

@@ -20,19 +20,23 @@ import {
   buildDirectorRequestBody,
   buildImageRequestBody,
   buildMusicRequestBody,
+  buildSfxRequestBody,
   buildVideoRequestBody,
   type GenerationInputMediaRequest,
   type GenerationReframeOptions,
 } from "./generation/request-builders";
+import type { GenerateSfxRequest } from "../types/sfx";
 import type {
   GenerateMusicResult,
   GenerationState,
   MusicOutput,
+  GenerateSfxResult,
 } from "./generation/types";
 import { useGenerationJob } from "./generation/useGenerationJob";
 import type { SubmittedVideoToolId } from "../types/video-tools";
 
 export type { GenerateMusicResult, MusicOutput };
+export type { GenerateSfxResult };
 
 export type InputMediaRequest = GenerationInputMediaRequest;
 export type ReframeGenerateOptions = GenerationReframeOptions;
@@ -60,6 +64,7 @@ export interface UseGenerationReturn extends GenerationState {
   generateMusic: (
     request: GenerateMusicRequest,
   ) => Promise<GenerateMusicResult | null>;
+  generateSfx: (request: GenerateSfxRequest) => Promise<GenerateSfxResult | null>;
   composeMusicLyrics: (
     request: ComposeMusicLyricsRequest,
   ) => Promise<string | null>;
@@ -288,6 +293,20 @@ export function useGeneration(): UseGenerationReturn {
     [runJob],
   );
 
+  const generateSfx = useCallback((request: GenerateSfxRequest): Promise<GenerateSfxResult | null> =>
+    runJob<GenerateSfxResult | null>({
+      ...buildSfxRequestBody(request), initialStatus: "Preparing sound effects...",
+      failureMessage: "Sound effects generation failed", formatProgress: (progress) => normaliseProgressResponse(progress),
+      parseResponse: async (response) => {
+        const payload = (await response.json()) as { status?: string; audio_path?: string; resolvedSeed?: number; error?: string }
+        if (payload.error) throw new Error(payload.error)
+        if (payload.status === "cancelled") return { value: null, patch: { statusMessage: "Cancelled" } }
+        if (payload.status !== "complete" || !payload.audio_path) throw new Error("SFX generation did not return audio")
+        const result = { audioPath: payload.audio_path, resolvedSeed: payload.resolvedSeed }
+        return { value: result, patch: { progress: 100, statusMessage: "Complete!", sfxResult: result } }
+      },
+    }), [runJob])
+
   const composeMusicLyrics = useCallback(
     async (request: ComposeMusicLyricsRequest): Promise<string | null> => {
       setIsComposingLyrics(true);
@@ -322,6 +341,7 @@ export function useGeneration(): UseGenerationReturn {
     generateDirector,
     generateImage,
     generateMusic,
+    generateSfx,
     composeMusicLyrics,
     isComposingLyrics,
     cancel,

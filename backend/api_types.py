@@ -314,6 +314,74 @@ class ModelProfileDirectorPolicy(BaseModel):
     allowKeyframesWithVideoGuidance: bool
     allowKeyframesWithIngredients: bool
     allowGuideAudioWithGuidance: bool
+    renderStrategies: list["ModelProfileDirectorRenderStrategyPolicy"]
+
+
+class ModelProfileDirectorRenderStrategyPolicy(BaseModel):
+    id: str
+    status: Literal["stable", "experimental", "hidden"]
+    handler: Literal["video_generation", "director_generation", "retake", "sfx_generation"] | None
+    requiredPackIds: list[str]
+    maxDurationSeconds: int | None
+
+
+class ModelProfileSystemDependency(BaseModel):
+    id: str
+    kind: Literal["lora", "checkpoint"]
+    requiredBy: list[str]
+    userSelectable: Literal[False]
+
+
+class ModelProfileVideoAudioPolicy(BaseModel):
+    status: Literal["stable", "experimental", "hidden"]
+    handler: Literal[
+        "video_generation", "director_generation", "retake", "sfx_generation"
+    ] | None
+    requiredPackIds: list[str]
+    soundtrack: bool
+    audioConditioning: bool
+    controlVideoAudio: bool
+    outputAudio: bool
+    maxAudioInputs: int
+
+
+class ModelProfileSpeechPolicy(BaseModel):
+    status: Literal["stable", "experimental", "hidden"]
+    handler: Literal[
+        "video_generation", "director_generation", "retake", "sfx_generation"
+    ] | None
+    requiredPackIds: list[str]
+    referenceVoice: bool
+    tts: bool
+    maxReferenceInputs: int
+
+
+class ModelProfileSfxPolicy(BaseModel):
+    status: Literal["stable", "experimental", "hidden"]
+    handler: Literal[
+        "video_generation", "director_generation", "retake", "sfx_generation"
+    ] | None
+    requiredPackIds: list[str]
+    text: bool
+    controlVideoAudio: bool
+    maxDurationSeconds: int | None
+
+
+class ModelProfileVideoEditOperationPolicy(BaseModel):
+    id: str
+    status: Literal["stable", "experimental", "hidden"]
+    handler: Literal[
+        "video_generation", "director_generation", "retake", "sfx_generation"
+    ] | None
+    requiredPackIds: list[str]
+    systemDependencyIds: list[str]
+    sourceBehavior: Literal["control_video", "continue_video", "source_video"]
+    durationBehavior: Literal["source_duration", "extend_by"]
+    disabledReason: str | None
+
+
+class ModelProfileVideoEditPolicy(BaseModel):
+    operations: list[ModelProfileVideoEditOperationPolicy]
 
 
 class ModelProfileMusicPolicy(BaseModel):
@@ -386,6 +454,12 @@ class ModelProfileResponse(BaseModel):
     capabilities: ModelProfileCapabilities
     ui: ModelProfileUi
     inputMedia: ModelProfileInputMedia
+    requiredPackIds: list[str]
+    systemDependencies: list[ModelProfileSystemDependency]
+    videoAudio: ModelProfileVideoAudioPolicy
+    speech: ModelProfileSpeechPolicy
+    sfx: ModelProfileSfxPolicy
+    videoEdits: ModelProfileVideoEditPolicy
     director: ModelProfileDirectorPolicy
     music: ModelProfileMusicPolicy
     license: ModelProfileLicenseInfo | None
@@ -510,6 +584,27 @@ class ComposeMusicLyricsRequest(BaseModel):
     durationSeconds: int = Field(default=60, ge=5, le=360)
     think: bool = False
     seed: int | None = Field(default=None, ge=0, le=999_999_999)
+
+
+class SfxVideoInputRequest(BaseModel):
+    path: str
+    trimStartTime: float | None = Field(default=None, ge=0)
+    trimDuration: float | None = Field(default=None, gt=0)
+
+
+class GenerateSfxRequest(BaseModel):
+    modelProfileId: str
+    prompt: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=512)]
+    negativePrompt: str = Field(default="", max_length=512)
+    durationSeconds: int = Field(ge=1, le=20)
+    seed: int | None = Field(default=None, ge=0, le=999_999_999)
+    video: SfxVideoInputRequest | None = None
+
+
+class GenerateSfxResponse(BaseModel):
+    status: str
+    audio_path: str | None = None
+    resolvedSeed: int | None = None
 
 
 class MediaCrop(BaseModel):

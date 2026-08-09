@@ -5,12 +5,17 @@ import {
 } from "../../../types/music";
 import type { Asset, GenerationParams } from "../../../types/project";
 import { DEFAULT_VIDEO_SETTINGS } from "../constants";
+import { buildSfxGenerationCommand } from "./sfx-request";
 import { buildGenSpaceRestorePlan } from "./settings-restore";
 
 function asset(generationParams: GenerationParams): Asset {
   return {
     id: "generated",
-    type: generationParams.mode === "text-to-music" ? "audio" : "video",
+    type:
+      generationParams.mode === "text-to-music" ||
+      generationParams.mode === "text-to-sfx"
+        ? "audio"
+        : "video",
     path: "C:\\generated.mp4",
     url: "file:///C:/generated.mp4",
     prompt: generationParams.prompt,
@@ -24,6 +29,71 @@ function asset(generationParams: GenerationParams): Asset {
 const musicSettings: MusicSettings = { ...DEFAULT_MUSIC_SETTINGS };
 
 describe("GenSpace settings restoration", () => {
+  it("round-trips an SFX request recipe and refreshes source-video lineage", () => {
+    const source: Asset = {
+      id: "source-video",
+      type: "video",
+      path: "D:\\project\\source.mp4",
+      url: "file:///D:/project/source.mp4",
+      prompt: "",
+      resolution: "1080p",
+      createdAt: 1,
+    };
+    const command = buildSfxGenerationCommand("  thunder crack  ", {
+      profileId: "mmaudio_sfx",
+      negativePrompt: "voices",
+      durationSeconds: 6,
+      seed: 17,
+      video: {
+        assetId: source.id,
+        path: "C:\\stale\\source.mp4",
+        url: "file:///C:/stale/source.mp4",
+        trimStartTime: 2,
+        trimDuration: 6,
+      },
+    });
+
+    expect(command?.request.video).toEqual({
+      path: "C:\\stale\\source.mp4",
+      trimStartTime: 2,
+      trimDuration: 6,
+    });
+    const plan = buildGenSpaceRestorePlan(
+      asset({
+        mode: "text-to-sfx",
+        prompt: command!.request.prompt,
+        model: command!.request.modelProfileId,
+        duration: command!.request.durationSeconds,
+        resolution: "",
+        fps: 0,
+        audio: true,
+        cameraMotion: "none",
+        sfx: command!.recipe,
+      }),
+      [source],
+      DEFAULT_VIDEO_SETTINGS,
+      musicSettings,
+    );
+
+    expect(plan).toMatchObject({
+      mode: "music",
+      prompt: "thunder crack",
+      sfxSettings: {
+        profileId: "mmaudio_sfx",
+        negativePrompt: "voices",
+        durationSeconds: 6,
+        seed: 17,
+        video: {
+          assetId: source.id,
+          path: source.path,
+          url: source.url,
+          trimStartTime: 2,
+          trimDuration: 6,
+        },
+      },
+    });
+  });
+
   it("recovers legacy media by project path and keeps guide trim fields", () => {
     const source: Asset = {
       id: "source",

@@ -1,11 +1,11 @@
 ---
 id: AIVS-034
 title: Unify setup and model-empty UI states
-status: Human Review
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-08-06 10:27'
-updated_date: '2026-08-06 12:57'
+updated_date: '2026-08-08 13:49'
 labels: []
 dependencies: []
 modified_files:

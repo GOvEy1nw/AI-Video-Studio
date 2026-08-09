@@ -1,6 +1,6 @@
 project_name: "AI Video Studio"
-default_status: "To Do"
-statuses: ["Backlog", "Ready", "In Progress", "Blocked", "Human Review", "Done"]
+default_status: "Backlog"
+statuses: unified
 labels: []
 definition_of_done: ["Acceptance criteria are satisfied", "Relevant automated tests pass", "Lint, type-check, and build checks pass where applicable", "Documentation is updated where required", "Implementation summary and verification evidence are recorded", "No unrelated changes are included"]
 date_format: yyyy-mm-dd

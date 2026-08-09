@@ -8,6 +8,7 @@ import {
 import type { MusicSettings } from "../../../types/music";
 import type { Asset } from "../../../types/project";
 import type { GenSpaceSettings } from "../constants";
+import type { SfxSettings } from "../../../types/sfx";
 import { getImageModeForProfileId } from "../image/image-profile-options";
 
 export function buildGenSpaceRestorePlan(
@@ -18,7 +19,8 @@ export function buildGenSpaceRestorePlan(
 ) {
   const params = asset.generationParams;
   if (!params) return null;
-  const mode = genSpaceModeFromParams(params);
+  const isSfx = params.mode === "text-to-sfx" && params.sfx?.schemaVersion === 1;
+  const mode = isSfx ? "music" : genSpaceModeFromParams(params);
   const restoredImageInputs = buildImageInputsFromParams(
     params,
     projectAssets,
@@ -57,6 +59,21 @@ export function buildGenSpaceRestorePlan(
       mode === "music"
         ? musicSettingsFromGenerationParams(params, musicSettings)
         : null,
+    sfxSettings: isSfx
+      ? ({
+          profileId: params.sfx!.modelProfileId,
+          negativePrompt: params.sfx!.negativePrompt,
+          durationSeconds: params.sfx!.durationSeconds,
+          seed: params.sfx!.seed,
+          video: params.sfx!.video
+            ? (() => {
+                const saved = params.sfx!.video!;
+                const asset = projectAssets.find(({ id }) => id === saved.assetId);
+                return asset ? { ...saved, path: asset.path, url: asset.url } : saved;
+              })()
+            : null,
+        } satisfies SfxSettings)
+      : null,
     media: {
       imageInputs,
       editImage,

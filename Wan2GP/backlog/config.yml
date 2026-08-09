@@ -1,0 +1,16 @@
+project_name: "WanGP"
+default_status: "Backlog"
+statuses: unified
+labels: []
+definition_of_done: ["Acceptance criteria are satisfied", "Relevant automated tests pass", "Lint, type-check, and build checks pass where applicable", "Documentation is updated where required", "Implementation summary and verification evidence are recorded", "No unrelated changes are included"]
+date_format: yyyy-mm-dd
+max_column_width: 20
+auto_open_browser: true
+default_port: 6420
+remote_operations: true
+auto_commit: false
+filesystem_only: false
+bypass_git_hooks: false
+check_active_branches: true
+active_branch_days: 30
+task_prefix: "WGP"

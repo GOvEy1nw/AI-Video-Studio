@@ -358,6 +358,7 @@ export function VideoGenPanel({
           onChange={videoTools.setMode}
           selectedTool={videoTools.selectedTool}
           onToolChange={videoTools.setSelectedTool}
+          profile={selectedProfile}
         />
         {installedProfiles.length ? (
           <ModelPicker

@@ -7,6 +7,8 @@ import {
   Video,
 } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useVideoProfiles } from "../hooks/use-image-profiles";
+import { selectVideoEditOperations } from "../lib/model-profile-policy";
 import type { VideoToolId } from "../types/video-tools";
 import { VIDEO_TOOL_OPTIONS } from "../views/genspace/video/video-tools";
 import { FloatingMenu } from "./FloatingMenu";
@@ -43,6 +45,15 @@ export function UseVideoDropdown({
   onSelect: (target: VideoUseTarget) => void;
   variant?: "context" | "detail";
 }) {
+  const { profiles } = useVideoProfiles();
+  const supportedToolIds = new Set(
+    profiles.flatMap((profile) =>
+      selectVideoEditOperations(profile).map(({ id }) => id),
+    ),
+  );
+  const options = VIDEO_USE_OPTIONS.filter(
+    ({ target }) => target === "reference" || supportedToolIds.has(target),
+  );
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -97,7 +108,7 @@ export function UseVideoDropdown({
           onMouseDown={(event) => event.stopPropagation()}
           className="max-h-60 w-44 overflow-y-auto rounded-md border border-zinc-700 bg-zinc-800 p-1.5 shadow-xl"
         >
-          {VIDEO_USE_OPTIONS.map((option) => (
+          {options.map((option) => (
             <button
               key={option.target}
               type="button"

@@ -10,6 +10,11 @@ describe("applyModelPackAvailability", () => {
       { availability: "experimental" as const, wangpModelType: "ready-model" },
       { availability: "available" as const, wangpModelType: "missing-model" },
       { availability: "unsupported" as const, wangpModelType: "unsupported" },
+      {
+        availability: "available" as const,
+        wangpModelType: "ltx2_22B_distilled_1_1",
+        requiredPackIds: ["ltx2_turbo"],
+      },
     ];
 
     expect(
@@ -17,6 +22,7 @@ describe("applyModelPackAvailability", () => {
         { modelType: "ready-model", installed: true },
         { modelType: "missing-model", installed: false },
         { modelType: "unsupported", installed: true },
+        { id: "ltx2_turbo", modelType: "different-model", installed: true },
       ]),
     ).toEqual([
       { availability: "available", wangpModelType: "ready-model" },
@@ -25,6 +31,11 @@ describe("applyModelPackAvailability", () => {
         wangpModelType: "missing-model",
       },
       { availability: "unsupported", wangpModelType: "unsupported" },
+      {
+        availability: "available",
+        wangpModelType: "ltx2_22B_distilled_1_1",
+        requiredPackIds: ["ltx2_turbo"],
+      },
     ]);
   });
 });

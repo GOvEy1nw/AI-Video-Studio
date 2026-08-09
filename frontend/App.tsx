@@ -15,26 +15,17 @@ import { KeyboardShortcutsModal } from "./components/KeyboardShortcutsModal";
 import { useBackend } from "./hooks/use-backend";
 import { logger } from "./lib/logger";
 import { Home } from "./views/Home";
-import type { SettingsTabId } from "./components/SettingsModal";
+import { Project } from "./views/Project";
+import { SettingsModal, type SettingsTabId } from "./components/SettingsModal";
 import { Button } from "./components/ui/button";
 import { ConnectionIndicator } from "./components/ModelStatusDropdown";
 
-const loadProject = () => import("./views/Project");
 const loadPythonSetup = () => import("./components/PythonSetup");
-const loadSettingsModal = () => import("./components/SettingsModal");
 const loadLogViewer = () => import("./components/LogViewer");
 
-const LazyProject = lazy(async () => {
-  const { Project } = await loadProject();
-  return { default: Project };
-});
 const LazyPythonSetup = lazy(async () => {
   const { PythonSetup } = await loadPythonSetup();
   return { default: PythonSetup };
-});
-const LazySettingsModal = lazy(async () => {
-  const { SettingsModal } = await loadSettingsModal();
-  return { default: SettingsModal };
 });
 const LazyLogViewer = lazy(async () => {
   const { LogViewer } = await loadLogViewer();
@@ -233,11 +224,7 @@ function AppContent() {
       case "home":
         return <Home />;
       case "project":
-        return (
-          <Suspense fallback={<LoadingPanel />}>
-            <LazyProject />
-          </Suspense>
-        );
+        return <Project />;
       default:
         return <Home />;
     }
@@ -284,16 +271,14 @@ function AppContent() {
         </Suspense>
       ) : null}
       {isSettingsOpen ? (
-        <Suspense fallback={<LoadingPanel />}>
-          <LazySettingsModal
-            isOpen={true}
-            onClose={() => {
-              setIsSettingsOpen(false);
-              setSettingsInitialTab(undefined);
-            }}
-            initialTab={settingsInitialTab}
-          />
-        </Suspense>
+        <SettingsModal
+          isOpen={true}
+          onClose={() => {
+            setIsSettingsOpen(false);
+            setSettingsInitialTab(undefined);
+          }}
+          initialTab={settingsInitialTab}
+        />
       ) : null}
 
       {restartingOverlay}

@@ -10,7 +10,7 @@ always-mounted controller.
 GenSpace
 └─ GenSpaceWorkspace
    ├─ useGenSpaceController
-   │  ├─ mode/settings/media/video-tool state
+   │  ├─ mode/settings/media/video-tool/audio-submode state
    │  ├─ one useGeneration instance
    │  ├─ generation actions and immutable snapshots
    │  ├─ result persistence and settings restoration
@@ -18,7 +18,8 @@ GenSpace
    ├─ GenSpaceSidebar
    │  ├─ image/ImageGenPanel
    │  ├─ video/VideoGenPanel
-   │  └─ music/MusicGenPanel
+   │  └─ audio/AudioGenPanel
+   │     └─ music/MusicGenPanel
    ├─ GenSpaceSelectedGeneration
    ├─ GenSpaceGallery
    └─ GenSpaceOverlays
@@ -43,7 +44,7 @@ preview in the center detail area. Completion persistence selects the returned
 asset so the finished result replaces the transient detail without another
 gallery click.
 
-Mode-owned UI and helpers live under `image/`, `video/`, or `music/`.
+Mode-owned UI and helpers live under `image/`, `video/`, `audio/`, or `music/`.
 Cross-mode controls remain in `components/`; cross-mode state, effects, and
 pure workflow logic remain in `hooks/` and `logic/`. Keep these folders direct
 and shallow rather than adding one-file `views/components/lib` subfolders.
@@ -56,11 +57,13 @@ and shallow rather than adding one-file `views/components/lib` subfolders.
 | Typed image/video/music settings | `hooks/useGenSpaceSettingsState.ts` |
 | Prompt and attached media | `hooks/useGenSpaceMediaInputs.ts` |
 | Video Tools/Retake panel state | `hooks/useGenSpaceVideoTools.tsx` |
+| Audio submode state | `hooks/useGenSpaceAudioState.ts` |
 | Image panel UI | `image/` |
 | Video, Reframe, Retake, and trim UI | `video/` |
 | Shared Image/Video Reframe framing UI | `components/ReframeEditor.tsx` |
 | Shared image/video input crop UI and geometry | `components/MediaCropPopover.tsx` and `logic/media-crop.ts` |
 | Music panel, media, lyrics settings, advanced settings, compiler, and keywords | `music/` |
+| Audio submode selector and unavailable Speech/SFX/Mixer shells | `audio/` |
 | Per-mode command construction | `logic/generation-requests.ts` |
 | Submission and immutable snapshots | `hooks/useGenSpaceGenerationActions.ts` |
 | Generated asset metadata | `logic/generation-assets.ts` |
@@ -213,6 +216,10 @@ context, call backend endpoints, persist assets, or instantiate
 
 ## Music contract
 
+- The top-level Quick Gen tab is labelled Audio but retains the internal
+  `music` mode value and existing Music request, metadata, snapshot, and
+  persistence contracts. Audio defaults to Music; Speech, SFX, and Mixer are
+  explicit unavailable placeholders until their complete workflows exist.
 - Music has one full settings mode. `experienceMode: "advanced"` remains only
   for saved-generation compatibility.
 - `MusicMediaInputs` owns independent Cover Song and Transfer Timbre slots.
@@ -239,6 +246,10 @@ context, call backend endpoints, persist assets, or instantiate
   Prompt footer. Variations remains in Advanced Settings.
 
 ## Generation lifecycle
+
+Audio SFX is profile-gated to the registered MMAudio processor. It shares the
+existing generation lifecycle, persists a versioned SFX recipe, and uses a
+runtime-owned black conditioning video for text-only submissions.
 
 `frontend/hooks/use-generation.ts` remains the public compatibility facade for
 GenSpace and Director. Pure transport builders and progress formatters live in

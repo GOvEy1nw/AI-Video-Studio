@@ -11,6 +11,7 @@ import {
 import { backendFetch } from "../lib/backend";
 import { logger } from "../lib/logger";
 import { applyModelPackAvailability } from "../lib/model-profile-availability";
+import { normalizeModelProfile } from "../lib/model-profile-policy";
 import type { ModelProfile, ModelProfileListResponse } from "../types/model-profiles";
 import { useBackendLifecycle } from "./BackendLifecycleContext";
 
@@ -90,7 +91,14 @@ export function ModelProfilesProvider({ children }: { children: ReactNode }) {
           return false;
         }
 
-        setAll(Object.freeze([...applyModelPackAvailability(data.profiles, modelPacks)]));
+        setAll(
+          Object.freeze([
+            ...applyModelPackAvailability(
+              data.profiles.map(normalizeModelProfile),
+              modelPacks,
+            ),
+          ]),
+        );
         hasProfilesRef.current = true;
         setStale(false);
         setError(null);

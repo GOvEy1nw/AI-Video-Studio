@@ -1,6 +1,6 @@
 import { GenSpaceModeTabs } from "./GenSpaceModeTabs";
+import { AudioGenPanel } from "./audio/AudioGenPanel";
 import { ImageGenPanel } from "./image/ImageGenPanel";
-import { MusicGenPanel } from "./music/MusicGenPanel";
 import { getGenSpaceModeAccentStyle } from "./mode-accent";
 import type { GenSpaceSidebarController } from "./types";
 import { VideoGenPanel } from "./video/VideoGenPanel";
@@ -22,7 +22,7 @@ export function GenSpaceSidebar({
       ) : controller.mode === "video" ? (
         <VideoGenPanel controller={controller.video} />
       ) : (
-        <MusicGenPanel controller={controller.music} />
+        <AudioGenPanel controller={controller.audio} />
       )}
     </div>
   );

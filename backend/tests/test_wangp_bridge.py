@@ -4,6 +4,7 @@ import json
 import sys
 import os
 from collections import deque
+from contextlib import nullcontext
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -247,6 +248,56 @@ def test_generate_music_maps_verified_wangp_settings() -> None:
         ".m4a",
         ".aac",
     }
+
+
+def test_generate_sfx_maps_mmaudio_processor_arguments(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    bridge = _make_bridge()
+    captured: dict[str, object] = {}
+    progress: list[tuple[str, int]] = []
+    output_path = tmp_path / "effect.wav"
+
+    class FakeSession:
+        def _ensure_runtime(self) -> SimpleNamespace:
+            return SimpleNamespace(root=tmp_path)
+
+    def generate_soundtrack(method: str, **kwargs: object) -> str:
+        captured["method"] = method
+        captured.update(kwargs)
+        Path(str(kwargs["output_path"])).write_bytes(b"wave")
+        return str(kwargs["output_path"])
+
+    bridge._get_session = lambda: FakeSession()  # type: ignore[method-assign]
+    bridge._load_api_module = lambda: SimpleNamespace(  # type: ignore[method-assign]
+        _pushd=lambda _root: nullcontext()
+    )
+    monkeypatch.setattr(
+        "services.wangp_bridge.importlib.import_module",
+        lambda name: SimpleNamespace(generate_soundtrack=generate_soundtrack),
+    )
+
+    result = bridge.generate_sfx(
+        video_path=str(tmp_path / "source.mp4"),
+        prompt="Door slam",
+        negative_prompt="music",
+        seed=7,
+        duration_seconds=3,
+        output_path=output_path,
+        on_progress=lambda phase, amount, *_detail: progress.append((phase, amount)),
+    )
+
+    assert result == str(output_path.resolve())
+    assert captured == {
+        "method": "mmaudio",
+        "video_path": str((tmp_path / "source.mp4").resolve()),
+        "prompt": "Door slam",
+        "negative_prompt": "music",
+        "seed": 7,
+        "duration": 3,
+        "output_path": str(output_path.resolve()),
+    }
+    assert progress == [("generating_sfx", 0), ("generating_sfx", 100)]
 
 
 def test_runtime_preferences_update_wangp_config(tmp_path: Path) -> None:

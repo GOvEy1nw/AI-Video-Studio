@@ -455,8 +455,8 @@ class family_handler:
             "keep_frames_video_guide_not_supported": True,
         }
         if base_model_type in LTX2_22B_CLASS:
-            extra_model_def["configs"] = {
-                "Default VAE": {},
+            extra_model_def["system_configs"] = {
+                "_name": "VAE",
                 "PrunaAI VAE": {
                     "name": "PrunaAI VAE (up to x2 faster)",
                     "ltx2_video_vae_file": _PRUNAAI_VAE_FILENAME,

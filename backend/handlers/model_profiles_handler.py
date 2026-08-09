@@ -13,12 +13,19 @@ from typing import TYPE_CHECKING
 
 from api_types import (
     ModelProfileCapabilities,
+    ModelProfileDirectorRenderStrategyPolicy,
     ModelProfileDirectorPolicy,
     ModelProfileInputMedia,
     ModelProfileInputMediaRole,
     ModelProfileLicenseInfo,
     ModelProfileListResponse,
     ModelProfileResponse,
+    ModelProfileSfxPolicy,
+    ModelProfileSpeechPolicy,
+    ModelProfileSystemDependency,
+    ModelProfileVideoAudioPolicy,
+    ModelProfileVideoEditOperationPolicy,
+    ModelProfileVideoEditPolicy,
     ModelProfileMusicPolicy,
     ModelProfileUi,
     ModelProfileWanGPMetadata,
@@ -27,6 +34,7 @@ from handlers.base import StateHandlerBase
 from model_profiles import (
     get_visible_image_profiles,
     get_visible_music_profiles,
+    get_visible_sfx_profiles,
     get_visible_video_profiles,
 )
 from model_profiles.profiles import ModelProfile
@@ -56,6 +64,7 @@ class ModelProfilesHandler(StateHandlerBase):
             *get_visible_image_profiles(),
             *get_visible_video_profiles(),
             *get_visible_music_profiles(),
+            *get_visible_sfx_profiles(),
         ]:
             responses.append(self._to_response(profile, bridge_available))
         return ModelProfileListResponse(profiles=responses)
@@ -127,6 +136,57 @@ class ModelProfilesHandler(StateHandlerBase):
                     for role in profile.input_media.roles
                 ],
             ),
+            requiredPackIds=list(profile.required_pack_ids),
+            systemDependencies=[
+                ModelProfileSystemDependency(
+                    id=dependency.id,
+                    kind=dependency.kind,
+                    requiredBy=list(dependency.required_by),
+                    userSelectable=dependency.user_selectable,
+                )
+                for dependency in profile.system_dependencies
+            ],
+            videoAudio=ModelProfileVideoAudioPolicy(
+                status=profile.video_audio.status,
+                handler=profile.video_audio.handler,
+                requiredPackIds=list(profile.video_audio.required_pack_ids),
+                soundtrack=profile.video_audio.soundtrack,
+                audioConditioning=profile.video_audio.audio_conditioning,
+                controlVideoAudio=profile.video_audio.control_video_audio,
+                outputAudio=profile.video_audio.output_audio,
+                maxAudioInputs=profile.video_audio.max_audio_inputs,
+            ),
+            speech=ModelProfileSpeechPolicy(
+                status=profile.speech.status,
+                handler=profile.speech.handler,
+                requiredPackIds=list(profile.speech.required_pack_ids),
+                referenceVoice=profile.speech.reference_voice,
+                tts=profile.speech.tts,
+                maxReferenceInputs=profile.speech.max_reference_inputs,
+            ),
+            sfx=ModelProfileSfxPolicy(
+                status=profile.sfx.status,
+                handler=profile.sfx.handler,
+                requiredPackIds=list(profile.sfx.required_pack_ids),
+                text=profile.sfx.text,
+                controlVideoAudio=profile.sfx.control_video_audio,
+                maxDurationSeconds=profile.sfx.max_duration_seconds,
+            ),
+            videoEdits=ModelProfileVideoEditPolicy(
+                operations=[
+                    ModelProfileVideoEditOperationPolicy(
+                        id=operation.id,
+                        status=operation.status,
+                        handler=operation.handler,
+                        requiredPackIds=list(operation.required_pack_ids),
+                        systemDependencyIds=list(operation.system_dependency_ids),
+                        sourceBehavior=operation.source_behavior,
+                        durationBehavior=operation.duration_behavior,
+                        disabledReason=operation.disabled_reason,
+                    )
+                    for operation in profile.video_edits.operations
+                ]
+            ),
             director=ModelProfileDirectorPolicy(
                 enabled=profile.director.enabled,
                 promptRelay=profile.director.prompt_relay,
@@ -140,6 +200,16 @@ class ModelProfilesHandler(StateHandlerBase):
                 allowKeyframesWithVideoGuidance=profile.director.allow_keyframes_with_video_guidance,
                 allowKeyframesWithIngredients=profile.director.allow_keyframes_with_ingredients,
                 allowGuideAudioWithGuidance=profile.director.allow_guide_audio_with_guidance,
+                renderStrategies=[
+                    ModelProfileDirectorRenderStrategyPolicy(
+                        id=strategy.id,
+                        status=strategy.status,
+                        handler=strategy.handler,
+                        requiredPackIds=list(strategy.required_pack_ids),
+                        maxDurationSeconds=strategy.max_duration_seconds,
+                    )
+                    for strategy in profile.director.render_strategies
+                ],
             ),
             music=ModelProfileMusicPolicy(
                 enabled=profile.music.enabled,

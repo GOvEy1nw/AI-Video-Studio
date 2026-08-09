@@ -15,6 +15,66 @@ export type ModelProfileAvailability =
   | 'hidden'
 
 export type ModelProfileStatus = 'stable' | 'experimental' | 'hidden'
+export type ModelProfileHandlerOwner = 'video_generation' | 'director_generation' | 'retake' | 'sfx_generation'
+
+export interface ModelProfileSystemDependency {
+  id: string
+  kind: 'lora' | 'checkpoint'
+  requiredBy: string[]
+  userSelectable: false
+}
+
+export interface ModelProfileVideoAudioPolicy {
+  status: ModelProfileStatus
+  handler: ModelProfileHandlerOwner | null
+  requiredPackIds: string[]
+  soundtrack: boolean
+  audioConditioning: boolean
+  controlVideoAudio: boolean
+  outputAudio: boolean
+  maxAudioInputs: number
+}
+
+export interface ModelProfileSpeechPolicy {
+  status: ModelProfileStatus
+  handler: ModelProfileHandlerOwner | null
+  requiredPackIds: string[]
+  referenceVoice: boolean
+  tts: boolean
+  maxReferenceInputs: number
+}
+
+export interface ModelProfileSfxPolicy {
+  status: ModelProfileStatus
+  handler: ModelProfileHandlerOwner | null
+  requiredPackIds: string[]
+  text: boolean
+  controlVideoAudio: boolean
+  maxDurationSeconds: number | null
+}
+
+export interface ModelProfileVideoEditOperationPolicy {
+  id: string
+  status: ModelProfileStatus
+  handler: ModelProfileHandlerOwner | null
+  requiredPackIds: string[]
+  systemDependencyIds: string[]
+  sourceBehavior: 'control_video' | 'continue_video' | 'source_video'
+  durationBehavior: 'source_duration' | 'extend_by'
+  disabledReason: string | null
+}
+
+export interface ModelProfileVideoEditPolicy {
+  operations: ModelProfileVideoEditOperationPolicy[]
+}
+
+export interface ModelProfileDirectorRenderStrategyPolicy {
+  id: string
+  status: ModelProfileStatus
+  handler: ModelProfileHandlerOwner | null
+  requiredPackIds: string[]
+  maxDurationSeconds: number | null
+}
 
 export interface ModelProfileCapabilities {
   textToImage: boolean
@@ -73,6 +133,7 @@ export interface ModelProfileDirectorPolicy {
   allowKeyframesWithVideoGuidance: boolean
   allowKeyframesWithIngredients: boolean
   allowGuideAudioWithGuidance: boolean
+  renderStrategies: ModelProfileDirectorRenderStrategyPolicy[]
 }
 
 export interface ModelProfileMusicPolicy {
@@ -153,6 +214,12 @@ export interface ModelProfile {
   capabilities: ModelProfileCapabilities
   ui: ModelProfileUi
   inputMedia: ModelProfileInputMedia
+  requiredPackIds: string[]
+  systemDependencies: ModelProfileSystemDependency[]
+  videoAudio: ModelProfileVideoAudioPolicy
+  speech: ModelProfileSpeechPolicy
+  sfx: ModelProfileSfxPolicy
+  videoEdits: ModelProfileVideoEditPolicy
   director: ModelProfileDirectorPolicy
   music: ModelProfileMusicPolicy
   license: ModelProfileLicenseInfo | null
@@ -160,5 +227,20 @@ export interface ModelProfile {
 }
 
 export interface ModelProfileListResponse {
-  profiles: ModelProfile[]
+  profiles: ModelProfileWire[]
+}
+
+export type ModelProfileWire = Omit<
+  ModelProfile,
+  'requiredPackIds' | 'systemDependencies' | 'videoAudio' | 'speech' | 'sfx' | 'videoEdits' | 'director'
+> & {
+  requiredPackIds?: string[]
+  systemDependencies?: ModelProfileSystemDependency[]
+  videoAudio?: ModelProfileVideoAudioPolicy
+  speech?: ModelProfileSpeechPolicy
+  sfx?: ModelProfileSfxPolicy
+  videoEdits?: ModelProfileVideoEditPolicy
+  director: Omit<ModelProfileDirectorPolicy, 'renderStrategies'> & {
+    renderStrategies?: ModelProfileDirectorRenderStrategyPolicy[]
+  }
 }

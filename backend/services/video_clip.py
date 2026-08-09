@@ -74,9 +74,11 @@ def extract_video_clip(
     ]
     result = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if result.returncode != 0:
+        output_path.unlink(missing_ok=True)
         stderr = (result.stderr or "").strip()
         raise RuntimeError(f"ffmpeg clip extract failed: {stderr or result.returncode}")
     if not output_path.exists():
+        output_path.unlink(missing_ok=True)
         raise RuntimeError("ffmpeg clip extract produced no output file")
     return output_path
 
@@ -119,4 +121,21 @@ def extract_audio_clip(
         raise RuntimeError(f"ffmpeg audio clip extract failed: {stderr or result.returncode}")
     if not output_path.exists():
         raise RuntimeError("ffmpeg audio clip extract produced no output file")
+    return output_path
+
+
+def create_black_video_clip(*, duration: float, output_dir: Path) -> Path:
+    """Create the smallest runtime-owned conditioning video MMAudio accepts."""
+    if duration <= 0:
+        raise ValueError("duration must be positive")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = output_dir / f"mmaudio_black_{uuid.uuid4().hex[:8]}.mp4"
+    cmd = [
+        imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-f", "lavfi", "-i", "color=c=black:s=320x180:r=24",
+        "-t", f"{duration:.3f}", "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p", str(output_path),
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    if result.returncode != 0 or not output_path.exists():
+        output_path.unlink(missing_ok=True)
+        raise RuntimeError(f"ffmpeg black video failed: {(result.stderr or str(result.returncode)).strip()}")
     return output_path

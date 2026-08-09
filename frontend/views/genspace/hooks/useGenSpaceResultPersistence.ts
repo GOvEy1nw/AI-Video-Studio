@@ -13,6 +13,7 @@ import type {
 import {
   generatedPathToFileUrl,
   type GenerateMusicResult,
+  type GenerateSfxResult,
 } from "../../../hooks/use-generation";
 import type { RetakeResult } from "../../../hooks/use-retake";
 import { copyToAssetFolder } from "../../../lib/asset-copy";
@@ -21,6 +22,7 @@ import type { Asset } from "../../../types/project";
 import {
   buildGeneratedImageAsset,
   buildGeneratedMusicAsset,
+  buildGeneratedSfxAsset,
   buildGeneratedVideoAsset,
   buildReframeAsset,
   buildRetakeAsset,
@@ -28,6 +30,7 @@ import {
 import type {
   ImageSubmissionSnapshot,
   MusicSubmissionSnapshot,
+  SfxSubmissionSnapshot,
   ReframeSubmissionSnapshot,
   RetakeSubmissionSnapshot,
   VideoSubmissionSnapshot,
@@ -57,6 +60,8 @@ export function useGenSpaceResultPersistence({
   imageSubmissionRef,
   musicResult,
   musicSubmissionRef,
+  sfxResult = null,
+  sfxSubmissionRef,
   onAssetAdded,
 }: {
   videoUrl: string | null;
@@ -80,11 +85,14 @@ export function useGenSpaceResultPersistence({
   imageSubmissionRef: MutableRefObject<ImageSubmissionSnapshot | null>;
   musicResult: GenerateMusicResult | null;
   musicSubmissionRef: MutableRefObject<MusicSubmissionSnapshot | null>;
+  sfxResult?: GenerateSfxResult | null;
+  sfxSubmissionRef?: MutableRefObject<SfxSubmissionSnapshot | null>;
   onAssetAdded?: (asset: Asset) => void;
 }) {
   const persistedVideoKey = useRef<string | null>(null);
   const persistedImageKey = useRef<string | null>(null);
   const persistedMusicKey = useRef<string | null>(null);
+  const persistedSfxKey = useRef<string | null>(null);
 
   useEffect(() => {
     if (!videoUrl || !videoPath || isGenerating) return;
@@ -137,6 +145,27 @@ export function useGenSpaceResultPersistence({
     videoSubmissionRef,
     videoUrl,
   ]);
+
+  useEffect(() => {
+    if (!sfxResult || isGenerating) return;
+    const snapshot = sfxSubmissionRef?.current;
+    if (!snapshot || persistedSfxKey.current === sfxResult.audioPath) return;
+    persistedSfxKey.current = sfxResult.audioPath;
+    void (async () => {
+      try {
+        const copied = await copyToAssetFolder(sfxResult.audioPath, snapshot.projectId);
+        const finalPath = copied?.path ?? sfxResult.audioPath;
+        const finalUrl = copied?.url ?? generatedPathToFileUrl(finalPath);
+        const asset = addAsset(snapshot.projectId, buildGeneratedSfxAsset({ snapshot, result: sfxResult, finalPath, finalUrl, createdAt: Date.now() }));
+        onAssetAdded?.(asset);
+        if (sfxSubmissionRef) sfxSubmissionRef.current = null;
+        reset();
+      } catch (error) {
+        persistedSfxKey.current = null;
+        logger.error(`Failed to persist generated SFX asset: ${error}`);
+      }
+    })();
+  }, [addAsset, isGenerating, onAssetAdded, reset, sfxResult, sfxSubmissionRef]);
 
   useEffect(() => {
     if (imageUrls.length === 0 || isGenerating) return;

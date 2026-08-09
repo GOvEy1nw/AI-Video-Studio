@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
-import { ArrowLeft, Sparkles, Film, Clapperboard } from "lucide-react";
+import { ArrowLeft, Sparkles, Film, Clapperboard, Loader2 } from "lucide-react";
 import {
   useProjectMeta,
   useProjectNavigation,
@@ -7,15 +7,11 @@ import {
 import { AivsLogo } from "../components/AivsLogo";
 import { Button } from "../components/ui/button";
 import type { ProjectTab } from "../types/project";
+import { GenSpace } from "./GenSpace";
 
-const loadGenSpace = () => import("./GenSpace");
 const loadDirectorEditor = () => import("./DirectorEditor");
 const loadVideoEditor = () => import("./VideoEditor");
 
-const LazyGenSpace = lazy(async () => {
-  const { GenSpace } = await loadGenSpace();
-  return { default: GenSpace };
-});
 const LazyDirectorEditor = lazy(async () => {
   const { DirectorEditor } = await loadDirectorEditor();
   return { default: DirectorEditor };
@@ -25,8 +21,7 @@ const LazyVideoEditor = lazy(async () => {
   return { default: VideoEditor };
 });
 
-const workspaceLoaders: Record<ProjectTab, () => Promise<unknown>> = {
-  "gen-space": loadGenSpace,
+const workspaceLoaders: Partial<Record<ProjectTab, () => Promise<unknown>>> = {
   director: loadDirectorEditor,
   "video-editor": loadVideoEditor,
 };
@@ -42,7 +37,15 @@ export function addVisitedTab(
 }
 
 function WorkspaceFallback() {
-  return <div className="h-full bg-zinc-950" />;
+  return (
+    <div
+      role="status"
+      className="flex h-full items-center justify-center gap-2 bg-zinc-950 text-sm text-zinc-400"
+    >
+      <Loader2 aria-hidden="true" className="h-5 w-5 animate-spin text-primary" />
+      <span>Loading workspace...</span>
+    </div>
+  );
 }
 
 export function Project() {
@@ -109,8 +112,8 @@ export function Project() {
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              onPointerEnter={() => void workspaceLoaders[tab.id]()}
-              onFocus={() => void workspaceLoaders[tab.id]()}
+              onPointerEnter={() => void workspaceLoaders[tab.id]?.()}
+              onFocus={() => void workspaceLoaders[tab.id]?.()}
               onClick={() => {
                 setVisitedTabs((current) => addVisitedTab(current, tab.id));
                 setCurrentTab(tab.id);
@@ -138,9 +141,7 @@ export function Project() {
             hidden={currentTab !== "gen-space"}
             className="absolute inset-0 z-10 bg-zinc-950"
           >
-            <Suspense fallback={<WorkspaceFallback />}>
-              <LazyGenSpace isActive={currentTab === "gen-space"} />
-            </Suspense>
+            <GenSpace isActive={currentTab === "gen-space"} />
           </div>
         ) : null}
         {visitedTabs.has("director") ? (

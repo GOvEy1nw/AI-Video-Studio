@@ -1,8 +1,10 @@
 import type { GenerateMusicResult } from "../../../hooks/use-generation";
+import type { GenerateSfxResult } from "../../../hooks/use-generation";
 import type { Asset, AssetTake } from "../../../types/project";
 import type {
   ImageSubmissionSnapshot,
   MusicSubmissionSnapshot,
+  SfxSubmissionSnapshot,
   ReframeSubmissionSnapshot,
   VideoSubmissionSnapshot,
 } from "../types";
@@ -316,6 +318,17 @@ export function buildGeneratedMusicAsset({
     },
     takes,
     activeTakeIndex: 0,
+  };
+}
+
+export function buildGeneratedSfxAsset({ snapshot, result, finalPath, finalUrl, createdAt }: {
+  snapshot: SfxSubmissionSnapshot; result: GenerateSfxResult; finalPath: string; finalUrl: string; createdAt: number;
+}): NewAsset {
+  return {
+    type: "audio", path: finalPath, url: finalUrl, prompt: snapshot.prompt, resolution: "",
+    duration: snapshot.recipe.durationSeconds, generationTimeSeconds: generationTimeSeconds(snapshot.submittedAt, createdAt), source: "generated",
+    generationParams: { mode: "text-to-sfx", prompt: snapshot.prompt, model: snapshot.recipe.modelProfileId, duration: snapshot.recipe.durationSeconds, resolution: "", fps: 0, audio: true, cameraMotion: "none", sfx: snapshot.recipe },
+    takes: [{ path: finalPath, url: finalUrl, createdAt, seed: result.resolvedSeed }], activeTakeIndex: 0,
   };
 }
 

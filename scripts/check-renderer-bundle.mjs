@@ -60,8 +60,6 @@ async function measure(label, entryKey) {
 
 const [rendererEntryKey] = rendererEntry;
 const initialClosure = staticClosure(rendererEntryKey);
-const projectKey = findDynamicEntry("Project", "frontend/views/Project.tsx");
-const quickGenKey = findDynamicEntry("Quick Gen", "frontend/views/GenSpace.tsx");
 const directorKey = findDynamicEntry(
   "Director",
   "frontend/views/DirectorEditor.tsx",
@@ -70,46 +68,29 @@ const videoEditorKey = findDynamicEntry(
   "Video Editor",
   "frontend/views/VideoEditor.tsx",
 );
-const settingsKey = findDynamicEntry(
-  "Settings",
-  "frontend/components/SettingsModal.tsx",
-);
-const modelPackManager = entries.find(
-  ([, entry]) => entry.name === "ModelPackManager",
-);
-if (!modelPackManager) fail("ModelPackManager manifest chunk was not found.");
-const [modelPackManagerKey] = modelPackManager;
 
 for (const [label, key] of [
-  ["Project", projectKey],
-  ["Quick Gen", quickGenKey],
   ["Director", directorKey],
   ["Video Editor", videoEditorKey],
-  ["Settings", settingsKey],
-  ["ModelPackManager", modelPackManagerKey],
 ]) {
   if (initialClosure.has(key)) fail(`${label} appears in the initial static graph.`);
 }
 
-const settingsSource = await readFile(
-  resolve(root, "frontend", "components", "SettingsModal.tsx"),
-  "utf8",
-);
-if (!/from\s+["']\.\/ModelPackManager["']/.test(settingsSource)) {
-  fail("SettingsModal no longer statically owns ModelPackManager.");
-}
-
-if (!staticClosure(settingsKey).has(modelPackManagerKey)) {
-  fail("Settings static closure does not include ModelPackManager.");
+for (const [label, source] of [
+  ["Project", "frontend/views/Project.tsx"],
+  ["Quick Gen", "frontend/views/GenSpace.tsx"],
+  ["Settings", "frontend/components/SettingsModal.tsx"],
+]) {
+  const dynamicEntry = entries.find(
+    ([, entry]) => entry.src === source && entry.isDynamicEntry,
+  );
+  if (dynamicEntry) fail(`${label} remains a dynamic manifest entry.`);
 }
 
 const rows = await Promise.all([
-  measure("Initial Home static graph", rendererEntryKey),
-  measure("Project shell", projectKey),
-  measure("Quick Gen", quickGenKey),
+  measure("Eager Home + primary project path", rendererEntryKey),
   measure("Director", directorKey),
   measure("Video Editor", videoEditorKey),
-  measure("Settings + ModelPackManager", settingsKey),
 ]);
 
 console.table(
