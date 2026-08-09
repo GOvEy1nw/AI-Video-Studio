@@ -1,7 +1,0 @@
-# #0689 Audio Mixer FFmpeg filter graph exits on the first real WAV mix, so the API returns 500 instead of publishing a mixed asset.
-
-- 2026-08-06T18:14:13Z `issue`: Audio Mixer FFmpeg filter graph exits on the first real WAV mix, so the API returns 500 instead of publishing a mixed asset. [backend/services/audio_mix.py]
-- 2026-08-06T18:14:24Z `attempt`: Initial real-FFmpeg implementation failed during the WAV integration test with Windows exit code -22; stderr was discarded, so the filter syntax still needs diagnosis. [backend/services/audio_mix.py] (failed)
-- 2026-08-06T18:15:04Z `attempt`: FFmpeg diagnostics identified the root cause: the atomic temporary output ended in .wav.tmp, so ffmpeg could not infer the muxer. The filter graph itself was not the failure. [backend/services/audio_mix.py] (failed)
-- 2026-08-06T18:16:02Z `attempt`: Fixed atomic temp output naming to retain the requested audio extension; real WAV mixing now publishes the expected offset duration and all focused mixer tests pass. [backend/services/audio_mix.py; backend/tests/test_audio_mix.py] (worked)
-- 2026-08-06T18:22:13Z `fix`: Confirmed the Audio Mixer route after fixing atomic temp extension naming: real WAV tracks mix with offsets, source bytes remain unchanged, invalid paths publish no output, and cancellation publishes nothing. [backend/services/audio_mix.py; backend/handlers/audio_mix_handler.py; backend/tests/test_audio_mix.py]

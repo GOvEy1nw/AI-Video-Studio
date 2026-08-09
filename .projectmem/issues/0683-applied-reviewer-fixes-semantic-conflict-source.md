@@ -1,5 +1,0 @@
-# #0683 Applied reviewer fixes: semantic conflict/source/duration preflight now runs before shared generation state starts; backend rejects soundtrack trims above 20 seconds; added post-extraction failure cleanup coverage.
-
-- 2026-08-06T17:22:39Z `issue`: Applied reviewer fixes: semantic conflict/source/duration preflight now runs before shared generation state starts; backend rejects soundtrack trims above 20 seconds; added post-extraction failure cleanup coverage. [backend/handlers/video_generation_handler.py; backend/tests/test_generation.py]
-- 2026-08-06T17:22:39Z `attempt`: Applied reviewer fixes: semantic conflict/source/duration preflight now runs before shared generation state starts; backend rejects soundtrack trims above 20 seconds; added post-extraction failure cleanup coverage. [backend/handlers/video_generation_handler.py; backend/tests/test_generation.py] (partial)
-- 2026-08-06T17:24:16Z `fix`: Reviewer findings resolved: semantic Soundtrack conflict/source/over-duration preflight now happens before generation state starts, backend enforces the 20-second cap, and post-extraction validation failure cleanup is covered by tests.
