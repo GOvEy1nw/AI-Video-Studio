@@ -17,19 +17,15 @@ if (-not (Test-Path $SourceFile)) {
     throw "WanGP source manifest not found: $SourceFile"
 }
 $Source = Get-Content $SourceFile -Raw | ConvertFrom-Json
-$ExpectedRevision = [string]$Source.revision
-if ($ExpectedRevision -notmatch "^[0-9a-f]{40}$") {
-    throw "WanGP revision must be a full 40-character Git SHA."
-}
-$ExpectedVersion = [string]$Source.wangpVersion
-if (-not $ExpectedVersion) {
-    throw "WanGP source manifest must define wangpVersion."
-}
+$Branch = [string]$Source.branch
 if (-not $RepoUrl) {
     $RepoUrl = [string]$Source.repository
 }
 if (-not $RepoUrl) {
     throw "WanGP source manifest must define repository."
+}
+if (-not $Branch) {
+    throw "WanGP source manifest must define branch."
 }
 
 function Resolve-Wan2GPDir {
@@ -87,7 +83,7 @@ if (-not $Wan2GPDir) {
         throw "git not found. Install Git before running setup, or set WANGP_ROOT to an existing Wan2GP checkout."
     }
     Write-Host "Cloning Wan2GP into $LocalWan2GPDir..." -ForegroundColor Yellow
-    git clone --filter=blob:none --branch $Source.branch --single-branch $RepoUrl $LocalWan2GPDir
+    git clone --filter=blob:none --branch $Branch --single-branch $RepoUrl $LocalWan2GPDir
     if ($LASTEXITCODE -ne 0) {
         throw "git clone failed for Wan2GP."
     }
@@ -107,26 +103,23 @@ if ($IsLocalCheckout) {
         throw "Failed to inspect WanGP checkout at $Wan2GPDir."
     }
     if ($LocalChanges.Count -gt 0) {
-        throw "WanGP checkout has local source changes. Commit them in the WanGP fork or restore the pinned checkout before continuing."
+        throw "WanGP checkout has local source changes. Commit them in the WanGP fork or restore the checkout before continuing."
     }
-    $CurrentRevision = (git -c "safe.directory=$Wan2GPDir" -C $Wan2GPDir rev-parse HEAD).Trim()
-    if ($LASTEXITCODE -ne 0 -or $CurrentRevision -ne $ExpectedRevision) {
-        git -c "safe.directory=$Wan2GPDir" -C $Wan2GPDir fetch $RepoUrl $ExpectedRevision --depth 1
-        if ($LASTEXITCODE -ne 0) {
-            throw "Failed to fetch pinned WanGP revision $ExpectedRevision."
-        }
-        git -c "safe.directory=$Wan2GPDir" -C $Wan2GPDir checkout --detach $ExpectedRevision
-        if ($LASTEXITCODE -ne 0) {
-            throw "Failed to check out pinned WanGP revision $ExpectedRevision."
-        }
+    git -c "safe.directory=$Wan2GPDir" -C $Wan2GPDir fetch $RepoUrl $Branch --depth 1
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to fetch WanGP branch $Branch."
+    }
+    git -c "safe.directory=$Wan2GPDir" -C $Wan2GPDir checkout --detach FETCH_HEAD
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to check out WanGP branch $Branch."
     }
 }
 
 $ActualRevision = (git -c "safe.directory=$Wan2GPDir" -C $Wan2GPDir rev-parse HEAD).Trim()
-if ($LASTEXITCODE -ne 0 -or $ActualRevision -ne $ExpectedRevision) {
-    throw "WanGP revision mismatch. Expected $ExpectedRevision, found $ActualRevision."
+if ($LASTEXITCODE -ne 0) {
+    throw "Failed to read the WanGP checkout revision."
 }
-Write-Host "WanGP revision: $ActualRevision" -ForegroundColor Green
+Write-Host "WanGP source: $Branch @ $ActualRevision" -ForegroundColor Green
 
 $ApiFile = Join-Path $Wan2GPDir "shared\api.py"
 $RequirementsFile = Join-Path $Wan2GPDir "requirements.txt"
@@ -134,12 +127,6 @@ $RequirementsFile = Join-Path $Wan2GPDir "requirements.txt"
 if (-not (Test-Path $ApiFile)) {
     throw "Wan2GP checkout does not expose shared/api.py yet. Update the checkout to a version that includes the new API."
 }
-
-$VersionMatch = Select-String -Path (Join-Path $Wan2GPDir "wgp.py") -Pattern '^WanGP_version\s*=\s*"([^"]+)"$'
-if (-not $VersionMatch -or $VersionMatch.Matches[0].Groups[1].Value -ne $ExpectedVersion) {
-    throw "WanGP version mismatch. Expected $ExpectedVersion from $SourceFile."
-}
-Write-Host "WanGP source: $($Source.branch) @ $ExpectedVersion ($($Source.aivsTag))" -ForegroundColor Green
 
 if ($InstallPythonDeps) {
     if (-not $PythonExe) {

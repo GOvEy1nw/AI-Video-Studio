@@ -52,7 +52,7 @@ The values below reflect the current lock/runtime configuration on `dev`.
 | Packaging/updating | electron-builder 26.8.1, electron-updater 6.x, NSIS on Windows  |
 | Backend            | Python 3.11.9, FastAPI, Pydantic 2, uvicorn, uv                 |
 | GPU runtime        | Torch 2.10.0 + CUDA 13.0 with curated hardware-specific kernels |
-| Generation runtime | Bundled WanGP 12.3456 through an in-process `WanGPSession`      |
+| Generation runtime | Bundled WanGP `AiVS` branch head through an in-process `WanGPSession` |
 
 ## Top-level architecture
 
@@ -87,7 +87,7 @@ The renderer never imports Node or Electron APIs directly. Native access must go
 | `scripts/`                   | Setup/build scripts, WanGP source management, and GPU stack installation                           |
 | `docs/`                      | Current contracts plus completed implementation plans retained for history                         |
 | `resources/`                 | App, installer, icon, and bootstrap resources                                                      |
-| `Wan2GP/`                    | Bundled WanGP checkout pinned by `scripts/wangp-source.json`                                       |
+| `Wan2GP/`                    | Bundled WanGP checkout sourced from the `AiVS` branch configured by `scripts/wangp-source.json`    |
 | `.projectmem/`               | Curated current-state summary/map plus durable open issues and cross-task constraints              |
 
 ## Frontend map
@@ -465,8 +465,7 @@ Current source manifest:
 
 - Repository: `GOvEy1nw/Wan2GP`
 - Branch: `AiVS`
-- Revision: `c220292252d21aff667b50d5edabc1b388ed5bee`
-- WanGP version: `12.432`
+- Tracking: latest remote branch head; no commit or `wangpVersion` gate
 
 Source-of-truth files:
 
@@ -475,7 +474,7 @@ Source-of-truth files:
 - `scripts/update-wangp.ps1`
 - `backend/WANGP_BACKEND.md`
 
-The bundled checkout is reproducible. Update scripts compare the fork branch, report sensitive changes, validate a candidate, and roll back both checkout and manifest when validation fails.
+Update scripts compare the fork branch, report sensitive changes, validate its current head, and roll back the checkout when validation fails. Runtime dependency pins remain reproducible separately from the floating source branch.
 
 Current Windows GPU stack:
 
@@ -521,8 +520,8 @@ Do not bulk-upgrade or automate this stack as ordinary Python dependencies. It i
 | `pnpm build:frontend`      | Renderer, Electron main, and preload production build |
 | `pnpm build:fast:win`      | Unpacked Windows build without rebuilding Python      |
 | `pnpm build:win`           | Full Windows installer build                          |
-| `pnpm wangp:check`         | Compare bundled pin with fork head                    |
-| `pnpm wangp:update`        | Transactional WanGP update                            |
+| `pnpm wangp:check`         | Compare the checkout with the current fork branch head |
+| `pnpm wangp:update`        | Validate and adopt the current fork branch head        |
 | `pnpm wangp:update:full`   | WanGP update plus full validation                     |
 
 ### Test ownership
@@ -575,7 +574,7 @@ Read these first:
 8. `docs/REFRAME_MODE.md` — current Reframe contract.
 9. `backend/architecture.md` — backend design rules.
 10. `backend/WANGP_BACKEND.md` — bundled WanGP/source-update contract.
-11. `scripts/wangp-source.json` and `scripts/wangp-stacks.json` — exact runtime pins.
+11. `scripts/wangp-source.json` and `scripts/wangp-stacks.json` — source branch and exact runtime-stack configuration.
 
 Completed implementation plans such as the full GenSpace split and Music V2 plan are historical records. Do not execute their unchecked phase language again unless a current task explicitly reopens that work.
 

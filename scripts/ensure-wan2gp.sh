@@ -13,13 +13,9 @@ json_value() {
   sed -n "s/.*\"$1\"[[:space:]]*:[[:space:]]*\"\([^\"]*\)\".*/\1/p" "$SOURCE_FILE" | head -n 1
 }
 REPO_URL="${1:-$(json_value repository)}"
-EXPECTED_REVISION="$(json_value revision)"
-EXPECTED_VERSION="$(json_value wangpVersion)"
-EXPECTED_BRANCH="$(json_value branch)"
-AIVS_TAG="$(json_value aivsTag)"
+BRANCH="$(json_value branch)"
 [ -n "$REPO_URL" ] || { echo "WanGP source manifest must define repository."; exit 1; }
-[[ "$EXPECTED_REVISION" =~ ^[0-9a-f]{40}$ ]] || { echo "WanGP revision must be a full 40-character Git SHA."; exit 1; }
-[ -n "$EXPECTED_VERSION" ] || { echo "WanGP source manifest must define wangpVersion."; exit 1; }
+[ -n "$BRANCH" ] || { echo "WanGP source manifest must define branch."; exit 1; }
 
 resolve_external_root() {
   local candidate="$1"
@@ -46,28 +42,23 @@ else
     exit 1
   }
   echo "Cloning Wan2GP into $WAN2GP_DIR..."
-  git clone --filter=blob:none --no-checkout "$REPO_URL" "$WAN2GP_DIR"
+  git clone --filter=blob:none --branch "$BRANCH" --single-branch "$REPO_URL" "$WAN2GP_DIR"
   LOCAL_CHECKOUT=1
 fi
 
 if [ "${LOCAL_CHECKOUT:-0}" = "1" ]; then
   [ -z "$(git -C "$WAN2GP_DIR" status --porcelain --untracked-files=no)" ] || {
-    echo "WanGP checkout has local source changes. Commit them in the WanGP fork or restore the pinned checkout before continuing."
+    echo "WanGP checkout has local source changes. Commit them in the WanGP fork or restore the checkout before continuing."
     exit 1
   }
-  git -C "$WAN2GP_DIR" fetch "$REPO_URL" "$EXPECTED_REVISION" --depth 1
-  git -C "$WAN2GP_DIR" checkout --detach "$EXPECTED_REVISION"
+  git -C "$WAN2GP_DIR" fetch "$REPO_URL" "$BRANCH" --depth 1
+  git -C "$WAN2GP_DIR" checkout --detach FETCH_HEAD
 fi
 
 ACTUAL_REVISION="$(git -C "$WAN2GP_DIR" rev-parse HEAD)"
-[ "$ACTUAL_REVISION" = "$EXPECTED_REVISION" ] || { echo "WanGP revision mismatch. Expected $EXPECTED_REVISION, found $ACTUAL_REVISION."; exit 1; }
-echo "WanGP revision: $ACTUAL_REVISION"
+echo "WanGP source: $BRANCH @ $ACTUAL_REVISION"
 
 if [ ! -f "$API_FILE" ]; then
   echo "Wan2GP checkout does not expose shared/api.py yet. Update the checkout to a version that includes the new API."
   exit 1
 fi
-
-ACTUAL_VERSION="$(sed -n 's/^WanGP_version[[:space:]]*=[[:space:]]*"\([^"]*\)"$/\1/p' "$WAN2GP_DIR/wgp.py" | head -n 1)"
-[ "$ACTUAL_VERSION" = "$EXPECTED_VERSION" ] || { echo "WanGP version mismatch. Expected $EXPECTED_VERSION, found $ACTUAL_VERSION."; exit 1; }
-echo "WanGP source: $EXPECTED_BRANCH @ $EXPECTED_VERSION ($AIVS_TAG)"

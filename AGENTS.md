@@ -32,7 +32,7 @@ Current high-level layers:
 - **Renderer** (`frontend/`) — React, TypeScript, Tailwind, projects, GenSpace, Director, Video Editor, Asset Library, and tests.
 - **Electron** (`electron/`) — application lifecycle, context-isolated preload, IPC, project/file access, Python/runtime setup, model packs, ffmpeg, packaging, and updates.
 - **Backend** (`backend/`) — FastAPI, typed domain handlers, state, services, curated model profiles, tests, and the in-process WanGP bridge.
-- **WanGP** (`Wan2GP/`) — bundled source pinned by `scripts/wangp-source.json`.
+- **WanGP** (`Wan2GP/`) — bundled source from the `AiVS` branch configured by `scripts/wangp-source.json`.
 
 Current desktop toolchain: Node 24, pnpm 10.30.3, Electron 43, React 19, Vite 8, Vitest 4, Tailwind CSS 4, and TypeScript 6.
 
@@ -151,7 +151,7 @@ Internal implementation may evolve, but the following require explicit migration
 - shared progress/cancellation semantics;
 - curated backend-owned model profiles;
 - Director and NLE domain separation;
-- reproducible WanGP/Python/Torch/CUDA runtime pins;
+- controlled WanGP branch tracking and reproducible Python/Torch/CUDA runtime pins;
 - compatibility with existing projects and saved generation settings.
 
 ## 5. Common commands
@@ -177,7 +177,7 @@ Internal implementation may evolve, but the following require explicit migration
 | `pnpm setup:dev:win` | Prepare the Windows development/runtime environment |
 | `pnpm setup:dev:linux` | Prepare a Linux source-development environment |
 | `pnpm setup:dev:mac` | Prepare the macOS development environment |
-| `pnpm wangp:check` | Compare the bundled WanGP pin with the fork's `AiVS` head |
+| `pnpm wangp:check` | Compare the bundled WanGP checkout with the fork's `AiVS` head |
 | `pnpm wangp:update` | Run a transactional focused WanGP update |
 | `pnpm wangp:update:full` | Run a transactional WanGP update plus full validation |
 
@@ -586,8 +586,8 @@ Rules:
 - Do not let Renovate/Dependabot update the runtime compatibility set independently.
 - Use `uv sync --inexact` where repository scripts specify it, so declared backend packages can sync without pruning WanGP/performance wheels sharing the environment.
 - Use the transactional WanGP update workflow rather than manually replacing `Wan2GP/`.
-- Review sensitive model/default/dependency/bridge changes before accepting a new pin.
-- Keep the exact bundled revision reproducible.
+- Review sensitive model/default/dependency/bridge changes before accepting a new branch head.
+- Track the latest `GOvEy1nw/Wan2GP` `AiVS` branch head without adding commit or `wangpVersion` gates.
 
 A future redesign of runtime ownership is possible, but it must preserve offline/reproducible installation, supported hardware validation, model-pack behaviour, existing user locations, and rollback. It is not ordinary dependency cleanup.
 
@@ -749,7 +749,7 @@ Before declaring work complete, verify every applicable item:
 - Model packs: `backend/wangp_model_packs.py`
 - Backend architecture: `backend/architecture.md`
 - WanGP contract: `backend/WANGP_BACKEND.md`
-- WanGP source pin: `scripts/wangp-source.json`
+- WanGP source branch configuration: `scripts/wangp-source.json`
 - GPU stack pin: `scripts/wangp-stacks.json`
 
 <!-- BACKLOG.MD MCP GUIDELINES START -->

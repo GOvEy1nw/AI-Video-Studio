@@ -47,6 +47,8 @@ tmp/
 
 wgp_config.json
 plugins_local.json
+/plugins/wan2gp-*/
+/plugins/wangp-*/
 loras_url_cache.json
 loras_url_cache_v2.json
 .projectmem/events.jsonl

@@ -150,7 +150,7 @@ Product boundaries remain stronger than implementation preferences. A rewrite ma
 
 ### 4.6 Reproducible runtime compatibility
 
-The Python, Torch, CUDA, performance-kernel, WanGP, and model-runtime combination is a curated compatibility unit.
+The Python, Torch, CUDA, performance-kernel, and model-runtime combination is a curated compatibility unit.
 
 It must remain reproducible through pinned manifests and installation scripts. Generic dependency automation must not independently upgrade this stack.
 
@@ -484,9 +484,9 @@ Treat these as one compatibility matrix. Do not run broad Python dependency upgr
 
 ### 8.3 Bundled WanGP source
 
-AiVS bundles a reproducible WanGP checkout pinned by `scripts/wangp-source.json`.
+AiVS bundles WanGP from the latest `GOvEy1nw/Wan2GP` `AiVS` branch head configured by `scripts/wangp-source.json`; no exact commit or WanGP version gate is required.
 
-WanGP updates must use the transactional update workflow, review sensitive bridge/model/default/dependency changes, run the required checks, and restore the previous checkout and manifest when validation fails.
+WanGP updates must use the transactional update workflow, review sensitive bridge/model/default/dependency changes, run the required checks, and restore the previous checkout when validation fails.
 
 ### 8.4 Frontend and desktop dependencies
 

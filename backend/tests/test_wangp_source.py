@@ -11,17 +11,13 @@ WANGP_ROOT = PROJECT_ROOT / "Wan2GP"
 SOURCE_FILE = PROJECT_ROOT / "scripts" / "wangp-source.json"
 
 
-def test_wangp_source_manifest_matches_bundled_runtime() -> None:
+def test_wangp_source_manifest_tracks_aivs_branch_head() -> None:
     source = json.loads(SOURCE_FILE.read_text(encoding="utf-8"))
 
     assert source["repository"] == "https://github.com/GOvEy1nw/Wan2GP.git"
     assert source["branch"] == "AiVS"
-    assert re.fullmatch(r"[0-9a-f]{40}", source["revision"])
-
-    wgp_source = (WANGP_ROOT / "wgp.py").read_text(encoding="utf-8")
-    version = re.search(r'^WanGP_version\s*=\s*"([^"]+)"$', wgp_source, re.MULTILINE)
-    assert version is not None
-    assert version.group(1) == source["wangpVersion"]
+    assert "revision" not in source
+    assert "wangpVersion" not in source
 
 
 def test_wangp_mmgp_requirement_matches_runtime_guard() -> None:
