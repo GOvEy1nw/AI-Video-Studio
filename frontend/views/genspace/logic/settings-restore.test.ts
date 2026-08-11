@@ -6,6 +6,7 @@ import {
 import type { Asset, GenerationParams } from "../../../types/project";
 import { DEFAULT_VIDEO_SETTINGS } from "../constants";
 import { buildSfxGenerationCommand } from "./sfx-request";
+import { buildSpeechGenerationCommand } from "./speech-request";
 import { buildGenSpaceRestorePlan } from "./settings-restore";
 
 function asset(generationParams: GenerationParams): Asset {
@@ -13,7 +14,8 @@ function asset(generationParams: GenerationParams): Asset {
     id: "generated",
     type:
       generationParams.mode === "text-to-music" ||
-      generationParams.mode === "text-to-sfx"
+      generationParams.mode === "text-to-sfx" ||
+      generationParams.mode === "text-to-speech"
         ? "audio"
         : "video",
     path: "C:\\generated.mp4",
@@ -29,6 +31,68 @@ function asset(generationParams: GenerationParams): Asset {
 const musicSettings: MusicSettings = { ...DEFAULT_MUSIC_SETTINGS };
 
 describe("GenSpace settings restoration", () => {
+  it("round-trips Speech settings and refreshes reference-voice lineage", () => {
+    const voice: Asset = {
+      id: "voice",
+      type: "audio",
+      path: "D:\\project\\voice.wav",
+      url: "file:///D:/project/voice.wav",
+      prompt: "",
+      resolution: "",
+      createdAt: 1,
+    };
+    const command = buildSpeechGenerationCommand("  Hello  ", {
+      profileId: "index_tts2",
+      seed: 7,
+      references: [{
+        assetId: voice.id,
+        path: "C:\\stale\\voice.wav",
+        url: "file:///C:/stale/voice.wav",
+      }],
+      segments: [],
+    }, true);
+    expect(command?.request).toEqual({
+      modelProfileId: "index_tts2",
+      text: "Hello",
+      seed: 7,
+      references: [{ path: "C:\\stale\\voice.wav" }],
+      enhancePrompt: true,
+    });
+    expect(command?.recipe.schemaVersion).toBe(2);
+
+    const plan = buildGenSpaceRestorePlan(
+      asset({
+        mode: "text-to-speech",
+        prompt: command!.request.text,
+        model: command!.request.modelProfileId,
+        duration: 0,
+        resolution: "",
+        fps: 0,
+        audio: true,
+        cameraMotion: "none",
+        speech: command!.recipe,
+      }),
+      [voice],
+      DEFAULT_VIDEO_SETTINGS,
+      musicSettings,
+    );
+
+    expect(plan).toMatchObject({
+      mode: "music",
+      prompt: "Hello",
+      speechSettings: {
+        profileId: "index_tts2",
+        seed: 7,
+        references: [{
+          assetId: voice.id,
+          path: voice.path,
+          url: voice.url,
+        }],
+      },
+    });
+    expect(plan?.speechPromptEnhancement).toBe(true);
+  });
+
   it("round-trips an SFX request recipe and refreshes source-video lineage", () => {
     const source: Asset = {
       id: "source-video",

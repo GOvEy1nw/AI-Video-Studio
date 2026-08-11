@@ -24,6 +24,7 @@ import {
   useImageProfiles,
   useMusicProfiles,
   useSfxProfiles,
+  useSpeechProfiles,
   useVideoProfiles,
 } from "../../../hooks/use-image-profiles";
 import type { Asset } from "../../../types/project";
@@ -166,6 +167,7 @@ export function useGenSpaceController(isActive: boolean) {
   const { profiles: videoProfiles } = useVideoProfiles();
   const { profiles: musicProfiles } = useMusicProfiles();
   const { profiles: sfxProfiles } = useSfxProfiles();
+  const { profiles: speechProfiles } = useSpeechProfiles();
   const {
     settings,
     setSettings,
@@ -176,7 +178,7 @@ export function useGenSpaceController(isActive: boolean) {
     musicSettings,
     setMusicSettings,
   } = useGenSpaceSettingsState(musicProfiles);
-  const { submode: audioSubmode, setSubmode: setAudioSubmode, sfxSettings, setSfxSettings } =
+  const { submode: audioSubmode, setSubmode: setAudioSubmode, sfxSettings, setSfxSettings, speechSettings, setSpeechSettings } =
     useGenSpaceAudioState();
   useEffect(() => {
     if (imageMode !== "edit" || editToolMode === "edit") return;
@@ -201,11 +203,11 @@ export function useGenSpaceController(isActive: boolean) {
   const profileNames = useMemo(
     () =>
       new Map(
-        [...imageProfiles, ...videoProfiles, ...musicProfiles, ...sfxProfiles].map(
+        [...imageProfiles, ...videoProfiles, ...musicProfiles, ...sfxProfiles, ...speechProfiles].map(
           (profile) => [profile.id, profile.displayName],
         ),
       ),
-    [imageProfiles, musicProfiles, sfxProfiles, videoProfiles],
+    [imageProfiles, musicProfiles, sfxProfiles, speechProfiles, videoProfiles],
   );
   const getAssetModelName = useCallback(
     (asset: Asset) => {
@@ -221,6 +223,7 @@ export function useGenSpaceController(isActive: boolean) {
     generateImage,
     generateMusic,
     generateSfx,
+    generateSpeech,
     composeMusicLyrics,
     isComposingLyrics,
     isGenerating,
@@ -243,6 +246,7 @@ export function useGenSpaceController(isActive: boolean) {
     imagePaths,
     musicResult,
     sfxResult,
+    speechResult,
     error,
     cancel,
     reset,
@@ -361,6 +365,7 @@ export function useGenSpaceController(isActive: boolean) {
     videoSubmissionRef,
     musicSubmissionRef,
     sfxSubmissionRef,
+    speechSubmissionRef,
   } = useGenSpaceGenerationActions({
     mode,
     imageMode,
@@ -378,6 +383,7 @@ export function useGenSpaceController(isActive: boolean) {
     musicSettings,
     audioSubmode,
     sfxSettings,
+    speechSettings,
     musicProfiles,
     imageInputs,
     editImage,
@@ -396,6 +402,7 @@ export function useGenSpaceController(isActive: boolean) {
     generateImage,
     generateMusic,
     generateSfx,
+    generateSpeech,
     submitRetake,
   });
   const handleUseImage = useCallback(
@@ -551,6 +558,8 @@ export function useGenSpaceController(isActive: boolean) {
     setMusicSettings,
     setAudioSubmode,
     setSfxSettings,
+    setSpeechSettings,
+    setPromptEnhancementEnabled,
     setInputs: setImageInputs,
     setEditImage,
     setEditToolMode,
@@ -592,6 +601,7 @@ export function useGenSpaceController(isActive: boolean) {
     filterActive: galleryFilterActive,
     selectAsset,
     syncInputFileToGallery,
+    syncInputFileToGalleryAsset,
     rootDragHandlers,
     overlays: galleryOverlays,
   } = gallery;
@@ -619,6 +629,8 @@ export function useGenSpaceController(isActive: boolean) {
     musicSubmissionRef,
     sfxResult,
     sfxSubmissionRef,
+    speechResult,
+    speechSubmissionRef,
     onAssetAdded: selectAsset,
   });
   const isPanelMode = isRetakeMode || isToolsMode;
@@ -657,7 +669,9 @@ export function useGenSpaceController(isActive: boolean) {
         ? musicCanSubmit
         : audioSubmode === "sfx"
           ? !!prompt.trim() && !isGenerating
-          : false
+          : audioSubmode === "speech"
+            ? !!speechProfiles.find((profile) => profile.id === speechSettings.profileId) && (speechSettings.references.length === 2 ? [1, 2].every((speaker) => speechSettings.segments.some((segment) => segment.speaker === speaker && segment.text.trim())) : !!prompt.trim() && (!speechProfiles.find((profile) => profile.id === speechSettings.profileId)?.speech.referenceRequired || speechSettings.references.length > 0)) && !isGenerating
+            : false
       : mode === "image" && imageMode === "region"
         ? isRegionPromptReady(regionPrompt)
         : mode === "image" && imageMode === "edit"
@@ -819,6 +833,10 @@ export function useGenSpaceController(isActive: boolean) {
               submit: handleGenerate,
             }
           : undefined,
+      speech:
+        speechProfiles.length > 0
+          ? { prompt: promptController, settings: speechSettings, setSettings: setSpeechSettings, profiles: { options: speechProfiles, modelDownload }, media: { resolveInputFileUrl, syncInputFileToGalleryAsset }, isRunning: isGenerating, submit: handleGenerate }
+          : undefined,
     },
   };
 
@@ -885,12 +903,16 @@ export function useGenSpaceController(isActive: boolean) {
             submittedAt: sfxSubmissionRef.current.submittedAt ?? 0,
           }
         : undefined,
+      speech: speechSubmissionRef.current
+        ? { profileId: speechSubmissionRef.current.recipe.modelProfileId, submittedAt: speechSubmissionRef.current.submittedAt ?? 0 }
+        : undefined,
     },
     selected: {
       image: imageSettings.profileId,
       video: videoSettings.profileId,
       music: musicSettings.profileId,
       sfx: sfxSettings.profileId,
+      speech: speechSettings.profileId,
     },
   });
   const activeGenerationModelName =

@@ -178,6 +178,26 @@ export function useGenSpaceGallery({
       requestDuplicateChoice,
     ],
   );
+  const syncInputFileToGalleryAsset = useCallback(
+    async (file: File): Promise<Asset | null> => {
+      let importedAsset: Asset | null = null;
+      const url = currentProjectId
+        ? await ensureGalleryAssetForInputFile(
+            currentProjectId,
+            file,
+            projectAssets,
+            (projectId, asset) => {
+              const added = addAsset(projectId, asset);
+              importedAsset = added;
+              return added;
+            },
+            requestDuplicateChoice,
+          )
+        : null;
+      return importedAsset ?? projectAssets.find((asset) => asset.url === url) ?? null;
+    },
+    [addAsset, currentProjectId, projectAssets, requestDuplicateChoice],
+  );
   const importFiles = useCallback(
     async (files: File[]) => {
       if (!currentProjectId || files.length === 0) return;
@@ -411,6 +431,7 @@ export function useGenSpaceGallery({
     filterActive: isGalleryFilterActive(filter),
     selectAsset,
     syncInputFileToGallery,
+    syncInputFileToGalleryAsset,
     rootDragHandlers: {
       onDragEnter: (event: React.DragEvent) => {
         if (event.dataTransfer.types.includes("asset")) return;

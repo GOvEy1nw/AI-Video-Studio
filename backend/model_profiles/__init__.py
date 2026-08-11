@@ -11,6 +11,7 @@ from model_profiles.profiles import (
     get_visible_image_profiles,
     get_visible_music_profiles,
     get_visible_sfx_profiles,
+    get_visible_speech_profiles,
     get_visible_video_profiles,
 )
 from model_profiles.resolution_resolver import (
@@ -29,6 +30,7 @@ __all__ = [
     "get_visible_image_profiles",
     "get_visible_music_profiles",
     "get_visible_sfx_profiles",
+    "get_visible_speech_profiles",
     "get_visible_video_profiles",
     "is_combination_supported",
     "resolve_resolution",

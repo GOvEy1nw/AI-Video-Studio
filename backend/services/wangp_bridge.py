@@ -506,6 +506,46 @@ class WanGPBridge:
         on_progress("generating_sfx", 100)
         return str(output_path.resolve())
 
+    def generate_speech(
+        self,
+        *,
+        text: str,
+        model_type: str,
+        default_settings: dict[str, object],
+        reference_audio_paths: list[str],
+        enhance_prompt: bool,
+        seed: int | None,
+        on_progress: ProgressCallback,
+        is_cancelled: CancelledCallback,
+    ) -> str:
+        session = self._get_session()
+        settings = dict(session.get_default_settings(model_type))
+        settings.update(default_settings)
+        settings.update({
+            "model_type": model_type,
+            "prompt": text,
+            "prompt_enhancer": "T" if enhance_prompt else "",
+            "duration_seconds": 0,
+        })
+        if len(reference_audio_paths) == 1:
+            settings["audio_guide"] = str(Path(reference_audio_paths[0]).resolve())
+            settings["audio_prompt_type"] = "A"
+        elif len(reference_audio_paths) == 2:
+            settings["audio_guide"] = str(Path(reference_audio_paths[0]).resolve())
+            settings["audio_guide2"] = str(Path(reference_audio_paths[1]).resolve())
+            settings["audio_prompt_type"] = "AB2" if model_type == "index_tts2" else "AB"
+        if seed is not None:
+            settings["seed"] = seed
+        outputs = self._run_manifest(
+            manifest=[{"id": 1, "params": settings, "plugin_data": {}}],
+            media_suffixes={".wav", ".mp3", ".flac", ".ogg", ".m4a", ".aac"},
+            on_progress=on_progress,
+            is_cancelled=is_cancelled,
+        )
+        if not outputs:
+            raise RuntimeError("WanGP completed without producing speech audio")
+        return self._select_final_output(outputs)
+
     def compose_music_lyrics(
         self,
         *,

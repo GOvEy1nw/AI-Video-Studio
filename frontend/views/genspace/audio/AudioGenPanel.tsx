@@ -6,9 +6,10 @@ import { AudioModeSelector } from "./AudioModeSelector";
 import { MusicGenPanel } from "../music/MusicGenPanel";
 import type { AudioGenPanelController, AudioSubMode } from "../types";
 import { SfxGenPanel } from "./SfxGenPanel";
+import { SpeechGenPanel } from "./SpeechGenPanel";
 
 const UNAVAILABLE_COPY: Record<Exclude<AudioSubMode, "music">, string> = {
-  speech: "Speech generation is planned and unavailable.",
+  speech: "Speech generation is unavailable.",
   sfx: "Sound effects generation is planned and unavailable.",
   mixer: "Audio mixing is planned and unavailable.",
 };
@@ -18,7 +19,9 @@ export function AudioGenPanel({
 }: {
   controller: AudioGenPanelController;
 }) {
-  const { submode, setSubmode, music, sfx } = controller;
+  const { submode, setSubmode, music, sfx, speech } = controller;
+  const availableSpeechProfiles = speech?.profiles.options.filter((profile) => profile.speech.handler === "speech_generation" && profile.speech.tts && isModelProfileInstalled(profile.availability)) ?? [];
+  const selectedSpeechProfile = availableSpeechProfiles.find((profile) => profile.id === speech?.settings.profileId) ?? availableSpeechProfiles[0];
   const availableSfxProfiles =
     sfx?.profiles.options.filter(
       (profile) =>
@@ -35,16 +38,16 @@ export function AudioGenPanel({
     <>
       <div className="flex items-center justify-between gap-2 border-b border-zinc-800 px-4 py-3">
         <AudioModeSelector mode={submode} onChange={setSubmode} />
-        {submode === "sfx" && sfx ? (
-          selectedSfxProfile ? (
+        {(submode === "sfx" && sfx) || (submode === "speech" && speech) ? (
+          (submode === "sfx" ? selectedSfxProfile : selectedSpeechProfile) ? (
             <ModelPicker
-              profiles={availableSfxProfiles}
-              value={selectedSfxProfile.id}
+              profiles={submode === "sfx" ? availableSfxProfiles : availableSpeechProfiles}
+              value={(submode === "sfx" ? selectedSfxProfile : selectedSpeechProfile)!.id}
               onChange={(profileId) =>
-                sfx.setSettings({ ...sfx.settings, profileId })
+                submode === "sfx" ? sfx!.setSettings({ ...sfx!.settings, profileId }) : speech!.setSettings({ ...speech!.settings, profileId })
               }
               placement="bottom"
-              modelDownload={sfx.profiles.modelDownload}
+              modelDownload={(submode === "sfx" ? sfx!.profiles : speech!.profiles).modelDownload}
               icon={<AudioLines className="h-5 w-5" />}
             />
           ) : (
@@ -56,6 +59,8 @@ export function AudioGenPanel({
         <MusicGenPanel controller={music} />
       ) : submode === "sfx" && sfx ? (
         <SfxGenPanel controller={sfx} selectedProfile={selectedSfxProfile} />
+      ) : submode === "speech" && speech ? (
+        <SpeechGenPanel controller={speech} selectedProfile={selectedSpeechProfile} />
       ) : (
         <section className="px-4 py-6" aria-live="polite">
           <p className="text-sm text-zinc-300">{UNAVAILABLE_COPY[submode]}</p>

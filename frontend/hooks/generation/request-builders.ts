@@ -4,6 +4,7 @@ import type { MediaCropRecipe } from "../../types/media-crop";
 import type { ImageEditRequest } from "../../types/image-edit";
 import type { GenerateMusicRequest } from "../../types/music";
 import type { GenerateSfxRequest } from "../../types/sfx";
+import type { GenerateSpeechRequest } from "../../types/speech";
 import {
   AUDIO_MEDIA_ROLE_SET,
   GUIDE_MEDIA_ROLE_SET,
@@ -50,6 +51,10 @@ export function buildMusicRequestBody(
 
 export function buildSfxRequestBody(request: GenerateSfxRequest): { endpoint: string; body: GenerateSfxRequest } {
   return { endpoint: "/api/generate-sfx", body: request }
+}
+
+export function buildSpeechRequestBody(request: GenerateSpeechRequest): { endpoint: string; body: GenerateSpeechRequest } {
+  return { endpoint: "/api/generate-speech", body: request };
 }
 
 function normalizeApiPadding(value: number): number {

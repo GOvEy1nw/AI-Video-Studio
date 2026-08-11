@@ -312,7 +312,11 @@ export function genSpaceModeFromParams(
   params: GenerationParams,
 ): 'image' | 'video' | 'music' | 'retake' | 'reframe' {
   if (params.mode === 'text-to-image') return 'image'
-  if (params.mode === 'text-to-music') return 'music'
+  if (
+    params.mode === 'text-to-music' ||
+    params.mode === 'text-to-sfx' ||
+    params.mode === 'text-to-speech'
+  ) return 'music'
   if (params.mode === 'retake') return 'retake'
   if (params.mode === 'reframe') return 'reframe'
   return 'video'

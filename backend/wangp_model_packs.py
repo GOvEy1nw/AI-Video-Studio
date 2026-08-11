@@ -50,6 +50,8 @@ PACKS: dict[str, dict[str, str]] = {
     "ace_step_15_turbo": {"name": "ACE-Step 1.5 Fast", "kind": "model", "model_type": "ace_step_v1_5_turbo_lm_1_7b"},
     "ace_step_15_xl_turbo": {"name": "ACE-Step 1.5 XL", "kind": "model", "model_type": "ace_step_v1_5_xl_turbo_lm_1_7b"},
     "mmaudio": {"name": "MMAudio Sound Effects", "kind": "audio_processor", "processor": "mmaudio"},
+    "omnivoice": {"name": "OmniVoice", "kind": "model", "model_type": "omnivoice"},
+    "index_tts2": {"name": "Index TTS 2", "kind": "model", "model_type": "index_tts2"},
     "prompt_enhancer": {"name": "Prompt Enhancer", "kind": "prompt"},
 }
 

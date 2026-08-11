@@ -317,10 +317,19 @@ class ModelProfileDirectorPolicy(BaseModel):
     renderStrategies: list["ModelProfileDirectorRenderStrategyPolicy"]
 
 
+ModelProfileHandlerOwner = Literal[
+    "video_generation",
+    "director_generation",
+    "retake",
+    "sfx_generation",
+    "speech_generation",
+]
+
+
 class ModelProfileDirectorRenderStrategyPolicy(BaseModel):
     id: str
     status: Literal["stable", "experimental", "hidden"]
-    handler: Literal["video_generation", "director_generation", "retake", "sfx_generation"] | None
+    handler: ModelProfileHandlerOwner | None
     requiredPackIds: list[str]
     maxDurationSeconds: int | None
 
@@ -334,9 +343,7 @@ class ModelProfileSystemDependency(BaseModel):
 
 class ModelProfileVideoAudioPolicy(BaseModel):
     status: Literal["stable", "experimental", "hidden"]
-    handler: Literal[
-        "video_generation", "director_generation", "retake", "sfx_generation"
-    ] | None
+    handler: ModelProfileHandlerOwner | None
     requiredPackIds: list[str]
     soundtrack: bool
     audioConditioning: bool
@@ -347,20 +354,17 @@ class ModelProfileVideoAudioPolicy(BaseModel):
 
 class ModelProfileSpeechPolicy(BaseModel):
     status: Literal["stable", "experimental", "hidden"]
-    handler: Literal[
-        "video_generation", "director_generation", "retake", "sfx_generation"
-    ] | None
+    handler: ModelProfileHandlerOwner | None
     requiredPackIds: list[str]
     referenceVoice: bool
     tts: bool
     maxReferenceInputs: int
+    referenceRequired: bool = False
 
 
 class ModelProfileSfxPolicy(BaseModel):
     status: Literal["stable", "experimental", "hidden"]
-    handler: Literal[
-        "video_generation", "director_generation", "retake", "sfx_generation"
-    ] | None
+    handler: ModelProfileHandlerOwner | None
     requiredPackIds: list[str]
     text: bool
     controlVideoAudio: bool
@@ -370,9 +374,7 @@ class ModelProfileSfxPolicy(BaseModel):
 class ModelProfileVideoEditOperationPolicy(BaseModel):
     id: str
     status: Literal["stable", "experimental", "hidden"]
-    handler: Literal[
-        "video_generation", "director_generation", "retake", "sfx_generation"
-    ] | None
+    handler: ModelProfileHandlerOwner | None
     requiredPackIds: list[str]
     systemDependencyIds: list[str]
     sourceBehavior: Literal["control_video", "continue_video", "source_video"]
@@ -602,6 +604,48 @@ class GenerateSfxRequest(BaseModel):
 
 
 class GenerateSfxResponse(BaseModel):
+    status: str
+    audio_path: str | None = None
+    resolvedSeed: int | None = None
+
+
+class SpeechReferenceInput(BaseModel):
+    path: str
+    trimStartTime: float | None = Field(default=None, ge=0)
+    trimDuration: float | None = Field(default=None, gt=0)
+    mediaDuration: float | None = Field(default=None, gt=0)
+
+    @model_validator(mode="after")
+    def validate_trim_bounds(self) -> "SpeechReferenceInput":
+        if self.trimDuration is not None:
+            if self.mediaDuration is None:
+                raise ValueError("trimmed references require their media duration")
+            if (self.trimStartTime or 0) + self.trimDuration > self.mediaDuration + 1e-6:
+                raise ValueError("trim must stay within the reference audio duration")
+        return self
+
+
+class GenerateSpeechRequest(BaseModel):
+    schemaVersion: Literal[1, 2] = 1
+    modelProfileId: str
+    text: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=4096)]
+    referenceAudioPath: str | None = None
+    references: list[SpeechReferenceInput] = Field(
+        default_factory=lambda: list[SpeechReferenceInput](), max_length=2
+    )
+    enhancePrompt: bool = False
+    seed: int | None = Field(default=None, ge=0, le=999_999_999)
+
+    @model_validator(mode="after")
+    def normalize_legacy_reference(self) -> "GenerateSpeechRequest":
+        if self.referenceAudioPath is not None and self.references:
+            raise ValueError("Use references or legacy referenceAudioPath, not both")
+        if self.referenceAudioPath is not None:
+            self.references = [SpeechReferenceInput(path=self.referenceAudioPath)]
+        return self
+
+
+class GenerateSpeechResponse(BaseModel):
     status: str
     audio_path: str | None = None
     resolvedSeed: int | None = None

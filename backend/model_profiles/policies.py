@@ -8,14 +8,14 @@ from typing import TYPE_CHECKING, Iterable, Literal
 if TYPE_CHECKING:
     from model_profiles.profiles import ModelProfile
 
-HandlerOwner = Literal["video_generation", "director_generation", "retake", "sfx_generation"]
+HandlerOwner = Literal["video_generation", "director_generation", "retake", "sfx_generation", "speech_generation"]
 PolicyStatus = Literal["stable", "experimental", "hidden"]
 SystemDependencyKind = Literal["lora", "checkpoint"]
 VideoEditSourceBehavior = Literal["control_video", "continue_video", "source_video"]
 VideoEditDurationBehavior = Literal["source_duration", "extend_by"]
 
 HANDLER_OWNERS: frozenset[str] = frozenset(
-    {"video_generation", "director_generation", "retake", "sfx_generation"}
+    {"video_generation", "director_generation", "retake", "sfx_generation", "speech_generation"}
 )
 
 
@@ -47,6 +47,7 @@ class SpeechPolicy:
     reference_voice: bool = False
     tts: bool = False
     max_reference_inputs: int = 0
+    reference_required: bool = False
 
 
 @dataclass(frozen=True)

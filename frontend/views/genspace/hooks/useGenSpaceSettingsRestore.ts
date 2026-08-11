@@ -26,6 +26,7 @@ import type {
 import type { VideoToolId } from "../../../types/video-tools";
 import type { AudioSubMode } from "../types";
 import type { SfxSettings } from "../../../types/sfx";
+import type { SpeechSettings } from "../../../types/speech";
 import {
   parseRegionPrompt,
   type RegionPromptState,
@@ -46,6 +47,8 @@ export function useGenSpaceSettingsRestore({
   setMusicSettings,
   setAudioSubmode,
   setSfxSettings,
+  setSpeechSettings,
+  setPromptEnhancementEnabled,
   setInputs,
   setEditImage,
   setEditToolMode,
@@ -72,6 +75,8 @@ export function useGenSpaceSettingsRestore({
   setMusicSettings: Dispatch<SetStateAction<MusicSettings>>;
   setAudioSubmode: (mode: AudioSubMode) => void;
   setSfxSettings: Dispatch<SetStateAction<SfxSettings>>;
+  setSpeechSettings: Dispatch<SetStateAction<SpeechSettings>>;
+  setPromptEnhancementEnabled: (enabled: boolean) => void;
   setInputs: Dispatch<SetStateAction<GenSpaceMediaInput[]>>;
   setEditImage: (image: GenSpaceMediaInput | null) => void;
   setEditToolMode: (mode: ImageEditToolMode) => void;
@@ -137,6 +142,12 @@ export function useGenSpaceSettingsRestore({
       if (plan.sfxSettings) {
         setAudioSubmode("sfx");
         setSfxSettings(plan.sfxSettings);
+      } else if (plan.speechSettings) {
+        setAudioSubmode("speech");
+        setSpeechSettings(plan.speechSettings);
+        if (plan.speechPromptEnhancement !== null) {
+          setPromptEnhancementEnabled(plan.speechPromptEnhancement);
+        }
       } else if (plan.mode === "music") {
         setAudioSubmode("music");
       }
@@ -159,6 +170,8 @@ export function useGenSpaceSettingsRestore({
       setMusicSettings,
       setAudioSubmode,
       setSfxSettings,
+      setSpeechSettings,
+      setPromptEnhancementEnabled,
       setPrompt,
       setRegionPrompt,
       setReframeSource,

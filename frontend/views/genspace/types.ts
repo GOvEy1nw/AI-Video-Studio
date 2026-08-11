@@ -22,6 +22,8 @@ import type { ReframeAspectMode } from "./video/reframe-outpaint";
 import type { VideoToolId } from "../../types/video-tools";
 import type { GenSpaceSettings } from "./constants";
 import type { SfxGenerationRecipeV1, SfxSettings } from "../../types/sfx";
+import type { SpeechGenerationRecipe, SpeechSettings } from "../../types/speech";
+import type { Asset } from "../../types/project";
 
 export type GenSpaceMode = "image" | "video" | "music";
 export type AudioSubMode = "music" | "speech" | "sfx" | "mixer";
@@ -206,6 +208,7 @@ export interface AudioGenPanelController {
   setSubmode: (submode: AudioSubMode) => void;
   music: MusicGenPanelController;
   sfx?: SfxGenPanelController;
+  speech?: SpeechGenPanelController;
 }
 
 export interface SfxGenPanelController {
@@ -217,6 +220,18 @@ export interface SfxGenPanelController {
     GenSpaceMediaController,
     "resolveInputFileUrl" | "syncInputFileToGallery"
   >;
+  isRunning: boolean;
+  submit: () => void;
+}
+
+export interface SpeechGenPanelController {
+  prompt: GenSpacePromptController;
+  settings: SpeechSettings;
+  setSettings: (settings: SpeechSettings) => void;
+  profiles: GenSpacePanelProfiles;
+  media: Pick<GenSpaceMediaController, "resolveInputFileUrl"> & {
+    syncInputFileToGalleryAsset: (file: File) => Promise<Asset | null>;
+  };
   isRunning: boolean;
   submit: () => void;
 }
@@ -259,6 +274,13 @@ export interface SfxSubmissionSnapshot {
   submittedAt?: number;
   prompt: string;
   recipe: SfxGenerationRecipeV1;
+}
+
+export interface SpeechSubmissionSnapshot {
+  projectId: string;
+  submittedAt?: number;
+  prompt: string;
+  recipe: SpeechGenerationRecipe;
 }
 
 export interface ReframeSubmissionSnapshot {

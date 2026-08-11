@@ -94,3 +94,5 @@ Wan2GP/loras/
 .projectmem/watch.log
 .projectmem/runtime/
 .projectmem/local/
+
+.projectmem/structure.json

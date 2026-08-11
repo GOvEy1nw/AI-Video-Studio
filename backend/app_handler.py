@@ -17,6 +17,7 @@ from handlers import (
     RetakeHandler,
     SettingsHandler,
     SfxGenerationHandler,
+    SpeechGenerationHandler,
     VideoGenerationHandler,
 )
 from runtime_config.runtime_config import RuntimeConfig
@@ -124,6 +125,10 @@ class AppHandler:
         )
 
         self.sfx_generation = SfxGenerationHandler(
+            state=self.state, lock=self._lock, generation_handler=self.generation,
+            outputs_dir=config.outputs_dir, wangp_bridge=self.wangp_bridge,
+        )
+        self.speech_generation = SpeechGenerationHandler(
             state=self.state, lock=self._lock, generation_handler=self.generation,
             outputs_dir=config.outputs_dir, wangp_bridge=self.wangp_bridge,
         )

@@ -250,6 +250,68 @@ def test_generate_music_maps_verified_wangp_settings() -> None:
     }
 
 
+def test_generate_speech_uses_wangp_defaults_and_curated_inputs(tmp_path: Path) -> None:
+    bridge = _make_bridge()
+    manifests: list[list[dict[str, object]]] = []
+
+    class FakeSession:
+        @staticmethod
+        def get_default_settings(model_type: str) -> dict[str, object]:
+            if model_type == "omnivoice":
+                return {"audio_prompt_type": "", "model_mode": "auto"}
+            return {"audio_prompt_type": "A", "duration_seconds": 25}
+
+    def fake_run_manifest(*, manifest, media_suffixes, on_progress, is_cancelled):  # type: ignore[no-untyped-def]
+        del on_progress, is_cancelled
+        manifests.append(manifest)
+        assert ".wav" in media_suffixes
+        return [str(tmp_path / f"speech-{len(manifests)}.wav")]
+
+    bridge._get_session = lambda: FakeSession()  # type: ignore[method-assign]
+    bridge._run_manifest = fake_run_manifest  # type: ignore[method-assign]
+
+    bridge.generate_speech(
+        text="Hello",
+        model_type="omnivoice",
+        default_settings={"audio_prompt_type": "", "model_mode": "auto"},
+        reference_audio_paths=[],
+        enhance_prompt=False,
+        seed=7,
+        on_progress=lambda *_args: None,
+        is_cancelled=lambda: False,
+    )
+    reference = tmp_path / "voice.wav"
+    bridge.generate_speech(
+        text="Speaker 1: Welcome\nSpeaker 2: Hello",
+        model_type="index_tts2",
+        default_settings={"audio_prompt_type": "A"},
+        reference_audio_paths=[str(reference), str(tmp_path / "second.wav")],
+        enhance_prompt=True,
+        seed=None,
+        on_progress=lambda *_args: None,
+        is_cancelled=lambda: False,
+    )
+
+    assert manifests[0][0]["params"] == {
+        "audio_prompt_type": "",
+        "model_mode": "auto",
+        "model_type": "omnivoice",
+        "prompt": "Hello",
+        "prompt_enhancer": "",
+        "duration_seconds": 0,
+        "seed": 7,
+    }
+    assert manifests[1][0]["params"] == {
+        "audio_prompt_type": "AB2",
+        "duration_seconds": 0,
+        "model_type": "index_tts2",
+        "prompt": "Speaker 1: Welcome\nSpeaker 2: Hello",
+        "audio_guide": str(reference.resolve()),
+        "audio_guide2": str((tmp_path / "second.wav").resolve()),
+        "prompt_enhancer": "T",
+    }
+
+
 def test_generate_sfx_maps_mmaudio_processor_arguments(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

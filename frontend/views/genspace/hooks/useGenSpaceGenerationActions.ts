@@ -26,6 +26,7 @@ import type {
   ImageSubmissionSnapshot,
   MusicSubmissionSnapshot,
   SfxSubmissionSnapshot,
+  SpeechSubmissionSnapshot,
   ReframeSubmissionSnapshot,
   RetakeSubmissionSnapshot,
   VideoSubmissionSnapshot,
@@ -46,6 +47,8 @@ import {
   buildVideoGenerationCommand,
 } from "../logic/generation-requests";
 import { buildSfxGenerationCommand } from "../logic/sfx-request";
+import { buildSpeechGenerationCommand } from "../logic/speech-request";
+import type { SpeechSettings } from "../../../types/speech";
 
 interface RetakeInput {
   videoPath: string | null;
@@ -71,6 +74,7 @@ export function useGenSpaceGenerationActions({
   musicSettings,
   audioSubmode = "music",
   sfxSettings,
+  speechSettings,
   musicProfiles,
   imageInputs,
   editImage = null,
@@ -89,6 +93,7 @@ export function useGenSpaceGenerationActions({
   generateImage,
   generateMusic,
   generateSfx,
+  generateSpeech,
   submitRetake,
 }: {
   mode: GenSpaceMode;
@@ -107,6 +112,7 @@ export function useGenSpaceGenerationActions({
   musicSettings: MusicSettings;
   audioSubmode?: "music" | "speech" | "sfx" | "mixer";
   sfxSettings?: SfxSettings;
+  speechSettings?: SpeechSettings;
   musicProfiles: ModelProfile[];
   imageInputs: GenSpaceMediaInput[];
   editImage?: GenSpaceMediaInput | null;
@@ -125,12 +131,14 @@ export function useGenSpaceGenerationActions({
   generateImage: UseGenerationReturn["generateImage"];
   generateMusic: UseGenerationReturn["generateMusic"];
   generateSfx?: UseGenerationReturn["generateSfx"];
+  generateSpeech?: UseGenerationReturn["generateSpeech"];
   submitRetake: (params: RetakeSubmitParams) => Promise<void>;
 }) {
   const imageSubmissionRef = useRef<ImageSubmissionSnapshot | null>(null);
   const videoSubmissionRef = useRef<VideoSubmissionSnapshot | null>(null);
   const musicSubmissionRef = useRef<MusicSubmissionSnapshot | null>(null);
   const sfxSubmissionRef = useRef<SfxSubmissionSnapshot | null>(null);
+  const speechSubmissionRef = useRef<SpeechSubmissionSnapshot | null>(null);
   const submit = useCallback(async () => {
     if (
       mode === "video" &&
@@ -184,7 +192,7 @@ export function useGenSpaceGenerationActions({
     const authoredPrompt = isRegionImage
       ? serializeRegionPrompt(regionPrompt)
       : prompt;
-    if (!authoredPrompt.trim()) return;
+    if (!authoredPrompt.trim() && !(mode === "music" && audioSubmode === "speech" && speechSettings?.references.length === 2)) return;
 
     if (mode === "music" && audioSubmode === "sfx") {
       if (!currentProjectId) return;
@@ -193,6 +201,19 @@ export function useGenSpaceGenerationActions({
       if (!command) return;
       sfxSubmissionRef.current = { projectId: currentProjectId, submittedAt: Date.now(), prompt: command.request.prompt, recipe: command.recipe };
       await generateSfx(command.request);
+      return;
+    }
+
+    if (mode === "music" && audioSubmode === "speech") {
+      if (!currentProjectId || !speechSettings || !generateSpeech) return;
+      const command = buildSpeechGenerationCommand(
+        prompt,
+        speechSettings,
+        promptEnhancementEnabled,
+      );
+      if (!command) return;
+      speechSubmissionRef.current = { projectId: currentProjectId, submittedAt: Date.now(), prompt: command.request.text, recipe: command.recipe };
+      await generateSpeech(command.request);
       return;
     }
 
@@ -393,6 +414,7 @@ export function useGenSpaceGenerationActions({
     generateImage,
     generateMusic,
     generateSfx,
+    generateSpeech,
     audioSubmode,
     imageInputs,
     imageMode,
@@ -408,6 +430,7 @@ export function useGenSpaceGenerationActions({
     musicProfiles,
     musicSettings,
     sfxSettings,
+    speechSettings,
     prompt,
     promptEnhancementEnabled,
     projectAssets,
@@ -430,5 +453,6 @@ export function useGenSpaceGenerationActions({
     videoSubmissionRef,
     musicSubmissionRef,
     sfxSubmissionRef,
+    speechSubmissionRef,
   };
 }

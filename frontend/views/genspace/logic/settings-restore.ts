@@ -9,6 +9,7 @@ import type { MusicSettings } from "../../../types/music";
 import type { Asset } from "../../../types/project";
 import type { GenSpaceSettings } from "../constants";
 import type { SfxSettings } from "../../../types/sfx";
+import type { SpeechSettings } from "../../../types/speech";
 import { getImageModeForProfileId } from "../image/image-profile-options";
 
 export function buildGenSpaceRestorePlan(
@@ -20,7 +21,10 @@ export function buildGenSpaceRestorePlan(
   const params = asset.generationParams;
   if (!params) return null;
   const isSfx = params.mode === "text-to-sfx" && params.sfx?.schemaVersion === 1;
-  const mode = isSfx ? "music" : genSpaceModeFromParams(params);
+  const isSpeech =
+    params.mode === "text-to-speech" &&
+    (params.speech?.schemaVersion === 1 || params.speech?.schemaVersion === 2);
+  const mode = genSpaceModeFromParams(params);
   const restoredImageInputs = buildImageInputsFromParams(
     params,
     projectAssets,
@@ -73,6 +77,28 @@ export function buildGenSpaceRestorePlan(
               })()
             : null,
         } satisfies SfxSettings)
+      : null,
+    speechSettings: isSpeech
+      ? (() => {
+          const recipe = params.speech!;
+          const savedReferences = recipe.schemaVersion === 1
+            ? recipe.referenceAudio ? [recipe.referenceAudio] : []
+            : recipe.references;
+          return {
+            profileId: recipe.modelProfileId,
+            seed: recipe.seed,
+            references: savedReferences.map((saved) => {
+              const source = saved.assetId
+                ? projectAssets.find(({ id }) => id === saved.assetId)
+                : undefined;
+              return source ? { ...saved, path: source.path, url: source.url } : { ...saved };
+            }),
+            segments: recipe.schemaVersion === 2 ? recipe.segments.map((segment) => ({ ...segment })) : [],
+          } satisfies SpeechSettings;
+        })()
+      : null,
+    speechPromptEnhancement: isSpeech && params.speech?.schemaVersion === 2
+      ? params.speech.enhancePrompt
       : null,
     media: {
       imageInputs,

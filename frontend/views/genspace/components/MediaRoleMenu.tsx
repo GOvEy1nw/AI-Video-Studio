@@ -61,7 +61,7 @@ export function MediaRoleMenu({
           ))}
           {onTrim ? (
             <>
-              <div className="my-1 h-px bg-zinc-700" />
+              {options.length ? <div className="my-1 h-px bg-zinc-700" /> : null}
               <button
                 type="button"
                 role="menuitem"

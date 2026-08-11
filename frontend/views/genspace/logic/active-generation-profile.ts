@@ -14,8 +14,9 @@ export function getActiveGenerationProfileId({
     reframe?: SubmittedGenerationProfile;
     music?: SubmittedGenerationProfile;
     sfx?: SubmittedGenerationProfile;
+    speech?: SubmittedGenerationProfile;
   };
-  selected: { image: string; video: string; music: string; sfx: string };
+  selected: { image: string; video: string; music: string; sfx: string; speech?: string };
 }) {
   const latestSubmission = Object.values(submitted).reduce<
     SubmittedGenerationProfile | undefined
@@ -31,7 +32,9 @@ export function getActiveGenerationProfileId({
   if (mode === "video") return selected.video;
   return audioSubmode === "sfx"
     ? selected.sfx
-    : selected.music;
+    : audioSubmode === "speech"
+      ? selected.speech ?? selected.music
+      : selected.music;
 }
 
 interface SubmittedGenerationProfile {

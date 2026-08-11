@@ -1,0 +1,8 @@
+# #0008 Initial Audio Speech implementation omitted speech profile exposure and Copy Settings restoration, miswired backend test bridge, and inferred an unsupported OmniVoice license.
+
+- 2026-08-10T11:56:33Z `issue`: Initial Audio Speech implementation omitted speech profile exposure and Copy Settings restoration, miswired backend test bridge, and inferred an unsupported OmniVoice license. [backend/handlers/model_profiles_handler.py]
+- 2026-08-10T11:56:40Z `attempt`: Added dedicated speech-profile listing, wired the fake bridge, restored speech recipes/reference lineage through Copy Settings, removed the inferred OmniVoice license claim, and tightened speech input typing/validation. [backend/handlers/model_profiles_handler.py] (partial)
+- 2026-08-10T12:00:11Z `attempt`: Corrected AudioGenPanel unavailable-copy typing after TypeScript reported Speech was still required in the placeholder map. [frontend/views/genspace/audio/AudioGenPanel.tsx] (partial)
+- 2026-08-10T12:00:44Z `attempt`: Restored an explicit Speech unavailable fallback so AudioGenPanel's final branch remains exhaustively typed when a speech controller is absent. [frontend/views/genspace/audio/AudioGenPanel.tsx] (partial)
+- 2026-08-10T14:44:37Z `attempt`: Focused backend tests, Python/TypeScript typechecks, frontend restore/panel tests, and the production renderer/Electron build all passed after the corrective patch. [backend/handlers/model_profiles_handler.py] (worked)
+- 2026-08-10T14:44:42Z `fix`: Speech profiles now expose correctly, backend test wiring uses the speech bridge, Copy Settings restores speech/reference lineage, and license metadata avoids unsupported OmniVoice claims. [backend/handlers/model_profiles_handler.py]

@@ -152,7 +152,11 @@ AUTOSAVE_TEMPLATE_PATH = AUTOSAVE_FILENAME
 CONFIG_FILENAME = "wgp_config.json"
 PROMPT_VARS_MAX = 10
 target_mmgp_version = "3.7.12"
+<<<<<<< HEAD
 WanGP_version = "12.45"
+=======
+WanGP_version = "12.452"
+>>>>>>> 213bd36b6855008279fa986b8073f864f2a9f335
 settings_version = 2.73
 max_source_video_frames = 3000
 prompt_enhancer_image_caption_model, prompt_enhancer_image_caption_processor, prompt_enhancer_llm_model, prompt_enhancer_llm_tokenizer = None, None, None, None

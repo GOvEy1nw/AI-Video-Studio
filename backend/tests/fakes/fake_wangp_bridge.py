@@ -114,6 +114,16 @@ class FakeWangpSfxCall:
 
 
 @dataclass
+class FakeWangpSpeechCall:
+    text: str
+    model_type: str
+    default_settings: dict[str, object]
+    reference_audio_paths: list[str]
+    enhance_prompt: bool
+    seed: int | None
+
+
+@dataclass
 class FakeWanGPBridge:
     """Test stand-in for ``WanGPBridge``.
 
@@ -149,6 +159,7 @@ class FakeWanGPBridge:
         default_factory=list
     )
     sfx_calls: list[FakeWangpSfxCall] = field(default_factory=list)
+    speech_calls: list[FakeWangpSpeechCall] = field(default_factory=list)
     raise_on_video: Exception | None = None
     raise_on_images: Exception | None = None
     raise_on_enhance_prompt: Exception | None = None
@@ -401,6 +412,30 @@ class FakeWanGPBridge:
         with wave.open(str(output_path), "wb") as output:
             output.setnchannels(1); output.setsampwidth(2); output.setframerate(8_000); output.writeframes(b"\x00\x00" * 800)
         on_progress("generating_sfx", 100)
+        return str(output_path)
+
+    def generate_speech(
+        self,
+        *,
+        text: str,
+        model_type: str,
+        default_settings: dict[str, object],
+        reference_audio_paths: list[str],
+        enhance_prompt: bool,
+        seed: int | None,
+        on_progress: ProgressCallback,
+        is_cancelled: Callable[[], bool],
+    ) -> str:
+        self.speech_calls.append(FakeWangpSpeechCall(text, model_type, default_settings, reference_audio_paths, enhance_prompt, seed))
+        if self.raise_on_music is not None:
+            raise self.raise_on_music
+        if is_cancelled():
+            raise RuntimeError("Generation was cancelled")
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = self.output_dir / f"fake_wangp_speech_{uuid.uuid4().hex[:8]}.wav"
+        with wave.open(str(output_path), "wb") as output:
+            output.setnchannels(1); output.setsampwidth(2); output.setframerate(8_000); output.writeframes(b"\x00\x00" * 800)
+        on_progress("generating_speech", 100)
         return str(output_path)
 
     def enhance_prompt(

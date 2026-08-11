@@ -29,3 +29,12 @@ export function useSfxProfiles() {
   );
   return useMemo(() => ({ ...result, profiles }), [profiles, result]);
 }
+
+export function useSpeechProfiles() {
+  const result = useProfilesByMediaType("audio");
+  const profiles = useMemo(
+    () => result.profiles.filter((profile) => profile.speech.handler === "speech_generation" && profile.speech.tts),
+    [result.profiles],
+  );
+  return useMemo(() => ({ ...result, profiles }), [profiles, result]);
+}

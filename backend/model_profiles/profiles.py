@@ -1896,8 +1896,46 @@ _MMAUDIO_METADATA = WanGPModelMetadata(
     setting_values={"duration_seconds": {"min": 1, "max": 20, "default": 8}},
 )
 
+_TTS_METADATA = WanGPModelMetadata(
+    family="speech", family_label="Speech", base_model_type="tts", finetune=False,
+    main_output=("audio",), outputs=("audio",), inputs=("text", "audio"),
+    media_inputs={"audio": {"reference": True, "output": True}},
+    capabilities={"text_to_audio": True, "audio_to_audio": True, "audio_output": True},
+)
+
+_OMNIVOICE_LICENSE = ModelLicenseInfo(
+    project_license="Not declared in the managed WanGP checkout",
+    weights_license="Not declared in the managed WanGP checkout",
+    commercial_use="unknown",
+    attribution_required=True,
+    source_project="OmniVoice / DeepBeepMeep TTS",
+    notes="WanGP downloads model files on demand; no usage rights are inferred.",
+)
+
+_INDEX_TTS2_LICENSE = ModelLicenseInfo(
+    project_license="Bilibili Model Use License", weights_license="Bilibili Model Use License",
+    commercial_use="restricted", attribution_required=True, source_project="IndexTTS2 / bilibili",
+    notes="Use is subject to the bundled local bilibili model-use license.",
+)
+
 
 MUSIC_PROFILES: tuple[ModelProfile, ...] = (
+    ModelProfile(
+        id="omnivoice", display_name="OmniVoice", media_type="audio", visible=True,
+        status="experimental", wangp_model_type="omnivoice", wangp_metadata=_TTS_METADATA,
+        wangp_default_settings={"audio_prompt_type": "", "model_mode": "auto"},
+        text_to_audio=True, audio_to_audio=True, audio_output=True, required_pack_ids=("omnivoice",),
+        speech=SpeechPolicy(status="experimental", handler="speech_generation", required_pack_ids=("omnivoice",), reference_voice=True, tts=True, max_reference_inputs=2),
+        license=_OMNIVOICE_LICENSE,
+    ),
+    ModelProfile(
+        id="index_tts2", display_name="Index TTS 2", media_type="audio", visible=True,
+        status="experimental", wangp_model_type="index_tts2", wangp_metadata=_TTS_METADATA,
+        wangp_default_settings={"audio_prompt_type": "A"},
+        text_to_audio=True, audio_to_audio=True, audio_output=True, required_pack_ids=("index_tts2",),
+        speech=SpeechPolicy(status="experimental", handler="speech_generation", required_pack_ids=("index_tts2",), reference_voice=True, tts=True, max_reference_inputs=2, reference_required=True),
+        license=_INDEX_TTS2_LICENSE,
+    ),
     ModelProfile(
         id="mmaudio_sfx", display_name="MMAudio Sound Effects", media_type="audio", visible=True,
         status="experimental", wangp_model_type="mmaudio", wangp_metadata=_MMAUDIO_METADATA,
@@ -1998,4 +2036,13 @@ def get_visible_sfx_profiles() -> list[ModelProfile]:
         profile
         for profile in MUSIC_PROFILES
         if profile.visible and profile.sfx.handler == "sfx_generation"
+    ]
+
+
+def get_visible_speech_profiles() -> list[ModelProfile]:
+    """Return visible dedicated speech profiles in display order."""
+    return [
+        profile
+        for profile in MUSIC_PROFILES
+        if profile.visible and profile.speech.handler == "speech_generation"
     ]

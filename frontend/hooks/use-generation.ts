@@ -21,22 +21,26 @@ import {
   buildImageRequestBody,
   buildMusicRequestBody,
   buildSfxRequestBody,
+  buildSpeechRequestBody,
   buildVideoRequestBody,
   type GenerationInputMediaRequest,
   type GenerationReframeOptions,
 } from "./generation/request-builders";
 import type { GenerateSfxRequest } from "../types/sfx";
+import type { GenerateSpeechRequest } from "../types/speech";
 import type {
   GenerateMusicResult,
   GenerationState,
   MusicOutput,
   GenerateSfxResult,
+  GenerateSpeechResult,
 } from "./generation/types";
 import { useGenerationJob } from "./generation/useGenerationJob";
 import type { SubmittedVideoToolId } from "../types/video-tools";
 
 export type { GenerateMusicResult, MusicOutput };
 export type { GenerateSfxResult };
+export type { GenerateSpeechResult };
 
 export type InputMediaRequest = GenerationInputMediaRequest;
 export type ReframeGenerateOptions = GenerationReframeOptions;
@@ -65,6 +69,7 @@ export interface UseGenerationReturn extends GenerationState {
     request: GenerateMusicRequest,
   ) => Promise<GenerateMusicResult | null>;
   generateSfx: (request: GenerateSfxRequest) => Promise<GenerateSfxResult | null>;
+  generateSpeech: (request: GenerateSpeechRequest) => Promise<GenerateSpeechResult | null>;
   composeMusicLyrics: (
     request: ComposeMusicLyricsRequest,
   ) => Promise<string | null>;
@@ -307,6 +312,20 @@ export function useGeneration(): UseGenerationReturn {
       },
     }), [runJob])
 
+  const generateSpeech = useCallback((request: GenerateSpeechRequest): Promise<GenerateSpeechResult | null> =>
+    runJob<GenerateSpeechResult | null>({
+      ...buildSpeechRequestBody(request), initialStatus: "Preparing speech...",
+      failureMessage: "Speech generation failed", formatProgress: (progress) => normaliseProgressResponse(progress),
+      parseResponse: async (response) => {
+        const payload = (await response.json()) as { status?: string; audio_path?: string; resolvedSeed?: number; error?: string }
+        if (payload.error) throw new Error(payload.error)
+        if (payload.status === "cancelled") return { value: null, patch: { statusMessage: "Cancelled" } }
+        if (payload.status !== "complete" || !payload.audio_path) throw new Error("Speech generation did not return audio")
+        const result = { audioPath: payload.audio_path, resolvedSeed: payload.resolvedSeed }
+        return { value: result, patch: { progress: 100, statusMessage: "Complete!", speechResult: result } }
+      },
+    }), [runJob])
+
   const composeMusicLyrics = useCallback(
     async (request: ComposeMusicLyricsRequest): Promise<string | null> => {
       setIsComposingLyrics(true);
@@ -342,6 +361,7 @@ export function useGeneration(): UseGenerationReturn {
     generateImage,
     generateMusic,
     generateSfx,
+    generateSpeech,
     composeMusicLyrics,
     isComposingLyrics,
     cancel,

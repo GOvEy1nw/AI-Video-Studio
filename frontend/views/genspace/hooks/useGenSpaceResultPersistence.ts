@@ -14,6 +14,7 @@ import {
   generatedPathToFileUrl,
   type GenerateMusicResult,
   type GenerateSfxResult,
+  type GenerateSpeechResult,
 } from "../../../hooks/use-generation";
 import type { RetakeResult } from "../../../hooks/use-retake";
 import { copyToAssetFolder } from "../../../lib/asset-copy";
@@ -23,6 +24,7 @@ import {
   buildGeneratedImageAsset,
   buildGeneratedMusicAsset,
   buildGeneratedSfxAsset,
+  buildGeneratedSpeechAsset,
   buildGeneratedVideoAsset,
   buildReframeAsset,
   buildRetakeAsset,
@@ -31,6 +33,7 @@ import type {
   ImageSubmissionSnapshot,
   MusicSubmissionSnapshot,
   SfxSubmissionSnapshot,
+  SpeechSubmissionSnapshot,
   ReframeSubmissionSnapshot,
   RetakeSubmissionSnapshot,
   VideoSubmissionSnapshot,
@@ -62,6 +65,8 @@ export function useGenSpaceResultPersistence({
   musicSubmissionRef,
   sfxResult = null,
   sfxSubmissionRef,
+  speechResult = null,
+  speechSubmissionRef,
   onAssetAdded,
 }: {
   videoUrl: string | null;
@@ -87,12 +92,15 @@ export function useGenSpaceResultPersistence({
   musicSubmissionRef: MutableRefObject<MusicSubmissionSnapshot | null>;
   sfxResult?: GenerateSfxResult | null;
   sfxSubmissionRef?: MutableRefObject<SfxSubmissionSnapshot | null>;
+  speechResult?: GenerateSpeechResult | null;
+  speechSubmissionRef?: MutableRefObject<SpeechSubmissionSnapshot | null>;
   onAssetAdded?: (asset: Asset) => void;
 }) {
   const persistedVideoKey = useRef<string | null>(null);
   const persistedImageKey = useRef<string | null>(null);
   const persistedMusicKey = useRef<string | null>(null);
   const persistedSfxKey = useRef<string | null>(null);
+  const persistedSpeechKey = useRef<string | null>(null);
 
   useEffect(() => {
     if (!videoUrl || !videoPath || isGenerating) return;
@@ -166,6 +174,27 @@ export function useGenSpaceResultPersistence({
       }
     })();
   }, [addAsset, isGenerating, onAssetAdded, reset, sfxResult, sfxSubmissionRef]);
+
+  useEffect(() => {
+    if (!speechResult || isGenerating) return;
+    const snapshot = speechSubmissionRef?.current;
+    if (!snapshot || persistedSpeechKey.current === speechResult.audioPath) return;
+    persistedSpeechKey.current = speechResult.audioPath;
+    void (async () => {
+      try {
+        const copied = await copyToAssetFolder(speechResult.audioPath, snapshot.projectId);
+        const finalPath = copied?.path ?? speechResult.audioPath;
+        const finalUrl = copied?.url ?? generatedPathToFileUrl(finalPath);
+        const asset = addAsset(snapshot.projectId, buildGeneratedSpeechAsset({ snapshot, result: speechResult, finalPath, finalUrl, createdAt: Date.now() }));
+        onAssetAdded?.(asset);
+        if (speechSubmissionRef) speechSubmissionRef.current = null;
+        reset();
+      } catch (error) {
+        persistedSpeechKey.current = null;
+        logger.error(`Failed to persist generated speech asset: ${error}`);
+      }
+    })();
+  }, [addAsset, isGenerating, onAssetAdded, reset, speechResult, speechSubmissionRef]);
 
   useEffect(() => {
     if (imageUrls.length === 0 || isGenerating) return;

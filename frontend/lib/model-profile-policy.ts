@@ -30,6 +30,7 @@ const disabledSpeech: ModelProfileSpeechPolicy = {
   referenceVoice: false,
   tts: false,
   maxReferenceInputs: 0,
+  referenceRequired: false,
 };
 
 const disabledSfx: ModelProfileSfxPolicy = {

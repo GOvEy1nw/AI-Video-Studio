@@ -15,7 +15,7 @@ export type ModelProfileAvailability =
   | 'hidden'
 
 export type ModelProfileStatus = 'stable' | 'experimental' | 'hidden'
-export type ModelProfileHandlerOwner = 'video_generation' | 'director_generation' | 'retake' | 'sfx_generation'
+export type ModelProfileHandlerOwner = 'video_generation' | 'director_generation' | 'retake' | 'sfx_generation' | 'speech_generation'
 
 export interface ModelProfileSystemDependency {
   id: string
@@ -42,6 +42,7 @@ export interface ModelProfileSpeechPolicy {
   referenceVoice: boolean
   tts: boolean
   maxReferenceInputs: number
+  referenceRequired?: boolean
 }
 
 export interface ModelProfileSfxPolicy {

@@ -35,6 +35,7 @@ from model_profiles import (
     get_visible_image_profiles,
     get_visible_music_profiles,
     get_visible_sfx_profiles,
+    get_visible_speech_profiles,
     get_visible_video_profiles,
 )
 from model_profiles.profiles import ModelProfile
@@ -65,6 +66,7 @@ class ModelProfilesHandler(StateHandlerBase):
             *get_visible_video_profiles(),
             *get_visible_music_profiles(),
             *get_visible_sfx_profiles(),
+            *get_visible_speech_profiles(),
         ]:
             responses.append(self._to_response(profile, bridge_available))
         return ModelProfileListResponse(profiles=responses)
@@ -163,6 +165,7 @@ class ModelProfilesHandler(StateHandlerBase):
                 referenceVoice=profile.speech.reference_voice,
                 tts=profile.speech.tts,
                 maxReferenceInputs=profile.speech.max_reference_inputs,
+                referenceRequired=profile.speech.reference_required,
             ),
             sfx=ModelProfileSfxPolicy(
                 status=profile.sfx.status,

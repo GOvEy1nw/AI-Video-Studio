@@ -190,6 +190,22 @@ const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
     mediaTypes: ['audio'],
     features: ['generate'],
   },
+  {
+    id: 'omnivoice',
+    name: 'OmniVoice',
+    estimatedSize: '5.0 GB',
+    modelType: 'omnivoice',
+    mediaTypes: ['audio'],
+    features: ['generate'],
+  },
+  {
+    id: 'index_tts2',
+    name: 'Index TTS 2',
+    estimatedSize: '5.0 GB',
+    modelType: 'index_tts2',
+    mediaTypes: ['audio'],
+    features: ['generate'],
+  },
   { id: 'prompt_enhancer', name: 'Prompt Enhancer', estimatedSize: '36.0 GB' },
 ]
 

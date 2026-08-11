@@ -24,6 +24,7 @@ export interface GenerateMusicResult {
 }
 
 export interface GenerateSfxResult { audioPath: string; resolvedSeed?: number }
+export interface GenerateSpeechResult { audioPath: string; resolvedSeed?: number }
 
 export interface GenerationState {
   isGenerating: boolean;
@@ -49,6 +50,7 @@ export interface GenerationState {
   imagePaths: string[];
   musicResult: GenerateMusicResult | null;
   sfxResult: GenerateSfxResult | null;
+  speechResult: GenerateSpeechResult | null;
   error: string | null;
   directorResult: GenerateDirectorResponse | null;
 }
@@ -83,6 +85,7 @@ export function emptyGenerationState(): GenerationState {
     imagePaths: [],
     musicResult: null,
     sfxResult: null,
+    speechResult: null,
     error: null,
     directorResult: null,
   };

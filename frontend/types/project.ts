@@ -4,6 +4,7 @@ import type { DirectorGenerationMetadata, DirectorSequenceV1 } from './director'
 import type { MediaCropRecipe } from './media-crop'
 import type { VideoToolId } from './video-tools'
 import type { SfxGenerationRecipeV1 } from './sfx'
+import type { SpeechGenerationRecipe } from './speech'
 import type {
   ImageEditMaskRecipe,
   ImageEditOutpaintRecipe,
@@ -91,7 +92,7 @@ export type MusicGenerationMetadata =
 
 // Parameters needed to regenerate a shot
 export interface GenerationParams {
-  mode: 'text-to-video' | 'image-to-video' | 'audio-to-video' | 'text-to-image' | 'text-to-music' | 'text-to-sfx' | 'retake' | 'reframe'
+  mode: 'text-to-video' | 'image-to-video' | 'audio-to-video' | 'text-to-image' | 'text-to-music' | 'text-to-sfx' | 'text-to-speech' | 'retake' | 'reframe'
   prompt: string
   model: string
   duration: number
@@ -143,6 +144,7 @@ export interface GenerationParams {
   reframeVideoPath?: string
   music?: MusicGenerationMetadata
   sfx?: SfxGenerationRecipeV1
+  speech?: SpeechGenerationRecipe
 }
 
 // A single "take" (version) of a generated asset
