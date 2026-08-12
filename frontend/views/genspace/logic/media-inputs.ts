@@ -82,6 +82,46 @@ export function findGuideInput(
   return inputs.find(({ role }) => GUIDE_MEDIA_ROLE_SET.has(role));
 }
 
+const H3_ALIAS_PATTERN = /@(image|video|audio)[1-9]\d*/g;
+
+export function getH3PromptAliases(prompt: string): string[] {
+  return [...new Set(prompt.match(H3_ALIAS_PATTERN) ?? [])];
+}
+
+export function nextH3MediaAlias(
+  inputs: GenSpaceMediaInput[],
+  reservedAliases: readonly string[],
+  type: GenSpaceMediaKind,
+): string {
+  const pattern = new RegExp(`^@${type}(\\d+)$`);
+  const highest = [...inputs.map((input) => input.alias), ...reservedAliases]
+    .reduce((value, alias) => {
+      const match = pattern.exec(alias ?? "");
+      return Math.max(value, match ? Number(match[1]) : 0);
+    }, 0);
+  return `@${type}${highest + 1}`;
+}
+
+export type H3ReferenceAvailability = Record<GenSpaceMediaKind, boolean>;
+
+export function getH3ReferenceAvailability(
+  inputs: GenSpaceMediaInput[],
+): H3ReferenceAvailability {
+  const hasFlInput = inputs.some(({ role }) =>
+    role === "start_image" || role === "end_image" || role === "control_video" || role === "audio_guide" || role === "control_audio",
+  );
+  const imageCount = inputs.filter(({ role }) => role === "reference_image").length;
+  const videoCount = inputs.filter(({ role }) => role === "reference_video").length;
+  const audioCount = inputs.filter(({ role }) => role === "reference_audio").length;
+  const total = imageCount + videoCount + audioCount;
+  const canAdd = !hasFlInput && total < 12;
+  return {
+    image: canAdd && imageCount < 9,
+    video: canAdd && videoCount < 2,
+    audio: canAdd && audioCount < 2 && audioCount < imageCount + videoCount,
+  };
+}
+
 export function inferMediaKindForRole(role: string): GenSpaceMediaKind {
   if (AUDIO_MEDIA_ROLE_SET.has(role)) return "audio";
   if (GUIDE_MEDIA_ROLE_SET.has(role)) return "video";

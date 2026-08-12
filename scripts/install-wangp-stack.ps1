@@ -2,7 +2,7 @@ param(
     [string]$PythonExe = "",              # backend venv python; defaults to backend\.venv\Scripts\python.exe
     [string]$UvExe = "",                  # bundled uv.exe; defaults to PATH
     [switch]$SkipWan2gpRequirements,      # skip Wan2GP/requirements.txt (debug only)
-    [switch]$SkipWan2gpCheckout,          # use an already-packaged Wan2GP directory
+    [string]$WanGPRoot = '',
     [switch]$List                          # print detected runtime and exit
 )
 
@@ -114,25 +114,15 @@ if ($StackDef.bitsandbytes) {
 }
 
 if (-not $SkipWan2gpRequirements) {
-    if (-not $SkipWan2gpCheckout) {
-        & (Join-Path $ScriptDir "ensure-wan2gp.ps1")
-        if ($LASTEXITCODE -ne 0) { throw "ensure-wan2gp.ps1 failed; cannot install Wan2GP requirements." }
-    }
-
-    $LocalWan2GPDir = Join-Path $ProjectDir "Wan2GP"
-    if (Test-Path $LocalWan2GPDir) {
-        $RequirementsFile = Join-Path (Resolve-Path $LocalWan2GPDir) "requirements.txt"
-        if (Test-Path $RequirementsFile) {
-            Write-Host "Installing Wan2GP requirements.txt..." -ForegroundColor Yellow
-            & $UvExe pip install --python $PythonExe -r $RequirementsFile
-            if ($LASTEXITCODE -ne 0) { throw "Failed to install Wan2GP requirements.txt." }
-            Ok "Wan2GP requirements installed"
-        } else {
-            Write-Host "[WARN] Wan2GP requirements.txt not found; skipping." -ForegroundColor Yellow
-        }
-    } else {
-        Write-Host "[WARN] Wan2GP checkout not found; run ensure-wan2gp.ps1 first." -ForegroundColor Yellow
-    }
+    if (-not $WanGPRoot) { throw 'WanGPRoot is required to install WanGP requirements.' }
+    if (Test-Path $WanGPRoot -PathType Leaf) { $WanGPRoot = Split-Path -Parent $WanGPRoot }
+    $WanGPRoot = (Resolve-Path $WanGPRoot).Path
+    $RequirementsFile = Join-Path $WanGPRoot 'requirements.txt'
+    if (-not (Test-Path $RequirementsFile)) { throw "WanGP requirements.txt not found: $RequirementsFile" }
+    Write-Host "Installing WanGP requirements.txt..." -ForegroundColor Yellow
+    & $UvExe pip install --python $PythonExe -r $RequirementsFile
+    if ($LASTEXITCODE -ne 0) { throw "Failed to install WanGP requirements.txt." }
+    Ok "WanGP requirements installed"
 }
 
 Write-Host ""

@@ -22,6 +22,7 @@ import type { SubmittedVideoToolId } from "../../../types/video-tools";
 export interface GenerationInputMedia {
   path: string;
   role: string;
+  alias?: string;
   type?: "image" | "video" | "audio";
   trimStartTime?: number;
   trimDuration?: number;
@@ -59,6 +60,7 @@ export function buildGenerationInputMedia(
       {
         path,
         role: item.role,
+        ...(item.alias ? { alias: item.alias } : {}),
         ...(item.type ? { type: item.type } : {}),
         ...(item.trimStartTime !== undefined
           ? { trimStartTime: item.trimStartTime }

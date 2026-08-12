@@ -362,9 +362,11 @@ def test_generate_sfx_maps_mmaudio_processor_arguments(
     assert progress == [("generating_sfx", 0), ("generating_sfx", 100)]
 
 
-def test_runtime_preferences_update_wangp_config(tmp_path: Path) -> None:
-    config_path = tmp_path / "wgp_config.json"
-    config_path.write_text(json.dumps({"existing": "kept"}), encoding="utf-8")
+def test_runtime_preferences_update_app_owned_wangp_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    root_config = tmp_path / "wgp_config.json"
+    root_config.write_text(json.dumps({"existing": "root"}), encoding="utf-8")
+    config_path = tmp_path / "config" / "wgp_config.json"
+    monkeypatch.setenv("AIVS_WANGP_CONFIG_TEMPLATE", str(root_config))
     bridge = WanGPBridge(
         enabled=True,
         root=tmp_path,
@@ -384,7 +386,8 @@ def test_runtime_preferences_update_wangp_config(tmp_path: Path) -> None:
     )
 
     saved = json.loads(config_path.read_text(encoding="utf-8"))
-    assert saved["existing"] == "kept"
+    assert root_config.read_text(encoding="utf-8") == json.dumps({"existing": "root"})
+    assert saved["existing"] == "root"
     assert saved["attention_mode"] == "sage2"
     assert saved["profile"] == 4.5
     assert saved["video_profile"] == 4.5
@@ -481,6 +484,34 @@ def test_ltx2_video_uses_full_video_length_as_sliding_window_size() -> None:
     assert output == "E:/tmp/out.mp4"
     assert captured["settings"]["video_length"] == 145
     assert captured["settings"]["sliding_window_size"] == 481
+
+
+def test_h3_video_maps_list_valued_references_to_wangp_manifest() -> None:
+    bridge = _make_bridge()
+    captured: dict[str, object] = {}
+
+    def fake_run_manifest(*, manifest, media_suffixes, on_progress, is_cancelled):  # type: ignore[no-untyped-def]
+        captured["settings"] = manifest[0]["params"]
+        return ["E:/tmp/out.mp4"]
+
+    bridge._run_manifest = fake_run_manifest  # type: ignore[method-assign]
+    bridge.generate_video(
+        prompt="Use <Picture 1>, <Video 1>, and <Audio 1>",
+        resolution_label="720p", aspect_ratio="16:9", duration_seconds=5,
+        fps=24, steps=20, seed=None, camera_motion="none", negative_prompt="",
+        image_path=None, audio_path=None, model_type="minimax_h3_ref2va_pruned",
+        video_prompt_type="V-", audio_prompt_type="A",
+        reference_image_paths=["E:/tmp/ref.png"],
+        reference_video_paths=["E:/tmp/ref.mp4"],
+        reference_audio_paths=["E:/tmp/ref.wav"],
+        on_progress=lambda *_args: None, is_cancelled=lambda: False,
+    )
+
+    settings = captured["settings"]
+    assert settings["video_length"] == 124
+    assert settings["image_refs"] == [str(Path("E:/tmp/ref.png").resolve())]
+    assert settings["video_guide"] == str(Path("E:/tmp/ref.mp4").resolve())
+    assert settings["audio_guide"] == str(Path("E:/tmp/ref.wav").resolve())
 
 
 def test_generate_video_forwards_default_lora_settings() -> None:
@@ -678,7 +709,7 @@ def test_select_final_output_prefers_newest_combined_file(tmp_path: Path) -> Non
     assert WanGPBridge._select_final_output([str(first), str(combined), str(final)]) == str(final)
 
 
-def test_bridge_prefers_root_wgp_config_when_present(tmp_path: Path) -> None:
+def test_bridge_never_writes_root_wgp_config(tmp_path: Path) -> None:
     root = tmp_path / "wangp-root"
     root.mkdir()
     root_config = root / "wgp_config.json"
@@ -696,7 +727,10 @@ def test_bridge_prefers_root_wgp_config_when_present(tmp_path: Path) -> None:
         extra_args=(),
     )
 
-    assert bridge._resolve_session_config_path() == root_config
+    bridge.set_runtime_preferences(attention_mode="sage2", performance_profile=4.5, reduce_vram="disabled")
+
+    assert root_config.read_text(encoding="utf-8") == "{}"
+    assert json.loads((tmp_path / "wangp_bridge" / "wgp_config.json").read_text(encoding="utf-8"))["attention_mode"] == "sage2"
 
 
 def test_bridge_falls_back_to_bridge_config_when_root_config_missing(tmp_path: Path) -> None:
@@ -778,10 +812,10 @@ class WanGPSession:
 
         assert (output_dir / "ensure_ready_called").exists()
         assert not (root / "load_models_called").exists()
-        saved_config = json.loads(root_config.read_text(encoding="utf-8"))
+        assert json.loads(root_config.read_text(encoding="utf-8"))["fit_canvas"] == 2
+        saved_config = json.loads((tmp_path / "wangp_bridge" / "wgp_config.json").read_text(encoding="utf-8"))
         assert saved_config["fit_canvas"] == 0
         assert saved_config["enhancer_mode"] == 0
-        assert saved_config["existing"] == "kept"
     finally:
         sys.path[:] = saved_path
         for name, module in saved_modules.items():

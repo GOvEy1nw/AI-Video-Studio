@@ -57,8 +57,13 @@ export function VideoTrimPanel({
   } | null>(null);
   const initialSelectionAppliedRef = useRef(false);
   const extractingRef = useRef(false);
+  const onSelectionChangeRef = useRef(onSelectionChange);
   const [thumbnails, setThumbnails] = useState<string[]>([]);
   const [thumbCount] = useState(20);
+
+  useEffect(() => {
+    onSelectionChangeRef.current = onSelectionChange;
+  }, [onSelectionChange]);
 
   useEffect(() => {
     initialSelectionAppliedRef.current = false;
@@ -91,8 +96,8 @@ export function VideoTrimPanel({
   ]);
 
   useEffect(() => {
-    onSelectionChange?.(selStart, selEnd);
-  }, [selStart, selEnd, onSelectionChange]);
+    onSelectionChangeRef.current?.(selStart, selEnd);
+  }, [selStart, selEnd]);
 
   useEffect(() => {
     onTimeUpdate?.(internalCurrentTime);

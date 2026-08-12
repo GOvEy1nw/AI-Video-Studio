@@ -83,11 +83,8 @@ python-bootstrap/
 git-bootstrap/
 backend/requirements-dist.txt
 
-# Wan2GP checkout: source is bundled; local models and generated indexes are not
-Wan2GP/.codegraph/
-Wan2GP/chkpts/
-Wan2GP/docs/
-Wan2GP/loras/
+# External WanGP source is configured via WANGP_ROOT; never add local checkouts or runtime data.
+Wan2GP/
 
 .projectmem/events.jsonl
 .projectmem/watch.pid

@@ -47,13 +47,6 @@ if (-not $UvExe) {
 }
 Write-Host "uv: $UvExe" -ForegroundColor Green
 
-Write-Host "`nEnsuring Wan2GP checkout..." -ForegroundColor Yellow
-& "$ScriptDir\ensure-wan2gp.ps1"
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "ERROR: Wan2GP checkout setup failed!" -ForegroundColor Red
-    exit 1
-}
-
 # ============================================================
 # Step 2: Generate requirements.txt from uv.lock
 # ============================================================
@@ -144,7 +137,7 @@ Write-Host "`nStep 6: Installing dependencies from requirements.txt..." -Foregro
 
 # Install the curated GPU stack before packages which depend on Torch.
 Write-Host "Installing tested WanGP GPU stack..." -ForegroundColor Yellow
-& "$ScriptDir\install-wangp-stack.ps1" -PythonExe $PythonExe
+& "$ScriptDir\install-wangp-stack.ps1" -PythonExe $PythonExe -SkipWan2gpRequirements
 if ($LASTEXITCODE -ne 0) {
     Write-Host "ERROR: WanGP GPU stack install failed!" -ForegroundColor Red
     exit 1

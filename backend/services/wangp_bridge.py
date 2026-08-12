@@ -6,6 +6,7 @@ import importlib
 import json
 import logging
 import math
+import os
 import re
 import sys
 import threading
@@ -145,6 +146,13 @@ class WanGPBridge:
                 if not isinstance(loaded, dict):
                     raise ValueError("WanGP config must contain a JSON object")
                 payload = cast(dict[str, object], loaded)
+            else:
+                template = Path(os.environ.get("AIVS_WANGP_CONFIG_TEMPLATE", ""))
+                if template.is_file():
+                    loaded = json.loads(template.read_text(encoding="utf-8"))
+                    if not isinstance(loaded, dict):
+                        raise ValueError("WanGP config template must contain a JSON object")
+                    payload = cast(dict[str, object], loaded)
             payload.update(overrides)
             config_path.parent.mkdir(parents=True, exist_ok=True)
             temporary_path = config_path.with_name(f".{config_path.name}.tmp")
@@ -158,10 +166,6 @@ class WanGPBridge:
         return self._session is not None
 
     def _resolve_session_config_path(self) -> Path:
-        if self._root is not None:
-            root_config = self._root / "wgp_config.json"
-            if root_config.exists():
-                return root_config
         return self._config_dir / "wgp_config.json"
 
     def get_status(self) -> WanGPBridgeStatus:
@@ -251,11 +255,17 @@ class WanGPBridge:
         video_guide_outpainting: str | None = None,
         video_guide_outpainting_ratio: str | None = None,
         video_length_frames: int | None = None,
+        reference_image_paths: list[str] | None = None,
+        reference_video_paths: list[str] | None = None,
+        reference_audio_paths: list[str] | None = None,
     ) -> str:
         active_model_type = model_type if model_type is not None else self._video_model_type
         resolution = self._map_video_resolution(resolution_label, aspect_ratio)
         merged_prompt = prompt + self._camera_motion_prompts.get(camera_motion, "")
-        if video_length_frames is not None:
+        target_frame_count = video_length_frames if video_length_frames is not None else duration_seconds * fps
+        if active_model_type.startswith("minimax_h3_"):
+            video_length = self.normalize_h3_frame_count(target_frame_count)
+        elif video_length_frames is not None:
             video_length = self.normalize_video_frame_count(video_length_frames)
         else:
             video_length = self.compute_num_frames(duration_seconds, fps)
@@ -292,6 +302,9 @@ class WanGPBridge:
         if end_image_path:
             settings["image_end"] = str(Path(end_image_path).resolve())
 
+        if reference_image_paths:
+            settings["image_refs"] = [str(Path(path).resolve()) for path in reference_image_paths]
+
         if image_prompt_type:
             settings["image_prompt_type"] = image_prompt_type
         else:
@@ -306,6 +319,11 @@ class WanGPBridge:
         if control_video_path:
             settings["video_guide"] = str(Path(control_video_path).resolve())
             settings["video_prompt_type"] = video_prompt_type or "VG"
+        elif reference_video_paths:
+            settings["video_guide"] = str(Path(reference_video_paths[0]).resolve())
+            if len(reference_video_paths) > 1:
+                settings["video_guide2"] = str(Path(reference_video_paths[1]).resolve())
+            settings["video_prompt_type"] = video_prompt_type or ("V+-" if len(reference_video_paths) > 1 else "V-")
 
         if video_guide_outpainting is not None:
             settings["video_guide_outpainting"] = video_guide_outpainting
@@ -317,6 +335,12 @@ class WanGPBridge:
             settings["audio_prompt_type"] = audio_prompt_type or ("K" if control_video_path else "A")
         elif audio_prompt_type:
             settings["audio_prompt_type"] = audio_prompt_type
+
+        if reference_audio_paths:
+            settings["audio_guide"] = str(Path(reference_audio_paths[0]).resolve())
+            if len(reference_audio_paths) > 1:
+                settings["audio_guide2"] = str(Path(reference_audio_paths[1]).resolve())
+            settings["audio_prompt_type"] = audio_prompt_type or ("AB" if len(reference_audio_paths) > 1 else "A")
 
         return self._submit_video_settings(
             settings=settings,
@@ -652,6 +676,11 @@ class WanGPBridge:
     @staticmethod
     def normalize_video_frame_count(frame_count: int) -> int:
         return max((max(1, frame_count) // 8) * 8 + 1, 9)
+
+    @staticmethod
+    def normalize_h3_frame_count(frame_count: int) -> int:
+        """Map to MiniMax H3's 5 + 17n frame grid, with its 107-frame minimum."""
+        return max(107, 5 + 17 * round((max(1, frame_count) - 5) / 17))
 
     def _map_video_resolution(self, resolution_label: str, aspect_ratio: str) -> str:
         if re.fullmatch(r"\d+x\d+", resolution_label):

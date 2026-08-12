@@ -290,6 +290,10 @@ class ModelProfileInputMedia(BaseModel):
     supportsImageInputs: bool
     tooltipLabel: str
     maxImages: int
+    maxReferenceImages: int = 0
+    maxReferenceVideos: int = 0
+    maxReferenceAudios: int = 0
+    maxCombinedReferences: int = 0
     defaultRole: str | None
     roles: list[ModelProfileInputMediaRole]
 
@@ -428,6 +432,7 @@ class ModelProfileLicenseInfo(BaseModel):
     attributionRequired: bool
     sourceProject: str
     sourceRevision: str | None = None
+    licenseUrl: str | None = None
     notes: str = ""
 
 
@@ -668,6 +673,7 @@ class MediaCrop(BaseModel):
 
 class GenerateVideoInputMedia(BaseModel):
     id: str | None = None
+    alias: str | None = None
     type: Literal["image", "video", "audio"] = "image"
     path: str
     trimStartTime: float | None = Field(default=None, ge=0)
@@ -686,6 +692,9 @@ class GenerateVideoInputMedia(BaseModel):
         "continue_video",
         "audio_to_video",
         "reference_voice",
+        "reference_image",
+        "reference_video",
+        "reference_audio",
     ]
 
     @model_validator(mode="after")

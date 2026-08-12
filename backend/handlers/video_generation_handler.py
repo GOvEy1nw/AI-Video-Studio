@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import logging
 import math
+import re
 import uuid
 from pathlib import Path
 from threading import RLock
 from typing import TYPE_CHECKING, cast
 
-from api_types import GenerateVideoRequest, GenerateVideoResponse
+from api_types import GenerateVideoInputMedia, GenerateVideoRequest, GenerateVideoResponse
 from _routes._errors import HTTPError
 from handlers.base import StateHandlerBase
 from handlers.generation_handler import GenerationHandler
@@ -44,6 +45,93 @@ VIDEO_TOOL_LORA_URLS = {
     "remove_glare": "https://huggingface.co/buckets/retIbedi/LTX-Loras/resolve/lens-remover-ltx23-ic-lora.safetensors",
     "deblur": "https://huggingface.co/buckets/retIbedi/LTX-Loras/resolve/ltx-2.3-22b-ic-lora-deblur-0.9.safetensors",
 }
+
+_H3_PROFILE_ID = "minimax_h3"
+_H3_REFERENCE_ROLES = {"reference_image", "reference_video", "reference_audio"}
+_H3_FL_ONLY_ROLES = {"control_video", "audio_guide"}
+_H3_ALIAS_PATTERN = re.compile(r"@(image|video|audio)([1-9]\d*)")
+
+
+def _h3_reference_media(req: GenerateVideoRequest) -> list[GenerateVideoInputMedia]:
+    return [media for media in req.inputMedia if media.role in _H3_REFERENCE_ROLES]
+
+
+def _validate_and_compile_h3_prompt(
+    req: GenerateVideoRequest, prompt: str
+) -> tuple[str, bool]:
+    singleton_roles = {"start_image", "end_image", "control_video", "audio_guide"}
+    role_types = {
+        "start_image": "image",
+        "end_image": "image",
+        "reference_image": "image",
+        "control_video": "video",
+        "reference_video": "video",
+        "audio_guide": "audio",
+        "reference_audio": "audio",
+    }
+    for role in singleton_roles:
+        if sum(media.role == role for media in req.inputMedia) > 1:
+            raise HTTPError(400, "H3_DUPLICATE_SINGLETON_MEDIA")
+    for media in req.inputMedia:
+        expected_type = role_types.get(media.role)
+        if expected_type is not None and media.type != expected_type:
+            raise HTTPError(400, "H3_MEDIA_TYPE_MISMATCH")
+
+    references = _h3_reference_media(req)
+    uses_ref2va = bool(references)
+    if uses_ref2va and any(media.role in _H3_FL_ONLY_ROLES for media in req.inputMedia):
+        raise HTTPError(400, "H3_REF2VA_FL2VA_MEDIA_MIX")
+
+    by_role = {
+        role: [media for media in references if media.role == role]
+        for role in _H3_REFERENCE_ROLES
+    }
+    limits = {"reference_image": 9, "reference_video": 2, "reference_audio": 2}
+    for role, limit in limits.items():
+        if len(by_role[role]) > limit:
+            raise HTTPError(400, f"H3_{role.upper()}_LIMIT")
+    if len(references) > 12:
+        raise HTTPError(400, "H3_COMBINED_REFERENCE_LIMIT")
+    visual_count = len(by_role["reference_image"]) + len(by_role["reference_video"])
+    if len(by_role["reference_audio"]) > visual_count:
+        raise HTTPError(400, "H3_AUDIO_REFERENCE_REQUIRES_VISUAL_REFERENCE")
+    trimmed_total = 0.0
+    for media in [*by_role["reference_video"], *by_role["reference_audio"]]:
+        if media.trimDuration is None:
+            continue
+        if not 2 <= media.trimDuration <= 15:
+            raise HTTPError(400, "H3_REFERENCE_DURATION_LIMIT")
+        trimmed_total += media.trimDuration
+    if trimmed_total > 15:
+        raise HTTPError(400, "H3_REFERENCE_TOTAL_DURATION_LIMIT")
+
+    aliases: dict[str, str] = {}
+    expected_alias_kind = {
+        "reference_image": "image",
+        "reference_video": "video",
+        "reference_audio": "audio",
+    }
+    for media in references:
+        if media.alias and re.fullmatch(
+            rf"@{expected_alias_kind[media.role]}[1-9]\d*", media.alias
+        ) is None:
+            raise HTTPError(400, "H3_INVALID_MEDIA_ALIAS")
+    start_end_count = sum(media.role in {"start_image", "end_image"} for media in req.inputMedia)
+    for index, media in enumerate(by_role["reference_image"], start=1):
+        if media.alias:
+            aliases[media.alias] = f"<Picture {start_end_count + index}>"
+    for role, label in (("reference_video", "Video"), ("reference_audio", "Audio")):
+        for index, media in enumerate(by_role[role], start=1):
+            if media.alias:
+                aliases[media.alias] = f"<{label} {index}>"
+
+    submitted_aliases = [media.alias for media in references if media.alias]
+    if len(set(submitted_aliases)) != len(submitted_aliases):
+        raise HTTPError(400, "H3_DUPLICATE_MEDIA_ALIAS")
+    aliases_in_prompt = {match.group(0) for match in _H3_ALIAS_PATTERN.finditer(prompt)}
+    if not aliases_in_prompt.issubset(aliases):
+        raise HTTPError(400, "H3_DANGLING_MEDIA_ALIAS")
+    return _H3_ALIAS_PATTERN.sub(lambda match: aliases[match.group(0)], prompt), uses_ref2va
 
 
 class VideoGenerationHandler(StateHandlerBase):
@@ -106,6 +194,9 @@ class VideoGenerationHandler(StateHandlerBase):
             wangp_prompt = req.prompt.strip() or "outpaint"
         else:
             wangp_prompt, duration = self._resolve_prompt_and_duration(req, duration)
+
+        is_h3 = req.modelProfileId == _H3_PROFILE_ID
+        h3_uses_ref2va = False
 
         start_image_path = None
         end_image_path = None
@@ -208,6 +299,22 @@ class VideoGenerationHandler(StateHandlerBase):
 
         try:
             profile = self._resolve_video_profile(req)
+            if is_h3:
+                wangp_prompt, h3_uses_ref2va = _validate_and_compile_h3_prompt(req, wangp_prompt)
+                if h3_uses_ref2va:
+                    video_count = sum(media.role == "reference_video" for media in req.inputMedia)
+                    audio_count = sum(media.role == "reference_audio" for media in req.inputMedia)
+                    video_prompt_type = "V+-" if video_count > 1 else "V-" if video_count else None
+                    audio_prompt_type = "AB" if audio_count > 1 else "A" if audio_count else None
+                elif control_video_path:
+                    video_prompt_type = "GV"
+                    if audio_path:
+                        audio_prompt_type = "A"
+                    elif req.useAudioTrack:
+                        audio_path = control_video_path
+                        audio_prompt_type = "K"
+                    else:
+                        audio_prompt_type = "2"
             if is_reframe:
                 reframe = req.reframe
                 assert reframe is not None
@@ -408,6 +515,22 @@ class VideoGenerationHandler(StateHandlerBase):
             else:
                 validated_audio_path = None
 
+            validated_reference_images: list[str] = []
+            validated_reference_videos: list[str] = []
+            validated_reference_audios: list[str] = []
+            if is_h3 and h3_uses_ref2va:
+                for media in req.inputMedia:
+                    media_path = normalize_optional_path(media.path)
+                    if not media_path:
+                        continue
+                    effective_path = transformed_media_paths.get((media.role, media_path), media_path)
+                    if media.role == "reference_image":
+                        validated_reference_images.append(str(validate_image_file(effective_path)))
+                    elif media.role == "reference_video":
+                        validated_reference_videos.append(str(validate_video_file(effective_path)))
+                    elif media.role == "reference_audio":
+                        validated_reference_audios.append(str(validate_audio_file(effective_path)))
+
             settings = self.state.app_settings.model_copy(deep=True)
             default_steps = profile.wangp_default_settings.get("num_inference_steps")
             if isinstance(default_steps, int):
@@ -473,7 +596,7 @@ class VideoGenerationHandler(StateHandlerBase):
                 audio_path=validated_audio_path,
                 on_progress=self._generation.update_progress,
                 is_cancelled=self._generation.is_generation_cancelled,
-                model_type=profile.wangp_model_type,
+                model_type=("minimax_h3_ref2va_pruned" if is_h3 and h3_uses_ref2va else profile.wangp_model_type),
                 default_settings=default_settings,
                 start_image_path=validated_start_image_path,
                 end_image_path=validated_end_image_path,
@@ -484,6 +607,9 @@ class VideoGenerationHandler(StateHandlerBase):
                 video_guide_outpainting=video_guide_outpainting,
                 video_guide_outpainting_ratio=video_guide_outpainting_ratio,
                 video_length_frames=source_video_frame_count,
+                reference_image_paths=validated_reference_images,
+                reference_video_paths=validated_reference_videos,
+                reference_audio_paths=validated_reference_audios,
             )
 
             self._generation.complete_generation(output_path)

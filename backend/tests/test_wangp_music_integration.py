@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
 from typing import cast
 
 import pytest
 
-from tools.inspect_wangp_music_models import MODEL_TYPES, inspect_models
+from tools.inspect_wangp_music_models import MODEL_TYPES, inspect_models, resolve_wangp_root
 
 pytestmark = [
     pytest.mark.wangp_integration,
@@ -20,8 +19,7 @@ pytestmark = [
 
 
 def test_curated_ace_step_models_match_pinned_wangp_schema() -> None:
-    root = Path(__file__).resolve().parents[2] / "Wan2GP"
-    records, _snapshots = inspect_models(root)
+    records, _snapshots = inspect_models(resolve_wangp_root())
     by_id = {str(record["modelType"]): record for record in records}
 
     assert set(by_id) == set(MODEL_TYPES)

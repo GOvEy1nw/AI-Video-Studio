@@ -28,6 +28,7 @@ export interface ModelPack {
   variantName?: string
   mediaTypes?: Array<'image' | 'video' | 'audio'>
   features?: string[]
+  licenseUrl?: string
 }
 
 export interface ModelPackProgress {
@@ -161,6 +162,15 @@ const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
     features: ['generate', 'reframe'],
   },
   {
+    id: 'minimax-h3',
+    name: 'MiniMax H3',
+    estimatedSize: '206.8 GB',
+    modelType: 'minimax_h3_fl2va_pruned',
+    mediaTypes: ['video'],
+    features: ['generate'],
+    licenseUrl: 'https://huggingface.co/MiniMaxAI/MiniMax-H3/blob/main/LICENSE',
+  },
+  {
     id: 'ace_step_15_turbo',
     name: 'ACE-Step 1.5 Fast',
     estimatedSize: '12.0 GB',
@@ -222,13 +232,54 @@ export interface FolderLocation {
   defaultPath: string
 }
 
-function getWanGPRoot(): string {
-  return path.join(isDev ? process.cwd() : process.resourcesPath, 'Wan2GP')
+function isWanGPRoot(root: string): boolean {
+  return ['wgp.py', path.join('shared', 'api.py'), 'requirements.txt']
+    .every((relative) => fs.existsSync(path.join(root, relative)))
+}
+
+export function getWanGPRoot(): string {
+  if (!isDev) return path.join(app.getPath('userData'), 'runtime', 'Wan2GP')
+  for (const value of [process.env.WANGP_ROOT, process.env.WANGP_WGP_PATH]) {
+    if (!value?.trim()) continue
+    const root = path.resolve(value.endsWith('wgp.py') ? path.dirname(value) : value)
+    if (isWanGPRoot(root)) return root
+  }
+  throw new Error('Set WANGP_ROOT or WANGP_WGP_PATH to a valid external Wan2GP checkout.')
+}
+
+function getRuntimeModelsDir(): string {
+  return path.join(app.getPath('userData'), 'models')
+}
+
+export function migrateLegacyModelDirectories(legacyRoot: string, modelsRoot: string): void {
+  for (const [legacyName, targetName] of [['ckpts', 'checkpoints'], ['loras', 'loras']] as const) {
+    const source = path.join(legacyRoot, legacyName)
+    const target = path.join(modelsRoot, targetName)
+    if (!fs.existsSync(source)) continue
+    moveLegacyModelContents(source, target)
+  }
+}
+
+function moveLegacyModelContents(source: string, target: string): void {
+  for (const entry of fs.readdirSync(source, { withFileTypes: true })) {
+    const from = path.join(source, entry.name)
+    const to = path.join(target, entry.name)
+    if (entry.isDirectory()) moveLegacyModelContents(from, to)
+    else if (entry.isFile() && !fs.existsSync(to)) {
+      fs.mkdirSync(path.dirname(to), { recursive: true })
+      try {
+        fs.renameSync(from, to)
+      } catch {
+        fs.copyFileSync(from, to, fs.constants.COPYFILE_EXCL)
+        fs.unlinkSync(from)
+      }
+    }
+  }
 }
 
 export function getCheckpointsLocation(): FolderLocation {
   const customPath = getCustomCheckpointsPath()
-  const defaultPath = path.join(getWanGPRoot(), 'ckpts')
+  const defaultPath = path.join(getRuntimeModelsDir(), 'checkpoints')
   return {
     path: customPath ?? defaultPath,
     custom: customPath !== null,
@@ -249,7 +300,7 @@ export function setCheckpointsLocation(value: string | null): FolderLocation {
 
 export function getLorasLocation(): FolderLocation {
   const customPath = getCustomLorasPath()
-  const defaultPath = path.join(getWanGPRoot(), 'loras')
+  const defaultPath = path.join(getRuntimeModelsDir(), 'loras')
   return {
     path: customPath ?? defaultPath,
     custom: customPath !== null,
@@ -337,6 +388,9 @@ function getRuntimeFiles(): string[] {
     path.join(root, 'backend', 'uv.lock'),
     path.join(root, 'scripts', 'install-python-dependencies.ps1'),
     path.join(root, 'scripts', 'install-wangp-stack.ps1'),
+    path.join(root, 'scripts', 'ensure-wan2gp.ps1'),
+    path.join(root, 'scripts', 'wangp-source.json'),
+    path.join(root, 'wgp_config.json'),
     path.join(root, 'scripts', 'wangp-stacks.json'),
     path.join(root, 'backend', 'wangp_model_packs.py'),
   ]
@@ -384,6 +438,8 @@ function findBundledGitExecutable(): string | null {
 
 export function getRuntimeEnvironment(): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env }
+  env.WANGP_ROOT = getWanGPRoot()
+  env.AIVS_WANGP_CONFIG_TEMPLATE = path.join(isDev ? process.cwd() : process.resourcesPath, 'wgp_config.json')
   env.WANGP_CHECKPOINTS_DIR = getCheckpointsLocation().path
   env.WANGP_LORAS_DIR = getLorasLocation().path
   const gitExe = findBundledGitExecutable()
@@ -401,13 +457,15 @@ export function getRuntimeEnvironment(): NodeJS.ProcessEnv {
 export function isPythonReady(): { ready: boolean } {
   if (process.platform !== 'win32' || isDev) return { ready: true }
   const expectedHash = getRuntimeHash()
+  const wangpReady = isWanGPRoot(path.join(app.getPath('userData'), 'runtime', 'Wan2GP'))
   return {
     ready: Boolean(expectedHash) &&
       expectedHash === readHash(getInstalledHashPath()) &&
       fs.existsSync(path.join(getPythonDir(), 'python.exe')) &&
       fs.existsSync(path.join(getPythonDir(), 'Include', 'Python.h')) &&
       fs.existsSync(path.join(getPythonDir(), 'libs', 'python311.lib')) &&
-      Boolean(findBundledGitExecutable()),
+      Boolean(findBundledGitExecutable()) &&
+      wangpReady,
   }
 }
 
@@ -504,6 +562,7 @@ function installDependencies(
         '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script,
         '-PythonExe', pythonExe,
         '-ProjectDir', process.resourcesPath,
+        '-WanGPRoot', getWanGPRoot(),
       ],
       { windowsHide: true, env: getRuntimeEnvironment() },
     )
@@ -546,7 +605,7 @@ function getInstalledModelPackIds(): Set<string> {
   try {
     const parsed = JSON.parse(fs.readFileSync(getModelPackStatePath(), 'utf-8')) as { files?: unknown }
     if (!parsed.files || typeof parsed.files !== 'object' || Array.isArray(parsed.files)) return new Set()
-    const wangpRoot = path.join(isDev ? process.cwd() : process.resourcesPath, 'Wan2GP')
+    const wangpRoot = getWanGPRoot()
     const installed = Object.entries(parsed.files).flatMap(([id, files]) => {
       if (!Array.isArray(files) || files.length === 0) return []
       const complete = files.every((file) => {
@@ -881,9 +940,17 @@ export async function downloadPythonEmbed(
 
   const destDir = getPythonDir()
   try {
+    migrateLegacyModelDirectories(path.join(process.resourcesPath, 'Wan2GP'), getRuntimeModelsDir())
     onProgress({ status: 'extracting', percent: 5, downloadedBytes: 0, totalBytes: 0, speed: 0, message: 'Preparing embedded Python' })
     copyBootstrap(destDir)
     onProgress({ status: 'installing', percent: 10, downloadedBytes: 0, totalBytes: 0, speed: 0, message: 'Starting first-time setup' })
+    const bootstrap = path.join(process.resourcesPath, 'scripts', 'ensure-wan2gp.ps1')
+    const powershell = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe')
+    await new Promise<void>((resolve, reject) => {
+      const child = spawn(powershell, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', bootstrap, '-Mode', 'Managed', '-RootDir', getWanGPRoot(), '-GitExe', findBundledGitExecutable() ?? ''], { windowsHide: true })
+      child.once('error', reject)
+      child.once('close', (code) => code === 0 ? resolve() : reject(new Error(`WanGP source setup failed (exit code ${code ?? 'unknown'}).`)))
+    })
     await installDependencies(path.join(destDir, 'python.exe'), onProgress)
     fs.writeFileSync(getInstalledHashPath(), expectedHash, 'utf-8')
     onProgress({ status: 'complete', percent: 100, downloadedBytes: 0, totalBytes: 0, speed: 0, message: 'WanGP is ready' })

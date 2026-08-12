@@ -14,6 +14,7 @@ import type { SubmittedVideoToolId } from "../../types/video-tools";
 export interface GenerationInputMediaRequest {
   path: string;
   role: string;
+  alias?: string;
   type?: "image" | "video" | "audio";
   trimStartTime?: number;
   trimDuration?: number;
@@ -122,6 +123,7 @@ export function buildVideoRequestBody({
           : item.type || "image",
       path: item.path,
       role: item.role,
+      ...(item.alias ? { alias: item.alias } : {}),
       trimStartTime: item.trimStartTime,
       trimDuration: item.trimDuration,
       ...(item.crop ? { crop: item.crop } : {}),

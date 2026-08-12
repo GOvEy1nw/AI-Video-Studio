@@ -27,6 +27,7 @@ import threading
 
 import torch
 from state.app_settings import AppSettings
+from wangp_root import resolve_wangp_root
 
 # ============================================================
 # Logging Configuration
@@ -82,37 +83,7 @@ OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def _resolve_wangp_root() -> Path | None:
-    candidates: list[Path] = []
-    search_roots = [PROJECT_ROOT, *PROJECT_ROOT.parents]
-
-    for env_key in ("WANGP_ROOT", "WANGP_WGP_PATH"):
-        raw_value = os.environ.get(env_key, "").strip()
-        if not raw_value:
-            continue
-        candidate = Path(raw_value)
-        if candidate.is_file():
-            candidate = candidate.parent
-        candidates.append(candidate)
-
-    # Fall back to bundled/sibling checkouts only when no explicit WanGP root
-    # was provided in the environment.
-    for base in search_roots:
-        candidates.append(base)
-        for sibling_name in ("Wan2GP", "WanGP", "wan2gp", "wangp"):
-            candidates.append(base / sibling_name)
-
-    seen: set[Path] = set()
-    for candidate in candidates:
-        try:
-            resolved = candidate.resolve()
-        except Exception:
-            continue
-        if resolved in seen:
-            continue
-        seen.add(resolved)
-        if (resolved / "wgp.py").exists():
-            return resolved
-    return None
+    return resolve_wangp_root(os.environ)
 
 
 def _resolve_wangp_python(wangp_root: Path | None) -> str | None:
@@ -145,9 +116,10 @@ def _resolve_wangp_attention_mode(root: Path | None, extra_args: tuple[str, ...]
         if arg.startswith("--attention="):
             return arg.partition("=")[2].strip().lower()
 
-    if root is not None:
+    template_value = os.environ.get("AIVS_WANGP_CONFIG_TEMPLATE", "").strip()
+    if template_value:
         try:
-            raw_object: object = json.loads((root / "wgp_config.json").read_text(encoding="utf-8"))
+            raw_object: object = json.loads(Path(template_value).read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             raw_object = {}
         if isinstance(raw_object, dict):

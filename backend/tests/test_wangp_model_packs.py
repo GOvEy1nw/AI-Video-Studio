@@ -24,6 +24,13 @@ def test_music_packs_use_verified_wangp_model_types() -> None:
     )
 
 
+def test_minimax_h3_pack_combines_both_wangp_model_types() -> None:
+    assert PACKS["minimax-h3"]["model_types"] == [
+        "minimax_h3_fl2va_pruned",
+        "minimax_h3_ref2va_pruned",
+    ]
+
+
 def test_mmaudio_pack_uses_registered_audio_processor() -> None:
     assert PACKS["mmaudio"] == {
         "name": "MMAudio Sound Effects",
@@ -59,7 +66,6 @@ class FakeWanGP:
 
     def __init__(self) -> None:
         self.downloads: list[tuple[str, str, int, int, str | None]] = []
-        self.callbacks: list[object] = []
 
     def get_model_def(self, model_type: str) -> dict[str, Any]:
         assert model_type == "example"
@@ -109,17 +115,14 @@ class FakeWanGP:
         file_type: int,
         submodel_no: int = 1,
         force_path: str | None = None,
-        progress_callback: object = None,
     ) -> None:
         self.downloads.append((filename, model_type, file_type, submodel_no, force_path))
-        self.callbacks.append(progress_callback)
 
 
 def test_download_model_dependencies_matches_wangp_generation_preflight() -> None:
     wgp = FakeWanGP()
-    callback = lambda _update: None
 
-    _download_model_dependencies(wgp, "example", callback)
+    _download_model_dependencies(wgp, "example")
 
     assert wgp.downloads == [
         ("main:1", "example", 0, 1, None),
@@ -129,9 +132,6 @@ def test_download_model_dependencies_matches_wangp_generation_preflight() -> Non
         ("urls:['right']", "example", 1, 2, None),
         ("urls:['text_encoder']", "example", 2, -1, "text_encoder"),
     ]
-    assert wgp.callbacks == [callback] * len(wgp.downloads)
-
-
 def test_process_download_definitions_forwards_callback() -> None:
     calls: list[dict[str, object]] = []
 

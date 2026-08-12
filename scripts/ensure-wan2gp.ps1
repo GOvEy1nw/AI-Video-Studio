@@ -1,147 +1,98 @@
 param(
-    [string]$RepoUrl = "",
-    [string]$CloneDir = "Wan2GP",
-    [switch]$InstallPythonDeps,
-    [string]$PythonExe = "",
-    [string]$RootDir = ""
+    [ValidateSet('External', 'Managed')][string]$Mode = 'External',
+    [string]$RootDir = '',
+    [string]$GitExe = ''
 )
 
-$ErrorActionPreference = "Stop"
-
+$ErrorActionPreference = 'Stop'
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$ProjectDir = Split-Path -Parent $ScriptDir
-$LocalWan2GPDir = Join-Path $ProjectDir $CloneDir
-$SourceFile = Join-Path $ScriptDir "wangp-source.json"
+$SourceFile = Join-Path $ScriptDir 'wangp-source.json'
 
-if (-not (Test-Path $SourceFile)) {
-    throw "WanGP source manifest not found: $SourceFile"
+function Resolve-WanGPRoot([string]$Value) {
+    if (-not $Value) { return $null }
+    $candidate = $Value.Trim()
+    if (Test-Path $candidate -PathType Leaf) {
+        if ((Split-Path -Leaf $candidate).ToLowerInvariant() -ne 'wgp.py') { return $null }
+        $candidate = Split-Path -Parent $candidate
+    }
+    if (-not (Test-Path $candidate -PathType Container)) { return $null }
+    return (Resolve-Path $candidate).Path
 }
+
+function Test-WanGPRoot([string]$Path) {
+    foreach ($relative in @('wgp.py', 'shared\api.py', 'requirements.txt')) {
+        if (-not (Test-Path (Join-Path $Path $relative) -PathType Leaf)) {
+            throw "WanGP source is missing $relative at $Path"
+        }
+    }
+}
+
+function Move-WanGPDirectory([string]$Source, [string]$Destination) {
+    for ($attempt = 1; $attempt -le 20; $attempt++) {
+        try {
+            [IO.Directory]::Move($Source, $Destination)
+            return
+        } catch {
+            if ($attempt -eq 20) { throw }
+            Start-Sleep -Milliseconds 100
+        }
+    }
+}
+
+if ($Mode -eq 'External') {
+    $externalRoot = Resolve-WanGPRoot $env:WANGP_ROOT
+    if (-not $externalRoot) { $externalRoot = Resolve-WanGPRoot $env:WANGP_WGP_PATH }
+    if (-not $externalRoot) {
+        throw 'Set WANGP_ROOT or WANGP_WGP_PATH to an external Wan2GP checkout containing wgp.py, shared/api.py, and requirements.txt.'
+    }
+    Test-WanGPRoot $externalRoot
+    Write-Host "Using external WanGP checkout at $externalRoot" -ForegroundColor Green
+    return
+}
+
+if (-not $RootDir) { throw 'RootDir is required for managed WanGP setup.' }
+if (-not (Test-Path $SourceFile)) { throw "WanGP source manifest not found: $SourceFile" }
+if (-not $GitExe -or -not (Test-Path $GitExe -PathType Leaf)) { throw 'A bundled Git executable is required for managed WanGP setup.' }
+
+$GitExe = (Resolve-Path $GitExe).Path
+$GitRoot = Split-Path -Parent (Split-Path -Parent $GitExe)
+$GitBin = Join-Path $GitRoot 'mingw64\bin'
+$GitUsrBin = Join-Path $GitRoot 'usr\bin'
+$GitExecPath = $GitBin
+$GitCaBundle = Join-Path $GitRoot 'mingw64\etc\ssl\certs\ca-bundle.crt'
+if (-not (Test-Path (Join-Path $GitBin 'git-remote-https.exe'))) { throw "Bundled Git HTTPS helper is missing: $GitBin" }
+if (-not (Test-Path $GitCaBundle -PathType Leaf)) { throw "Bundled Git CA bundle is missing: $GitCaBundle" }
+$env:PATH = "$GitBin;$GitUsrBin;$env:PATH"
+$env:GIT_EXEC_PATH = $GitExecPath
+
 $Source = Get-Content $SourceFile -Raw | ConvertFrom-Json
+$Repository = [string]$Source.repository
 $Branch = [string]$Source.branch
-if (-not $RepoUrl) {
-    $RepoUrl = [string]$Source.repository
-}
-if (-not $RepoUrl) {
-    throw "WanGP source manifest must define repository."
-}
-if (-not $Branch) {
-    throw "WanGP source manifest must define branch."
-}
+if (-not $Repository -or -not $Branch) { throw 'WanGP source manifest must define repository and branch.' }
 
-function Resolve-Wan2GPDir {
-    param(
-        [string]$LocalDir,
-        [string]$ExplicitRoot
-    )
+$target = [IO.Path]::GetFullPath($RootDir)
+$parent = Split-Path -Parent $target
+New-Item -ItemType Directory -Force -Path $parent | Out-Null
+$candidate = "$target.candidate-$PID-$([guid]::NewGuid().ToString('N'))"
+$backup = "$target.backup-$PID-$([guid]::NewGuid().ToString('N'))"
 
-    if (Test-Path $LocalDir) {
-        return (Resolve-Path $LocalDir).Path
-    }
+try {
+    Write-Host "Cloning WanGP $Branch into a temporary runtime directory..." -ForegroundColor Yellow
+    & $GitExe -c http.sslBackend=openssl -c "http.sslCAInfo=$GitCaBundle" clone --filter=blob:none --branch $Branch --single-branch $Repository $candidate
+    if ($LASTEXITCODE -ne 0) { throw "Failed to clone WanGP branch $Branch." }
+    Test-WanGPRoot $candidate
 
-    $rawCandidates = @()
-    if ($ExplicitRoot) {
-        $rawCandidates += $ExplicitRoot
+    if (Test-Path $target) { Move-WanGPDirectory $target $backup }
+    try {
+        Move-WanGPDirectory $candidate $target
+        Test-WanGPRoot $target
+    } catch {
+        if (Test-Path $target) { Remove-Item -LiteralPath $target -Recurse -Force }
+        if (Test-Path $backup) { Move-WanGPDirectory $backup $target }
+        throw
     }
-    foreach ($envKey in "WANGP_ROOT", "WANGP_WGP_PATH") {
-        $rawValue = [Environment]::GetEnvironmentVariable($envKey)
-        if ($rawValue) {
-            $rawCandidates += $rawValue
-        }
-    }
-
-    foreach ($rawCandidate in $rawCandidates) {
-        if (-not $rawCandidate) {
-            continue
-        }
-        $candidate = $rawCandidate.Trim()
-        if (-not $candidate) {
-            continue
-        }
-        if (Test-Path $candidate -PathType Leaf) {
-            if ([System.IO.Path]::GetFileName($candidate).ToLowerInvariant() -eq "wgp.py") {
-                $candidate = Split-Path -Parent $candidate
-            } else {
-                continue
-            }
-        }
-        if ((Test-Path $candidate -PathType Container) -and (Test-Path (Join-Path $candidate "wgp.py"))) {
-            return (Resolve-Path $candidate).Path
-        }
-    }
-
-    return $null
-}
-
-$Wan2GPDir = Resolve-Wan2GPDir -LocalDir $LocalWan2GPDir -ExplicitRoot $RootDir
-$ResolvedLocalWan2GPDir = $null
-if (Test-Path $LocalWan2GPDir) {
-    $ResolvedLocalWan2GPDir = (Resolve-Path $LocalWan2GPDir).Path
-}
-
-if (-not $Wan2GPDir) {
-    if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
-        throw "git not found. Install Git before running setup, or set WANGP_ROOT to an existing Wan2GP checkout."
-    }
-    Write-Host "Cloning Wan2GP into $LocalWan2GPDir..." -ForegroundColor Yellow
-    git clone --filter=blob:none --branch $Branch --single-branch $RepoUrl $LocalWan2GPDir
-    if ($LASTEXITCODE -ne 0) {
-        throw "git clone failed for Wan2GP."
-    }
-    $Wan2GPDir = (Resolve-Path $LocalWan2GPDir).Path
-    $ResolvedLocalWan2GPDir = $Wan2GPDir
-    Write-Host "Using repo-local Wan2GP checkout at $Wan2GPDir" -ForegroundColor Green
-} elseif ($ResolvedLocalWan2GPDir -and ((Resolve-Path $Wan2GPDir).Path -eq $ResolvedLocalWan2GPDir)) {
-    Write-Host "Wan2GP checkout found at $Wan2GPDir" -ForegroundColor Green
-} else {
-    Write-Host "Using external Wan2GP checkout at $Wan2GPDir" -ForegroundColor Green
-}
-
-$IsLocalCheckout = $ResolvedLocalWan2GPDir -and ((Resolve-Path $Wan2GPDir).Path -eq $ResolvedLocalWan2GPDir)
-if ($IsLocalCheckout) {
-    $LocalChanges = @(git -c "safe.directory=$Wan2GPDir" -C $Wan2GPDir status --porcelain --untracked-files=no)
-    if ($LASTEXITCODE -ne 0) {
-        throw "Failed to inspect WanGP checkout at $Wan2GPDir."
-    }
-    if ($LocalChanges.Count -gt 0) {
-        throw "WanGP checkout has local source changes. Commit them in the WanGP fork or restore the checkout before continuing."
-    }
-    git -c "safe.directory=$Wan2GPDir" -C $Wan2GPDir fetch $RepoUrl $Branch --depth 1
-    if ($LASTEXITCODE -ne 0) {
-        throw "Failed to fetch WanGP branch $Branch."
-    }
-    git -c "safe.directory=$Wan2GPDir" -C $Wan2GPDir checkout --detach FETCH_HEAD
-    if ($LASTEXITCODE -ne 0) {
-        throw "Failed to check out WanGP branch $Branch."
-    }
-}
-
-$ActualRevision = (git -c "safe.directory=$Wan2GPDir" -C $Wan2GPDir rev-parse HEAD).Trim()
-if ($LASTEXITCODE -ne 0) {
-    throw "Failed to read the WanGP checkout revision."
-}
-Write-Host "WanGP source: $Branch @ $ActualRevision" -ForegroundColor Green
-
-$ApiFile = Join-Path $Wan2GPDir "shared\api.py"
-$RequirementsFile = Join-Path $Wan2GPDir "requirements.txt"
-
-if (-not (Test-Path $ApiFile)) {
-    throw "Wan2GP checkout does not expose shared/api.py yet. Update the checkout to a version that includes the new API."
-}
-
-if ($InstallPythonDeps) {
-    if (-not $PythonExe) {
-        throw "PythonExe is required when -InstallPythonDeps is used."
-    }
-    if (-not (Test-Path $PythonExe)) {
-        throw "Python executable not found at $PythonExe"
-    }
-    if (-not (Test-Path $RequirementsFile)) {
-        throw "Wan2GP requirements.txt not found at $RequirementsFile"
-    }
-
-    Write-Host "Installing Wan2GP Python dependencies from $Wan2GPDir into $PythonExe..." -ForegroundColor Yellow
-    uv pip install --python $PythonExe -r $RequirementsFile
-    if ($LASTEXITCODE -ne 0) {
-        throw "Failed to install Wan2GP dependencies."
-    }
+    if (Test-Path $backup) { Remove-Item -LiteralPath $backup -Recurse -Force }
+    Write-Host "Managed WanGP source ready at $target" -ForegroundColor Green
+} finally {
+    if (Test-Path $candidate) { Remove-Item -LiteralPath $candidate -Recurse -Force }
 }

@@ -179,6 +179,24 @@ describe("GenSpace generation request builders", () => {
     expect(command?.reframe.controlVideoStartTime).toBe(1);
   });
 
+  it("keeps a stable H3 media alias in the submitted input", () => {
+    const command = buildVideoGenerationCommand({
+      prompt: "Use @image4",
+      settings: { ...DEFAULT_VIDEO_SETTINGS, videoProfileId: "minimax_h3" },
+      imageInputs: [{
+        id: "ref", url: "file:///C:/ref.png", role: "reference_image", type: "image", alias: "@image4",
+      }],
+      inputImage: null,
+      inputAudio: null,
+      useAudioTrack: true,
+      enhancePrompt: false,
+    });
+
+    expect(command.inputMedia).toEqual([{
+      path: "C:/ref.png", role: "reference_image", type: "image", alias: "@image4",
+    }]);
+  });
+
   it.each([
     ["extend", "continue_video", 12, false],
     ["relight", "control_video", 5, true],

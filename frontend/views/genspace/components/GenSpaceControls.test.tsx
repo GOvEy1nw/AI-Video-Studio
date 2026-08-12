@@ -1,12 +1,14 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { useState } from "react";
 import { GenerateButton } from "./GenerateButton";
 import { ImageMediaInputs } from "../image/ImageMediaInputs";
 import { MusicMediaInputs } from "../music/MusicMediaInputs";
 import { VideoMediaInputs } from "../video/VideoMediaInputs";
 import { PromptEditor } from "./PromptEditor";
 import type { ModelProfile } from "../../../types/model-profiles";
+import type { GenSpaceMediaInput } from "../types";
 
 afterEach(cleanup);
 
@@ -244,6 +246,172 @@ describe("GenSpace shared controls", () => {
         url: "file:///C:/last-frame.png",
       }),
     ]);
+  });
+
+  it("mutually disables H3 references and FL2VA additions without hiding existing media", () => {
+    const profile = { id: "minimax_h3", inputMedia: { supportsImageInputs: true } } as ModelProfile;
+    const { rerender } = render(
+      <VideoMediaInputs
+        inputs={[{ id: "ref", alias: "@image1", type: "image", url: "file:///C:/reference.png", role: "reference_image" }]}
+        onChange={vi.fn()}
+        profile={profile}
+        useAudioTrack={false}
+        onUseAudioTrackChange={vi.fn()}
+        resolveInputFileUrl={vi.fn(async () => null)}
+      />,
+    );
+
+    const addMedia = screen.getByRole("button", { name: "Add media" });
+    const combinedInput = document.querySelector<HTMLInputElement>(
+      'input[accept^="image/*,video/*,audio/*"]',
+    );
+    expect(combinedInput).toBeTruthy();
+    const openCombinedInput = vi.spyOn(combinedInput!, "click");
+    fireEvent.click(addMedia);
+    expect(openCombinedInput).toHaveBeenCalledOnce();
+
+    expect((screen.getByRole("button", { name: "Start image" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "Control" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByRole("button", { name: "Remove @image1" })).toBeTruthy();
+
+    rerender(
+      <VideoMediaInputs
+        inputs={[{ id: "start", type: "image", url: "file:///C:/start.png", role: "start_image" }]}
+        onChange={vi.fn()}
+        profile={profile}
+        useAudioTrack={false}
+        onUseAudioTrackChange={vi.fn()}
+        resolveInputFileUrl={vi.fn(async () => null)}
+      />,
+    );
+
+    expect((screen.getByRole("button", { name: "Add media" }) as HTMLButtonElement).disabled).toBe(true);
+
+    rerender(
+      <VideoMediaInputs
+        inputs={[{ id: "restored", type: "audio", url: "file:///C:/control.wav", role: "control_audio" }]}
+        onChange={vi.fn()}
+        profile={profile}
+        useAudioTrack={false}
+        onUseAudioTrackChange={vi.fn()}
+        resolveInputFileUrl={vi.fn(async () => null)}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Restored control audio" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Remove control audio" })).toBeTruthy();
+  });
+
+  it("replaces the active @ token from the keyboard and opens media add commands", async () => {
+    const addMedia = vi.fn();
+    function MentionPrompt() {
+      const [value, setValue] = useState("Before @ after");
+      return <PromptEditor value={value} onChange={setValue} onSubmit={vi.fn()} canSubmit disabled={false} placeholder="Prompt" mediaMentions={[{ alias: "@image1", type: "image", url: "file:///C:/reference.png" }]} onAddMedia={addMedia} />;
+    }
+
+    render(<MentionPrompt />);
+    const editor = screen.getByRole("textbox") as HTMLTextAreaElement;
+    editor.focus();
+    editor.setSelectionRange(8, 8);
+    fireEvent.click(editor);
+    await userEvent.keyboard("{ArrowDown}{ArrowDown}{ArrowDown}{Enter}");
+    expect(editor.value).toBe("Before @image1 after");
+
+    fireEvent.change(editor, { target: { value: "@" } });
+    await userEvent.keyboard("{Enter}");
+    expect(editor.value).toBe("");
+    expect(addMedia).toHaveBeenCalledWith("image");
+  });
+
+  it("allocates distinct aliases when H3 reference imports finish out of order", async () => {
+    const profile = {
+      id: "minimax_h3",
+      inputMedia: { supportsImageInputs: true },
+    } as ModelProfile;
+    const resolvers: Array<(url: string) => void> = [];
+    const resolveInputFileUrl = vi.fn(
+      () => new Promise<string>((resolve) => resolvers.push(resolve)),
+    );
+    function H3Inputs() {
+      const [inputs, setInputs] = useState<Parameters<typeof VideoMediaInputs>[0]["inputs"]>([]);
+      return (
+        <VideoMediaInputs
+          inputs={inputs}
+          onChange={setInputs}
+          profile={profile}
+          useAudioTrack={false}
+          onUseAudioTrackChange={vi.fn()}
+          resolveInputFileUrl={resolveInputFileUrl}
+        />
+      );
+    }
+
+    render(<H3Inputs />);
+    const combinedInput = document.querySelector<HTMLInputElement>(
+      'input[accept^="image/*,video/*,audio/*"]',
+    )!;
+    fireEvent.change(combinedInput, {
+      target: { files: [new File(["a"], "a.png", { type: "image/png" })] },
+    });
+    fireEvent.change(combinedInput, {
+      target: { files: [new File(["b"], "b.png", { type: "image/png" })] },
+    });
+
+    await act(async () => {
+      resolvers[1]("file:///C:/b.png");
+      await Promise.resolve();
+      resolvers[0]("file:///C:/a.png");
+      await Promise.resolve();
+    });
+    expect(screen.getByRole("button", { name: "Remove @image1" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Remove @image2" })).toBeTruthy();
+  });
+
+  it("keeps video reference trim editors mounted without an update loop", () => {
+    const profile = {
+      id: "minimax_h3",
+      inputMedia: { supportsImageInputs: true },
+    } as ModelProfile;
+    const ltxProfile = {
+      id: "ltx",
+      inputMedia: {
+        supportsImageInputs: true,
+        roles: [
+          { role: "start_image", label: "Start", description: "", kind: "reference" },
+          { role: "end_image", label: "End", description: "", kind: "reference" },
+        ],
+      },
+    } as ModelProfile;
+    function VideoReferenceInputs({ role }: { role: string }) {
+      const [inputs, setInputs] = useState<GenSpaceMediaInput[]>([
+        {
+          id: "video",
+          alias: role === "reference_video" ? "@video1" : undefined,
+          type: "video" as const,
+          url: "file:///C:/reference.mp4",
+          role,
+        },
+      ]);
+      return (
+        <VideoMediaInputs
+          inputs={inputs}
+          onChange={setInputs}
+          profile={role === "reference_video" ? profile : ltxProfile}
+          useAudioTrack={false}
+          onUseAudioTrackChange={vi.fn()}
+          resolveInputFileUrl={vi.fn(async () => null)}
+        />
+      );
+    }
+
+    const { rerender } = render(<VideoReferenceInputs role="reference_video" />);
+    fireEvent.click(screen.getByTitle("Click for actions"));
+    fireEvent.click(screen.getByText("Trim"));
+    expect(screen.getByRole("button", { name: "Confirm" })).toBeTruthy();
+
+    rerender(<VideoReferenceInputs key="ltx" role="human_motion" />);
+    fireEvent.click(screen.getByTitle("Change Human Motion usage"));
+    fireEvent.click(screen.getByText("Trim"));
+    expect(screen.getByRole("button", { name: "Confirm" })).toBeTruthy();
   });
 
   it("removes an occupied media input", async () => {

@@ -17,6 +17,8 @@ export function MediaInputSlot({
   ariaLabel,
   active,
   dragActive,
+  disabled,
+  sizeClassName,
   inputRef,
   menu,
   onToggle,
@@ -33,6 +35,8 @@ export function MediaInputSlot({
   ariaLabel?: string;
   active?: boolean;
   dragActive?: boolean;
+  disabled?: boolean;
+  sizeClassName?: string;
   inputRef?: RefObject<HTMLInputElement | null>;
   menu?: ReactNode;
   onToggle?: () => void;
@@ -44,6 +48,7 @@ export function MediaInputSlot({
   const Icon = icon[kind];
   const open = (event: MouseEvent) => {
     event.stopPropagation();
+    if (disabled) return;
     if (item && onToggle) onToggle();
     else {
       onAdd?.();
@@ -55,20 +60,28 @@ export function MediaInputSlot({
     <div
       className="group relative"
       onDragOver={(event) => {
+        if (disabled) return;
         event.preventDefault();
         event.dataTransfer.dropEffect = "copy";
       }}
-      onDrop={onDrop}
+      onDrop={(event) => {
+        if (disabled) {
+          event.preventDefault();
+          return;
+        }
+        void onDrop(event);
+      }}
     >
       {active ? menu : null}
       <button
         type="button"
+        disabled={disabled}
         onClick={open}
         title={title}
         aria-label={ariaLabel}
         data-genspace-dropzone
         data-drag-active={dragActive || undefined}
-        className={`relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-lg ${
+        className={`relative flex ${sizeClassName ?? "h-24 w-24"} shrink-0 items-center justify-center overflow-hidden rounded-lg disabled:cursor-not-allowed disabled:opacity-50 ${
           item
             ? "border bg-zinc-800"
             : "flex-col border-2 border-dashed transition-colors hover:border-zinc-500"

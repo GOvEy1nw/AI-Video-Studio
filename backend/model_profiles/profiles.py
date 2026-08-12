@@ -74,6 +74,9 @@ ImageInputRole = Literal[
     "continue_video",
     "audio_to_video",
     "reference_voice",
+    "reference_image",
+    "reference_video",
+    "reference_audio",
 ]
 ImageInputKind = Literal["reference", "control", "inpaint"]
 AvailabilityState = Literal[
@@ -148,6 +151,7 @@ class ModelLicenseInfo:
     attribution_required: bool
     source_project: str
     source_revision: str | None = None
+    license_url: str | None = None
     notes: str = ""
 
 
@@ -164,6 +168,10 @@ class InputMediaPolicy:
     supports_image_inputs: bool = False
     tooltip_label: str = ""
     max_images: int = 0
+    max_reference_images: int = 0
+    max_reference_videos: int = 0
+    max_reference_audios: int = 0
+    max_combined_references: int = 0
     default_role: ImageInputRole | None = None
     roles: tuple[InputMediaRole, ...] = ()
     wangp_model_type: str | None = None
@@ -355,6 +363,24 @@ REFERENCE_VOICE_ROLE = InputMediaRole(
     label="Reference Voice",
     description="Generate video using reference voice (ID-LoRA).",
     kind="control",
+)
+H3_REFERENCE_IMAGE_ROLE = InputMediaRole(
+    role="reference_image",
+    label="Reference Image",
+    description="Use this image as a MiniMax H3 visual reference.",
+    kind="reference",
+)
+H3_REFERENCE_VIDEO_ROLE = InputMediaRole(
+    role="reference_video",
+    label="Reference Video",
+    description="Use this video as a MiniMax H3 visual reference.",
+    kind="reference",
+)
+H3_REFERENCE_AUDIO_ROLE = InputMediaRole(
+    role="reference_audio",
+    label="Reference Audio",
+    description="Use this audio as a MiniMax H3 audio reference.",
+    kind="reference",
 )
 
 
@@ -1759,6 +1785,92 @@ VIDEO_PROFILES: tuple[ModelProfile, ...] = (
             ),
         ),
     ),
+    ModelProfile(
+        id="minimax_h3",
+        display_name="MiniMax H3",
+        media_type="video",
+        visible=True,
+        status="experimental",
+        wangp_model_type="minimax_h3_fl2va_pruned",
+        wangp_metadata=WanGPModelMetadata(
+            family="minimax_h3",
+            family_label="MiniMax H3",
+            base_model_type="minimax_h3",
+            finetune=False,
+            main_output=("video", "audio"),
+            outputs=("video", "audio"),
+            inputs=("text", "image", "video", "audio"),
+            media_inputs={
+                "image": {"start": True, "end": True, "reference": True, "single_reference": False, "multiple_references": True, "background": False, "injected_frames": False, "control": False, "mask": False},
+                "video": {"continue": False, "last": False, "control": True, "mask": False},
+                "audio": {"prompt": True, "output": True},
+            },
+            capabilities={
+                "text_to_video": True, "image_to_video": True, "video_to_video": True,
+                "text_to_image": False, "image_to_image": False, "text_to_audio": False,
+                "audio_to_audio": False, "audio_to_video": True, "audio_output": True,
+                "inpainting": False, "outpainting": False, "reference_images": True,
+                "background_image": False, "injected_frames": False, "control_image": False,
+                "control_video": True, "video_continuation": False, "sliding_window": True,
+                "lora": False,
+            },
+            setting_values=_image_setting_values(
+                video_prompt_type={"guide_preprocessing": None, "mask_preprocessing": None, "guide_custom_choices": None, "image_ref_choices": None, "custom_video_selection": None, "forced": ""},
+                prompt_enhancer={"default": "", "choices": [{"label": "Enhance prompt", "value": "T"}]},
+            ),
+        ),
+        wangp_default_settings={
+            "video_length": 124,
+            "sliding_window_size": 362,
+            "sliding_window_overlap": 18,
+            "num_inference_steps": 20,
+            "guidance_scale": 1.0,
+            "flow_shift": 12.0,
+            "sample_solver": "euler",
+            "force_fps": 24,
+        },
+        text_to_video=True,
+        image_to_video=True,
+        video_to_video=True,
+        audio_to_video=True,
+        audio_output=True,
+        start_image=True,
+        end_image=True,
+        control_video=True,
+        sliding_window=True,
+        reference_images=True,
+        lora="unsupported",
+        input_media=InputMediaPolicy(
+            supports_image_inputs=True,
+            tooltip_label="Add H3 frames, controls, or references",
+            max_images=12,
+            max_reference_images=9,
+            max_reference_videos=2,
+            max_reference_audios=2,
+            max_combined_references=12,
+            default_role="start_image",
+            roles=(START_IMAGE_ROLE, END_IMAGE_ROLE, CONTROL_VIDEO_ROLE, AUDIO_GUIDE_ROLE, H3_REFERENCE_IMAGE_ROLE, H3_REFERENCE_VIDEO_ROLE, H3_REFERENCE_AUDIO_ROLE),
+        ),
+        default_aspect_ratio="16:9",
+        default_resolution_tier="720p",
+        allowed_aspect_ratios=CURATED_ASPECT_RATIOS,
+        allowed_resolution_tiers=("540p", "720p", "1080p"),
+        required_pack_ids=("minimax-h3",),
+        video_audio=VideoAudioPolicy(
+            status="experimental", handler="video_generation", required_pack_ids=("minimax-h3",),
+            soundtrack=True, audio_conditioning=True, control_video_audio=True,
+            output_audio=True, max_audio_inputs=2,
+        ),
+        license=ModelLicenseInfo(
+            project_license="MiniMax H3 Community License",
+            weights_license="MiniMax H3 Community License",
+            commercial_use="restricted",
+            attribution_required=True,
+            source_project="MiniMax H3",
+            license_url="https://huggingface.co/MiniMaxAI/MiniMax-H3/blob/main/LICENSE",
+            notes="License scope is subject to the official territorial and use restrictions.",
+        ),
+    ),
 )
 
 
@@ -1895,7 +2007,6 @@ _MMAUDIO_METADATA = WanGPModelMetadata(
     capabilities={"text_to_audio": True, "video_to_audio": True, "audio_output": True},
     setting_values={"duration_seconds": {"min": 1, "max": 20, "default": 8}},
 )
-
 _TTS_METADATA = WanGPModelMetadata(
     family="speech", family_label="Speech", base_model_type="tts", finetune=False,
     main_output=("audio",), outputs=("audio",), inputs=("text", "audio"),

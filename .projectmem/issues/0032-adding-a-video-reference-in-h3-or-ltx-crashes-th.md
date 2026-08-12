@@ -1,0 +1,9 @@
+# #0032 Adding a video reference in H3 or LTX crashes the renderer and leaves the entire Electron app blank.
+
+- 2026-08-12T08:56:14Z `issue`: Adding a video reference in H3 or LTX crashes the renderer and leaves the entire Electron app blank. [frontend/views/genspace/video/GuideMediaTrimEditor.tsx]
+- 2026-08-12T09:02:50Z `attempt`: Tried broad read-only PowerShell log/process discovery through nested context execution; outer PowerShell stripped $_ variables, producing unusable command errors. [renderer diagnostics] (failed)
+- 2026-08-12T09:05:20Z `attempt`: Traced both H3 and LTX to VideoTrimPanel's selection effect: inline parent callbacks change identity, the effect re-emits unchanged selection, and parent media updates create an infinite React update loop. [frontend/views/genspace/video/VideoTrimPanel.tsx] (partial)
+- 2026-08-12T09:06:17Z `attempt`: Added the shared callback-ref fix and first rendered regression test; test setup failed because reference_video is a normal H3 card, not a restored-role button. [frontend/views/genspace/components/GenSpaceControls.test.tsx] (partial)
+- 2026-08-12T09:08:51Z `attempt`: Stabilized VideoTrimPanel selection notifications through a callback ref; the rendered H3 and LTX trim-editor regression now passes 11/11. [frontend/views/genspace/video/VideoTrimPanel.tsx] (worked)
+- 2026-08-12T09:09:22Z `attempt`: Focused regression and production build passed, but strict TypeScript exposed an over-narrow inferred state type in the new test fixture. [frontend/views/genspace/components/GenSpaceControls.test.tsx] (partial)
+- 2026-08-12T09:15:38Z `fix`: Fixed the shared VideoTrimPanel callback-identity render loop by storing onSelectionChange in a ref and notifying only when trim bounds change. Focused GenSpaceControls regression passes for both MiniMax H3 and LTX paths; TypeScript typecheck and frontend production build pass; user confirmed the Electron app now remains working when adding video references.

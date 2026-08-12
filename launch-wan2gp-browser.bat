@@ -3,7 +3,7 @@ setlocal
 
 set "ROOT=%~dp0"
 set "VENV_ACTIVATE=%ROOT%backend\.venv\Scripts\activate.bat"
-set "WANGP_DIR=%ROOT%Wan2GP"
+set "WANGP_DIR=C:\Users\rais\Documents\GitHub\Wan2GP"
 
 if not exist "%VENV_ACTIVATE%" (
     echo [!] Missing project venv: "%VENV_ACTIVATE%"

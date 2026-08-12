@@ -19,6 +19,7 @@ interface ModelPack {
   variantName?: string;
   mediaTypes?: Array<"image" | "video" | "audio">;
   features?: string[];
+  licenseUrl?: string;
 }
 
 interface ModelPackManagerProps {
@@ -548,6 +549,16 @@ export function ModelPackManager({
                   )}
                 </span>
               </button>
+              {pack.licenseUrl ? (
+                <a
+                  href={pack.licenseUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="relative z-10 ml-4 mb-3 inline-block text-xs text-blue-300 hover:text-blue-200"
+                >
+                  View license
+                </a>
+              ) : null}
             </div>
           );
         })}

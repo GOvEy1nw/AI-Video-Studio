@@ -35,35 +35,34 @@
     "spatial_upsamplers": {
         "flashvsr": {
             "mode": 1,
-            "persistence": 1,
             "backend": "auto",
             "topk_ratio": 0.0
         },
         "pid": {
             "version": "1.5",
-            "tiling_threshold": 0,
-            "persistence": 1
+            "tiling_threshold": 0
         },
         "chain_of_zoom": {
-            "persistence": 1,
             "parallel_tile_processing": "auto"
+        },
+        "persistence": 1,
+        "seedvr2": {
+            "window_size": 0
         }
     },
     "audio_processors": {
         "mmaudio": {
-            "mode": 1,
-            "persistence": 1
+            "mode": 1
         },
         "prismaudio": {
             "mode": 1,
-            "persistence": 1,
             "steps": 24,
             "cfg_scale": 5.0
         },
         "seedvc": {
-            "mode": 2,
-            "persistence": 1
-        }
+            "mode": 2
+        },
+        "persistence": 1
     },
     "temporal_upsamplers": {
         "rife": {
@@ -88,7 +87,7 @@
     "prompt_enhancer_randomize_seed": true,
     "audio_save_path": "outputs",
     "enhancer_enabled": 3,
-    "extensions_defaults_version": "1.17",
+    "extensions_defaults_version": "1.19",
     "installed_remote_plugins": [
         "wan2gp-multiangle-prompt-helper",
         "Wan2GP-finetune-manager"
@@ -118,7 +117,7 @@
     "notification_sound_volume": 50,
     "max_frames_multiplier": 1,
     "display_stats": 0,
-    "last_model_type": "krea2_turbo_edit",
+    "last_model_type": "minimax_h3_ref2va_pruned",
     "last_model_per_family": {
         "music": "ace_step_v1_5_xl_turbo_lm_1_7b",
         "wan": "scail2_14B",
@@ -134,7 +133,8 @@
         "hunyuan": "hunyuan_avatar",
         "hunyuan_1_5": "hunyuan_1_5_480_i2v",
         "kandinsky5": "k5_lite_i2v",
-        "longcat": "longcat_avatar_v1_5"
+        "longcat": "longcat_avatar_v1_5",
+        "minimax_h3": "minimax_h3_ref2va_pruned"
     },
     "last_model_per_type": {
         "ace_step_v1": "ace_step_v1",
@@ -175,20 +175,23 @@
         "longcat_avatar_v1_5": "longcat_avatar_v1_5",
         "ltx2_22B": "ltx2_22B_distilled_1_1",
         "t2v_2_2": "t2v_2_2",
-        "shotplan_t2v_2_2": "shotplan_t2v_2_2"
+        "shotplan_t2v_2_2": "shotplan_t2v_2_2",
+        "minimax_h3_fl2va": "minimax_h3_fl2va",
+        "minimax_h3_ref2va_pruned": "minimax_h3_ref2va_pruned",
+        "minimax_h3_fl2va_pruned": "minimax_h3_fl2va_pruned"
     },
     "last_advanced_choice": true,
-    "last_resolution_choice": "1440x1440",
+    "last_resolution_choice": "832x480",
     "last_resolution_per_group": {
         "480p": "832x480",
-        "1080p": "1440x1440",
+        "1080p": "1408x1408",
         "720p": "1024x1024",
         "1440p": "1920x1920"
     },
-    "model_output_filter": "image",
+    "model_output_filter": "video",
     "last_model_per_output_filter": {
         "audio": "ace_step_v1_5_xl_turbo_lm_1_7b",
-        "video": "ltx2_22B_distilled_1_1",
+        "video": "minimax_h3_ref2va_pruned",
         "image": "krea2_turbo_edit"
     }
 }

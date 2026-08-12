@@ -86,6 +86,106 @@ class TestGenerate:
         assert call.steps == 8
         assert call.default_settings["prompt_enhancer"] == "T"
 
+    def test_h3_routes_references_and_compiles_stable_aliases(
+        self, client, enable_wangp: FakeWanGPBridge, tmp_path: Path
+    ):
+        from PIL import Image
+
+        start = tmp_path / "start.png"
+        reference = tmp_path / "reference.png"
+        Image.new("RGB", (16, 16), color="red").save(start)
+        Image.new("RGB", (16, 16), color="blue").save(reference)
+        response = client.post(
+            "/api/generate",
+            json={
+                **_T2V_JSON,
+                "modelProfileId": "minimax_h3",
+                "inputMedia": [
+                    {"role": "start_image", "path": str(start), "type": "image"},
+                    {"role": "reference_image", "path": str(reference), "type": "image", "alias": "@image4"},
+                ],
+                "prompt": "Use @image4 as the subject.",
+            },
+        )
+
+        assert response.status_code == 200
+        call = enable_wangp.video_calls[-1]
+        assert call.model_type == "minimax_h3_ref2va_pruned"
+        assert call.prompt == "Use <Picture 2> as the subject."
+        assert call.reference_image_paths == [str(reference)]
+
+    def test_h3_rejects_mixed_media_and_invalid_alias_kind(
+        self, client, enable_wangp: FakeWanGPBridge, tmp_path: Path
+    ):
+        from PIL import Image
+
+        reference = tmp_path / "reference.png"
+        Image.new("RGB", (16, 16), color="red").save(reference)
+        response = client.post(
+            "/api/generate",
+            json={
+                **_T2V_JSON,
+                "modelProfileId": "minimax_h3",
+                "inputMedia": [
+                    {"role": "reference_image", "path": str(reference), "type": "image", "alias": "@image1"},
+                    {"role": "control_video", "path": "control.mp4", "type": "video"},
+                ],
+                "prompt": "Use @image2.",
+            },
+        )
+
+        assert response.status_code == 400
+        assert response.json()["error"] == "H3_REF2VA_FL2VA_MEDIA_MIX"
+        assert enable_wangp.video_calls == []
+
+        invalid_alias = client.post(
+            "/api/generate",
+            json={
+                **_T2V_JSON,
+                "modelProfileId": "minimax_h3",
+                "inputMedia": [
+                    {"role": "reference_image", "path": str(reference), "type": "image", "alias": "@video1"},
+                ],
+                "prompt": "Use @video1.",
+            },
+        )
+
+        assert invalid_alias.status_code == 400
+        assert invalid_alias.json()["error"] == "H3_INVALID_MEDIA_ALIAS"
+
+        duplicate_frame = client.post(
+            "/api/generate",
+            json={
+                **_T2V_JSON,
+                "modelProfileId": "minimax_h3",
+                "inputMedia": [
+                    {"role": "start_image", "path": str(reference), "type": "image"},
+                    {"role": "start_image", "path": str(reference), "type": "image"},
+                ],
+            },
+        )
+        assert duplicate_frame.status_code == 400
+        assert duplicate_frame.json()["error"] == "H3_DUPLICATE_SINGLETON_MEDIA"
+
+        mismatched_type = client.post(
+            "/api/generate",
+            json={
+                **_T2V_JSON,
+                "modelProfileId": "minimax_h3",
+                "inputMedia": [
+                    {"role": "reference_video", "path": str(reference), "type": "image"},
+                ],
+            },
+        )
+        assert mismatched_type.status_code == 400
+        assert mismatched_type.json()["error"] == "H3_MEDIA_TYPE_MISMATCH"
+
+        recovery = client.post(
+            "/api/generate",
+            json={**_T2V_JSON, "modelProfileId": "minimax_h3"},
+        )
+        assert recovery.status_code == 200
+
     def test_video_profile_square_aspect_routes_to_ltx2(
         self, client, enable_wangp: FakeWanGPBridge
     ):

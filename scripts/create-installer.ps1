@@ -22,12 +22,6 @@ $WindowsSecurityModule = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v
 
 Set-Location $ProjectDir
 
-& "$ScriptDir\ensure-wan2gp.ps1"
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "ERROR: Pinned Wan2GP checkout is unavailable." -ForegroundColor Red
-    exit 1
-}
-
 # Verify prerequisites
 if (-not (Test-Path "dist") -or -not (Test-Path "dist-electron")) {
     Write-Host "ERROR: Frontend not built. Run local-build.ps1 or 'npm run build:frontend' first." -ForegroundColor Red

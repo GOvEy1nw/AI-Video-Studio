@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Callable, cast
 
 
-PACKS: dict[str, dict[str, str]] = {
+PACKS: dict[str, dict[str, str | list[str]]] = {
     "utility": {"name": "Utility Models", "kind": "utility"},
     "z_image_turbo": {"name": "Z-Image Turbo", "kind": "model", "model_type": "z_image"},
     "flux2_klein_4b": {"name": "Flux 2 Klein 4B", "kind": "model", "model_type": "flux2_klein_4b"},
@@ -52,6 +52,11 @@ PACKS: dict[str, dict[str, str]] = {
     "mmaudio": {"name": "MMAudio Sound Effects", "kind": "audio_processor", "processor": "mmaudio"},
     "omnivoice": {"name": "OmniVoice", "kind": "model", "model_type": "omnivoice"},
     "index_tts2": {"name": "Index TTS 2", "kind": "model", "model_type": "index_tts2"},
+    "minimax-h3": {
+        "name": "MiniMax H3",
+        "kind": "model",
+        "model_types": ["minimax_h3_fl2va_pruned", "minimax_h3_ref2va_pruned"],
+    },
     "prompt_enhancer": {"name": "Prompt Enhancer", "kind": "prompt"},
 }
 
@@ -231,7 +236,6 @@ def _create_model_manager(wgp: Any) -> Any:
 def _download_model_dependencies(
     wgp: Any,
     model_type: str,
-    progress_callback: Callable[[object], None] | None = None,
 ) -> None:
     """Mirror WanGP load_models download preflight without loading model weights."""
     model_def = cast(dict[str, Any], wgp.get_model_def(model_type))
@@ -245,7 +249,6 @@ def _download_model_dependencies(
             model_type,
             file_type=0,
             submodel_no=1,
-            progress_callback=progress_callback,
         )
         downloaded_main = True
 
@@ -262,7 +265,6 @@ def _download_model_dependencies(
                 model_type,
                 file_type=0,
                 submodel_no=2,
-                progress_callback=progress_callback,
             )
             downloaded_main = True
 
@@ -296,7 +298,6 @@ def _download_model_dependencies(
                         model_type,
                         file_type=1,
                         submodel_no=submodel_no,
-                        progress_callback=progress_callback,
                     )
         else:
             filename = wgp.get_model_filename(
@@ -311,7 +312,6 @@ def _download_model_dependencies(
                     model_type,
                     file_type=1,
                     submodel_no=0,
-                    progress_callback=progress_callback,
                 )
 
     if not downloaded_main:
@@ -320,7 +320,6 @@ def _download_model_dependencies(
             model_type,
             file_type=0,
             submodel_no=-1,
-            progress_callback=progress_callback,
         )
 
     text_encoder_urls = wgp.get_model_recursive_prop(
@@ -342,7 +341,6 @@ def _download_model_dependencies(
                 file_type=2,
                 submodel_no=-1,
                 force_path=model_def.get("text_encoder_folder"),
-                progress_callback=progress_callback,
             )
 
 
@@ -367,6 +365,16 @@ def _model_paths(manager: Any, model_type: str) -> set[Path]:
     model_def = manager.get_model_def(model_type)
     paths.update(Path(path) for path in manager._collect_handler_file_paths(model_type, model_def))
     return paths
+
+
+def _pack_model_types(pack: dict[str, str | list[str]]) -> list[str]:
+    value = pack.get("model_types")
+    if isinstance(value, list):
+        return value
+    model_type = pack.get("model_type")
+    if isinstance(model_type, str):
+        return [model_type]
+    raise RuntimeError("Model pack is missing a model type")
 
 
 def _validate_paths(pack_id: str, paths: set[Path]) -> set[Path]:
@@ -411,7 +419,8 @@ def _download_pack(
             raise RuntimeError(f"WanGP audio processor is not registered: {pack['processor']}")
         _process_download_definitions(wgp, handler.query_download_defs(), progress_callback)
     else:
-        _download_model_dependencies(wgp, pack["model_type"], progress_callback)
+        for model_type in _pack_model_types(pack):
+            _download_model_dependencies(wgp, model_type)
     return _validate_paths(pack_id, _resolve_pack_paths(wgp, manager, pack_id))
 
 
@@ -432,7 +441,10 @@ def _resolve_pack_paths(wgp: Any, manager: Any, pack_id: str) -> set[Path]:
             raise RuntimeError(f"WanGP audio processor is not registered: {pack['processor']}")
         return _download_def_paths(manager, handler.query_download_defs())
 
-    return _model_paths(manager, pack["model_type"])
+    paths: set[Path] = set()
+    for model_type in _pack_model_types(pack):
+        paths.update(_model_paths(manager, model_type))
+    return paths
 
 
 def main() -> int:
@@ -502,6 +514,8 @@ def main() -> int:
     pack_count = len(requested)
     for pack_index, pack_id in enumerate(requested, start=1):
         pack_name = PACKS[pack_id]["name"]
+        if not isinstance(pack_name, str):
+            raise RuntimeError(f"Model pack '{pack_id}' has an invalid name")
         context = {
             "id": pack_id,
             "name": pack_name,

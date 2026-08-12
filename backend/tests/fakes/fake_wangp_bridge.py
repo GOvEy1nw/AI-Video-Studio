@@ -43,6 +43,9 @@ class FakeWangpVideoCall:
     video_guide_outpainting: str | None = None
     video_guide_outpainting_ratio: str | None = None
     video_length_frames: int | None = None
+    reference_image_paths: list[str] = field(default_factory=list)
+    reference_video_paths: list[str] = field(default_factory=list)
+    reference_audio_paths: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -227,6 +230,9 @@ class FakeWanGPBridge:
         video_guide_outpainting: str | None = None,
         video_guide_outpainting_ratio: str | None = None,
         video_length_frames: int | None = None,
+        reference_image_paths: list[str] | None = None,
+        reference_video_paths: list[str] | None = None,
+        reference_audio_paths: list[str] | None = None,
     ) -> str:
         self.video_calls.append(
             FakeWangpVideoCall(
@@ -252,6 +258,9 @@ class FakeWanGPBridge:
                 video_guide_outpainting=video_guide_outpainting,
                 video_guide_outpainting_ratio=video_guide_outpainting_ratio,
                 video_length_frames=video_length_frames,
+                reference_image_paths=list(reference_image_paths or []),
+                reference_video_paths=list(reference_video_paths or []),
+                reference_audio_paths=list(reference_audio_paths or []),
             )
         )
         if self.raise_on_video is not None:

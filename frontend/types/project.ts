@@ -114,6 +114,7 @@ export interface GenerationParams {
   imageInputMedia?: {
     url: string
     role: string
+    alias?: string
     path?: string
     type?: 'image' | 'video' | 'audio'
     trimStartTime?: number

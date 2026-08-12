@@ -127,6 +127,10 @@ class ModelProfilesHandler(StateHandlerBase):
                 supportsImageInputs=profile.input_media.supports_image_inputs,
                 tooltipLabel=profile.input_media.tooltip_label,
                 maxImages=profile.input_media.max_images,
+                maxReferenceImages=profile.input_media.max_reference_images,
+                maxReferenceVideos=profile.input_media.max_reference_videos,
+                maxReferenceAudios=profile.input_media.max_reference_audios,
+                maxCombinedReferences=profile.input_media.max_combined_references,
                 defaultRole=profile.input_media.default_role,
                 roles=[
                     ModelProfileInputMediaRole(
@@ -255,6 +259,7 @@ class ModelProfilesHandler(StateHandlerBase):
                 attributionRequired=profile.license.attribution_required,
                 sourceProject=profile.license.source_project,
                 sourceRevision=profile.license.source_revision,
+                licenseUrl=profile.license.license_url,
                 notes=profile.license.notes,
             ) if profile.license is not None else None,
             availability=availability,

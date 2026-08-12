@@ -16,6 +16,18 @@ MODEL_TYPES = (
 )
 
 
+def resolve_wangp_root(value: str | None = None) -> Path:
+    for candidate_value in (value, os.environ.get("WANGP_ROOT"), os.environ.get("WANGP_WGP_PATH")):
+        if not candidate_value:
+            continue
+        candidate = Path(candidate_value).expanduser()
+        if candidate.is_file():
+            candidate = candidate.parent
+        if all((candidate / relative).is_file() for relative in ("wgp.py", "shared/api.py", "requirements.txt")):
+            return candidate.resolve()
+    raise ValueError("set WANGP_ROOT or WANGP_WGP_PATH to an external Wan2GP checkout")
+
+
 def inspect_models(
     wangp_root: Path,
     *,
@@ -104,17 +116,13 @@ def inspect_models(
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--wangp-root",
-        type=Path,
-        default=Path(__file__).resolve().parents[2] / "Wan2GP",
-    )
+    parser.add_argument("--wangp-root")
     parser.add_argument("--config", type=Path)
     parser.add_argument("--outputs-dir", type=Path)
     parser.add_argument("--snapshot", type=Path)
     args = parser.parse_args()
     records, snapshots = inspect_models(
-        args.wangp_root,
+        resolve_wangp_root(args.wangp_root),
         config_path=args.config,
         output_dir=args.outputs_dir,
     )

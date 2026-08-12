@@ -151,8 +151,20 @@ class TestCuratedProfiles:
 
     def test_visible_video_profiles(self) -> None:
         visible = get_visible_video_profiles()
-        assert len(visible) == 1
-        assert [p.id for p in visible] == ["ltx2_22b_distilled"]
+        assert [p.id for p in visible] == ["ltx2_22b_distilled", "minimax_h3"]
+
+    def test_minimax_h3_profile_exposes_curated_limits_and_pack(self) -> None:
+        profile = get_video_profile("minimax_h3")
+        assert profile is not None
+        assert profile.wangp_model_type == "minimax_h3_fl2va_pruned"
+        assert profile.required_pack_ids == ("minimax-h3",)
+        assert profile.input_media.max_reference_images == 9
+        assert profile.input_media.max_reference_videos == 2
+        assert profile.input_media.max_reference_audios == 2
+        assert profile.input_media.max_combined_references == 12
+        assert profile.video_audio.output_audio is True
+        assert profile.license is not None
+        assert profile.license.license_url == "https://huggingface.co/MiniMaxAI/MiniMax-H3/blob/main/LICENSE"
 
     def test_ltx2_distilled_video_profile(self) -> None:
         profile = get_video_profile("ltx2_22b_distilled")
@@ -340,7 +352,7 @@ class TestModelProfilesEndpoint:
             "ideogram4_turbotime_int8",
         ]
         video_ids = [p["id"] for p in data["profiles"] if p["mediaType"] == "video"]
-        assert video_ids == ["ltx2_22b_distilled"]
+        assert video_ids == ["ltx2_22b_distilled", "minimax_h3"]
 
     def test_profile_shape(self, client) -> None:
         r = client.get("/api/model-profiles")

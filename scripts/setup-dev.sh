@@ -23,9 +23,9 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 SYSTEM_NAME="$(uname -s)"
 
 echo ""
-echo "Ensuring Wan2GP checkout..."
+echo "Validating external WanGP checkout..."
 bash "$SCRIPT_DIR/ensure-wan2gp.sh"
-ok "Wan2GP checkout ready"
+ok "External WanGP checkout ready"
 
 echo ""
 echo "Installing Node dependencies..."
@@ -41,7 +41,7 @@ ok "uv sync complete"
 
 echo ""
 if [ "$SYSTEM_NAME" = "Darwin" ]; then
-  echo "Wan2GP local bridge remains disabled on macOS; the checkout is cloned for repo parity and packaging."
+  echo "Wan2GP local bridge remains disabled on macOS."
   echo ""
   echo "Verifying PyTorch MPS support..."
   .venv/bin/python -c "import torch; mps=hasattr(torch.backends,'mps') and torch.backends.mps.is_available(); print(f'MPS available: {mps}')" || true

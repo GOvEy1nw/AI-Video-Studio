@@ -1,6 +1,7 @@
 param(
     [Parameter(Mandatory = $true)][string]$PythonExe,
-    [Parameter(Mandatory = $true)][string]$ProjectDir
+    [Parameter(Mandatory = $true)][string]$ProjectDir,
+    [Parameter(Mandatory = $true)][string]$WanGPRoot
 )
 
 $ErrorActionPreference = "Stop"
@@ -13,12 +14,11 @@ $PythonRoot = Split-Path -Parent $PythonExe
 $PythonVersion = (Get-Content (Join-Path $BackendDir ".python-version") -Raw).Trim()
 $RequirementsFile = Join-Path $env:TEMP "aivs-requirements-$PID.txt"
 $FilteredRequirementsFile = Join-Path $env:TEMP "aivs-requirements-no-torch-$PID.txt"
-$WanGPRoot = Join-Path $ProjectDir "Wan2GP"
 
 if (-not (Test-Path $PythonExe)) { throw "Bundled Python not found: $PythonExe" }
 if (-not (Test-Path $UvExe)) { throw "Bundled uv not found: $UvExe" }
 if (-not (Test-Path (Join-Path $BackendDir "uv.lock"))) { throw "Pinned dependency lock is missing." }
-if (-not (Test-Path $WanGPRoot)) { throw "Bundled WanGP checkout is missing: $WanGPRoot" }
+if (-not (Test-Path (Join-Path $WanGPRoot 'requirements.txt'))) { throw "WanGP requirements are missing: $WanGPRoot" }
 
 try {
     Write-Output "AIVS_STEP:1:Resolving pinned dependencies"
@@ -30,7 +30,7 @@ try {
         Set-Content -Path $FilteredRequirementsFile -Encoding utf8
 
     Write-Output "AIVS_STEP:2:Installing GPU runtime"
-    & (Join-Path $ScriptDir "install-wangp-stack.ps1") -PythonExe $PythonExe -UvExe $UvExe -SkipWan2gpCheckout
+    & (Join-Path $ScriptDir "install-wangp-stack.ps1") -PythonExe $PythonExe -UvExe $UvExe -WanGPRoot $WanGPRoot
     if ($LASTEXITCODE -ne 0) { throw "WanGP GPU stack install failed." }
 
     Write-Output "AIVS_STEP:3:Installing application dependencies"

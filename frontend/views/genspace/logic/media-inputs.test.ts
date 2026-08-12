@@ -4,12 +4,15 @@ import type { GenSpaceMediaInput } from "../types";
 import { VIDEO_GUIDE_ROLE_OPTIONS } from "../constants";
 import {
   findGuideInput,
+  getH3ReferenceAvailability,
+  getH3PromptAliases,
   isImageAspectRatioLocked,
   isVideoAspectRatioLocked,
   inferMediaKindForRole,
   normalizeImageInputsForProfile,
   normalizeVideoInputsForProfile,
   replaceGuideInput,
+  nextH3MediaAlias,
 } from "./media-inputs";
 
 const policy: ModelProfileInputMedia = {
@@ -62,6 +65,20 @@ describe("GenSpace media input logic", () => {
         true,
       ),
     ).toEqual([input("start-a", "start_image"), input("end", "end_image"), guide]);
+  });
+
+  it("reserves removed H3 aliases still referenced by the prompt", () => {
+    expect(getH3PromptAliases("Keep @image2 with @audio1.")).toEqual([
+      "@image2",
+      "@audio1",
+    ]);
+    expect(nextH3MediaAlias([], ["@image2"], "image")).toBe("@image3");
+  });
+
+  it("keeps H3 reference capacity and audio balance available only when valid", () => {
+    expect(getH3ReferenceAvailability([])).toEqual({ image: true, video: true, audio: false });
+    expect(getH3ReferenceAvailability([input("image", "reference_image", "image")])).toMatchObject({ audio: true });
+    expect(getH3ReferenceAvailability([input("frame", "start_image", "image")])).toEqual({ image: false, video: false, audio: false });
   });
 
   it("replaces only the guide slot", () => {

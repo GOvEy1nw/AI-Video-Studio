@@ -42,6 +42,7 @@ export interface FramingSettings {
 
 export interface GenSpaceMediaInput {
   id: string;
+  alias?: string;
   url: string;
   path?: string;
   role: string;

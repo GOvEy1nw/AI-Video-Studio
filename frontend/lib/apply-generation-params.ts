@@ -90,6 +90,7 @@ export function toStoredInputMediaEntry(
   item: {
     url: string
     role: string
+    alias?: string
     type?: 'image' | 'video' | 'audio'
     trimStartTime?: number
     trimDuration?: number
@@ -105,6 +106,7 @@ export function toStoredInputMediaEntry(
   }
   if (path) entry.path = path
   if (item.type) entry.type = item.type
+  if (item.alias) entry.alias = item.alias
   if (item.trimStartTime !== undefined) entry.trimStartTime = item.trimStartTime
   if (item.trimDuration !== undefined) entry.trimDuration = item.trimDuration
   if (item.mediaDuration !== undefined) entry.mediaDuration = item.mediaDuration
@@ -189,6 +191,7 @@ export function buildImageInputsFromParams(
       if (!isUsableMediaUrl(url)) continue
       items.push({
         id: crypto.randomUUID(),
+        ...(item.alias ? { alias: item.alias } : {}),
         url,
         role: item.role,
         type: item.type ?? inferInputType(item.role),

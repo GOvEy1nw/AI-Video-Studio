@@ -1,5 +1,5 @@
 import { Clock, Image, Monitor, Music, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ModelDownloadButton } from "../../../components/ModelDownloadButton";
 import { ModelPicker } from "../../../components/ModelPicker";
 import { SettingsDropdown } from "../../../components/SettingsDropdown";
@@ -12,8 +12,8 @@ import { GenerateButton } from "../components/GenerateButton";
 import { GenPanelSection } from "../components/GenPanelSection";
 import { PromptActions } from "../components/PromptActions";
 import { PromptEditor } from "../components/PromptEditor";
-import type { VideoGenPanelController } from "../types";
-import { isVideoAspectRatioLocked } from "../logic/media-inputs";
+import type { GenSpaceMediaKind, VideoGenPanelController } from "../types";
+import { getH3PromptAliases, getH3ReferenceAvailability, isVideoAspectRatioLocked } from "../logic/media-inputs";
 import { VideoMediaInputs } from "./VideoMediaInputs";
 import { VideoModeTabs } from "./VideoModeTabs";
 import { VideoToolInput } from "./VideoToolInput";
@@ -185,6 +185,10 @@ export function VideoGenPanel({
   const { prompt, generation, settings, media, profiles, videoTools, framing } =
     controller;
   const videoSettings = settings.value;
+  const h3ReferenceRequestRef = useRef<(type: GenSpaceMediaKind) => void>(() => undefined);
+  const setH3ReferenceRequest = useCallback((request: (type: GenSpaceMediaKind) => void) => {
+    h3ReferenceRequestRef.current = request;
+  }, []);
   const patchVideoSettings = settings.patch;
   const installedProfiles = profiles.options.filter((profile) =>
     isModelProfileInstalled(profile.availability),
@@ -212,6 +216,8 @@ export function VideoGenPanel({
   const hasAudioInput =
     !!media.inputAudio ||
     media.inputs.some(({ role }) => AUDIO_MEDIA_ROLE_SET.has(role));
+  const isH3Generation = !isPanelMode && selectedProfile?.id === "minimax_h3";
+  const h3ReferenceAvailability = getH3ReferenceAvailability(media.inputs);
   const aspectRatioDisabled = isVideoAspectRatioLocked(
     videoTools.mode,
     media.inputs,
@@ -386,6 +392,8 @@ export function VideoGenPanel({
           onUseAudioTrackChange={media.setUseAudioTrack}
           resolveInputFileUrl={media.resolveInputFileUrl}
           syncInputFileToGallery={media.syncInputFileToGallery}
+          reservedAliases={getH3PromptAliases(prompt.value)}
+          onReferenceRequestReady={setH3ReferenceRequest}
         />
       ) : null}
       {isTools ? (
@@ -425,6 +433,17 @@ export function VideoGenPanel({
       <PromptEditor
         value={prompt.value}
         onChange={prompt.setValue}
+        mediaMentions={
+          isH3Generation
+            ? media.inputs.flatMap((input) => input.alias && input.type ? [{ alias: input.alias, type: input.type, url: input.url }] : [])
+            : undefined
+        }
+        onAddMedia={isH3Generation ? (type) => h3ReferenceRequestRef.current(type) : undefined}
+        mediaAddDisabled={isH3Generation ? {
+          image: !h3ReferenceAvailability.image,
+          video: !h3ReferenceAvailability.video,
+          audio: !h3ReferenceAvailability.audio,
+        } : undefined}
         onSubmit={generation.submit}
         canSubmit={generation.canSubmit}
         disabled={generation.isRunning}

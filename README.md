@@ -75,7 +75,7 @@ AiVS is in active development. Director Mode V1 is available as a standalone wor
 - VRAM: 12 GB minimum for selective/light use, 16 GB recommended for image work, 24 GB recommended for LTX video and larger model packs. This is guidance, not an enforced hardware gate.
 - At least 50 GB free disk space where model packs are installed; more is needed for several packs and generated media.
 
-The desktop installer includes Python, pip, uv, MinGit, WanGP and GPU runtime setup. It does not require Node.js, pnpm or a system Git installation.
+The desktop installer includes Python, pip, uv, MinGit and GPU runtime setup. On first run or repair it uses bundled MinGit to clone the current configured WanGP `AiVS` branch into app-managed runtime storage. It does not require Node.js, pnpm or a system Git installation.
 
 ## Quick Start: Windows
 
@@ -95,10 +95,7 @@ pnpm setup:dev:win
 pnpm dev
 ```
 
-`setup:dev:win` prepares the backend environment, installs the WanGP GPU stack, and uses either:
-
-- a repo-local `Wan2GP/` checkout, or
-- an existing Wan2GP checkout pointed to by `WANGP_ROOT`.
+`setup:dev:win` prepares the backend environment and installs the WanGP GPU stack against an external Wan2GP checkout. It never fetches, switches, or modifies that checkout.
 
 To reuse an existing Wan2GP checkout:
 
@@ -108,7 +105,7 @@ pnpm setup:dev:win
 pnpm dev
 ```
 
-If both `.\Wan2GP` and `WANGP_ROOT` exist, the repo-local `.\Wan2GP` checkout is preferred.
+`WANGP_WGP_PATH` is accepted for compatibility when `WANGP_ROOT` is not set. The external checkout must contain `wgp.py`, `shared/api.py`, and `requirements.txt`.
 
 ## Quick Start: Linux
 
@@ -122,7 +119,7 @@ Prerequisites:
 - Git
 - ffmpeg
 - NVIDIA GPU with CUDA support
-- WanGP checkout available locally or via `WANGP_ROOT`
+- external WanGP checkout configured through `WANGP_ROOT` (or `WANGP_WGP_PATH`)
 
 ```bash
 export WANGP_ROOT=/path/to/Wan2GP
@@ -130,7 +127,7 @@ pnpm setup:dev:linux
 pnpm dev
 ```
 
-If `WANGP_ROOT` is not set, the setup script can prepare a repo-local `Wan2GP/` checkout.
+The Linux setup script validates the external checkout and never clones or changes it.
 
 ## Runtime Notes
 

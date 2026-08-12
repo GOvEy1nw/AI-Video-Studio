@@ -96,6 +96,10 @@ for profile_id in _SHARED_IMAGE_RESOLUTION_PROFILE_IDS:
         if source_id == "flux2_klein_4b":
             _RESOLUTION_TABLE[(profile_id, tier, aspect)] = dimensions
 
+for (source_id, tier, aspect), dimensions in tuple(_RESOLUTION_TABLE.items()):
+    if source_id == "ltx2_22b_distilled":
+        _RESOLUTION_TABLE[("minimax_h3", tier, aspect)] = dimensions
+
 # WanGP's built-in list does not contain every requested ratio at every tier.
 # These curated 16-aligned sizes use built-in choices where available and
 # preserve each tier's established pixel budget elsewhere.
@@ -139,6 +143,7 @@ _ADDITIONAL_ASPECT_RESOLUTIONS: dict[
 _PROFILE_RESOLUTION_TIERS: dict[str, tuple[ResolutionTier, ...]] = {
     "z_image_turbo": ("540p", "720p", "1080p"),
     "ltx2_22b_distilled": ("540p", "720p", "1080p"),
+    "minimax_h3": ("540p", "720p", "1080p"),
     **{
         profile_id: ("540p", "720p", "1080p", "1440p")
         for profile_id in (

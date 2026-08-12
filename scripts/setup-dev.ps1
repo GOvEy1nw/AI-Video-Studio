@@ -27,12 +27,12 @@ Ok "uv $(uv --version)"
 Ok "git $(git --version)"
 
 Write-Host ""
-Write-Host "Ensuring Wan2GP checkout..."
+Write-Host "Validating external WanGP checkout..."
 & (Join-Path $ScriptDir "ensure-wan2gp.ps1")
 if ($LASTEXITCODE -ne 0) {
-    Fail "Wan2GP checkout setup failed"
+Fail "External WanGP checkout validation failed"
 }
-Ok "Wan2GP checkout ready"
+Ok "External WanGP checkout ready"
 
 Write-Host ""
 Write-Host "Installing Node dependencies..."
@@ -54,7 +54,8 @@ Ok "uv sync complete"
 
 Write-Host ""
 Write-Host "Installing WanGP GPU stack (auto-detects your NVIDIA GPU)..."
-& (Join-Path $ScriptDir "install-wangp-stack.ps1")
+$WanGPRoot = if ($env:WANGP_ROOT) { $env:WANGP_ROOT } else { $env:WANGP_WGP_PATH }
+& (Join-Path $ScriptDir "install-wangp-stack.ps1") -WanGPRoot $WanGPRoot
 if ($LASTEXITCODE -ne 0) {
     Fail "WanGP stack install failed"
 }

@@ -110,6 +110,10 @@ export interface ModelProfileInputMedia {
   supportsImageInputs: boolean
   tooltipLabel: string
   maxImages: number
+  maxReferenceImages?: number
+  maxReferenceVideos?: number
+  maxReferenceAudios?: number
+  maxCombinedReferences?: number
   defaultRole: string | null
   roles: ModelProfileInputMediaRole[]
 }
@@ -179,6 +183,7 @@ export interface ModelProfileLicenseInfo {
   attributionRequired: boolean
   sourceProject: string
   sourceRevision: string | null
+  licenseUrl?: string | null
   notes: string
 }
 

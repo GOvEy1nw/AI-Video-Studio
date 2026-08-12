@@ -31,30 +31,20 @@ extraResources:
       - "!outputs/**"
       - "!models/**"
       - "!tests/**"
-  - from: Wan2GP
-    to: Wan2GP
-    filter:
-      - "**/*"
-      - "!**/.git/**"
-      - "!docs/**"
-      - "!**/.venv/**"
-      - "!**/__pycache__/**"
-      - "!**/*.pyc"
-      - "!**/.codegraph/**"
-      - "!ckpts/**"
-      - "!loras/**"
-      - "!outputs/**"
-      - "!release/**"
   - from: python-bootstrap
     to: python-bootstrap
   - from: git-bootstrap
     to: git
+  - from: wgp_config.json
+    to: wgp_config.json
   - from: scripts
     to: scripts
     filter:
       - install-python-dependencies.ps1
       - install-wangp-stack.ps1
+      - ensure-wan2gp.ps1
       - wangp-stacks.json
+      - wangp-source.json
   - from: resources/vc_redist.x64.exe
     to: vc_redist.x64.exe
 

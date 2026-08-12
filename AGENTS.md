@@ -113,7 +113,7 @@ React renderer (`frontend/`)
 | `electron/` | Desktop lifecycle, preload, IPC, path safety, storage, runtime setup, export, and packaging behaviour |
 | `backend/` | FastAPI routes, typed handlers, state, services, curated profiles, WanGP bridge, and backend tests |
 | `scripts/` | Supported setup, build, packaging, runtime-stack, and WanGP update workflows |
-| `Wan2GP/` | Managed WanGP checkout sourced from the configured AiVS branch |
+| external `Wan2GP/` checkout | Development WanGP source supplied through `WANGP_ROOT` or `WANGP_WGP_PATH`; installed Windows builds clone the configured branch into app-managed runtime storage |
 | `resources/` | Application and installer resources |
 | `backlog/tasks/` | Actionable task scope, acceptance criteria, plans, status, and validation evidence |
 
@@ -281,7 +281,7 @@ Treat Python, Torch, CUDA, acceleration kernels, and WanGP as one curated compat
 - Use the versions and install paths pinned by `backend/pyproject.toml`, `backend/uv.lock`, `scripts/wangp-stacks.json`, and the repository scripts.
 - Do not run broad `pip install -U`, generic `uv update`, or automated dependency upgrades across the GPU stack.
 - Do not let a normal package update prune hardware-specific wheels from the shared backend environment.
-- Use the WanGP source/update scripts rather than manually replacing the managed `Wan2GP/` checkout.
+- Development uses an external read-only WanGP checkout via `WANGP_ROOT` or `WANGP_WGP_PATH`; installed Windows setup transactionally clones the configured branch into app-managed storage.
 
 ## 9. Persistence and file safety
 
@@ -365,14 +365,14 @@ Run commands from the repository root unless shown otherwise.
 | `pnpm dev` | Launch Vite, Electron, and the supervised local backend |
 | `pnpm dev:debug` | Launch with Electron inspector and Python debug support |
 
-To reuse an external WanGP checkout during setup:
+Development requires an external WanGP checkout during setup:
 
 ```powershell
 $env:WANGP_ROOT = "D:\Wan2GP"
 pnpm setup:dev:win
 ```
 
-A repo-local `Wan2GP/` checkout takes precedence when both exist.
+The setup scripts validate this checkout but never fetch, switch, or modify it.
 
 ### Focused checks
 
@@ -417,9 +417,9 @@ Use the repository build scripts. Do not replace them with ad hoc `vite`, raw `e
 
 | Command | Purpose |
 | --- | --- |
-| `pnpm wangp:check` | Compare the managed checkout with the configured AiVS branch |
-| `pnpm wangp:update` | Perform the supported transactional WanGP update workflow |
-| `pnpm wangp:update:full` | Update WanGP and run the full promotion validation |
+| `pnpm wangp:check` | Compare the external checkout with the configured AiVS branch head without modifying it |
+| `pnpm wangp:validate` | Run focused compatibility validation against the external checkout without modifying it |
+| `pnpm wangp:validate:full` | Run the full external-checkout validation gate without modifying it |
 
 ## 13. Working style
 
