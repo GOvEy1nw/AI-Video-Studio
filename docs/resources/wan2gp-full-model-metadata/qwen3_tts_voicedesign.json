@@ -497,7 +497,7 @@
       }
     },
     "default_settings": {
-      "settings_version": 2.66,
+      "settings_version": 2.73,
       "prompt": "I wish you a good day. Please keep the door closed. I am afraid AI haters are going to come in. Oh I am so afraid !",
       "resolution": "832x480",
       "flow_shift": 5.0,

@@ -118,6 +118,17 @@
           "min": 0.0,
           "max": 90.0,
           "inc": 1.0
+        },
+        {
+          "id": "adjust_speed_to_max_duration",
+          "label": "Adjust Speed to Max duration",
+          "name": "Adjust Speed",
+          "type": "dropdown",
+          "choices": [
+            "No",
+            "Yes"
+          ],
+          "default": "No"
         }
       ],
       "audio_guide_label": "Speaker 1 reference voice",
@@ -631,7 +642,7 @@
       }
     },
     "default_settings": {
-      "settings_version": 2.66,
+      "settings_version": 2.73,
       "prompt": "I told you this would happen.[laughter] But no, nobody listened. Dont you feel dumb now ? [question-en] What now?",
       "resolution": "832x480",
       "flow_shift": 5.0,

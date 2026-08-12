@@ -83,7 +83,8 @@
       ],
       "text_encoder_folder": "Qwen3-VL-4B-Instruct",
       "text_encoder_URLs": [
-        "https://huggingface.co/DeepBeepMeep/krea-2/resolve/main/Qwen3-VL-4B-Instruct/Qwen3-VL-4B-Instruct_bf16.safetensors"
+        "https://huggingface.co/DeepBeepMeep/krea-2/resolve/main/Qwen3-VL-4B-Instruct/Qwen3-VL-4B-Instruct_text_bf16.safetensors",
+        "https://huggingface.co/DeepBeepMeep/krea-2/resolve/main/Qwen3-VL-4B-Instruct/Qwen3-VL-4B-Instruct_quanto_bf16_int8.safetensors"
       ],
       "no_negative_prompt": false,
       "no_background_removal": false,
@@ -91,6 +92,9 @@
         "<=2k"
       ],
       "vae_block_size": 16,
+      "vae_upsampler": [
+        1
+      ],
       "vae_upsamplers": {
         "qwen_vae_pid(1.5)": [
           1
@@ -124,6 +128,10 @@
         2
       ],
       "outpainting_quantize_margins": 16,
+      "vision_encoder_filename": "Qwen3-VL-4B-Instruct\\Qwen3-VL-4B-Instruct_vision_bf16.safetensors",
+      "preload_URLs": [
+        "https://huggingface.co/DeepBeepMeep/krea-2/resolve/main/Qwen3-VL-4B-Instruct/Qwen3-VL-4B-Instruct_vision_bf16.safetensors|Qwen3-VL-4B-Instruct"
+      ],
       "name": "Krea 2 Turbo Identity Edit v1.2",
       "architecture": "krea2_turbo_edit",
       "description": "Fast instruction-based image editing with identity preservation using Krea 2 Turbo and the full-rank Identity Edit v1.2 LoRA. Up to two Reference Images can be provided.",

@@ -12,7 +12,9 @@
       "wan_5B_class": false,
       "vace_class": false,
       "bernini_class": true,
+      "shotplan": false,
       "scail2": false,
+      "animate2": false,
       "prompt_infos": "## Bernini Prompt Tips\nUse direct editing language. Say what should change, where it should appear, and what must remain unchanged.\n\n### Referring to Inputs\n- Use `source video` for the control video or original clip.\n- Use `reference image` when there is one image.\n- With several images, refer to them by order: `the first reference image`, `the second reference image`, `the third reference image`.\n- Assign each reference a role in the prompt. For example: `Use the first reference image as the jacket design and the second reference image as the logo on the back.`\n\n### Good Prompt Shapes\n- **Video edit:** `Replace the person's blue shirt in the source video with the red floral shirt from the reference image. Preserve the person's face, body shape, pose, motion, camera movement, lighting, shadows, and background. Keep the shirt stable with no flicker.`\n- **Multiple references:** `Dress the person in the source video with the coat from the first reference image and the scarf from the second reference image. Match the original perspective, body motion, fabric folds, and scene lighting. Do not change the face, hair, hands, background, or camera framing.`\n- **Object insertion:** `Add the handbag from the reference image onto the table at the right side of the source video. Keep it the same scale across frames, aligned with the table perspective, with natural contact shadows and no sliding.`\n- **Style transfer:** `Apply the watercolor painting style from the reference image to the source video while preserving the original composition, object shapes, motion, and camera path.`\n- **Reference-to-video:** `Generate a video of the subject from the first reference image walking through a rainy street. Use the outfit from the second reference image. Keep the subject identity consistent, with realistic steps, wet reflections, and stable clothing details.`\n- **Text-only generation:** `A close-up video of a ceramic teapot on a wooden table, morning sunlight through a window, slow camera push-in, steam rising gently, realistic reflections and shadows.`\n\n### Practical Tips\n- Put the requested edit first, then the preservation constraints.\n- Mention materials, colors, placement, scale, lighting, and motion when they matter.\n- For local edits, explicitly name untouched regions: `Do not change the face, hands, background, camera framing, or original motion.`\n- Avoid vague prompts like `make it better`; use concrete nouns and visible constraints.",
       "infos": "## Bernini 1.3B Notes\nThis smaller variant is best for simple or localized tasks such as style transfer, subtitle or watermark removal, garment or object swaps, and local edits.\n\nIt is less suitable than the 14B Bernini model for complex human generation, large motion changes, dense multi-reference composition, or edits that require many interacting objects.",
       "color_correction": true,
@@ -539,7 +541,7 @@
       "prompt_enhancer": null
     },
     "default_settings": {
-      "settings_version": 2.66,
+      "settings_version": 2.73,
       "prompt": "Replace the person's outer shirt with the shirt from the reference image while preserving the original motion, camera framing, lighting, background, and body pose.",
       "resolution": "832x480",
       "flow_shift": 5,

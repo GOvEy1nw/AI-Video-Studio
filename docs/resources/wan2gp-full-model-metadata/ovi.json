@@ -357,7 +357,7 @@
       "prompt_enhancer": null
     },
     "default_settings": {
-      "settings_version": 2.66,
+      "settings_version": 2.73,
       "prompt": "A singer in a glittering jacket grips the microphone, sweat shining on his brow, and shouts, <S>The end is night<E>. The crowd roars in response, fists in the air. Behind him, a guitarist steps to the mic and adds to say <S>We must all find a bunker where to hide.<E>. The energy peaks as the lights flare brighter.. <AUDCAP>Electric guitar riffs, cheering crowd, shouted male voices.<ENDAUDCAP>",
       "resolution": "832x480",
       "flow_shift": 5.0,

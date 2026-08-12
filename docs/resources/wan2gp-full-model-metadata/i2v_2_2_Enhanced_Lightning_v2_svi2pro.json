@@ -17,7 +17,9 @@
       "wan_5B_class": false,
       "vace_class": false,
       "bernini_class": false,
+      "shotplan": false,
       "scail2": false,
+      "animate2": false,
       "color_correction": true,
       "svi2pro": true,
       "i2v_2_2": true,
@@ -487,7 +489,7 @@
       "prompt_enhancer": null
     },
     "default_settings": {
-      "settings_version": 2.66,
+      "settings_version": 2.73,
       "prompt": "(at 0 seconds:a man open his fridge, takes a beer and drink it)",
       "resolution": "832x480",
       "flow_shift": 5,

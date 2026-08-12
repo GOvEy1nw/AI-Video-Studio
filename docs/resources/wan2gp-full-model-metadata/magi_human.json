@@ -384,7 +384,7 @@
       "prompt_enhancer": null
     },
     "default_settings": {
-      "settings_version": 2.66,
+      "settings_version": 2.73,
       "prompt": "A calm woman with short dark hair looks into the camera and speaks clearly in English about how small daily habits can improve confidence. Her expression stays warm and natural, with subtle head movement, realistic blinking, and clean lip sync. Background Sound: <No prominent background sound>",
       "resolution": "448x256",
       "flow_shift": 5.0,

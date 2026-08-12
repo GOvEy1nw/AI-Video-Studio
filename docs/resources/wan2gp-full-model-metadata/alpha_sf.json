@@ -12,7 +12,9 @@
       "wan_5B_class": false,
       "vace_class": false,
       "bernini_class": false,
+      "shotplan": false,
       "scail2": false,
+      "animate2": false,
       "color_correction": true,
       "svi2pro": false,
       "i2v_2_2": false,
@@ -360,7 +362,7 @@
       "prompt_enhancer": null
     },
     "default_settings": {
-      "settings_version": 2.66,
+      "settings_version": 2.73,
       "prompt": "A large orange octopus is seen resting. The background of the video is transparent.",
       "resolution": "832x480",
       "flow_shift": 3,

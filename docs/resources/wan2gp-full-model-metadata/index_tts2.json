@@ -383,7 +383,7 @@
       }
     },
     "default_settings": {
-      "settings_version": 2.66,
+      "settings_version": 2.73,
       "prompt": "[fear] At the very beginning I was so afraid to speak.\n[sadness] Nobody would talk to me. I felt so alone.\n[disgust] They would just ignore me and pretend that I didnt exist\n[happy] By chance I discovered this wonderful App, and now everything is different.\n[anger] I have a new voice and now everybody will have no choice but to listen to my words !!!",
       "resolution": "832x480",
       "flow_shift": 5.0,

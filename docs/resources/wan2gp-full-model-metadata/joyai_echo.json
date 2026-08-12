@@ -1,7 +1,7 @@
 {
   "joyai_echo": {
     "model_type": "joyai_echo",
-    "name": "JoyAI-Echo 22B",
+    "name": "LTX-2 2.3 JoyAI-Echo 22B",
     "model_def": {
       "ltx2_22B_class": true,
       "ltx2_edit_anything": false,
@@ -17,7 +17,6 @@
       "frames_steps": 8,
       "sliding_window": true,
       "returns_audio": true,
-      "prompt_enhancer_button_label": "Write",
       "auto_null_audio": true,
       "multimedia_generation": true,
       "profiles_dir": [
@@ -37,7 +36,8 @@
           "default": 0.001,
           "min": 0.0001,
           "max": 0.99,
-          "inc": 0.0001
+          "inc": 0.0001,
+          "video_prompt_type": "?"
         },
         {
           "id": "joyai_control_memory_positions",
@@ -50,6 +50,21 @@
       ],
       "vae_block_size": 64,
       "keep_frames_video_guide_not_supported": true,
+      "prompt_enhancer_button_label": "Write",
+      "system_configs": {
+        "_name": "VAE",
+        "_default_label": "Standard VAE (Fast)",
+        "NAD Diffusion Decoder": {
+          "name": "NAD Diffusion Decoder (Higher VRAM, Slow)",
+          "ltx2_video_vae_file": "ltx-2.5-22b_diffusion_video_vae_bf16.safetensors"
+        },
+        "PrunaAI VAE": {
+          "name": "PrunaAI VAE (up to x2 faster)",
+          "ltx2_video_vae_file": "ltx-2.3-22b_PrunaAI_vae.safetensors",
+          "ltx2_video_vae_config_file": "ltx-2.3-22b_PrunaAI_vae.json",
+          "ltx2_pruna_vae": true
+        }
+      },
       "ltx2_lora_distilled": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-distilled-lora-384.safetensors",
       "ltx2_lora_distilled_1_1": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-distilled-lora-384-1.1.safetensors",
       "ltx2_lora_union_control": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-ic-lora-union-control-ref0.5.safetensors",
@@ -130,7 +145,7 @@
       "lock_inference_steps": true,
       "guidance_max_phases": 2,
       "visible_phases": 0,
-      "name": "JoyAI-Echo 22B",
+      "name": "LTX-2 2.3 JoyAI-Echo 22B",
       "architecture": "joyai_echo",
       "description": "JoyAI-Echo is an LTX-2.3-based audio-video model for connected multi-window stories. WanGP keeps compact visual and audio memories so later windows can reuse characters, voices, objects, and places. Write clear story beats with stable IDs, repeated identity details, readable dialogue, and consistent sound design. A Control Video with audio can predefine memory before generation.",
       "URLs": [
@@ -465,7 +480,7 @@
       }
     },
     "default_settings": {
-      "settings_version": 2.66,
+      "settings_version": 2.73,
       "prompt": "[/duration=10s, /store_mem=man1,man2]ID_A is a charismatic retired stage magician in his late sixties with silver hair, a velvet burgundy jacket, expressive eyebrows, and a dry theatrical voice. He stands alone inside an abandoned seaside theater at night, lit by dusty gold footlights and moonlight through cracked windows. ID_A opens a small lacquered box, removes a glowing blue playing card, looks directly into the camera, and says, \"I retired from miracles because the miracles started freelancing.\" Keep his face and lip movement clearly visible in a stable medium close-up. The theater contains faded red seats, torn curtains, brass railings, and a faint ocean shimmer beyond the broken windows. Audible details include soft card handling, distant waves, old wood creaks, and his amused breath before speaking. No prominent music, only a playful mysterious room tone.\n\n[/duration=10s]ID_A is the same retired magician with the same silver hair, burgundy velvet jacket, theatrical voice, glowing blue playing card, and abandoned seaside theater. He moves across the stage with surprising elegance, flicks the glowing card into the air, and it becomes a tiny floating door made of light. ID_A grins, bows to the empty seats, and says, \"Ladies and gentlemen, please applaud responsibly. The door is shy.\" Preserve his clothing, face, voice, and the theater layout from the first shot. Use a wider stage composition that keeps his gestures, the floating card-door, and his readable lip movement in frame. Sounds include a crisp card flick, a soft magical hum, distant waves, and scattered dust falling from the rigging.\n\n[/duration=10s,/new_shot,/load_mem=,/store_mem=woman1,woman2]ID_B is an energetic young marine biologist in her thirties with shoulder-length blonde hair tucked under a yellow scarf, round glasses, a teal raincoat, and a quick bright voice. She stands alone on the moonlit beach outside the same abandoned theater, holding a waterproof notebook and a small brass telescope. ID_B looks toward the theater windows, notices the glow from inside, and says, \"That is either illegal plankton behavior or someone finally found the ridiculous door.\" Keep her face and lip movement clear in a medium shot. The background includes wet sand, tide pools, the dark theater silhouette, sea foam, and scattered bioluminescent blue sparks near the waterline. Audible details include waves, wind tugging at her raincoat, notebook pages fluttering, and a tiny metallic telescope click.\n\n[/duration=10s,/new_shot,/load_mem=man1,man2,woman1,woman2]ID_A and ID_B are together in the same moonlit seaside theater and beach setting, with ID_A still the same retired magician wearing his burgundy velvet jacket and holding the glowing blue playing card, and ID_B still the blonde marine biologist wearing her teal raincoat, yellow scarf, round glasses, and carrying the waterproof notebook. The glowing door now hovers between them on the theater stage, opening onto an impossible miniature ocean full of floating teacups and tiny lantern-lit boats. ID_A gestures grandly while ID_B steps closer, amused and suspicious, and they exchange a fast playful line: ID_A says, \"I told you the door was shy.\" ID_B replies, \"It just stole my tide chart.\" Keep both faces and lip movement readable, with the door and magical ocean visible between them. Use a lively two-shot that preserves their distinct clothing, voices, and personalities. Audible details include the door humming, tiny waves from the miniature ocean, ID_B's notebook snapping shut, ID_A's card tapping the air, and their overlapping laughter.",
       "resolution": "1280x720",
       "flow_shift": 5.0,

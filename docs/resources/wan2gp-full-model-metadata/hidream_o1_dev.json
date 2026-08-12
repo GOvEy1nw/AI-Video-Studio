@@ -418,7 +418,7 @@
       "prompt_enhancer": null
     },
     "default_settings": {
-      "settings_version": 2.66,
+      "settings_version": 2.73,
       "prompt": "A tiny porcelain robot arranging wildflowers on a sunlit kitchen table, crisp details, natural colors",
       "resolution": "1920x1088",
       "flow_shift": 1,

@@ -17,7 +17,6 @@
       "frames_steps": 8,
       "sliding_window": true,
       "returns_audio": true,
-      "prompt_enhancer_button_label": "Write",
       "auto_null_audio": true,
       "multimedia_generation": true,
       "profiles_dir": [
@@ -37,11 +36,27 @@
           "default": 0.001,
           "min": 0.0001,
           "max": 0.99,
-          "inc": 0.0001
+          "inc": 0.0001,
+          "video_prompt_type": "?"
         }
       ],
       "vae_block_size": 64,
       "keep_frames_video_guide_not_supported": true,
+      "prompt_enhancer_button_label": "Write",
+      "system_configs": {
+        "_name": "VAE",
+        "_default_label": "Standard VAE (Fast)",
+        "NAD Diffusion Decoder": {
+          "name": "NAD Diffusion Decoder (Higher VRAM, Slow)",
+          "ltx2_video_vae_file": "ltx-2.5-22b_diffusion_video_vae_bf16.safetensors"
+        },
+        "PrunaAI VAE": {
+          "name": "PrunaAI VAE (up to x2 faster)",
+          "ltx2_video_vae_file": "ltx-2.3-22b_PrunaAI_vae.safetensors",
+          "ltx2_video_vae_config_file": "ltx-2.3-22b_PrunaAI_vae.json",
+          "ltx2_pruna_vae": true
+        }
+      },
       "ltx2_lora_distilled": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-distilled-lora-384.safetensors",
       "ltx2_lora_distilled_1_1": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-distilled-lora-384-1.1.safetensors",
       "ltx2_lora_union_control": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-ic-lora-union-control-ref0.5.safetensors",
@@ -651,7 +666,7 @@
       }
     },
     "default_settings": {
-      "settings_version": 2.66,
+      "settings_version": 2.73,
       "prompt": "Add a middle-aged man with curly grey hair, a beard and glasses, wearing a blue quarter-zip sweater, on the right side of the frame, standing in front of a raw cut of meat on a tray.",
       "resolution": "1280x720",
       "flow_shift": 5.0,

@@ -5,7 +5,7 @@
     "model_def": {
       "ltx2_22B_class": true,
       "ltx2_edit_anything": false,
-      "infos": "\n# LTX2 Multiple Subject Reference\n\nThis model is configured for the LiconStudio Multiple Subject Reference LoRA. It uses reference images only; Control Video, pose, depth, canny, HDR, outpainting, masks, and frame injection are disabled for this workflow.\n\n## Reference Image Order\n\nUse one of the `MSR Reference Images` modes:\n\n- `Background + Up to 4 Subjects`: upload 2 to 5 images. Image 1 is the background or scene reference; images 2 to 5 are the subject or object references to preserve.\n- `Subjects / Objects only`: upload 1 to 4 subject or object references on a plain white or neutral background.\n\nIn `Background + Up to 4 Subjects` mode, WanGP internally reorders the references before denoising so the MSR LoRA receives the subject references first and the background reference last, matching the upstream MSR convention. In `Subjects / Objects only` mode, WanGP keeps the uploaded reference order unchanged.\n\n## Reference Image Preparation\n\nSubject or object references work best on a plain white background. If your non-background references are not already isolated on white, keep `Remove Background behind MSR Subjects / Objects` enabled so WanGP removes the subject background and places it on white.\n\nCharacter sheets are recommended for character references: use an image that shows the same character from several points of view, poses, or close-up/detail angles. This gives MSR more identity and clothing information than a single portrait.\n\nUse the text prompt to describe how the referenced subjects should appear together in the referenced environment.\n",
+      "infos": "\n# LTX2 Multiple Subject Reference\n\nThis model is configured for the LiconStudio Multiple Subject Reference LoRA. It uses reference images only; Control Video, pose, depth, canny, HDR, outpainting, masks, and frame injection are disabled for this workflow.\n\n## Reference Image Order\n\nUse one of the `MSR Reference Images` modes:\n\n- `Background + Up to 4 Subjects`: upload 2 to 5 images. Image 1 is the background or scene reference; images 2 to 5 are the subject or object references to preserve.\n- `Subjects / Objects only`: upload 1 to 4 subject or object references on a plain white or neutral background.\n\nIn `Background + Up to 4 Subjects` mode, WanGP internally reorders the references before denoising so the MSR LoRA receives the subject references first and the background reference last, matching the upstream MSR convention. In `Subjects / Objects only` mode, WanGP keeps the uploaded reference order unchanged.\n\n## Reference Image Preparation\n\nSubject or object references work best on a plain white background. If your non-background references are not already isolated on white, keep `Remove Background behind MSR Subjects / Objects` enabled so WanGP removes the subject background and places it on white.\n\nCharacter sheets are recommended for character references: use an image that shows the same character from several points of view, poses, or close-up/detail angles. This gives MSR more identity and clothing information than a single portrait.\n\nUse the text prompt to describe how the referenced subjects should appear together in the referenced environment.\n\n\n## **MSR Reference Video Length** (MSR V2 only)\n\nLeave this on `Auto` for normal use. WanGP automatically gives each uploaded subject enough reference space and keeps the background separate:\n\n- 1 subject: `17`\n- 2 subjects: `33`\n- 3 subjects: `49`\n- 4 subjects: `65`\n\nChoose `17` to `65` manually only when you want to experiment with reference strength or reduce memory use. This setting changes how the uploaded images are prepared; it does not change the generated video length. Missing or older saved settings behave like `Auto`.\n\nMSR V2 keeps subject references separate from the background and generally preserves identities and multi-subject scenes better than V1.\n",
       "text_encoder_folder": "gemma-3-12b-it-qat-q4_0-unquantized",
       "text_encoder_URLs": [
         "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/gemma-3-12b-it-qat-q4_0-unquantized/gemma-3-12b-it-qat-q4_0-unquantized.safetensors",
@@ -17,7 +17,6 @@
       "frames_steps": 8,
       "sliding_window": false,
       "returns_audio": true,
-      "prompt_enhancer_button_label": "Write",
       "auto_null_audio": true,
       "multimedia_generation": true,
       "profiles_dir": [
@@ -30,18 +29,64 @@
       "self_refiner_max_plans": 2,
       "custom_settings": [
         {
-          "id": "prompt_relay_epsilon",
-          "name": "Prompt Relay Epsilon",
-          "label": "Prompt Relay Epsilon (higher values create softer transitions)",
-          "type": "float",
-          "default": 0.001,
-          "min": 0.0001,
-          "max": 0.99,
-          "inc": 0.0001
+          "id": "msr_reference_frames",
+          "name": "MSR Reference Video Length",
+          "label": "MSR Reference Video Length",
+          "type": "dropdown",
+          "default": "",
+          "choices": [
+            [
+              "Auto",
+              ""
+            ],
+            [
+              "17",
+              17
+            ],
+            [
+              "25",
+              25
+            ],
+            [
+              "33",
+              33
+            ],
+            [
+              "41",
+              41
+            ],
+            [
+              "49",
+              49
+            ],
+            [
+              "57",
+              57
+            ],
+            [
+              "65",
+              65
+            ]
+          ]
         }
       ],
       "vae_block_size": 64,
       "keep_frames_video_guide_not_supported": true,
+      "prompt_enhancer_button_label": "Write",
+      "system_configs": {
+        "_name": "VAE",
+        "_default_label": "Standard VAE (Fast)",
+        "NAD Diffusion Decoder": {
+          "name": "NAD Diffusion Decoder (Higher VRAM, Slow)",
+          "ltx2_video_vae_file": "ltx-2.5-22b_diffusion_video_vae_bf16.safetensors"
+        },
+        "PrunaAI VAE": {
+          "name": "PrunaAI VAE (up to x2 faster)",
+          "ltx2_video_vae_file": "ltx-2.3-22b_PrunaAI_vae.safetensors",
+          "ltx2_video_vae_config_file": "ltx-2.3-22b_PrunaAI_vae.json",
+          "ltx2_pruna_vae": true
+        }
+      },
       "ltx2_lora_distilled": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-distilled-lora-384.safetensors",
       "ltx2_lora_distilled_1_1": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-distilled-lora-384-1.1.safetensors",
       "ltx2_lora_union_control": "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.3-22b-ic-lora-union-control-ref0.5.safetensors",
@@ -618,7 +663,7 @@
       }
     },
     "default_settings": {
-      "settings_version": 2.66,
+      "settings_version": 2.73,
       "prompt": "A cinematic tracking shot of the referenced subjects standing together in the referenced environment, natural motion, detailed clothing, consistent identities, realistic lighting.",
       "resolution": "1280x720",
       "flow_shift": 5.0,

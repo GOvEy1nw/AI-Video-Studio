@@ -79,7 +79,7 @@
       ],
       "text_encoder_folder": "Qwen3-VL-4B-Instruct",
       "text_encoder_URLs": [
-        "https://huggingface.co/DeepBeepMeep/krea-2/resolve/main/Qwen3-VL-4B-Instruct/Qwen3-VL-4B-Instruct_bf16.safetensors",
+        "https://huggingface.co/DeepBeepMeep/krea-2/resolve/main/Qwen3-VL-4B-Instruct/Qwen3-VL-4B-Instruct_text_bf16.safetensors",
         "https://huggingface.co/DeepBeepMeep/krea-2/resolve/main/Qwen3-VL-4B-Instruct/Qwen3-VL-4B-Instruct_quanto_bf16_int8.safetensors"
       ],
       "no_negative_prompt": false,
@@ -88,6 +88,9 @@
         "<=2k"
       ],
       "vae_block_size": 16,
+      "vae_upsampler": [
+        1
+      ],
       "vae_upsamplers": {
         "qwen_vae_pid(1.5)": [
           1
@@ -382,7 +385,7 @@
       "prompt_enhancer": null
     },
     "default_settings": {
-      "settings_version": 2.66,
+      "settings_version": 2.73,
       "prompt": "a fox walking in fresh snow at golden hour, natural light, detailed fur",
       "resolution": "1024x1024",
       "flow_shift": 5.0,

@@ -465,7 +465,7 @@
       }
     },
     "default_settings": {
-      "settings_version": 2.66,
+      "settings_version": 2.73,
       "prompt": "The lights are already on, so we can start whenever you are ready.",
       "resolution": "832x480",
       "flow_shift": 5.0,

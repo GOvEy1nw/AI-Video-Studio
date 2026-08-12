@@ -12,7 +12,9 @@
       "wan_5B_class": true,
       "vace_class": false,
       "bernini_class": false,
+      "shotplan": false,
       "scail2": false,
+      "animate2": false,
       "color_correction": true,
       "svi2pro": false,
       "i2v_2_2": false,
@@ -433,7 +435,7 @@
       "prompt_enhancer": null
     },
     "default_settings": {
-      "settings_version": 2.66,
+      "settings_version": 2.73,
       "prompt": "change the background setting with a jungle full of wild animals",
       "resolution": "1280x720",
       "flow_shift": 3,

@@ -12,7 +12,9 @@
       "wan_5B_class": false,
       "vace_class": false,
       "bernini_class": false,
+      "shotplan": false,
       "scail2": true,
+      "animate2": false,
       "color_correction": true,
       "svi2pro": false,
       "i2v_2_2": false,
@@ -130,7 +132,7 @@
       "control_video_trim": true,
       "extract_guide_from_window_start": true,
       "return_image_refs_tensor": true,
-      "infos": "\n# SCAIL-2 Workflows\n\nSCAIL-2 replaces or animates people from a reference image while following a control video and a colored person mask.\n\n## Animate Mode\n\nUse Animate when you want a character to move like the person in the Control Video.\n\nRequired inputs:\n\n- Location: use `Start Image` or `Video to Continue`.\n- Control Video: the motion or scene you want to follow.\n- Video Mask: a colored mask video showing the people to animate.\n- Reference Image: optional. If you do not provide one, WanGP builds the reference from the Start Image or the current Continue Video frame.\n\nAnimate preprocessing:\n\n- `Use Raw Control Video Content`: default. The model sees the resized Control Video itself. This preserves more scene detail and motion context, but the original people or clothing in the control video can influence the result more.\n- `Extract 3D Pose information`: WanGP extracts body pose from the Control Video first. This reduces appearance leakage from the control video, but it can lose details such as props, hands, loose clothing, or subtle scene motion.\n\n## Replacement Mode\n\nUse Replacement when you want to keep the Control Video as the source scene and replace masked people with the reference character.\n\nRequired inputs:\n\n- Location: Text Prompt.\n- Reference Image: required.\n- Control Video: required.\n- Persons Locations: Masked Area.\n- Video Mask: required.\n\nReplacement uses the Control Video as the source frames. The mask says which people are replaced.\n\n## Experimental Subwindows\n\nSCAIL-2 can use experimental subwindow sampling inside each sliding-window generation. When `Sub Parallel Window Size` is nonzero, WanGP denoises several overlapping temporal subwindows sequentially at every denoising step, blends their noise predictions over `Sub Parallel Window Overlap`, then applies one scheduler step to the full latent window. This can reduce peak VRAM for long SCAIL-2 windows, but it may introduce motion or identity discontinuities at subwindow boundaries. Keep it disabled unless you are testing longer windows or need the VRAM reduction.\n\n## Colored Masks\n\nSCAIL-2 relies on mask colors. Each person should keep one stable color for the whole video. For multiple people, use one color per person. Do not use a single gray/white mask when you need to distinguish several characters.\n\nThe default person colors are blue, red, green, magenta, cyan, and yellow. Background should stay uncolored. In Replacement mode, WanGP converts the background to the model's expected replacement background color.\n\n## Building Masks With Magic Mask\n\nUse the Magic Mask tool on the Video Mask input:\n\n- Enter a keyword such as `person`, `woman`, `man`, or a clothing description.\n- Generate the mask, then check the preview.\n- For multiple people, make sure each person gets a separate color and keeps it across frames.\n- If the wrong object is selected, adjust the keyword or edit the mask before generating.\n\n## Troubleshooting\n\n### Image Reference Mask Extraction Fails\n\nIf WanGP shows `SCAIL-2 could not extract the image reference mask. Check Image Ref Keyword content.`, fill `Image Ref Keyword content` with a keyword that describes what is visible in the reference frame, usually `person`, `woman`, or `man`. SCAIL-2 uses this keyword to guide SAM 3 reference mask extraction.\n\n## Tips\n\n- Review the Image References preview before generation. SCAIL-2 shows the prepared reference image and the reference mask there.\n- For best results, use a Reference Image or a Start Image that is closely aligned to the first frame of the control video. You can use an Image Model generator for this.\n- Extra Reference Images are experimental. The first image stays the primary reference; later images are fit into the output canvas and auto-masked with the same Image Ref Keyword content.\n- If Animate looks too close to the original control video person, try `Extract 3D Pose information`.\n- If pose mode loses important visual details, switch back to `Use Raw Control Video Content`.\n- Keep the number of selected people in `Type of Process` aligned with the number of colored people in the mask.\n- Use clean masks with stable colors. Flickering colors or missing mask frames usually produce unstable identity or motion.\n",
+      "infos": "\n# SCAIL-2 Workflows\n\nSCAIL-2 replaces or animates people from a reference image while following a control video and a colored person mask.\n\n## Animate Mode\n\nUse Animate when you want a character to move like the person in the Control Video.\n\nRequired inputs:\n\n- Location: use `Start Image` or `Video to Continue`.\n- Control Video: the motion or scene you want to follow.\n- Video Mask: a colored mask video showing the people to animate.\n- Reference Image: optional. If you do not provide one, WanGP builds the reference from the Start Image or the current Continue Video frame.\n\nAnimate preprocessing:\n\n- `Use Raw Control Video Content`: default. The model sees the resized Control Video itself. This preserves more scene detail and motion context, but the original people or clothing in the control video can influence the result more.\n- `Extract 3D Pose information`: WanGP extracts body pose from the Control Video first. This reduces appearance leakage from the control video, but it can lose details such as props, hands, loose clothing, or subtle scene motion.\n\n## Replacement Mode\n\nUse Replacement when you want to keep the Control Video as the source scene and replace masked people with the reference character.\n\nRequired inputs:\n\n- Location: Text Prompt.\n- Reference Image: required.\n- Control Video: required.\n- Persons Locations: Masked Area.\n- Video Mask: required.\n\nReplacement uses the Control Video as the source frames. The mask says which people are replaced.\n\n## Experimental Subwindows\n\nSCAIL-2 can use experimental subwindow sampling inside each sliding-window generation. When `Sub Parallel Window Size` is nonzero, WanGP denoises several overlapping temporal subwindows sequentially at every denoising step, blends their noise predictions over `Sub Parallel Window Overlap`, then applies one scheduler step to the full latent window. This can reduce peak VRAM for long SCAIL-2 windows, but it may introduce motion or identity discontinuities at subwindow boundaries. Keep it disabled unless you are testing longer windows or need the VRAM reduction.\n\n## Inject Ref Frames in Video\n\nWhen using several Reference Images, setting this to `Yes` packs them into a short still-image video before generation. This may help SCAIL-2 hold onto the references more consistently and reduce the quality loss or artifacts that extra references can sometimes cause. The first image remains the primary reference. Leave it at `No` for the normal reference workflow or when using a single reference.\n\n## Colored Masks\n\nSCAIL-2 relies on mask colors. Each person should keep one stable color for the whole video. For multiple people, use one color per person. Do not use a single gray/white mask when you need to distinguish several characters.\n\nThe default person colors are blue, red, green, magenta, cyan, and yellow. Background should stay uncolored. In Replacement mode, WanGP converts the background to the model's expected replacement background color.\n\n## Building Masks With Magic Mask\n\nUse the Magic Mask tool on the Video Mask input:\n\n- Enter a keyword such as `person`, `woman`, `man`, or a clothing description.\n- Generate the mask, then check the preview.\n- For multiple people, make sure each person gets a separate color and keeps it across frames.\n- If the wrong object is selected, adjust the keyword or edit the mask before generating.\n\n## Troubleshooting\n\n### Image Reference Mask Extraction Fails\n\nIf WanGP shows `SCAIL-2 could not extract the image reference mask. Check Image Ref Keyword content.`, fill `Image Ref Keyword content` with a keyword that describes what is visible in the reference frame, usually `person`, `woman`, or `man`. SCAIL-2 uses this keyword to guide SAM 3 reference mask extraction.\n\n## Tips\n\n- Review the Image References preview before generation. SCAIL-2 shows the prepared reference image and the reference mask there.\n- For best results, use a Reference Image or a Start Image that is closely aligned to the first frame of the control video. You can use an Image Model generator for this.\n- Extra Reference Images are experimental. The first image stays the primary reference; later images are fit into the output canvas and auto-masked with the same Image Ref Keyword content.\n- If Animate looks too close to the original control video person, try `Extract 3D Pose information`.\n- If pose mode loses important visual details, switch back to `Use Raw Control Video Content`.\n- Keep the number of selected people in `Type of Process` aligned with the number of colored people in the mask.\n- Use clean masks with stable colors. Flickering colors or missing mask frames usually produce unstable identity or motion.\n",
       "custom_settings": [
         {
           "id": "scail2_animate_preprocessing",
@@ -157,6 +159,24 @@
           "label": "Image Ref Keyword content",
           "type": "text",
           "default": "human character",
+          "video_prompt_type": "I"
+        },
+        {
+          "id": "scail2_inject_ref_frames_in_video",
+          "name": "Inject Ref Frames in Video",
+          "label": "Inject Ref Frames in Video",
+          "type": "dropdown",
+          "default": "No",
+          "choices": [
+            [
+              "No",
+              "No"
+            ],
+            [
+              "Yes",
+              "Yes"
+            ]
+          ],
           "video_prompt_type": "I"
         }
       ],
@@ -449,7 +469,8 @@
         "guidance_scale": 5.0,
         "custom_settings": {
           "scail2_animate_preprocessing": "raw",
-          "image_ref_keyword_content": "human character"
+          "image_ref_keyword_content": "human character",
+          "scail2_inject_ref_frames_in_video": "No"
         },
         "sliding_window_size": 81,
         "sliding_window_overlap": 5,
@@ -794,7 +815,7 @@
       "prompt_enhancer": null
     },
     "default_settings": {
-      "settings_version": 2.66,
+      "settings_version": 2.73,
       "prompt": "The character is dancing naturally with expressive body movement.",
       "resolution": "832x480",
       "flow_shift": 3,
@@ -810,7 +831,8 @@
       "remove_background_images_ref": 0,
       "custom_settings": {
         "scail2_animate_preprocessing": "raw",
-        "image_ref_keyword_content": "human character"
+        "image_ref_keyword_content": "human character",
+        "scail2_inject_ref_frames_in_video": "No"
       },
       "negative_prompt": "",
       "video_length": 81,

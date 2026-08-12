@@ -1,5 +1,5 @@
 {
-  "exported_count": 205,
+  "exported_count": 217,
   "failed_count": 0,
   "output_dir": "wan2gp-full-model-metadata",
   "include_availability": false,
@@ -72,6 +72,16 @@
     {
       "model_type": "animate",
       "file": "wan2gp-full-model-metadata\\animate.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "animate2",
+      "file": "wan2gp-full-model-metadata\\animate2.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "animate2_distilled",
+      "file": "wan2gp-full-model-metadata\\animate2_distilled.json",
       "serialisation_notes_count": 0
     },
     {
@@ -395,6 +405,11 @@
       "serialisation_notes_count": 0
     },
     {
+      "model_type": "joyai_echo_surgical",
+      "file": "wan2gp-full-model-metadata\\joyai_echo_surgical.json",
+      "serialisation_notes_count": 0
+    },
+    {
       "model_type": "k5_lite_i2v",
       "file": "wan2gp-full-model-metadata\\k5_lite_i2v.json",
       "serialisation_notes_count": 0
@@ -580,6 +595,21 @@
       "serialisation_notes_count": 0
     },
     {
+      "model_type": "ltx2_25_22B",
+      "file": "wan2gp-full-model-metadata\\ltx2_25_22B.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ltx2_25_22B_distilled",
+      "file": "wan2gp-full-model-metadata\\ltx2_25_22B_distilled.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "ltx2_25_22B_distilled_nvfp4",
+      "file": "wan2gp-full-model-metadata\\ltx2_25_22B_distilled_nvfp4.json",
+      "serialisation_notes_count": 0
+    },
+    {
       "model_type": "ltx2_distilled",
       "file": "wan2gp-full-model-metadata\\ltx2_distilled.json",
       "serialisation_notes_count": 0
@@ -652,6 +682,26 @@
     {
       "model_type": "magi_human_sr1080",
       "file": "wan2gp-full-model-metadata\\magi_human_sr1080.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "minimax_h3_fl2va",
+      "file": "wan2gp-full-model-metadata\\minimax_h3_fl2va.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "minimax_h3_fl2va_pruned",
+      "file": "wan2gp-full-model-metadata\\minimax_h3_fl2va_pruned.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "minimax_h3_ref2va",
+      "file": "wan2gp-full-model-metadata\\minimax_h3_ref2va.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "minimax_h3_ref2va_pruned",
+      "file": "wan2gp-full-model-metadata\\minimax_h3_ref2va_pruned.json",
       "serialisation_notes_count": 0
     },
     {
@@ -802,6 +852,16 @@
     {
       "model_type": "scenema_audio",
       "file": "wan2gp-full-model-metadata\\scenema_audio.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "shotplan_t2v",
+      "file": "wan2gp-full-model-metadata\\shotplan_t2v.json",
+      "serialisation_notes_count": 0
+    },
+    {
+      "model_type": "shotplan_t2v_2_2",
+      "file": "wan2gp-full-model-metadata\\shotplan_t2v_2_2.json",
       "serialisation_notes_count": 0
     },
     {

@@ -534,7 +534,7 @@
       "prompt_enhancer": null
     },
     "default_settings": {
-      "settings_version": 2.66,
+      "settings_version": 2.73,
       "prompt": "draw a hat on top of a hat inside a hat",
       "resolution": "1024x1024",
       "flow_shift": 5.0,

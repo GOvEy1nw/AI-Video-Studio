@@ -442,7 +442,7 @@
       "prompt_enhancer": null
     },
     "default_settings": {
-      "settings_version": 2.66,
+      "settings_version": 2.73,
       "prompt": "A polished cinematic electronic track with shimmering arpeggios, deep sub bass, wide drums, and evolving atmospheric pads.",
       "resolution": "832x480",
       "flow_shift": 5.0,

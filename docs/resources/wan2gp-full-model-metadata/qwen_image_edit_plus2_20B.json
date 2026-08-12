@@ -38,7 +38,8 @@
         "qwen_pid(1.5)"
       ],
       "inpaint_support": true,
-      "inpaint_video_prompt_type": "VAGI",
+      "inpaint_video_prompt_type": "VAG",
+      "inpaint_with_image_ref": true,
       "image_ref_inpaint": true,
       "image_ref_choices": {
         "choices": [
@@ -624,7 +625,7 @@
       "prompt_enhancer": null
     },
     "default_settings": {
-      "settings_version": 2.66,
+      "settings_version": 2.73,
       "prompt": "add a hat",
       "resolution": "1024x1024",
       "flow_shift": 5.0,
