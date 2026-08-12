@@ -104,22 +104,68 @@ export function nextH3MediaAlias(
 
 export type H3ReferenceAvailability = Record<GenSpaceMediaKind, boolean>;
 
-export function getH3ReferenceAvailability(
+export interface H3ReferenceState {
+  activeInputs: GenSpaceMediaInput[];
+  disabledVideoIds: ReadonlySet<string>;
+  imageCount: number;
+  videoCount: number;
+  audioCount: number;
+  totalCount: number;
+  soundtrackCount: number;
+  availability: H3ReferenceAvailability;
+}
+
+export function getH3ReferenceState(
   inputs: GenSpaceMediaInput[],
-): H3ReferenceAvailability {
+): H3ReferenceState {
   const hasFlInput = inputs.some(({ role }) =>
     role === "start_image" || role === "end_image" || role === "control_video" || role === "audio_guide" || role === "control_audio",
   );
   const imageCount = inputs.filter(({ role }) => role === "reference_image").length;
-  const videoCount = inputs.filter(({ role }) => role === "reference_video").length;
-  const audioCount = inputs.filter(({ role }) => role === "reference_audio").length;
-  const total = imageCount + videoCount + audioCount;
-  const canAdd = !hasFlInput && total < 12;
-  return {
+  const videos = inputs.filter(
+    ({ role, type }) =>
+      type === "video" && (role === "reference_video" || role === "depth"),
+  );
+  const depth = videos.find(({ role }) => role === "depth");
+  const activeVideos = depth ? [depth] : videos;
+  const disabledVideoIds = new Set(
+    depth ? videos.filter(({ id }) => id !== depth.id).map(({ id }) => id) : [],
+  );
+  const standaloneAudioCount = inputs.filter(
+    ({ role }) => role === "reference_audio",
+  ).length;
+  const soundtrackCount = activeVideos.some(({ useAudioTrack }) => useAudioTrack)
+    ? activeVideos.length
+    : 0;
+  const videoCount = activeVideos.length;
+  const audioCount = standaloneAudioCount + soundtrackCount;
+  const totalCount = imageCount + videoCount + standaloneAudioCount;
+  const canAdd = !hasFlInput && totalCount < 12;
+  const availability = {
     image: canAdd && imageCount < 9,
-    video: canAdd && videoCount < 2,
-    audio: canAdd && audioCount < 2 && audioCount < imageCount + videoCount,
+    video: canAdd && !depth && videoCount < 2,
+    audio:
+      canAdd &&
+      soundtrackCount === 0 &&
+      audioCount < 2 &&
+      audioCount + 1 <= imageCount + videoCount,
   };
+  return {
+    activeInputs: inputs.filter(({ id }) => !disabledVideoIds.has(id)),
+    disabledVideoIds,
+    imageCount,
+    videoCount,
+    audioCount,
+    totalCount,
+    soundtrackCount,
+    availability,
+  };
+}
+
+export function getH3ReferenceAvailability(
+  inputs: GenSpaceMediaInput[],
+): H3ReferenceAvailability {
+  return getH3ReferenceState(inputs).availability;
 }
 
 export function inferMediaKindForRole(role: string): GenSpaceMediaKind {

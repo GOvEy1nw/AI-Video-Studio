@@ -47,6 +47,7 @@ export interface GenSpaceMediaInput {
   path?: string;
   role: string;
   type?: GenSpaceMediaKind;
+  useAudioTrack?: boolean;
   trimStartTime?: number;
   trimDuration?: number;
   mediaDuration?: number;

@@ -19,6 +19,7 @@ export interface GenerationInputMediaRequest {
   trimStartTime?: number;
   trimDuration?: number;
   crop?: MediaCropRecipe;
+  useAudioTrack?: boolean;
 }
 
 export interface GenerationReframeOptions {
@@ -124,6 +125,9 @@ export function buildVideoRequestBody({
       path: item.path,
       role: item.role,
       ...(item.alias ? { alias: item.alias } : {}),
+      ...(item.useAudioTrack !== undefined
+        ? { useAudioTrack: item.useAudioTrack }
+        : {}),
       trimStartTime: item.trimStartTime,
       trimDuration: item.trimDuration,
       ...(item.crop ? { crop: item.crop } : {}),

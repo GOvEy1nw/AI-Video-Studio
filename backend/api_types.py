@@ -679,6 +679,7 @@ class GenerateVideoInputMedia(BaseModel):
     trimStartTime: float | None = Field(default=None, ge=0)
     trimDuration: float | None = Field(default=None, gt=0)
     crop: MediaCrop | None = None
+    useAudioTrack: bool = False
     role: Literal[
         "start_image",
         "end_image",

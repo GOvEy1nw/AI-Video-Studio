@@ -47,7 +47,7 @@ VIDEO_TOOL_LORA_URLS = {
 }
 
 _H3_PROFILE_ID = "minimax_h3"
-_H3_REFERENCE_ROLES = {"reference_image", "reference_video", "reference_audio"}
+_H3_REFERENCE_ROLES = {"reference_image", "reference_video", "reference_audio", "depth"}
 _H3_FL_ONLY_ROLES = {"control_video", "audio_guide"}
 _H3_ALIAS_PATTERN = re.compile(r"@(image|video|audio)([1-9]\d*)")
 
@@ -66,6 +66,7 @@ def _validate_and_compile_h3_prompt(
         "reference_image": "image",
         "control_video": "video",
         "reference_video": "video",
+        "depth": "video",
         "audio_guide": "audio",
         "reference_audio": "audio",
     }
@@ -86,17 +87,27 @@ def _validate_and_compile_h3_prompt(
         role: [media for media in references if media.role == role]
         for role in _H3_REFERENCE_ROLES
     }
-    limits = {"reference_image": 9, "reference_video": 2, "reference_audio": 2}
+    limits = {"reference_image": 9, "reference_video": 2, "reference_audio": 2, "depth": 1}
     for role, limit in limits.items():
         if len(by_role[role]) > limit:
             raise HTTPError(400, f"H3_{role.upper()}_LIMIT")
+    if by_role["depth"] and by_role["reference_video"]:
+        raise HTTPError(400, "H3_DEPTH_REFERENCE_VIDEO_MIX")
     if len(references) > 12:
         raise HTTPError(400, "H3_COMBINED_REFERENCE_LIMIT")
-    visual_count = len(by_role["reference_image"]) + len(by_role["reference_video"])
-    if len(by_role["reference_audio"]) > visual_count:
+    active_videos = [*by_role["reference_video"], *by_role["depth"]]
+    soundtrack_count = len(active_videos) if any(media.useAudioTrack for media in active_videos) else 0
+    if any(media.useAudioTrack for media in active_videos) and not all(media.useAudioTrack for media in active_videos):
+        raise HTTPError(400, "H3_SOUNDTRACKS_MUST_BE_SYNCHRONIZED")
+    if soundtrack_count and by_role["reference_audio"]:
+        raise HTTPError(400, "H3_SOUNDTRACK_AUDIO_REFERENCE_MIX")
+    if len(by_role["reference_audio"]) + soundtrack_count > 2:
+        raise HTTPError(400, "H3_AUDIO_REFERENCE_LIMIT")
+    visual_count = len(by_role["reference_image"]) + len(active_videos)
+    if len(by_role["reference_audio"]) + soundtrack_count > visual_count:
         raise HTTPError(400, "H3_AUDIO_REFERENCE_REQUIRES_VISUAL_REFERENCE")
     trimmed_total = 0.0
-    for media in [*by_role["reference_video"], *by_role["reference_audio"]]:
+    for media in [*active_videos, *by_role["reference_audio"]]:
         if media.trimDuration is None:
             continue
         if not 2 <= media.trimDuration <= 15:
@@ -109,6 +120,7 @@ def _validate_and_compile_h3_prompt(
     expected_alias_kind = {
         "reference_image": "image",
         "reference_video": "video",
+        "depth": "video",
         "reference_audio": "audio",
     }
     for media in references:
@@ -120,7 +132,7 @@ def _validate_and_compile_h3_prompt(
     for index, media in enumerate(by_role["reference_image"], start=1):
         if media.alias:
             aliases[media.alias] = f"<Picture {start_end_count + index}>"
-    for role, label in (("reference_video", "Video"), ("reference_audio", "Audio")):
+    for role, label in (("reference_video", "Video"), ("depth", "Video"), ("reference_audio", "Audio")):
         for index, media in enumerate(by_role[role], start=1):
             if media.alias:
                 aliases[media.alias] = f"<{label} {index}>"
@@ -302,10 +314,11 @@ class VideoGenerationHandler(StateHandlerBase):
             if is_h3:
                 wangp_prompt, h3_uses_ref2va = _validate_and_compile_h3_prompt(req, wangp_prompt)
                 if h3_uses_ref2va:
-                    video_count = sum(media.role == "reference_video" for media in req.inputMedia)
+                    reference_videos = [media for media in req.inputMedia if media.role in {"reference_video", "depth"}]
                     audio_count = sum(media.role == "reference_audio" for media in req.inputMedia)
-                    video_prompt_type = "V+-" if video_count > 1 else "V-" if video_count else None
-                    audio_prompt_type = "AB" if audio_count > 1 else "A" if audio_count else None
+                    video_prompt_type = "DV" if any(media.role == "depth" for media in reference_videos) else "V+-" if len(reference_videos) > 1 else "V-" if reference_videos else None
+                    soundtrack_enabled = bool(reference_videos and reference_videos[0].useAudioTrack)
+                    audio_prompt_type = "K" if soundtrack_enabled else "AB" if audio_count > 1 else "A" if audio_count else None
                 elif control_video_path:
                     video_prompt_type = "GV"
                     if audio_path:
@@ -526,10 +539,15 @@ class VideoGenerationHandler(StateHandlerBase):
                     effective_path = transformed_media_paths.get((media.role, media_path), media_path)
                     if media.role == "reference_image":
                         validated_reference_images.append(str(validate_image_file(effective_path)))
-                    elif media.role == "reference_video":
+                    elif media.role in {"reference_video", "depth"}:
                         validated_reference_videos.append(str(validate_video_file(effective_path)))
                     elif media.role == "reference_audio":
                         validated_reference_audios.append(str(validate_audio_file(effective_path)))
+                if audio_prompt_type == "K":
+                    validated_reference_audios = [
+                        *validated_reference_videos,
+                        *validated_reference_audios,
+                    ]
 
             settings = self.state.app_settings.model_copy(deep=True)
             default_steps = profile.wangp_default_settings.get("num_inference_steps")

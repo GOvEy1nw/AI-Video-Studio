@@ -486,6 +486,151 @@ def test_ltx2_video_uses_full_video_length_as_sliding_window_size() -> None:
     assert captured["settings"]["sliding_window_size"] == 481
 
 
+@pytest.mark.parametrize(
+    ("model_type", "expected_preview_data"),
+    [
+        (
+            "ltx2_22B_distilled_1_1",
+            {"_preview": {"mode": "tae", "update_rate": "adaptive", "device": "auto", "max_edge": 512, "preview_fps": 16, "webp_quality": 72}},
+        ),
+        (
+            "minimax_h3_ref2va_pruned",
+            {"_preview": {"mode": "tae", "update_rate": "adaptive", "device": "auto", "max_edge": 512, "preview_fps": 16, "webp_quality": 72}},
+        ),
+        ("wan2_2_t2v", {}),
+    ],
+)
+def test_video_manifest_requests_tae_previews_only_for_supported_models(
+    model_type: str,
+    expected_preview_data: dict[str, object],
+) -> None:
+    bridge = _make_bridge()
+    captured: dict[str, object] = {}
+
+    def fake_run_manifest(*, manifest, media_suffixes, on_progress, is_cancelled):  # type: ignore[no-untyped-def]
+        captured["manifest"] = manifest
+        return ["E:/tmp/out.mp4"]
+
+    bridge._run_manifest = fake_run_manifest  # type: ignore[method-assign]
+    bridge.generate_video(
+        prompt="test", resolution_label="720p", aspect_ratio="16:9", duration_seconds=5,
+        fps=24, steps=20, seed=None, camera_motion="none", negative_prompt="",
+        image_path=None, audio_path=None, model_type=model_type,
+        on_progress=lambda *_args: None, is_cancelled=lambda: False,
+    )
+
+    assert captured["manifest"][0]["plugin_data"] == expected_preview_data
+
+
+def test_video_manifest_uses_configured_preview_options() -> None:
+    bridge = _make_bridge()
+    captured: dict[str, object] = {}
+    bridge.set_preview_options(
+        mode="rgb",
+        update_rate="every_2",
+        device="cpu",
+        max_edge=768,
+        preview_fps=8,
+        webp_quality=85,
+    )
+
+    def fake_run_manifest(*, manifest, media_suffixes, on_progress, is_cancelled):  # type: ignore[no-untyped-def]
+        captured["manifest"] = manifest
+        return ["E:/tmp/out.mp4"]
+
+    bridge._run_manifest = fake_run_manifest  # type: ignore[method-assign]
+    bridge.generate_video(
+        prompt="test", resolution_label="720p", aspect_ratio="16:9", duration_seconds=5,
+        fps=24, steps=20, seed=None, camera_motion="none", negative_prompt="",
+        image_path=None, audio_path=None, model_type="ltx2_22B_distilled_1_1",
+        on_progress=lambda *_args: None, is_cancelled=lambda: False,
+    )
+
+    assert captured["manifest"][0]["plugin_data"] == {
+        "_preview": {
+            "mode": "rgb",
+            "update_rate": "every_2",
+            "device": "cpu",
+            "max_edge": 768,
+            "preview_fps": 8,
+            "webp_quality": 85,
+        }
+    }
+
+
+def test_preview_event_preserves_animated_webp_media(tmp_path: Path) -> None:
+    bridge = _make_bridge()
+    bridge._output_dir = tmp_path
+    captured: list[tuple[object, ...]] = []
+
+    bridge._handle_event(
+        SimpleNamespace(
+            kind="preview",
+            data=SimpleNamespace(
+                phase="inference", status="Preview", progress=50,
+                current_step=10, total_steps=20, image=None,
+                media=SimpleNamespace(mime_type="image/webp", data=b"animated-webp"),
+            ),
+        ),
+        lambda *args: captured.append(args),
+        deque(),
+        {"phase": "", "progress": -1, "logged_at": 0.0},
+    )
+
+    assert (tmp_path / "_wangp_preview_latest.webp").read_bytes() == b"animated-webp"
+    assert captured[-1][9].startswith("file://")
+
+
+def test_preview_event_preserves_mp4_media(tmp_path: Path) -> None:
+    bridge = _make_bridge()
+    bridge._output_dir = tmp_path
+    captured: list[tuple[object, ...]] = []
+
+    bridge._handle_event(
+        SimpleNamespace(
+            kind="preview",
+            data=SimpleNamespace(
+                phase="inference", status="Preview", progress=50,
+                current_step=10, total_steps=20, image=None,
+                media=SimpleNamespace(mime_type="video/mp4", data=b"preview-mp4"),
+            ),
+        ),
+        lambda *args: captured.append(args),
+        deque(),
+        {"phase": "", "progress": -1, "logged_at": 0.0},
+    )
+
+    assert (tmp_path / "_wangp_preview_latest.mp4").read_bytes() == b"preview-mp4"
+    assert ".mp4?v=" in captured[-1][9]
+
+
+def test_preview_event_falls_back_to_legacy_image_when_media_is_unavailable(tmp_path: Path) -> None:
+    class LegacyPreview:
+        def save(self, path: Path, **_kwargs: object) -> None:
+            path.write_bytes(b"jpeg-preview")
+
+    bridge = _make_bridge()
+    bridge._output_dir = tmp_path
+    captured: list[tuple[object, ...]] = []
+
+    bridge._handle_event(
+        SimpleNamespace(
+            kind="preview",
+            data=SimpleNamespace(
+                phase="inference", status="Preview", progress=50,
+                current_step=10, total_steps=20, image=LegacyPreview(),
+                media=SimpleNamespace(mime_type="application/octet-stream", data=b"ignored"),
+            ),
+        ),
+        lambda *args: captured.append(args),
+        deque(),
+        {"phase": "", "progress": -1, "logged_at": 0.0},
+    )
+
+    assert (tmp_path / "_wangp_preview_latest.jpg").read_bytes() == b"jpeg-preview"
+    assert captured[-1][9].startswith("file://")
+
+
 def test_h3_video_maps_list_valued_references_to_wangp_manifest() -> None:
     bridge = _make_bridge()
     captured: dict[str, object] = {}
@@ -512,6 +657,32 @@ def test_h3_video_maps_list_valued_references_to_wangp_manifest() -> None:
     assert settings["image_refs"] == [str(Path("E:/tmp/ref.png").resolve())]
     assert settings["video_guide"] == str(Path("E:/tmp/ref.mp4").resolve())
     assert settings["audio_guide"] == str(Path("E:/tmp/ref.wav").resolve())
+
+
+def test_h3_depth_video_reuses_its_path_for_soundtrack() -> None:
+    bridge = _make_bridge()
+    captured: dict[str, object] = {}
+
+    def fake_run_manifest(*, manifest, media_suffixes, on_progress, is_cancelled):  # type: ignore[no-untyped-def]
+        captured["settings"] = manifest[0]["params"]
+        return ["E:/tmp/out.mp4"]
+
+    bridge._run_manifest = fake_run_manifest  # type: ignore[method-assign]
+    bridge.generate_video(
+        prompt="depth scene",
+        resolution_label="720p", aspect_ratio="16:9", duration_seconds=5,
+        fps=24, steps=20, seed=None, camera_motion="none", negative_prompt="",
+        image_path=None, audio_path=None, model_type="minimax_h3_ref2va_pruned",
+        video_prompt_type="DV", audio_prompt_type="K",
+        reference_video_paths=["E:/tmp/depth.mp4"],
+        reference_audio_paths=["E:/tmp/depth.mp4"],
+        on_progress=lambda *_args: None, is_cancelled=lambda: False,
+    )
+
+    settings = captured["settings"]
+    assert settings["video_prompt_type"] == "DV"
+    assert settings["audio_prompt_type"] == "K"
+    assert settings["audio_guide"] == str(Path("E:/tmp/depth.mp4").resolve())
 
 
 def test_generate_video_forwards_default_lora_settings() -> None:
@@ -693,7 +864,16 @@ def test_generate_director_video_submits_exact_backend_settings() -> None:
         {
             "id": 1,
             "params": {**settings, "config": "PrunaAI VAE"},
-            "plugin_data": {},
+            "plugin_data": {
+                "_preview": {
+                    "mode": "tae",
+                    "update_rate": "adaptive",
+                    "device": "auto",
+                    "max_edge": 512,
+                    "preview_fps": 16,
+                    "webp_quality": 72,
+                }
+            },
         }
     ]
 

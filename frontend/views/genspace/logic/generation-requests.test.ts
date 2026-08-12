@@ -197,6 +197,25 @@ describe("GenSpace generation request builders", () => {
     }]);
   });
 
+  it("omits the retained disabled H3 video from the submitted request", () => {
+    const command = buildVideoGenerationCommand({
+      prompt: "Use @video1",
+      settings: { ...DEFAULT_VIDEO_SETTINGS, videoProfileId: "minimax_h3" },
+      imageInputs: [
+        { id: "video", url: "file:///C:/video.mp4", role: "reference_video", type: "video", alias: "@video1" },
+        { id: "depth", url: "file:///C:/depth.mp4", role: "depth", type: "video", alias: "@video2" },
+      ],
+      inputImage: null,
+      inputAudio: null,
+      useAudioTrack: false,
+      enhancePrompt: false,
+    });
+
+    expect(command.inputMedia).toEqual([
+      expect.objectContaining({ path: "C:/depth.mp4", role: "depth", alias: "@video2" }),
+    ]);
+  });
+
   it.each([
     ["extend", "continue_video", 12, false],
     ["relight", "control_video", 5, true],

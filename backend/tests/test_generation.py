@@ -186,6 +186,49 @@ class TestGenerate:
         )
         assert recovery.status_code == 200
 
+    def test_h3_rejects_depth_mixed_with_reference_video(
+        self, client, enable_wangp: FakeWanGPBridge
+    ):
+        response = client.post(
+            "/api/generate",
+            json={
+                **_T2V_JSON,
+                "modelProfileId": "minimax_h3",
+                "inputMedia": [
+                    {"role": "depth", "path": "depth.mp4", "type": "video"},
+                    {"role": "reference_video", "path": "reference.mp4", "type": "video"},
+                ],
+            },
+        )
+
+        assert response.status_code == 400
+        assert response.json()["error"] == "H3_DEPTH_REFERENCE_VIDEO_MIX"
+        assert enable_wangp.video_calls == []
+
+    def test_h3_rejects_video_soundtrack_mixed_with_audio_reference(
+        self, client, enable_wangp: FakeWanGPBridge
+    ):
+        response = client.post(
+            "/api/generate",
+            json={
+                **_T2V_JSON,
+                "modelProfileId": "minimax_h3",
+                "inputMedia": [
+                    {
+                        "role": "reference_video",
+                        "path": "reference.mp4",
+                        "type": "video",
+                        "useAudioTrack": True,
+                    },
+                    {"role": "reference_audio", "path": "reference.wav", "type": "audio"},
+                ],
+            },
+        )
+
+        assert response.status_code == 400
+        assert response.json()["error"] == "H3_SOUNDTRACK_AUDIO_REFERENCE_MIX"
+        assert enable_wangp.video_calls == []
+
     def test_video_profile_square_aspect_routes_to_ltx2(
         self, client, enable_wangp: FakeWanGPBridge
     ):

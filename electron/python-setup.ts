@@ -55,12 +55,12 @@ export interface ModelPackProgress {
 }
 
 const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
-  { id: 'utility', name: 'Utility Models', estimatedSize: '2.3 GB' },
-  { id: 'z_image_turbo', name: 'Z-Image Turbo', estimatedSize: '14.3 GB', modelType: 'z_image', mediaTypes: ['image'], features: ['generate'] },
+  { id: 'utility', name: 'Utility Models', estimatedSize: '~3.3 GB' },
+  { id: 'z_image_turbo', name: 'Z-Image Turbo', estimatedSize: '~11.5 GB', modelType: 'z_image', mediaTypes: ['image'], features: ['generate'] },
   {
     id: 'flux2_klein_4b',
     name: 'Flux 2 Klein 4B',
-    estimatedSize: '11.8 GB',
+    estimatedSize: '~8.8 GB',
     modelType: 'flux2_klein_4b',
     groupId: 'flux2_klein',
     groupName: 'Flux 2 Klein',
@@ -71,7 +71,7 @@ const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
   {
     id: 'flux2_klein_9b',
     name: 'Flux 2 Klein 9B',
-    estimatedSize: '20.8 GB',
+    estimatedSize: '~19.2 GB',
     modelType: 'flux2_klein_9b',
     groupId: 'flux2_klein',
     groupName: 'Flux 2 Klein',
@@ -82,7 +82,7 @@ const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
   {
     id: 'krea2_turbo',
     name: 'Krea 2 Turbo',
-    estimatedSize: '20.5 GB',
+    estimatedSize: '~18.2 GB',
     modelType: 'krea2_turbo',
     groupId: 'krea2',
     groupName: 'Krea 2',
@@ -93,7 +93,7 @@ const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
   {
     id: 'krea2_turbo_edit',
     name: 'Krea 2 Edit',
-    estimatedSize: '40.9 GB',
+    estimatedSize: '~20.8 GB',
     modelType: 'krea2_turbo_edit',
     groupId: 'krea2',
     groupName: 'Krea 2',
@@ -104,7 +104,7 @@ const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
   {
     id: 'qwen_image_2512_20B',
     name: 'Qwen Image',
-    estimatedSize: '27.9 GB',
+    estimatedSize: '~30.7 GB',
     modelType: 'qwen_image_2512_20B',
     groupId: 'qwen_image',
     groupName: 'Qwen Image',
@@ -115,7 +115,7 @@ const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
   {
     id: 'qwen_image_edit_plus2_20B',
     name: 'Qwen Image Edit',
-    estimatedSize: '27.9 GB',
+    estimatedSize: '~31.3 GB',
     modelType: 'qwen_image_edit_plus2_20B',
     groupId: 'qwen_image',
     groupName: 'Qwen Image',
@@ -126,7 +126,7 @@ const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
   {
     id: 'hidream_o1',
     name: 'HiDream O1',
-    estimatedSize: '15.4 GB',
+    estimatedSize: '~12.7 GB',
     modelType: 'hidream_o1_dev',
     mediaTypes: ['image'],
     features: ['generate', 'edit'],
@@ -134,7 +134,7 @@ const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
   {
     id: 'ideogram4_int8',
     name: 'Ideogram 4 Standard',
-    estimatedSize: '26.4 GB',
+    estimatedSize: '~28.3 GB',
     modelType: 'ideogram4_int8',
     groupId: 'ideogram4',
     groupName: 'Ideogram 4',
@@ -145,7 +145,7 @@ const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
   {
     id: 'ideogram4_turbotime_int8',
     name: 'Ideogram 4 TurboTime',
-    estimatedSize: '18.3 GB',
+    estimatedSize: '~19.6 GB',
     modelType: 'ideogram4_turbotime_int8',
     groupId: 'ideogram4',
     groupName: 'Ideogram 4',
@@ -156,7 +156,7 @@ const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
   {
     id: 'ltx2_turbo',
     name: 'LTX 2.3 Turbo 1.1',
-    estimatedSize: '42.8 GB',
+    estimatedSize: '~42.1 GB',
     modelType: 'ltx2_22B_distilled_1_1',
     mediaTypes: ['video'],
     features: ['generate', 'reframe'],
@@ -164,7 +164,7 @@ const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
   {
     id: 'minimax-h3',
     name: 'MiniMax H3',
-    estimatedSize: '206.8 GB',
+    estimatedSize: '~74.7 GB',
     modelType: 'minimax_h3_fl2va_pruned',
     mediaTypes: ['video'],
     features: ['generate'],
@@ -173,7 +173,7 @@ const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
   {
     id: 'ace_step_15_turbo',
     name: 'ACE-Step 1.5 Fast',
-    estimatedSize: '12.0 GB',
+    estimatedSize: '~6.3 GB',
     modelType: 'ace_step_v1_5_turbo_lm_1_7b',
     groupId: 'ace_step_15',
     groupName: 'ACE-Step 1.5',
@@ -184,7 +184,7 @@ const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
   {
     id: 'ace_step_15_xl_turbo',
     name: 'ACE-Step 1.5 XL',
-    estimatedSize: '20.0 GB',
+    estimatedSize: '~9.4 GB',
     modelType: 'ace_step_v1_5_xl_turbo_lm_1_7b',
     groupId: 'ace_step_15',
     groupName: 'ACE-Step 1.5',
@@ -195,7 +195,7 @@ const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
   {
     id: 'mmaudio',
     name: 'MMAudio Sound Effects',
-    estimatedSize: '13.9 GB',
+    estimatedSize: '~10.7 GB',
     modelType: 'mmaudio',
     mediaTypes: ['audio'],
     features: ['generate'],
@@ -203,7 +203,7 @@ const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
   {
     id: 'omnivoice',
     name: 'OmniVoice',
-    estimatedSize: '5.0 GB',
+    estimatedSize: '~3.2 GB',
     modelType: 'omnivoice',
     mediaTypes: ['audio'],
     features: ['generate'],
@@ -211,12 +211,12 @@ const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
   {
     id: 'index_tts2',
     name: 'Index TTS 2',
-    estimatedSize: '5.0 GB',
+    estimatedSize: '~5.2 GB',
     modelType: 'index_tts2',
     mediaTypes: ['audio'],
     features: ['generate'],
   },
-  { id: 'prompt_enhancer', name: 'Prompt Enhancer', estimatedSize: '36.0 GB' },
+  { id: 'prompt_enhancer', name: 'Prompt Enhancer', estimatedSize: '~38.7 GB' },
 ]
 
 let activeModelPackProcess: ChildProcess | null = null

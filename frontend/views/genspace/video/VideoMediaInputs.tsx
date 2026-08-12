@@ -16,6 +16,7 @@ import {
 } from "../constants";
 import {
   findGuideInput,
+  getH3ReferenceState,
   getH3ReferenceAvailability,
   normalizeVideoInputsForProfile,
   nextH3MediaAlias,
@@ -388,10 +389,6 @@ const H3_REFERENCE_TYPES: Array<{
   { type: "video", role: "reference_video", limit: 2, label: "Video Ref" },
   { type: "audio", role: "reference_audio", limit: 2, label: "Audio Ref" },
 ];
-const H3_FL_INPUTS: Array<{ type: "video" | "audio"; role: string; label: string }> = [
-  { type: "video", role: "control_video", label: "Control" },
-  { type: "audio", role: "audio_guide", label: "Soundtrack" },
-];
 const H3_REFERENCE_ROLE_FOR_TYPE: Record<GenSpaceMediaKind, string> = {
   image: "reference_image",
   video: "reference_video",
@@ -421,13 +418,14 @@ function H3MediaInputs({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const editing = inputs.find((input) => input.id === editingId);
-  const hasReferences = inputs.some((input) => H3_REFERENCE_TYPES.some((entry) => entry.role === input.role));
-  const referenceAvailability = getH3ReferenceAvailability(inputs);
+  const hasReferences = inputs.some((input) => H3_REFERENCE_TYPES.some((entry) => entry.role === input.role) || input.role === "depth");
+  const referenceState = getH3ReferenceState(inputs);
+  const referenceAvailability = referenceState.availability;
   const renderedRoles = new Set([
     "start_image",
     "end_image",
     ...H3_REFERENCE_TYPES.map(({ role }) => role),
-    ...H3_FL_INPUTS.map(({ role }) => role),
+    "depth",
   ]);
   const restoredInputs = inputs.filter(({ role }) => !renderedRoles.has(role));
 
@@ -437,12 +435,9 @@ function H3MediaInputs({
       const id = crypto.randomUUID();
       onChange((current) => {
         const currentHasReferences = current.some((input) =>
-          H3_REFERENCE_TYPES.some((entry) => entry.role === input.role),
+          H3_REFERENCE_TYPES.some((entry) => entry.role === input.role) || input.role === "depth",
         );
-        if (
-          (reference && !getH3ReferenceAvailability(current)[type]) ||
-          (!reference && currentHasReferences)
-        ) {
+        if ((reference && !getH3ReferenceAvailability(current)[type]) || (!reference && currentHasReferences)) {
           return current;
         }
         const next: GenSpaceMediaInput = {
@@ -454,7 +449,7 @@ function H3MediaInputs({
             ? { alias: nextH3MediaAlias(current, reservedAliases, type) }
             : {}),
         };
-        return role === "start_image" || role === "end_image" || role === "control_video" || role === "audio_guide"
+        return role === "start_image" || role === "end_image"
           ? replaceInputForRole(current, next)
           : [...current, next];
       });
@@ -466,7 +461,7 @@ function H3MediaInputs({
   const addFile = async (file: File, role: string) => {
     const type = detectMediaType(file.name, file.type);
     const reference = H3_REFERENCE_TYPES.find((entry) => entry.role === role);
-    const expected = reference?.type ?? H3_FL_INPUTS.find((entry) => entry.role === role)?.type ?? "image";
+    const expected = reference?.type ?? "image";
     if (!type || type !== expected) return;
     const url = await resolveInputFileUrl(file, syncInputFileToGallery);
     if (url) add(url, type, role);
@@ -485,6 +480,20 @@ function H3MediaInputs({
 
   const update = (id: string, patch: Partial<GenSpaceMediaInput>) =>
     onChange((current) => current.map((input) => input.id === id ? { ...input, ...patch } : input));
+
+  const setVideoRole = (id: string, role: "reference_video" | "depth") =>
+    onChange((current) => current.map((input) => input.id === id ? { ...input, role } : input));
+
+  const setSoundtrack = (enabled: boolean) =>
+    onChange((current) => {
+      const state = getH3ReferenceState(current);
+      if (enabled && state.audioCount - state.soundtrackCount > 0) return current;
+      return current.map((input) =>
+        input.type === "video" && (input.role === "reference_video" || input.role === "depth")
+          ? { ...input, useAudioTrack: enabled }
+          : input,
+      );
+    });
 
   const openReferencePicker = useCallback((type: GenSpaceMediaKind) => {
     if (!referenceAvailability[type]) return;
@@ -517,7 +526,16 @@ function H3MediaInputs({
   };
 
   return (
-    <GenPanelSection title="References">
+    <GenPanelSection collapsible={false}>
+      <div className="mb-2 flex items-center justify-between text-2xs font-medium uppercase tracking-wider text-zinc-500">
+        <span>References</span>
+        <span className="normal-case tracking-normal">
+          <span title="Images">▧ {referenceState.imageCount}/9</span>{" "}
+          <span title="Videos">▣ {referenceState.videoCount}/2</span>{" "}
+          <span title="Audio">♫ {referenceState.audioCount}/2</span>{" "}
+          <span title="Total files">◈ {referenceState.totalCount}/12</span>
+        </span>
+      </div>
       {editing ? (
         <GuideMediaTrimEditor
           item={editing}
@@ -576,48 +594,26 @@ function H3MediaInputs({
           <span className="text-sm">Add media</span>
         </button>
         <div className="flex flex-wrap gap-2">
-          {H3_REFERENCE_TYPES.flatMap((entry) => inputs.filter((input) => input.role === entry.role).map((item) => ({ entry, item }))).map(({ entry, item }) => (
+          {H3_REFERENCE_TYPES.flatMap((entry) => inputs.filter((input) => input.role === entry.role).map((item) => ({ entry, item }))).concat(inputs.filter((input) => input.role === "depth").map((item) => ({ entry: H3_REFERENCE_TYPES[1], item }))).map(({ entry, item }) => (
                 <CroppableMediaInputSlot
                   key={item.id}
                   item={item}
                   kind={entry.type}
                   badge={item.alias}
-                  title="Click for actions"
+                  title={referenceState.disabledVideoIds.has(item.id) ? "Disabled while a depth reference is active" : "Click for actions"}
                   sizeClassName="h-14 w-16"
+                  disabled={referenceState.disabledVideoIds.has(item.id)}
                   active={activeId === item.id}
                   onToggle={() => setActiveId((current) => current === item.id ? null : item.id)}
                   onRemove={() => onChange((current) => removeMediaInput(current, item.id))}
                   removeLabel={item.alias ?? entry.label}
                   onDrop={dropFor(entry.role, entry.type)}
                   onCropChange={(crop) => update(item.id, { crop: crop ?? undefined })}
-                  menu={<MediaRoleMenu title={entry.label} selectedRole={item.role} options={[]} onSelect={() => undefined} onTrim={entry.type === "image" ? undefined : () => { setEditingId(item.id); setActiveId(null); }} />}
+                  menu={<MediaRoleMenu title={entry.type === "video" ? "Video reference" : entry.label} selectedRole={item.role} options={entry.type === "video" ? [{ role: "reference_video", label: "Reference" }, { role: "depth", label: "Depth" }] : []} onSelect={(role) => { if (role === "reference_video" || role === "depth") setVideoRole(item.id, role); setActiveId(null); }} onTrim={entry.type === "image" ? undefined : () => { setEditingId(item.id); setActiveId(null); }} extra={entry.type === "video" && !referenceState.disabledVideoIds.has(item.id) ? <label className="mt-1 flex items-center gap-2 border-t border-zinc-700 px-2 pt-2 text-xs text-zinc-300"><span>Use Audio Track</span><input type="checkbox" checked={referenceState.soundtrackCount > 0} onChange={(event) => setSoundtrack(event.target.checked)} /></label> : null} />}
                 />
           ))}
         </div>
         <div className="flex flex-wrap gap-2">
-          {H3_FL_INPUTS.map((entry) => {
-            const item = inputs.find((input) => input.role === entry.role);
-            return (
-              <CroppableMediaInputSlot
-                key={entry.role}
-                item={item}
-                kind={entry.type}
-                label={entry.label}
-                badge={item ? entry.label : undefined}
-                title={hasReferences && !item ? "Remove references before adding FL2VA media" : `Click or drop a ${entry.type}`}
-                disabled={!item && hasReferences}
-                active={activeId === entry.role}
-                inputRef={({ video: videoInputRef, audio: audioInputRef }[entry.type] as React.RefObject<HTMLInputElement | null>)}
-                onAdd={() => setPendingRole(entry.role)}
-                onToggle={() => setActiveId((current) => current === entry.role ? null : entry.role)}
-                onRemove={() => item && onChange((current) => removeMediaInput(current, item.id))}
-                removeLabel={entry.label}
-                onDrop={dropFor(entry.role, entry.type)}
-                onCropChange={(crop) => item && update(item.id, { crop: crop ?? undefined })}
-                menu={item ? <MediaRoleMenu title={`H3 ${entry.label}`} selectedRole={item.role} options={[]} onSelect={() => undefined} onTrim={() => { setEditingId(item.id); setActiveId(null); }} /> : null}
-              />
-            );
-          })}
           {restoredInputs.map((item) => {
             const label = item.role.split("_").join(" ");
             return (

@@ -36,6 +36,14 @@ class TestGetSettings:
         assert data["outputSettings"]["imageQuality"] == 95
         assert data["outputSettings"]["audioCodec"] == "aac_192"
         assert data["outputSettings"]["metadataMode"] == "metadata"
+        assert data["previewSettings"] == {
+            "mode": "tae",
+            "updateRate": "adaptive",
+            "device": "auto",
+            "maxEdge": 512,
+            "previewFps": 16,
+            "webpQuality": 72,
+        }
         assert "ltxApiKey" not in data
         assert "falApiKey" not in data
         assert "geminiApiKey" not in data
@@ -75,6 +83,31 @@ class TestPostSettings:
             "attention_mode": "sage2",
             "performance_profile": 4.5,
             "reduce_vram": "2",
+        }
+
+    def test_update_preview_settings(self, client, test_state, wangp_bridge):
+        r = client.post(
+            "/api/settings",
+            json={
+                "previewSettings": {
+                    "mode": "rgb",
+                    "updateRate": "every_2",
+                    "device": "cpu",
+                    "maxEdge": 768,
+                    "previewFps": 8,
+                    "webpQuality": 85,
+                },
+            },
+        )
+
+        assert r.status_code == 200
+        assert wangp_bridge.preview_options == {
+            "mode": "rgb",
+            "update_rate": "every_2",
+            "device": "cpu",
+            "max_edge": 768,
+            "preview_fps": 8,
+            "webp_quality": 85,
         }
 
     def test_invalid_runtime_preference_rejected(self, client):
@@ -185,6 +218,24 @@ class TestSettingsPersistence:
         assert loaded.state.app_settings.prompt_cache_size == 1000
         assert loaded.state.app_settings.locked_seed == 0
         assert loaded.state.app_settings.pro_model.steps == 100
+
+    def test_existing_settings_without_preview_options_use_tae_defaults(
+        self, test_state, default_app_settings
+    ):
+        test_state.config.settings_file.write_text(
+            json.dumps({"use_torch_compile": True}), encoding="utf-8"
+        )
+
+        loaded = self._new_state(test_state, default_app_settings)
+
+        assert loaded.state.app_settings.preview_settings.model_dump() == {
+            "mode": "tae",
+            "update_rate": "adaptive",
+            "device": "auto",
+            "max_edge": 512,
+            "preview_fps": 16,
+            "webp_quality": 72,
+        }
 
     def test_legacy_prompt_enhancer_key_migrates(self, test_state, default_app_settings):
         test_state.config.settings_file.write_text(

@@ -1,3 +1,5 @@
+import { GenerationPreviewMedia } from "../genspace/components/GenerationPreviewMedia"
+
 interface Props {
   videoUrl: string | null
   previewUrl: string | null
@@ -10,7 +12,7 @@ export function DirectorGenerationPreview({ videoUrl, previewUrl, progress, stat
   return (
     <div className="relative flex min-h-32 min-w-0 flex-1 items-center justify-center overflow-hidden rounded-sm border border-zinc-800 bg-black">
       {videoUrl ? <video src={videoUrl} controls className="max-h-full w-full object-contain" />
-        : previewUrl ? <img src={previewUrl} className="max-h-full w-full object-contain" alt="Generation preview" />
+        : previewUrl ? <GenerationPreviewMedia url={previewUrl} className="max-h-full w-full object-contain" />
           : <span className="text-xs text-zinc-600">Latest Director output</span>}
       {isGenerating && (
         <div className="absolute inset-x-0 bottom-0 bg-zinc-950/90 p-2">

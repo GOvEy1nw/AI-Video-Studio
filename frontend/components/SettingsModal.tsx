@@ -36,7 +36,11 @@ interface FolderLocation {
 
 type AdvancedSettings = Pick<
   AppSettings,
-  "useTorchCompile" | "attentionMode" | "performanceProfile" | "reduceVram"
+  | "useTorchCompile"
+  | "attentionMode"
+  | "performanceProfile"
+  | "reduceVram"
+  | "previewSettings"
 >;
 
 function getAdvancedSettings(settings: AppSettings): AdvancedSettings {
@@ -45,6 +49,7 @@ function getAdvancedSettings(settings: AppSettings): AdvancedSettings {
     attentionMode: settings.attentionMode,
     performanceProfile: settings.performanceProfile,
     reduceVram: settings.reduceVram,
+    previewSettings: { ...settings.previewSettings },
   };
 }
 
@@ -136,6 +141,7 @@ export function SettingsModal({
     settings.attentionMode,
     settings.performanceProfile,
     settings.reduceVram,
+    settings.previewSettings,
     settings.useTorchCompile,
   ]);
 
@@ -144,6 +150,11 @@ export function SettingsModal({
     advancedSettings.attentionMode !== settings.attentionMode ||
     advancedSettings.performanceProfile !== settings.performanceProfile ||
     advancedSettings.reduceVram !== settings.reduceVram ||
+    Object.entries(advancedSettings.previewSettings).some(
+      ([key, value]) =>
+        value !==
+        settings.previewSettings[key as keyof typeof settings.previewSettings],
+    ) ||
     checkpointsLocation?.path !== savedCheckpointsLocation?.path ||
     checkpointsLocation?.custom !== savedCheckpointsLocation?.custom ||
     lorasLocation?.path !== savedLorasLocation?.path ||
@@ -535,6 +546,117 @@ export function SettingsModal({
                     <option value="3">Level 3 (6GB+)</option>
                   </select>
                 </label>
+              </div>
+
+              <div className="space-y-3 border-t border-zinc-800 pt-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-white">Generation Previews</h3>
+                  <p className="mt-1 text-xs leading-relaxed text-zinc-500">
+                    Used by LTX and MiniMax H3. Lower sizes and frame rates reduce preview overhead.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  <label className="space-y-1.5">
+                    <span className="text-xs text-zinc-500">Mode</span>
+                    <select
+                      value={advancedSettings.previewSettings.mode}
+                      disabled={advancedSaving}
+                      onChange={(event) => {
+                        setAdvancedSettings((current) => ({ ...current, previewSettings: { ...current.previewSettings, mode: event.target.value as typeof current.previewSettings.mode } }));
+                        setAdvancedReloaded(false);
+                      }}
+                      className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white"
+                    >
+                      <option value="tae">TAE (Recommended)</option>
+                      <option value="rgb">Fast RGB</option>
+                      <option value="off">Off</option>
+                    </select>
+                  </label>
+                  <label className="space-y-1.5">
+                    <span className="text-xs text-zinc-500">Update Rate</span>
+                    <select
+                      value={advancedSettings.previewSettings.updateRate}
+                      disabled={advancedSaving}
+                      onChange={(event) => {
+                        setAdvancedSettings((current) => ({ ...current, previewSettings: { ...current.previewSettings, updateRate: event.target.value as typeof current.previewSettings.updateRate } }));
+                        setAdvancedReloaded(false);
+                      }}
+                      className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white"
+                    >
+                      <option value="adaptive">Adaptive</option>
+                      <option value="every_step">Every step</option>
+                      <option value="every_2">Every 2 steps</option>
+                      <option value="every_4">Every 4 steps</option>
+                    </select>
+                  </label>
+                  <label className="space-y-1.5">
+                    <span className="text-xs text-zinc-500">Decode Device</span>
+                    <select
+                      value={advancedSettings.previewSettings.device}
+                      disabled={advancedSaving}
+                      onChange={(event) => {
+                        setAdvancedSettings((current) => ({ ...current, previewSettings: { ...current.previewSettings, device: event.target.value as typeof current.previewSettings.device } }));
+                        setAdvancedReloaded(false);
+                      }}
+                      className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white"
+                    >
+                      <option value="auto">Auto</option>
+                      <option value="cuda">GPU</option>
+                      <option value="cpu">CPU</option>
+                    </select>
+                  </label>
+                  <label className="space-y-1.5">
+                    <span className="text-xs text-zinc-500">Maximum Edge</span>
+                    <select
+                      value={advancedSettings.previewSettings.maxEdge}
+                      disabled={advancedSaving}
+                      onChange={(event) => {
+                        setAdvancedSettings((current) => ({ ...current, previewSettings: { ...current.previewSettings, maxEdge: Number(event.target.value) } }));
+                        setAdvancedReloaded(false);
+                      }}
+                      className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white"
+                    >
+                      {[128, 256, 384, 512, 768, 1024].map((size) => (
+                        <option key={size} value={size}>
+                          {size}px
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="space-y-1.5">
+                    <span className="text-xs text-zinc-500">Playback FPS</span>
+                    <select
+                      value={advancedSettings.previewSettings.previewFps}
+                      disabled={advancedSaving}
+                      onChange={(event) => {
+                        setAdvancedSettings((current) => ({ ...current, previewSettings: { ...current.previewSettings, previewFps: Number(event.target.value) as typeof current.previewSettings.previewFps } }));
+                        setAdvancedReloaded(false);
+                      }}
+                      className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white"
+                    >
+                      {[2, 4, 8, 16].map((fps) => (
+                        <option key={fps} value={fps}>
+                          {fps} FPS
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="space-y-1.5">
+                    <span className="text-xs text-zinc-500">WebP Quality</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={advancedSettings.previewSettings.webpQuality}
+                      disabled={advancedSaving}
+                      onChange={(event) => {
+                        setAdvancedSettings((current) => ({ ...current, previewSettings: { ...current.previewSettings, webpQuality: Math.max(1, Math.min(100, Number(event.target.value))) } }));
+                        setAdvancedReloaded(false);
+                      }}
+                      className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white"
+                    />
+                  </label>
+                </div>
               </div>
 
               <div className="space-y-3 pt-4 border-t border-zinc-800">

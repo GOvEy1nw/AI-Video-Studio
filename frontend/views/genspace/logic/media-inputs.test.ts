@@ -5,6 +5,7 @@ import { VIDEO_GUIDE_ROLE_OPTIONS } from "../constants";
 import {
   findGuideInput,
   getH3ReferenceAvailability,
+  getH3ReferenceState,
   getH3PromptAliases,
   isImageAspectRatioLocked,
   isVideoAspectRatioLocked,
@@ -79,6 +80,20 @@ describe("GenSpace media input logic", () => {
     expect(getH3ReferenceAvailability([])).toEqual({ image: true, video: true, audio: false });
     expect(getH3ReferenceAvailability([input("image", "reference_image", "image")])).toMatchObject({ audio: true });
     expect(getH3ReferenceAvailability([input("frame", "start_image", "image")])).toEqual({ image: false, video: false, audio: false });
+  });
+
+  it("retains a second video as disabled when depth is active and counts soundtracks as audio", () => {
+    const first = { ...input("first", "reference_video", "video"), useAudioTrack: true };
+    const depth = { ...input("depth", "depth", "video"), useAudioTrack: true };
+    const state = getH3ReferenceState([first, depth]);
+
+    expect([...state.disabledVideoIds]).toEqual(["first"]);
+    expect(state.activeInputs).toEqual([depth]);
+    expect(state.videoCount).toBe(1);
+    expect(state.audioCount).toBe(1);
+    expect(state.totalCount).toBe(1);
+    expect(state.availability.video).toBe(false);
+    expect(state.availability.audio).toBe(false);
   });
 
   it("replaces only the guide slot", () => {

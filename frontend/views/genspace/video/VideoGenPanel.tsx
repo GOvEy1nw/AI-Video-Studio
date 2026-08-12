@@ -13,7 +13,7 @@ import { GenPanelSection } from "../components/GenPanelSection";
 import { PromptActions } from "../components/PromptActions";
 import { PromptEditor } from "../components/PromptEditor";
 import type { GenSpaceMediaKind, VideoGenPanelController } from "../types";
-import { getH3PromptAliases, getH3ReferenceAvailability, isVideoAspectRatioLocked } from "../logic/media-inputs";
+import { getH3PromptAliases, getH3ReferenceState, isVideoAspectRatioLocked } from "../logic/media-inputs";
 import { VideoMediaInputs } from "./VideoMediaInputs";
 import { VideoModeTabs } from "./VideoModeTabs";
 import { VideoToolInput } from "./VideoToolInput";
@@ -217,7 +217,8 @@ export function VideoGenPanel({
     !!media.inputAudio ||
     media.inputs.some(({ role }) => AUDIO_MEDIA_ROLE_SET.has(role));
   const isH3Generation = !isPanelMode && selectedProfile?.id === "minimax_h3";
-  const h3ReferenceAvailability = getH3ReferenceAvailability(media.inputs);
+  const h3ReferenceState = getH3ReferenceState(media.inputs);
+  const h3ReferenceAvailability = h3ReferenceState.availability;
   const aspectRatioDisabled = isVideoAspectRatioLocked(
     videoTools.mode,
     media.inputs,
@@ -435,7 +436,7 @@ export function VideoGenPanel({
         onChange={prompt.setValue}
         mediaMentions={
           isH3Generation
-            ? media.inputs.flatMap((input) => input.alias && input.type ? [{ alias: input.alias, type: input.type, url: input.url }] : [])
+            ? h3ReferenceState.activeInputs.flatMap((input) => input.alias && input.type ? [{ alias: input.alias, type: input.type, url: input.url }] : [])
             : undefined
         }
         onAddMedia={isH3Generation ? (type) => h3ReferenceRequestRef.current(type) : undefined}

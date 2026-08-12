@@ -93,6 +93,14 @@ class WanGPBridge:
         self._submitted_manifest_once = False
         self._session_lock = threading.Lock()
         self._last_preview_write_at = 0.0
+        self._preview_options: dict[str, object] = {
+            "mode": "tae",
+            "update_rate": "adaptive",
+            "device": "auto",
+            "max_edge": 512,
+            "preview_fps": 16,
+            "webp_quality": 72,
+        }
         runtime_overrides: dict[str, object] = {}
         if checkpoints_dir is not None:
             runtime_overrides["checkpoints_paths"] = [str(checkpoints_dir.resolve()), "."]
@@ -107,6 +115,26 @@ class WanGPBridge:
             if enabled:
                 args.append("--compile")
             self._extra_args = tuple(args)
+
+    def set_preview_options(
+        self,
+        *,
+        mode: str,
+        update_rate: str,
+        device: str,
+        max_edge: int,
+        preview_fps: int,
+        webp_quality: int,
+    ) -> None:
+        with self._session_lock:
+            self._preview_options = {
+                "mode": mode,
+                "update_rate": update_rate,
+                "device": device,
+                "max_edge": max_edge,
+                "preview_fps": preview_fps,
+                "webp_quality": webp_quality,
+            }
 
     def set_runtime_preferences(
         self,
@@ -372,8 +400,14 @@ class WanGPBridge:
         model_type = effective_settings.get("model_type")
         if isinstance(model_type, str) and model_type.startswith("ltx"):
             effective_settings["config"] = "PrunaAI VAE"
+        preview_data: dict[str, object] = {}
+        if isinstance(model_type, str) and (
+            model_type.startswith("ltx") or model_type.startswith("minimax_h3_")
+        ):
+            with self._session_lock:
+                preview_data = {"_preview": dict(self._preview_options)}
         outputs = self._run_manifest(
-            manifest=[{"id": 1, "params": effective_settings, "plugin_data": {}}],
+            manifest=[{"id": 1, "params": effective_settings, "plugin_data": preview_data}],
             media_suffixes={".mp4", ".mov", ".mkv", ".avi", ".webm", ".mp3", ".wav", ".ogg", ".aac", ".flac", ".m4a"},
             on_progress=on_progress,
             is_cancelled=is_cancelled,
@@ -945,7 +979,9 @@ class WanGPBridge:
             progress = int(getattr(data, "progress", 0))
             current_step = getattr(data, "current_step", None)
             total_steps = getattr(data, "total_steps", None)
-            preview_url = self._write_preview_image(getattr(data, "image", None))
+            preview_url = self._write_preview_media(getattr(data, "media", None))
+            if preview_url is None:
+                preview_url = self._write_preview_image(getattr(data, "image", None))
             detail = self._parse_progress_detail(status_text, phase)
             on_progress(
                 phase,
@@ -1292,13 +1328,37 @@ class WanGPBridge:
         save = getattr(image, "save", None)
         if not callable(save):
             return None
+        return self._write_preview_file(
+            ".jpg",
+            lambda preview_path: save(preview_path, format="JPEG", quality=85),
+        )
+
+    def _write_preview_media(self, media: object) -> str | None:
+        data = getattr(media, "data", None)
+        mime_type = getattr(media, "mime_type", None)
+        if not isinstance(mime_type, str) or not isinstance(data, bytes):
+            return None
+        suffix = {
+            "image/webp": ".webp",
+            "image/gif": ".gif",
+            "video/mp4": ".mp4",
+        }.get(mime_type)
+        if suffix is None:
+            return None
+        return self._write_preview_file(suffix, lambda preview_path: preview_path.write_bytes(data))
+
+    def _write_preview_file(
+        self,
+        suffix: str,
+        write: Callable[[Path], object],
+    ) -> str | None:
         now = time.monotonic()
         if now - self._last_preview_write_at < _PREVIEW_WRITE_INTERVAL_SECONDS:
             return None
         try:
-            preview_path = self._output_dir / "_wangp_preview_latest.jpg"
+            preview_path = self._output_dir / f"_wangp_preview_latest{suffix}"
             self._output_dir.mkdir(parents=True, exist_ok=True)
-            save(preview_path, format="JPEG", quality=85)
+            write(preview_path)
             normalized = str(preview_path.resolve()).replace("\\", "/")
             file_url = (
                 f"file:///{normalized}"
@@ -1309,7 +1369,7 @@ class WanGPBridge:
             self._last_preview_write_at = now
             return f"{file_url}?v={time.time_ns()}"
         except Exception:
-            logger.debug("Could not write WanGP preview image", exc_info=True)
+            logger.debug("Could not write WanGP preview media", exc_info=True)
             return None
 
     @staticmethod

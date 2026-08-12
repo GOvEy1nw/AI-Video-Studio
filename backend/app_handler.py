@@ -79,6 +79,15 @@ class AppHandler:
             performance_profile=self.state.app_settings.performance_profile,
             reduce_vram=self.state.app_settings.reduce_vram,
         )
+        preview_settings = self.state.app_settings.preview_settings
+        self.wangp_bridge.set_preview_options(
+            mode=preview_settings.mode,
+            update_rate=preview_settings.update_rate,
+            device=preview_settings.device,
+            max_edge=preview_settings.max_edge,
+            preview_fps=preview_settings.preview_fps,
+            webp_quality=preview_settings.webp_quality,
+        )
 
         self.generation = GenerationHandler(state=self.state, lock=self._lock)
 

@@ -87,6 +87,25 @@ class OutputSettings(SettingsBaseModel):
         return self
 
 
+class PreviewSettings(SettingsBaseModel):
+    mode: Literal["off", "rgb", "tae"] = "tae"
+    update_rate: Literal["adaptive", "every_step", "every_2", "every_4"] = "adaptive"
+    device: Literal["auto", "cuda", "cpu"] = "auto"
+    max_edge: int = 512
+    preview_fps: Literal[2, 4, 8, 16] = 16
+    webp_quality: int = 72
+
+    @field_validator("max_edge", mode="before")
+    @classmethod
+    def _clamp_max_edge(cls, value: Any) -> int:
+        return _clamp_int(value, minimum=128, maximum=1024, default=512)
+
+    @field_validator("webp_quality", mode="before")
+    @classmethod
+    def _clamp_webp_quality(cls, value: Any) -> int:
+        return _clamp_int(value, minimum=1, maximum=100, default=72)
+
+
 class AppSettings(SettingsBaseModel):
     use_torch_compile: bool = False
     attention_mode: Literal["auto", "sdpa", "flash", "xformers", "sage", "sage2", "sage3"] = "auto"
@@ -102,6 +121,7 @@ class AppSettings(SettingsBaseModel):
     seed_locked: bool = False
     locked_seed: int = 42
     output_settings: OutputSettings = Field(default_factory=OutputSettings)
+    preview_settings: PreviewSettings = Field(default_factory=PreviewSettings)
 
     @field_validator("prompt_cache_size", mode="before")
     @classmethod
@@ -181,6 +201,7 @@ class SettingsResponse(SettingsBaseModel):
     seed_locked: bool = False
     locked_seed: int = 42
     output_settings: OutputSettings = Field(default_factory=OutputSettings)
+    preview_settings: PreviewSettings = Field(default_factory=PreviewSettings)
 
 
 def to_settings_response(settings: AppSettings) -> SettingsResponse:

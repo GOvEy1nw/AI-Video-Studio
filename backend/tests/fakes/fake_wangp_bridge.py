@@ -152,6 +152,7 @@ class FakeWanGPBridge:
     preload_calls: int = 0
     compile_enabled: bool = False
     runtime_preferences: dict[str, object] = field(default_factory=dict)
+    preview_options: dict[str, object] = field(default_factory=dict)
 
     video_calls: list[FakeWangpVideoCall] = field(default_factory=list)
     image_calls: list[FakeWangpImageCall] = field(default_factory=list)
@@ -201,6 +202,25 @@ class FakeWanGPBridge:
             "attention_mode": attention_mode,
             "performance_profile": performance_profile,
             "reduce_vram": reduce_vram,
+        }
+
+    def set_preview_options(
+        self,
+        *,
+        mode: str,
+        update_rate: str,
+        device: str,
+        max_edge: int,
+        preview_fps: int,
+        webp_quality: int,
+    ) -> None:
+        self.preview_options = {
+            "mode": mode,
+            "update_rate": update_rate,
+            "device": device,
+            "max_edge": max_edge,
+            "preview_fps": preview_fps,
+            "webp_quality": webp_quality,
         }
 
     def generate_video(

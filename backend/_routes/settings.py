@@ -36,6 +36,15 @@ def route_post_settings(
             performance_profile=_after.performance_profile,
             reduce_vram=_after.reduce_vram,
         )
+    if "preview_settings" in changed_roots:
+        handler.wangp_bridge.set_preview_options(
+            mode=_after.preview_settings.mode,
+            update_rate=_after.preview_settings.update_rate,
+            device=_after.preview_settings.device,
+            max_edge=_after.preview_settings.max_edge,
+            preview_fps=_after.preview_settings.preview_fps,
+            webp_quality=_after.preview_settings.webp_quality,
+        )
 
     logger.info(
         "Applied settings patch (changed=%s)",

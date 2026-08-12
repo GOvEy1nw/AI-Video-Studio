@@ -1,11 +1,11 @@
 ---
 id: AIVS-003
 title: Add curated MiniMax H3 video generation
-status: Human Review
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-08-11 14:56'
-updated_date: '2026-08-12 08:27'
+updated_date: '2026-08-12 12:26'
 labels:
   - video
   - model
@@ -95,6 +95,12 @@ Add MiniMax H3 as a user-friendly, local-only AiVS video model backed by the man
 8. Replace H3 prompt alias chips with an accessible @ mention menu that can add media or insert an existing stable alias at the current prompt selection, then verify focused interaction logic, strict TypeScript, frontend build, and the real Electron UI.
 
 9. Make H3 frame slots square and replace the per-kind Add media icon buttons with one full-surface combined importer while retaining per-kind limits after file-type detection.
+
+10. Replace standalone H3 Control/Soundtrack slots with per-video Reference/Depth role and Use Audio Track actions inside the unified reference cards; exclude Generic Control from Generate.
+
+11. Centralize H3 counts/availability so the heading counter, importer, role switches, soundtrack audio-slot consumption, 12-file cap, and depth exclusivity share one contract.
+
+12. Compile and validate depth plus per-video soundtrack through the existing request/backend/WanGP path, add focused pure/rendered/backend checks, then rerun strict typechecks, build, Electron smoke, and independent review.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -123,10 +129,26 @@ Human-review follow-up: make the H3 Start/End image slots square and make the en
 H3 UI follow-up complete: square Start/End slots; one full-width Add media button opens a combined image/video/audio input; @ commands retain type-specific pickers; restored unknown roles remain removable; concurrent async imports validate and allocate aliases against current state.
 
 Validation: focused H3 UI/media tests 19/19 passed; strict TypeScript passed; production renderer/Electron-main/preload build passed; scoped diff check had no whitespace errors; actual Electron screenshot confirmed square frame slots and the full-width Add media surface; independent final reviewer verdict ship.
+
+Human-review feedback on 2026-08-12: add Images/Videos/Audio/Total counters; remove standalone Control and Soundtrack slots; default videos to Reference; permit Reference/Depth switching; depth permits one enabled video and greys any other existing video; per-video Use Audio Track consumes an audio slot without adding a mixed-reference file; Generic Control remains excluded from Generate mode.
+
+H3 reference refinement complete. The References heading now reports image/video/audio/total usage; standalone Generate-mode Control and Soundtrack slots are removed; unified Add media defaults videos to Reference; cards expose Reference/Depth, Trim, and synchronized Use Audio Track. Depth compiles to WanGP DV, retains but disables another video, and disabled media is excluded from submission and @ mentions. WanGP K soundtrack mode is synchronized across all retained active/disabled video cards, consumes one audio slot per active video without increasing file count, and is mutually exclusive with standalone audio references. Generic Control remains reserved for future Edit mode.
+
+Final verification: frontend focused Vitest 38/38 passed; TypeScript strict typecheck passed; backend generation/bridge pytest 86/86 passed with one existing pynvml deprecation warning; Pyright 0 errors/0 warnings; production renderer/Electron-main/preload build passed with existing chunk-size warning; git diff --check passed with line-ending notices only. Real Electron visual smoke confirmed the final H3 counters, square frame slots, unified Add media surface, and removed standalone slots. Automated rendered interaction covers Reference→Depth grey/disable, soundtrack synchronization, and restore. Fresh independent reviewer verdict: ship, no findings.
 <!-- SECTION:NOTES:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+author: @codex
+created: 2026-08-12 12:26
+---
+Approved by the user on 2026-08-12 after reviewing the completed H3 reference counters, unified importer, Reference/Depth behavior, and soundtrack handling.
+---
+<!-- COMMENTS:END -->
 
 ## Final Summary
 
 <!-- SECTION:FINAL_SUMMARY:BEGIN -->
-Implemented MiniMax H3 as one curated experimental AiVS video profile backed exclusively by local WanGP, including automatic combined-pack download, deterministic FL2VA/Ref2VA routing, stable prompt aliases, validation, Copy Settings, and real GPU generation. The final Quick Gen H3 References UI uses square Start/End image slots, one full-width Add media button with a combined image/video/audio importer, removable reference cards, mutual exclusion with FL2VA media, and an accessible @ menu for add commands and existing aliases. Restored unsupported roles remain visible/removable, and concurrent imports allocate aliases against current state. Verification: related backend suites passed (final generation/bridge 83 and pack 12), focused frontend suites passed (final UI/media 19), TypeScript and Python typechecks passed, production renderer/Electron-main/preload build passed, Electron visual smoke confirmed the final layout and @ menu, full H3 pack download and a real H3 GPU generation succeeded, and the independent final reviewer returned ship with no findings.
+Refined MiniMax H3 Generate references around WanGP's actual Ref2VA contract: live 9/2/2/12 counters, one unified importer, Reference/Depth video roles, retained greyed conflict cards, stable active @ aliases, and synchronized soundtrack slot accounting. Backend trust-boundary validation maps Depth to DV and soundtrack reuse to K while rejecting unsupported mixes. Focused frontend/backend tests, strict TypeScript/Python checks, production bundles, Electron visual smoke, diff inspection, and independent review all passed.
 <!-- SECTION:FINAL_SUMMARY:END -->

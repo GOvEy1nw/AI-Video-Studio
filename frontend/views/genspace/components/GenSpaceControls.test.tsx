@@ -248,7 +248,7 @@ describe("GenSpace shared controls", () => {
     ]);
   });
 
-  it("mutually disables H3 references and FL2VA additions without hiding existing media", () => {
+  it("keeps H3 references mutually exclusive with frame inputs and hides new FL2VA slots", () => {
     const profile = { id: "minimax_h3", inputMedia: { supportsImageInputs: true } } as ModelProfile;
     const { rerender } = render(
       <VideoMediaInputs
@@ -271,7 +271,7 @@ describe("GenSpace shared controls", () => {
     expect(openCombinedInput).toHaveBeenCalledOnce();
 
     expect((screen.getByRole("button", { name: "Start image" }) as HTMLButtonElement).disabled).toBe(true);
-    expect((screen.getByRole("button", { name: "Control" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByRole("button", { name: "Control" })).toBeNull();
     expect(screen.getByRole("button", { name: "Remove @image1" })).toBeTruthy();
 
     rerender(
@@ -299,6 +299,39 @@ describe("GenSpace shared controls", () => {
     );
     expect(screen.getByRole("button", { name: "Restored control audio" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Remove control audio" })).toBeTruthy();
+  });
+
+  it("keeps H3 soundtrack selection synchronized through a depth disable and restore", () => {
+    const profile = {
+      id: "minimax_h3",
+      inputMedia: { supportsImageInputs: true },
+    } as ModelProfile;
+    function H3Inputs() {
+      const [inputs, setInputs] = useState<Parameters<typeof VideoMediaInputs>[0]["inputs"]>([
+        { id: "one", alias: "@video1", type: "video", url: "file:///C:/one.mp4", role: "reference_video", useAudioTrack: true },
+        { id: "two", alias: "@video2", type: "video", url: "file:///C:/two.mp4", role: "reference_video", useAudioTrack: true },
+      ]);
+      return (
+        <VideoMediaInputs
+          inputs={inputs}
+          onChange={setInputs}
+          profile={profile}
+          useAudioTrack={false}
+          onUseAudioTrackChange={vi.fn()}
+          resolveInputFileUrl={vi.fn(async () => null)}
+        />
+      );
+    }
+
+    render(<H3Inputs />);
+    fireEvent.click(screen.getByRole("button", { name: "Change @video1 usage" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Depth" }));
+    fireEvent.click(screen.getByRole("button", { name: "Change @video1 usage" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Use Audio Track" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Reference" }));
+    fireEvent.click(screen.getByRole("button", { name: "Change @video2 usage" }));
+
+    expect((screen.getByRole("checkbox", { name: "Use Audio Track" }) as HTMLInputElement).checked).toBe(false);
   });
 
   it("replaces the active @ token from the keyboard and opens media add commands", async () => {

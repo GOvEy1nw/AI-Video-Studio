@@ -22,7 +22,7 @@ describe('Model Manager catalog', () => {
     expect(getModelPacks()).toContainEqual({
       id: 'mmaudio',
       name: 'MMAudio Sound Effects',
-      estimatedSize: '13.9 GB',
+      estimatedSize: '~10.7 GB',
       installed: false,
       modelType: 'mmaudio',
       mediaTypes: ['audio'],

@@ -32,6 +32,7 @@ import {
 } from "../../components/UseVideoDropdown";
 import type { Asset } from "../../types/project";
 import type { GenSpaceGalleryProps } from "./GenSpaceGallery";
+import { GenerationPreviewMedia } from "./components/GenerationPreviewMedia";
 
 export interface GenSpaceSelectedGenerationProps {
   style?: React.CSSProperties;
@@ -590,9 +591,8 @@ export function GenSpaceSelectedGeneration({
       {showingGeneration ? (
         <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-black/40">
           {generation.previewUrl ? (
-            <img
-              src={generation.previewUrl}
-              alt="Current generation preview"
+            <GenerationPreviewMedia
+              url={generation.previewUrl}
               className="h-full w-full object-contain"
             />
           ) : null}

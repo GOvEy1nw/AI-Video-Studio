@@ -17,6 +17,7 @@ import {
 } from "../constants";
 import type { GenSpaceSettings } from "../constants";
 import type { GenSpaceMediaInput } from "../types";
+import { getH3ReferenceState } from "./media-inputs";
 import type { SubmittedVideoToolId } from "../../../types/video-tools";
 
 export interface GenerationInputMedia {
@@ -27,6 +28,7 @@ export interface GenerationInputMedia {
   trimStartTime?: number;
   trimDuration?: number;
   crop?: MediaCropRecipe;
+  useAudioTrack?: boolean;
 }
 
 export interface VideoGenerationCommand {
@@ -69,6 +71,9 @@ export function buildGenerationInputMedia(
           ? { trimDuration: item.trimDuration }
           : {}),
         ...(item.crop ? { crop: { ...item.crop } } : {}),
+        ...(item.useAudioTrack !== undefined
+          ? { useAudioTrack: item.useAudioTrack }
+          : {}),
       },
     ];
   });
@@ -189,7 +194,11 @@ export function buildVideoGenerationCommand({
       enhancePrompt,
     },
     audioPath,
-    inputMedia: buildGenerationInputMedia(imageInputs),
+    inputMedia: buildGenerationInputMedia(
+      settings.videoProfileId === "minimax_h3"
+        ? getH3ReferenceState(imageInputs).activeInputs
+        : imageInputs,
+    ),
     useAudioTrack,
     normalizedSettings,
     persistNormalizedSettings: Boolean(autoDuration),

@@ -21,6 +21,15 @@ export interface OutputSettings {
   keepIntermediateSlidingWindows: boolean
 }
 
+export interface PreviewSettings {
+  mode: 'off' | 'rgb' | 'tae'
+  updateRate: 'adaptive' | 'every_step' | 'every_2' | 'every_4'
+  device: 'auto' | 'cuda' | 'cpu'
+  maxEdge: number
+  previewFps: 2 | 4 | 8 | 16
+  webpQuality: number
+}
+
 export interface AppSettings {
   useTorchCompile: boolean
   attentionMode: 'auto' | 'sdpa' | 'flash' | 'xformers' | 'sage' | 'sage2' | 'sage3'
@@ -34,6 +43,7 @@ export interface AppSettings {
   seedLocked: boolean
   lockedSeed: number
   outputSettings: OutputSettings
+  previewSettings: PreviewSettings
 }
 
 const DEFAULT_OUTPUT_SETTINGS: OutputSettings = {
@@ -44,6 +54,15 @@ const DEFAULT_OUTPUT_SETTINGS: OutputSettings = {
   audioCodec: 'aac_192',
   metadataMode: 'metadata',
   keepIntermediateSlidingWindows: false,
+}
+
+const DEFAULT_PREVIEW_SETTINGS: PreviewSettings = {
+  mode: 'tae',
+  updateRate: 'adaptive',
+  device: 'auto',
+  maxEdge: 512,
+  previewFps: 16,
+  webpQuality: 72,
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
@@ -59,6 +78,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   seedLocked: false,
   lockedSeed: 42,
   outputSettings: DEFAULT_OUTPUT_SETTINGS,
+  previewSettings: DEFAULT_PREVIEW_SETTINGS,
 }
 
 interface AppSettingsContextValue {
@@ -87,6 +107,10 @@ function normalizeAppSettings(data: Partial<AppSettings>): AppSettings {
     outputSettings: {
       ...DEFAULT_OUTPUT_SETTINGS,
       ...(data.outputSettings ?? {}),
+    },
+    previewSettings: {
+      ...DEFAULT_PREVIEW_SETTINGS,
+      ...(data.previewSettings ?? {}),
     },
   }
 }
@@ -172,9 +196,8 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
     if (!response.ok) {
       throw new Error(`Settings save failed with status ${response.status}`)
     }
-    const data = await response.json()
-    setSettings(normalizeAppSettings(data))
-  }, [])
+    setSettings(await loadSettings())
+  }, [loadSettings])
 
   const contextValue = useMemo<AppSettingsContextValue>(
     () => ({
