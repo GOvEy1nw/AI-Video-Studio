@@ -756,7 +756,7 @@ def test_generate_video_maps_ic_lora_guide_only() -> None:
     assert settings["video_guide"] == resolved_source
     assert "image_prompt_type" not in settings
     assert settings["video_prompt_type"] == "VG"
-    assert settings["config"] == "PrunaAI VAE"
+    assert settings["config"] == ""
 
 
 def test_generate_video_forwards_outpainting_settings() -> None:

@@ -399,7 +399,7 @@ class WanGPBridge:
         effective_settings = dict(settings)
         model_type = effective_settings.get("model_type")
         if isinstance(model_type, str) and model_type.startswith("ltx"):
-            effective_settings["config"] = "PrunaAI VAE"
+            effective_settings["config"] = ""
         preview_data: dict[str, object] = {}
         if isinstance(model_type, str) and (
             model_type.startswith("ltx") or model_type.startswith("minimax_h3_")
