@@ -18,6 +18,33 @@ afterEach(() => {
 })
 
 describe('Model Manager catalog', () => {
+  it('exposes LTX 2.5 Base and Turbo packs on the same checkpoint', () => {
+    expect(getModelPacks()).toContainEqual({
+      id: 'ltx2_base',
+      name: 'LTX 2.5 Base',
+      estimatedSize: '',
+      installed: false,
+      modelType: 'ltx2_25_22B',
+      groupId: 'ltx2_25',
+      groupName: 'LTX 2.5',
+      variantName: 'Base',
+      mediaTypes: ['video'],
+      features: ['generate', 'reframe'],
+    })
+    expect(getModelPacks()).toContainEqual({
+      id: 'ltx2_turbo',
+      name: 'LTX 2.5 Turbo',
+      estimatedSize: '',
+      installed: false,
+      modelType: 'ltx2_25_22B',
+      groupId: 'ltx2_25',
+      groupName: 'LTX 2.5',
+      variantName: 'Turbo',
+      mediaTypes: ['video'],
+      features: ['generate', 'reframe'],
+    })
+  })
+
   it('exposes the backend-owned MMAudio pack', () => {
     expect(getModelPacks()).toContainEqual({
       id: 'mmaudio',

@@ -27,6 +27,7 @@ from server_utils.media_validation import (
     validate_video_file,
 )
 from state.app_state_types import AppState
+from wangp_model_packs import H3_TURBO_REF2VA_LORA_URL
 
 if TYPE_CHECKING:
     from runtime_config.runtime_config import RuntimeConfig
@@ -46,7 +47,8 @@ VIDEO_TOOL_LORA_URLS = {
     "deblur": "https://huggingface.co/buckets/retIbedi/LTX-Loras/resolve/ltx-2.3-22b-ic-lora-deblur-0.9.safetensors",
 }
 
-_H3_PROFILE_ID = "minimax_h3"
+
+_H3_PROFILE_IDS = {"minimax_h3", "minimax_h3_turbo"}
 _H3_REFERENCE_ROLES = {"reference_image", "reference_video", "reference_audio", "depth"}
 _H3_FL_ONLY_ROLES = {"control_video", "audio_guide"}
 _H3_ALIAS_PATTERN = re.compile(r"@(image|video|audio)([1-9]\d*)")
@@ -180,6 +182,11 @@ class VideoGenerationHandler(StateHandlerBase):
         return None
 
     def _generate_via_wangp(self, req: GenerateVideoRequest) -> GenerateVideoResponse:
+        is_h3 = req.modelProfileId in _H3_PROFILE_IDS
+        if is_h3 and req.shotPrompts:
+            raise HTTPError(400, "H3_MULTI_SHOT_UNSUPPORTED")
+        if is_h3 and req.videoTool is not None:
+            raise HTTPError(400, "VIDEO_TOOL_NOT_SUPPORTED")
         if self._generation.is_generation_running():
             raise HTTPError(409, "Generation already in progress")
 
@@ -207,7 +214,6 @@ class VideoGenerationHandler(StateHandlerBase):
         else:
             wangp_prompt, duration = self._resolve_prompt_and_duration(req, duration)
 
-        is_h3 = req.modelProfileId == _H3_PROFILE_ID
         h3_uses_ref2va = False
 
         start_image_path = None
@@ -557,6 +563,8 @@ class VideoGenerationHandler(StateHandlerBase):
                 steps = 8 if req.model.strip().lower() == "fast" else max(1, settings.pro_model.steps)
             seed = self._resolve_seed()
             default_settings = dict(profile.wangp_default_settings)
+            if profile.id == "minimax_h3_turbo" and h3_uses_ref2va:
+                default_settings["activated_loras"] = [H3_TURBO_REF2VA_LORA_URL]
             output_settings = settings.output_settings
             default_settings.update(
                 {

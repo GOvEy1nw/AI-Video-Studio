@@ -3,14 +3,19 @@
 from __future__ import annotations
 
 from pathlib import Path
+import sys
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 from wangp_model_packs import (
+    H3_TURBO_FL2VA_LORA_URL,
+    H3_TURBO_REF2VA_LORA_URL,
+    LTX25_DISTILLED_LORA_URL,
     PACKS,
     _delete_pack_files,
     _download_model_dependencies,
     _load_state,
+    _pack_model_def,
     _pack_progress_callback,
     _process_download_definitions,
 )
@@ -29,6 +34,26 @@ def test_minimax_h3_pack_combines_both_wangp_model_types() -> None:
         "minimax_h3_fl2va_pruned",
         "minimax_h3_ref2va_pruned",
     ]
+    assert PACKS["minimax-h3"]["config"] == "gguf_q4_k_m,fp8mix"
+    assert PACKS["minimax-h3-turbo"]["model_types"] == PACKS["minimax-h3"]["model_types"]
+    assert PACKS["minimax-h3-turbo"]["loras"] == [
+        H3_TURBO_FL2VA_LORA_URL,
+        H3_TURBO_REF2VA_LORA_URL,
+    ]
+
+
+def test_ltx_packs_share_base_checkpoint_and_turbo_adds_distilled_lora() -> None:
+    assert PACKS["ltx2_base"] == {
+        "name": "LTX 2.5 Base",
+        "kind": "model",
+        "model_type": "ltx2_25_22B",
+    }
+    assert PACKS["ltx2_turbo"] == {
+        "name": "LTX 2.5 Turbo",
+        "kind": "model",
+        "model_type": "ltx2_25_22B",
+        "loras": [LTX25_DISTILLED_LORA_URL],
+    }
 
 
 def test_mmaudio_pack_uses_registered_audio_processor() -> None:
@@ -66,6 +91,7 @@ class FakeWanGP:
 
     def __init__(self) -> None:
         self.downloads: list[tuple[str, str, int, int, str | None]] = []
+        self.callbacks: list[object] = []
 
     def get_model_def(self, model_type: str) -> dict[str, Any]:
         assert model_type == "example"
@@ -83,8 +109,10 @@ class FakeWanGP:
         submodel_no: int = 1,
         URLs: Any = None,
         module_type: Any = None,
+        model_def: Any = None,
     ) -> str:
         assert model_type == "example"
+        del model_def
         if URLs is not None:
             return f"urls:{URLs}"
         if module_type is not None:
@@ -98,8 +126,9 @@ class FakeWanGP:
         *,
         sub_prop_name: str | None = None,
         return_list: bool = False,
+        model_def: Any = None,
     ) -> Any:
-        del sub_prop_name, return_list
+        del sub_prop_name, return_list, model_def
         if prop == "modules" and model_or_module == "example":
             return ["named_module", {"URLs": ["left"], "URLs2": ["right"]}]
         if prop == "modules":
@@ -115,14 +144,19 @@ class FakeWanGP:
         file_type: int,
         submodel_no: int = 1,
         force_path: str | None = None,
+        progress_callback: object = None,
+        model_def: Any = None,
     ) -> None:
+        del model_def
         self.downloads.append((filename, model_type, file_type, submodel_no, force_path))
+        self.callbacks.append(progress_callback)
 
 
 def test_download_model_dependencies_matches_wangp_generation_preflight() -> None:
     wgp = FakeWanGP()
+    callback = lambda _update: None
 
-    _download_model_dependencies(wgp, "example")
+    _download_model_dependencies(wgp, "example", callback)
 
     assert wgp.downloads == [
         ("main:1", "example", 0, 1, None),
@@ -132,6 +166,61 @@ def test_download_model_dependencies_matches_wangp_generation_preflight() -> Non
         ("urls:['right']", "example", 1, 2, None),
         ("urls:['text_encoder']", "example", 2, -1, "text_encoder"),
     ]
+    assert wgp.callbacks == [callback] * len(wgp.downloads)
+
+
+def test_pack_model_def_applies_config_and_adds_variant_lora(monkeypatch) -> None:
+    monkeypatch.setitem(
+        sys.modules,
+        "shared.config_groups",
+        SimpleNamespace(
+            selected_model_configs=lambda groups, selection: (
+                (index, config_id, groups[index - 1][config_id])
+                for index, config_id in enumerate(selection.split(","), 1)
+            )
+        ),
+    )
+    class FakeConfiguredWanGP:
+        def get_model_def(self, model_type: str) -> dict[str, Any]:
+            assert model_type == "example"
+            return {"loras": ["base.safetensors"]}
+
+        def get_model_config_groups(
+            self, model_type: str, model_def: dict[str, Any]
+        ) -> list[dict[str, object]]:
+            assert model_type == "example"
+            assert model_def == {"loras": ["base.safetensors"]}
+            return [
+                {"gguf_q4_k_m": {"text_encoder": "q4"}},
+                {"fp8mix": {"video_vae": "fp8"}},
+            ]
+
+        def get_model_recursive_prop(
+            self, model_type: str, prop: str, **values: object
+        ) -> list[str]:
+            assert model_type == "example"
+            assert prop == "loras"
+            return cast(dict[str, Any], values["model_def"])["loras"]
+
+    model_def = _pack_model_def(
+        FakeConfiguredWanGP(),
+        {
+            "name": "Example Turbo",
+            "kind": "model",
+            "model_type": "example",
+            "config": "gguf_q4_k_m,fp8mix",
+            "loras": ["turbo.safetensors"],
+        },
+        "example",
+    )
+
+    assert model_def == {
+        "loras": ["base.safetensors", "turbo.safetensors"],
+        "text_encoder": "q4",
+        "video_vae": "fp8",
+    }
+
+
 def test_process_download_definitions_forwards_callback() -> None:
     calls: list[dict[str, object]] = []
 
@@ -153,7 +242,7 @@ def test_process_download_definitions_forwards_callback() -> None:
 
 
 def test_pack_progress_callback_emits_safe_structured_event(capsys) -> None:
-    callback = _pack_progress_callback("ltx2_turbo", "LTX 2.3 Fast", 2, 3)
+    callback = _pack_progress_callback("ltx2_turbo", "LTX 2.5 Fast", 2, 3)
     callback(
         SimpleNamespace(
             phase="downloading",

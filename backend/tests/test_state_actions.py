@@ -47,7 +47,7 @@ def test_generation_download_progress_serializes_and_clears(test_state):
     transfer = ModelDownloadProgress(
         phase="downloading",
         model_type="ltx2",
-        model_name="LTX 2.3 Fast",
+        model_name="LTX 2.5 Fast",
         source="huggingface",
         repo_id="owner/repo",
         filename="model.safetensors",

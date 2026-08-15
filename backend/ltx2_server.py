@@ -156,7 +156,7 @@ WANGP_LORAS_DIR = (
     if (value := os.environ.get("WANGP_LORAS_DIR", "").strip())
     else None
 )
-WANGP_VIDEO_MODEL_TYPE = os.environ.get("WANGP_VIDEO_MODEL_TYPE", "ltx2_22B_distilled_1_1")
+WANGP_VIDEO_MODEL_TYPE = os.environ.get("WANGP_VIDEO_MODEL_TYPE", "ltx2_25_22B_distilled")
 WANGP_IMAGE_MODEL_TYPE = os.environ.get("WANGP_IMAGE_MODEL_TYPE", "z_image")
 WANGP_EXTRA_ARGS = _resolve_wangp_extra_args()
 WANGP_ATTENTION_MODE = _resolve_wangp_attention_mode(WANGP_ROOT, WANGP_EXTRA_ARGS)

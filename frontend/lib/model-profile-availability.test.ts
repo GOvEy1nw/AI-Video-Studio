@@ -12,7 +12,7 @@ describe("applyModelPackAvailability", () => {
       { availability: "unsupported" as const, wangpModelType: "unsupported" },
       {
         availability: "available" as const,
-        wangpModelType: "ltx2_22B_distilled_1_1",
+        wangpModelType: "ltx2_25_22B_distilled",
         requiredPackIds: ["ltx2_turbo"],
       },
     ];
@@ -33,7 +33,7 @@ describe("applyModelPackAvailability", () => {
       { availability: "unsupported", wangpModelType: "unsupported" },
       {
         availability: "available",
-        wangpModelType: "ltx2_22B_distilled_1_1",
+        wangpModelType: "ltx2_25_22B_distilled",
         requiredPackIds: ["ltx2_turbo"],
       },
     ]);

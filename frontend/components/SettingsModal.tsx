@@ -552,7 +552,7 @@ export function SettingsModal({
                 <div>
                   <h3 className="text-sm font-semibold text-white">Generation Previews</h3>
                   <p className="mt-1 text-xs leading-relaxed text-zinc-500">
-                    Used by LTX and MiniMax H3. Lower sizes and frame rates reduce preview overhead.
+                    Animated TAE is used where WanGP supports it; other models fall back to Fast RGB. Lower sizes and frame rates reduce preview overhead.
                   </p>
                 </div>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -567,7 +567,7 @@ export function SettingsModal({
                       }}
                       className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white"
                     >
-                      <option value="tae">TAE (Recommended)</option>
+                      <option value="tae">TAE (when supported)</option>
                       <option value="rgb">Fast RGB</option>
                       <option value="off">Off</option>
                     </select>

@@ -84,7 +84,7 @@ export function SettingsPanel({
         onChange={(e) => handleChange('model', e.target.value)}
         disabled={disabled}
       >
-        <option value="fast">LTX 2.3 Fast</option>
+        <option value="fast">LTX 2.5 Fast</option>
       </Select>
 
       {/* Duration, Resolution, FPS Row */}

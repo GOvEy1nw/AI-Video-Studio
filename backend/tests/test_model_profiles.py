@@ -151,12 +151,18 @@ class TestCuratedProfiles:
 
     def test_visible_video_profiles(self) -> None:
         visible = get_visible_video_profiles()
-        assert [p.id for p in visible] == ["ltx2_22b_distilled", "minimax_h3"]
+        assert [p.id for p in visible] == [
+            "ltx2_25_22b",
+            "ltx2_22b_distilled",
+            "minimax_h3",
+            "minimax_h3_turbo",
+        ]
 
     def test_minimax_h3_profile_exposes_curated_limits_and_pack(self) -> None:
         profile = get_video_profile("minimax_h3")
         assert profile is not None
         assert profile.wangp_model_type == "minimax_h3_fl2va_pruned"
+        assert profile.wangp_default_settings["config"] == "gguf_q4_k_m,fp8mix"
         assert profile.required_pack_ids == ("minimax-h3",)
         assert profile.input_media.max_reference_images == 9
         assert profile.input_media.max_reference_videos == 2
@@ -171,7 +177,9 @@ class TestCuratedProfiles:
         assert profile is not None
         assert profile.status == "stable"
         assert profile.media_type == "video"
-        assert profile.wangp_model_type == "ltx2_22B_distilled_1_1"
+        assert profile.display_name == "LTX 2.5 Turbo"
+        assert profile.wangp_model_type == "ltx2_25_22B"
+        assert profile.wangp_default_settings["sample_solver"] == "distilled_8_steps"
         assert profile.text_to_video is True
         assert profile.image_to_video is True
         assert profile.audio_to_video is True
@@ -352,7 +360,12 @@ class TestModelProfilesEndpoint:
             "ideogram4_turbotime_int8",
         ]
         video_ids = [p["id"] for p in data["profiles"] if p["mediaType"] == "video"]
-        assert video_ids == ["ltx2_22b_distilled", "minimax_h3"]
+        assert video_ids == [
+            "ltx2_25_22b",
+            "ltx2_22b_distilled",
+            "minimax_h3",
+            "minimax_h3_turbo",
+        ]
 
     def test_profile_shape(self, client) -> None:
         r = client.get("/api/model-profiles")
@@ -383,9 +396,9 @@ class TestModelProfilesEndpoint:
         assert z_image["inputMedia"]["maxImages"] == 1
 
         ltx = next(p for p in data["profiles"] if p["id"] == "ltx2_22b_distilled")
-        assert ltx["displayName"] == "LTX 2.3 Fast"
+        assert ltx["displayName"] == "LTX 2.5 Turbo"
         assert ltx["mediaType"] == "video"
-        assert ltx["wangpModelType"] == "ltx2_22B_distilled_1_1"
+        assert ltx["wangpModelType"] == "ltx2_25_22B"
         assert ltx["capabilities"]["textToVideo"] is True
         assert ltx["capabilities"]["imageToVideo"] is True
         assert ltx["capabilities"]["audioToVideo"] is True

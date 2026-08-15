@@ -142,7 +142,7 @@ class FakeWanGPBridge:
     python_executable: str | None = None
     config_dir: Path = field(default_factory=lambda: Path("."))
     output_dir: Path = field(default_factory=lambda: Path("."))
-    video_model_type: str = "ltx2_22B_distilled_1_1"
+    video_model_type: str = "ltx2_25_22B_distilled"
     image_model_type: str = "z_image"
     camera_motion_prompts: dict[str, str] = field(default_factory=dict)
     extra_args: Iterable[str] = ()
@@ -496,7 +496,7 @@ def build_fake_wangp_bridge(
     *,
     output_dir: Path,
     image_model_type: str = "z_image",
-    video_model_type: str = "ltx2_22B_distilled_1_1",
+    video_model_type: str = "ltx2_25_22B_distilled",
 ) -> FakeWanGPBridge:
     """Construct a default-available fake bridge bound to ``output_dir``."""
     return FakeWanGPBridge(

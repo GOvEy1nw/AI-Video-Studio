@@ -30,7 +30,7 @@ def test_director_generation_uses_shared_state_and_bridge(client, enable_wangp) 
     assert body["resolvedFrameCount"] == 121
     assert body["compiledPrompt"] == "cinematic scene\n[1:120] walk"
     settings = enable_wangp.director_calls[0].settings
-    assert settings["model_type"] == "ltx2_22B_distilled_1_1"
+    assert settings["model_type"] == "ltx2_25_22B_distilled"
     assert settings["multi_prompts_gen_type"] == "FG"
     assert settings["video_length"] == 121
     assert settings["custom_settings"] == {"prompt_relay_epsilon": 0.001}

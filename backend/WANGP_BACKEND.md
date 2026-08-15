@@ -21,7 +21,7 @@ Development and installer preparation consume the latest branch head.
 ## Optional
 
 - `WANGP_VIDEO_MODEL_TYPE`
-  - Defaults to `ltx2_22B_distilled_1_1`.
+  - Defaults to `ltx2_25_22B_distilled`.
 - `WANGP_IMAGE_MODEL_TYPE`
   - Defaults to `z_image`.
 - `WANGP_EXTRA_ARGS`

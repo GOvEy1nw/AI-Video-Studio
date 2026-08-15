@@ -44,7 +44,7 @@ class HealthHandler(StateHandlerBase):
             models_status=[
                 ModelStatusItem(
                     id="fast",
-                    name="WanGP LTX-2.3 Distilled",
+                    name="WanGP LTX-2.5 Distilled",
                     loaded=models_ready,
                     downloaded=models_ready,
                 ),

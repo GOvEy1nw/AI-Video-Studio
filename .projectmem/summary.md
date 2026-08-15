@@ -1,11 +1,36 @@
 # projectmem - AI-Video-Studio
 
-_Last updated: 2026-08-12_
+_Last updated: 2026-08-15_
 
 ## Project purpose
 AiVS is a local-first Electron desktop application for project-based AI image, video, music, and sound-effect creation. It gives Windows/NVIDIA users curated Quick Gen, Director, Video Editor, and Asset Library workflows backed exclusively by the bundled local WanGP/Wan2GP runtime.
 
 ## Recent issues
+- [DONE] #0069 LTX Turbo's solver auto-LoRA is fixed at 0.5 and request-specific LoRA paths overwrite profile LoRAs [backend/handlers/video_generation_handler.py] -> Set H3 Turbo LoRA to 0.75 while retaining WanGP's native LTX distilled_8_steps auto-LoRA strength of 0.5 [backend/model_profiles/profiles.py] (fixed)
+  - Partial attempt: Explicitly selected LTX distilled LoRA at 0.6 per phase and composed profile LoRAs with multi-shot/video-tool LoRAs [backend/handlers/video_generation_handler.py]
+  - Partial attempt: Ran focused backend tests; implementation passed but three old assertions still expected Turbo to have no explicit distilled LoRA [backend/tests/test_generation.py]
+  - Partial attempt: Removed the explicit LTX 0.6 override and additive handler changes after user chose WanGP's native 0.5 behavior; retained only H3 0.75 [backend/model_profiles/profiles.py]
+- [DONE] #0068 Model-pack catalogue labels imply separate compact/Turbo bases even though Base and Turbo share each family’s full base model set [electron/python-setup.ts] -> Model Manager now presents only LTX 2.5 Base/Turbo and MiniMax H3 Base/Turbo; both variants retain the same family base models and Turbo is distinguished only by LoRA/settings [electron/python-setup.ts] (fixed)
+- [DONE] #0067 H3 Turbo multi-shot and LTX-only video-tool paths would overwrite its required Turbo LoRA with incompatible LTX LoRAs [backend/handlers/video_generation_handler.py] -> H3 Turbo now retains its required LoRA by rejecting incompatible LTX multi-shot/tool LoRA overrides [backend/handlers/video_generation_handler.py] (fixed)
+  - Partial attempt: Rejected H3 multi-shot and LTX-only LoRA tools before request compilation, preserving the H3 Turbo LoRA contract [backend/handlers/video_generation_handler.py]
+- [DONE] #0066 New pack-overlay unit test cannot import WanGP shared.config_groups when run from the standalone AiVS backend test environment [backend/tests/test_wangp_model_packs.py] -> Pack-overlay test now isolates the WanGP config selector and verifies effective config plus LoRA merging; focused suites pass [backend/tests/test_wangp_model_packs.py] (fixed)
+  - Partial attempt: Stubbed only WanGP shared.config_groups in the focused unit test so the overlay logic can run without importing the external checkout [backend/tests/test_wangp_model_packs.py]
+- [DONE] #0065 Repository-wide git diff/status inspection is blocked by permission denied reading pre-existing backend/handlers/health_handler.py [backend/handlers/health_handler.py] -> Use explicit AIVS-010 path scope for git diff/check while the unrelated health handler remains unreadable in sandbox [backend/handlers/health_handler.py] (fixed)
+- [DONE] #0064 Production frontend build again hit sandbox Rolldown access-denied errors on unchanged Electron dependencies [electron/main.ts] -> Confirmed the frontend build failure was sandbox interference; the production renderer/Electron/preload bundle passes with workspace access [electron/main.ts] (fixed)
+- [DONE] #0063 Focused backend suite found the model-profile endpoint test still expected only the two pre-variant video IDs [backend/tests/test_model_profiles.py] -> Model-profile endpoint now exposes and verifies all four LTX/H3 Base/Turbo profile IDs [backend/tests/test_model_profiles.py] (fixed)
+  - Partial attempt: Updated the endpoint contract assertion to the four visible Base/Turbo profile IDs [backend/tests/test_model_profiles.py]
+- [DONE] #0062 Backend Pyright is blocked because sandboxed uv cannot access the user cache sdists-v9/.git [backend/.venv] -> Backend profile variants now construct without constant redefinition and Pyright reports zero errors [backend/model_profiles/profiles.py] (fixed)
+  - Partial attempt: Escalated Pyright ran and found one real error: VIDEO_PROFILES constant redefinition in the profile variant construction [backend/model_profiles/profiles.py]
+- [DONE] #0061 PowerShell quoting corrupted a combined rg regex while locating stale LTX 2.5 expectations [investigation/tooling] -> Use fixed-string rg patterns for PowerShell searches containing brackets and quotes [investigation/tooling] (fixed)
+  - Partial attempt: Re-ran stale-expectation search with fixed-string patterns; it succeeded and exposed an unrelated sandbox denial on two test files [investigation/tooling]
+- [DONE] #0060 Python syntax check invoked the inaccessible WindowsApps python shim instead of the repository backend runtime [investigation/tooling] -> Use the bundled Codex Python executable when the repository uv runtime is temporarily unavailable [investigation/tooling] (fixed)
+  - Failed attempt: Retried syntax compilation through backend/.venv, but its uv-managed base Python path is currently unavailable [backend/.venv]
+- [DONE] #0059 context-mode execute unexpectedly lost the AiVS working directory and could not read backend/model_profiles/profiles.py [investigation/tooling] -> Use absolute workspace paths when context-mode loses the repository working directory [investigation/tooling] (fixed)
+- [DONE] #0058 Model-pack downloads remain stuck at Preparing while WanGP downloads continue without progress events [backend/wangp_model_packs.py] -> Restored AiVS model-pack progress by forwarding the existing callback through all WanGP dependency downloads and protecting the contract with a focused assertion [backend/wangp_model_packs.py] (fixed)
+  - Failed attempt: Ran Wan2GP callback unittest from AiVS root; test discovery failed because the command was executed in the wrong repository [..\Wan2GP\tests\test_model_download_progress.py]
+  - Failed attempt: Validation batch again used the AiVS root for both cross-repo commands; Wan unittest and backend pytest failed test discovery without exercising code [investigation/tooling]
+  - Partial attempt: Restored the optional progress callback through every AiVS model dependency download and reinstated the focused all-calls forwarding assertion [backend/wangp_model_packs.py]
+- [DONE] #0057 apply_patch was denied reading backend/handlers/health_handler.py during the LTX 2.5 replacement [backend/handlers/health_handler.py] -> Updated the health model label through an approved direct workspace write after sandbox-only apply_patch access denial [backend/handlers/health_handler.py] (fixed)
 - [DONE] #0056 Curated Ideogram profiles and packs use stale *_int8 WanGP model IDs while current WanGP registers ideogram4 and ideogram4_turbotime [backend/model_profiles/profiles.py] -> Stable AiVS Ideogram IDs now route to WanGP ideogram4 and ideogram4_turbotime for generation, downloads, and inventory [backend/model_profiles/profiles.py] (fixed)
   - Partial attempt: Kept stable AiVS profile/pack IDs but changed their WanGP model_type mappings to current registered identifiers [backend/model_profiles/profiles.py]
 - [DONE] #0055 Advanced Settings reports save/reload failure when model-pack refresh crashes on WanGP-unknown curated model ideogram4_int8 [backend/wangp_model_packs.py] -> Model-pack refresh now succeeds against the configured external WanGP after aligning Ideogram pack mappings to registered model IDs [backend/wangp_model_packs.py] (fixed)
@@ -132,18 +157,23 @@ AiVS is a local-first Electron desktop application for project-based AI image, v
 - Persist preview controls as nested app preview_settings and forward all six WanGP-supported values only in LTX and MiniMax H3 video manifests; preserve current TAE defaults for old settings files [backend/state/app_settings.py]
 - Preview controls are now user-configurable through nested app preview_settings while remaining gated to LTX and MiniMax H3 manifests; automatic TAE remains the backward-compatible default [backend/services/wangp_bridge.py]
 - Retain AiVS Ideogram *_int8 WanGP mappings; the reported unknown-model refresh was caused by the user's temporarily unsynced custom finetunes, not an AiVS compatibility change [backend/model_profiles/profiles.py]
+- Replace the curated LTX 2.3 Fast runtime with WanGP LTX 2.5 Distilled while retaining stable AiVS profile `ltx2_22b_distilled` and pack `ltx2_turbo` IDs for saved-state compatibility [backend/model_profiles/profiles.py]
+- AIVS-010 preserves stable saved IDs by keeping minimax_h3 as H3 Base and ltx2_22b_distilled/ltx2_turbo as LTX Turbo, adding only sibling Base/Turbo IDs and packs [backend/model_profiles/profiles.py]
+- AIVS-010 model packs use WanGP config overlays and required LoRA URLs so installed manifests exactly match generation dependencies; H3 compact config is selected for both variants and only Turbo packs add their acceleration LoRA [backend/wangp_model_packs.py]
+- Keep LTX 2.5 Turbo on WanGP's native distilled_8_steps auto-LoRA strength of 0.5; do not explicitly override it [backend/model_profiles/profiles.py]
+- H3 Turbo uses separate Kijai FL2VA and Ref2VA LoRAs at 1.0; the existing validated H3 mode selection chooses the active LoRA and the Turbo pack installs both [backend/handlers/video_generation_handler.py]
 
 ## Notes
-- MiniMax H3's official community license excludes the UK, EU, US, and Republic of Korea from its automatic territory grant; the DeepBeepMeep pruned checkpoints do not state a separate permissive license, so AiVS must not silently enable automatic H3 downloads without reviewed distribution rights. [backend/model_profiles/profiles.py]
-- AIVS-003 live validation: the user confirmed the full combined MiniMax H3 pack downloaded successfully through AiVS after removing the unsupported `download_models(progress_callback=...)` argument. [backend/wangp_model_packs.py]
-- AIVS-003 live GPU validation: the user confirmed a real MiniMax H3 generation completed successfully through AiVS after the full combined pack installation. [backend/services/wangp_bridge.py]
-- AIVS-003 final H3 Quick Gen UI uses square Start/End slots, one full-width combined image/video/audio Add media importer, and an @ menu; restored roles remain removable and concurrent imports allocate stable aliases at commit time. [frontend/views/genspace/video/VideoMediaInputs.tsx]
-- Packaged Electron currently hardcodes Wan2GP under process.resourcesPath and first-run dependency setup rejects a missing bundled checkout; externalizing it requires resolving an app-managed runtime root before dependency installation. [electron/python-setup.ts, scripts/install-python-dependencies.ps1]
-- AIVS-003 MiniMax H3 was explicitly approved by the user after reviewing the final reference counters, unified importer, Reference/Depth behavior, and soundtrack handling; the Backlog task is Done. [backlog/tasks/aivs-003 - Add-curated-MiniMax-H3-video-generation.md]
-- The complete installed AiVS pack manifests under LocalAppData/AiVS resolve all 19 supported packs with zero missing files; MiniMax H3 measures ~74.7 GB and LTX 2.3 Turbo ~42.1 GB. [electron/python-setup.ts]
 - gotcha: WanGP TAE previews may be encoded as video/mp4 when PyAV/NVENC is available, so AiVS preview consumers must support video as well as animated WebP. [frontend/views/genspace/components/GenerationPreviewMedia.tsx]
 - Advanced Settings now exposes persisted WanGP preview controls for LTX and MiniMax H3; defaults remain TAE/adaptive/auto/512/16/72 and unsupported models receive no preview plugin data [frontend/components/SettingsModal.tsx]
 - Correction: the ideogram4_int8 unknown-model refresh was caused by custom finetunes temporarily missing from the user's Wan2GP fork; the AiVS Ideogram mapping change was reverted [backend/wangp_model_packs.py]
+- gotcha: WanGP LTX 2.5 shares `loras/ltx2` with older LTX versions, but the current TAE registry only permits LTX 2.3 IDs; 2.5 keeps RGB fallback until its latent contract is validated upstream [backend/services/wangp_bridge.py]
+- AIVS-008 completed: curated LTX Fast now maps stable AiVS IDs to WanGP `ltx2_25_22B_distilled`; manifest resolves 17 INT8 pack files at ~41.3 GB, with focused tests/typechecks/build passing [backend/wangp_model_packs.py]
+- AIVS-010 completed: MiniMax H3 and LTX 2.5 now expose Base/Turbo curated profiles and packs; H3 compact Q4/FP8 config is pack-owned, Turbo LoRAs are manifest-owned, and stable historical IDs retain their variant meaning. Focused tests/typechecks/build pass; live GPU generation remains unrun. [backend/model_profiles/profiles.py]
+- User clarified Base/Turbo naming: both variants use the same full family base models; Turbo is only the LoRA plus matching settings. Model Manager must show only LTX 2.5 Base/Turbo and MiniMax H3 Base/Turbo without compact or base-plus-LoRA wording. [electron/python-setup.ts]
+- AIVS-010 final correction verified: H3 Turbo multiplier is 0.75; LTX distilled_8_steps remains native WanGP 0.5. Focused backend 133 passed and Pyright clean. [backend/model_profiles/profiles.py]
+- AIVS-010 H3 Turbo now selects separate Kijai FL2VA/Ref2VA LoRAs at 1.0 via existing validated mode routing; pack installs both. Focused 134 passed, Pyright clean, reviewer ship. [backend/handlers/video_generation_handler.py]
+- gotcha: WanGPSession has no first-class Accelerator Profile list/apply API; WebUI profiles use private get_settings_from_file merge-before semantics, while session.run(profile.json) raw-loads the JSON as a standalone task [backend/services/wangp_bridge.py]
 
 ## Key files
 - `.git/backlog.md`

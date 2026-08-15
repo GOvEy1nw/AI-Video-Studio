@@ -45,8 +45,8 @@ def test_structured_model_download_preserves_exact_transfer_progress() -> None:
             details={
                 "kind": "model_download",
                 "phase": "downloading",
-                "model_type": "ltx2_22B_distilled_1_1",
-                "model_name": "LTX 2.3 Fast",
+                "model_type": "ltx2_25_22B_distilled",
+                "model_name": "LTX 2.5 Fast",
                 "source": "huggingface",
                 "repo_id": "owner/repo",
                 "filename": "model-00003-of-00006.safetensors",
@@ -142,7 +142,7 @@ def _make_bridge(*, image_model_type: str = "z_image") -> WanGPBridge:
         python_executable=None,
         config_dir=Path(r"E:\tmp\wangp_bridge"),
         output_dir=Path(r"E:\tmp\wangp_outputs"),
-        video_model_type="ltx2_22B_distilled_1_1",
+        video_model_type="ltx2_25_22B_distilled",
         image_model_type=image_model_type,
         camera_motion_prompts={},
         extra_args=(),
@@ -373,7 +373,7 @@ def test_runtime_preferences_update_app_owned_wangp_config(tmp_path: Path, monke
         python_executable=None,
         config_dir=tmp_path / "config",
         output_dir=tmp_path / "outputs",
-        video_model_type="ltx2_22B_distilled_1_1",
+        video_model_type="ltx2_25_22B_distilled",
         image_model_type="z_image",
         camera_motion_prompts={},
         extra_args=(),
@@ -419,7 +419,7 @@ def test_custom_checkpoints_directory_updates_wangp_config(tmp_path: Path) -> No
         python_executable=None,
         config_dir=tmp_path / "config",
         output_dir=tmp_path / "outputs",
-        video_model_type="ltx2_22B_distilled_1_1",
+        video_model_type="ltx2_25_22B_distilled",
         image_model_type="z_image",
         camera_motion_prompts={},
         checkpoints_dir=checkpoints_dir,
@@ -437,7 +437,7 @@ def test_custom_loras_directory_updates_wangp_config(tmp_path: Path) -> None:
         python_executable=None,
         config_dir=tmp_path / "config",
         output_dir=tmp_path / "outputs",
-        video_model_type="ltx2_22B_distilled_1_1",
+        video_model_type="ltx2_25_22B_distilled",
         image_model_type="z_image",
         camera_motion_prompts={},
         loras_dir=loras_dir,
@@ -490,7 +490,7 @@ def test_ltx2_video_uses_full_video_length_as_sliding_window_size() -> None:
     ("model_type", "expected_preview_data"),
     [
         (
-            "ltx2_22B_distilled_1_1",
+            "ltx2_25_22B_distilled",
             {"_preview": {"mode": "tae", "update_rate": "adaptive", "device": "auto", "max_edge": 512, "preview_fps": 16, "webp_quality": 72}},
         ),
         (
@@ -542,7 +542,7 @@ def test_video_manifest_uses_configured_preview_options() -> None:
     bridge.generate_video(
         prompt="test", resolution_label="720p", aspect_ratio="16:9", duration_seconds=5,
         fps=24, steps=20, seed=None, camera_motion="none", negative_prompt="",
-        image_path=None, audio_path=None, model_type="ltx2_22B_distilled_1_1",
+        image_path=None, audio_path=None, model_type="ltx2_25_22B_distilled",
         on_progress=lambda *_args: None, is_cancelled=lambda: False,
     )
 
@@ -844,7 +844,7 @@ def test_generate_director_video_submits_exact_backend_settings() -> None:
 
     bridge._run_manifest = fake_run_manifest  # type: ignore[method-assign]
     settings: dict[str, object] = {
-        "model_type": "ltx2_22B_distilled_1_1",
+        "model_type": "ltx2_25_22B_distilled",
         "prompt": "[1:61] walk",
         "multi_prompts_gen_type": "FG",
         "video_prompt_type": "KFI",
@@ -901,7 +901,7 @@ def test_bridge_never_writes_root_wgp_config(tmp_path: Path) -> None:
         python_executable=None,
         config_dir=tmp_path / "wangp_bridge",
         output_dir=tmp_path / "wangp_outputs",
-        video_model_type="ltx2_22B_distilled_1_1",
+        video_model_type="ltx2_25_22B_distilled",
         image_model_type="z_image",
         camera_motion_prompts={},
         extra_args=(),
@@ -924,7 +924,7 @@ def test_bridge_falls_back_to_bridge_config_when_root_config_missing(tmp_path: P
         python_executable=None,
         config_dir=config_dir,
         output_dir=tmp_path / "wangp_outputs",
-        video_model_type="ltx2_22B_distilled_1_1",
+        video_model_type="ltx2_25_22B_distilled",
         image_model_type="z_image",
         camera_motion_prompts={},
         extra_args=(),
@@ -982,7 +982,7 @@ class WanGPSession:
             python_executable=None,
             config_dir=tmp_path / "wangp_bridge",
             output_dir=output_dir,
-            video_model_type="ltx2_22B_distilled_1_1",
+            video_model_type="ltx2_25_22B_distilled",
             image_model_type="z_image",
             camera_motion_prompts={},
                 extra_args=(),

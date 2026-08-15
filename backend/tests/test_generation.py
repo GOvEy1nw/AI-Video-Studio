@@ -13,6 +13,7 @@ from pathlib import Path
 
 from services.video_clip import VideoMetadata
 from tests.fakes.fake_wangp_bridge import FakeWanGPBridge
+from wangp_model_packs import H3_TURBO_FL2VA_LORA_URL, H3_TURBO_REF2VA_LORA_URL
 
 _T2V_JSON = {
     "prompt": "test",
@@ -56,8 +57,9 @@ class TestGenerate:
         assert call.aspect_ratio == "16:9"
         assert call.duration_seconds == 2
         assert call.fps == 24
-        assert call.model_type == "ltx2_22B_distilled_1_1"
+        assert call.model_type == "ltx2_25_22B"
         assert call.default_settings["num_inference_steps"] == 8
+        assert call.default_settings["sample_solver"] == "distilled_8_steps"
         assert call.default_settings["video_output_codec"] == "libx264_8"
         assert call.default_settings["video_container"] == "mp4"
         assert call.default_settings["prompt_enhancer"] == ""
@@ -80,7 +82,7 @@ class TestGenerate:
 
         assert r.status_code == 200
         call = enable_wangp.video_calls[0]
-        assert call.model_type == "ltx2_22B_distilled_1_1"
+        assert call.model_type == "ltx2_25_22B"
         assert call.resolution_label == "720x1280"
         assert call.aspect_ratio == "9:16"
         assert call.steps == 8
@@ -113,6 +115,95 @@ class TestGenerate:
         assert call.model_type == "minimax_h3_ref2va_pruned"
         assert call.prompt == "Use <Picture 2> as the subject."
         assert call.reference_image_paths == [str(reference)]
+
+    def test_h3_turbo_routes_ref2va_with_turbo_defaults(
+        self, client, enable_wangp: FakeWanGPBridge, tmp_path: Path
+    ):
+        from PIL import Image
+
+        reference = tmp_path / "reference.png"
+        Image.new("RGB", (16, 16), color="blue").save(reference)
+        response = client.post(
+            "/api/generate",
+            json={
+                **_T2V_JSON,
+                "modelProfileId": "minimax_h3_turbo",
+                "inputMedia": [
+                    {"role": "reference_image", "path": str(reference), "type": "image", "alias": "@image1"}
+                ],
+                "prompt": "Use @image1.",
+            },
+        )
+
+        assert response.status_code == 200
+        call = enable_wangp.video_calls[-1]
+        assert call.model_type == "minimax_h3_ref2va_pruned"
+        assert call.steps == 4
+        assert call.default_settings["flow_shift"] == 6
+        assert call.default_settings["config"] == "gguf_q4_k_m,fp8mix"
+        assert call.default_settings["loras_multipliers"] == "1.0|"
+        assert call.default_settings["activated_loras"] == [H3_TURBO_REF2VA_LORA_URL]
+
+    def test_h3_turbo_routes_fl2va_with_turbo_lora(
+        self, client, enable_wangp: FakeWanGPBridge
+    ):
+        response = client.post(
+            "/api/generate",
+            json={**_T2V_JSON, "modelProfileId": "minimax_h3_turbo"},
+        )
+
+        assert response.status_code == 200
+        call = enable_wangp.video_calls[-1]
+        assert call.model_type == "minimax_h3_fl2va_pruned"
+        assert call.default_settings["loras_multipliers"] == "1.0|"
+        assert call.default_settings["activated_loras"] == [H3_TURBO_FL2VA_LORA_URL]
+
+    def test_h3_rejects_ltx_only_multi_shot_lora(
+        self, client, enable_wangp: FakeWanGPBridge
+    ):
+        response = client.post(
+            "/api/generate",
+            json={
+                **_T2V_JSON,
+                "modelProfileId": "minimax_h3_turbo",
+                "shotPrompts": [{"seconds": 2, "prompt": "Move."}],
+            },
+        )
+
+        assert response.status_code == 400
+        assert response.json()["error"] == "H3_MULTI_SHOT_UNSUPPORTED"
+        assert enable_wangp.video_calls == []
+
+        tool_response = client.post(
+            "/api/generate",
+            json={
+                **_T2V_JSON,
+                "modelProfileId": "minimax_h3_turbo",
+                "videoTool": "extend",
+            },
+        )
+        assert tool_response.status_code == 400
+        assert tool_response.json()["error"] == "VIDEO_TOOL_NOT_SUPPORTED"
+
+        recovery = client.post(
+            "/api/generate",
+            json={**_T2V_JSON, "modelProfileId": "minimax_h3_turbo"},
+        )
+        assert recovery.status_code == 200
+
+    def test_ltx_base_uses_dev_settings(self, client, enable_wangp: FakeWanGPBridge):
+        response = client.post(
+            "/api/generate",
+            json={**_T2V_JSON, "modelProfileId": "ltx2_25_22b"},
+        )
+
+        assert response.status_code == 200
+        call = enable_wangp.video_calls[-1]
+        assert call.model_type == "ltx2_25_22B"
+        assert call.steps == 30
+        assert call.default_settings["sample_solver"] == "euler"
+        assert call.default_settings["guidance_scale"] == 3
+        assert call.default_settings["audio_guidance_scale"] == 7
 
     def test_h3_rejects_mixed_media_and_invalid_alias_kind(
         self, client, enable_wangp: FakeWanGPBridge, tmp_path: Path

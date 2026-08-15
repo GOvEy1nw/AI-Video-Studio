@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import replace
 from importlib import import_module
 import json
 import math
@@ -12,6 +13,11 @@ import warnings
 from numbers import Real
 from pathlib import Path
 from typing import Any, Callable, cast
+
+
+H3_TURBO_FL2VA_LORA_URL = "https://huggingface.co/Kijai/MiniMax-H3_comfy/resolve/main/loras/minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy_resized_avg_rank_21_bf16.safetensors"
+H3_TURBO_REF2VA_LORA_URL = "https://huggingface.co/Kijai/MiniMax-H3_comfy/resolve/main/loras/minimax_h3_ref2v_lightx2v_turbo_4step_v0.1_resized_avg_rank_20_bf16.safetensors"
+LTX25_DISTILLED_LORA_URL = "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.5-22b-distilled-lora-450_bf16.safetensors"
 
 
 PACKS: dict[str, dict[str, str | list[str]]] = {
@@ -46,16 +52,30 @@ PACKS: dict[str, dict[str, str | list[str]]] = {
         "kind": "model",
         "model_type": "ideogram4_turbotime_int8",
     },
-    "ltx2_turbo": {"name": "LTX 2.3 Turbo 1.1", "kind": "model", "model_type": "ltx2_22B_distilled_1_1"},
+    "ltx2_base": {"name": "LTX 2.5 Base", "kind": "model", "model_type": "ltx2_25_22B"},
+    "ltx2_turbo": {
+        "name": "LTX 2.5 Turbo",
+        "kind": "model",
+        "model_type": "ltx2_25_22B",
+        "loras": [LTX25_DISTILLED_LORA_URL],
+    },
     "ace_step_15_turbo": {"name": "ACE-Step 1.5 Fast", "kind": "model", "model_type": "ace_step_v1_5_turbo_lm_1_7b"},
     "ace_step_15_xl_turbo": {"name": "ACE-Step 1.5 XL", "kind": "model", "model_type": "ace_step_v1_5_xl_turbo_lm_1_7b"},
     "mmaudio": {"name": "MMAudio Sound Effects", "kind": "audio_processor", "processor": "mmaudio"},
     "omnivoice": {"name": "OmniVoice", "kind": "model", "model_type": "omnivoice"},
     "index_tts2": {"name": "Index TTS 2", "kind": "model", "model_type": "index_tts2"},
     "minimax-h3": {
-        "name": "MiniMax H3",
+        "name": "MiniMax H3 Base",
         "kind": "model",
         "model_types": ["minimax_h3_fl2va_pruned", "minimax_h3_ref2va_pruned"],
+        "config": "gguf_q4_k_m,fp8mix",
+    },
+    "minimax-h3-turbo": {
+        "name": "MiniMax H3 Turbo",
+        "kind": "model",
+        "model_types": ["minimax_h3_fl2va_pruned", "minimax_h3_ref2va_pruned"],
+        "config": "gguf_q4_k_m,fp8mix",
+        "loras": [H3_TURBO_FL2VA_LORA_URL, H3_TURBO_REF2VA_LORA_URL],
     },
     "prompt_enhancer": {"name": "Prompt Enhancer", "kind": "prompt"},
 }
@@ -236,12 +256,16 @@ def _create_model_manager(wgp: Any) -> Any:
 def _download_model_dependencies(
     wgp: Any,
     model_type: str,
+    progress_callback: Callable[[object], None] | None = None,
+    model_def: dict[str, Any] | None = None,
 ) -> None:
     """Mirror WanGP load_models download preflight without loading model weights."""
-    model_def = cast(dict[str, Any], wgp.get_model_def(model_type))
+    model_def = model_def or cast(dict[str, Any], wgp.get_model_def(model_type))
     quantization = wgp.transformer_quantization
     dtype_policy = wgp.transformer_dtype_policy
-    main_filename = wgp.get_model_filename(model_type, quantization, dtype_policy)
+    main_filename = wgp.get_model_filename(
+        model_type, quantization, dtype_policy, model_def=model_def
+    )
     downloaded_main = False
     if main_filename:
         wgp.download_models(
@@ -249,6 +273,8 @@ def _download_model_dependencies(
             model_type,
             file_type=0,
             submodel_no=1,
+            progress_callback=progress_callback,
+            model_def=model_def,
         )
         downloaded_main = True
 
@@ -258,6 +284,7 @@ def _download_model_dependencies(
             quantization,
             dtype_policy,
             submodel_no=2,
+            model_def=model_def,
         )
         if second_filename:
             wgp.download_models(
@@ -265,15 +292,24 @@ def _download_model_dependencies(
                 model_type,
                 file_type=0,
                 submodel_no=2,
+                progress_callback=progress_callback,
+                model_def=model_def,
             )
             downloaded_main = True
 
     raw_modules = cast(
         list[object],
-        wgp.get_model_recursive_prop(model_type, "modules", return_list=True) or [],
+        wgp.get_model_recursive_prop(
+            model_type, "modules", return_list=True, model_def=model_def
+        ) or [],
     )
     modules: list[object] = [
-        wgp.get_model_recursive_prop(module, "modules", sub_prop_name="_list", return_list=True)
+        wgp.get_model_recursive_prop(
+            module,
+            "modules",
+            sub_prop_name="_list",
+            return_list=True,
+        )
         if isinstance(module, str)
         else module
         for module in raw_modules
@@ -291,6 +327,7 @@ def _download_model_dependencies(
                     quantization,
                     dtype_policy,
                     URLs=urls,
+                    model_def=model_def,
                 )
                 if filename:
                     wgp.download_models(
@@ -298,6 +335,8 @@ def _download_model_dependencies(
                         model_type,
                         file_type=1,
                         submodel_no=submodel_no,
+                        progress_callback=progress_callback,
+                        model_def=model_def,
                     )
         else:
             filename = wgp.get_model_filename(
@@ -305,6 +344,7 @@ def _download_model_dependencies(
                 quantization,
                 dtype_policy,
                 module_type=module,
+                model_def=model_def,
             )
             if filename:
                 wgp.download_models(
@@ -312,6 +352,8 @@ def _download_model_dependencies(
                     model_type,
                     file_type=1,
                     submodel_no=0,
+                    progress_callback=progress_callback,
+                    model_def=model_def,
                 )
 
     if not downloaded_main:
@@ -320,12 +362,15 @@ def _download_model_dependencies(
             model_type,
             file_type=0,
             submodel_no=-1,
+            progress_callback=progress_callback,
+            model_def=model_def,
         )
 
     text_encoder_urls = wgp.get_model_recursive_prop(
         model_type,
         "text_encoder_URLs",
         return_list=True,
+        model_def=model_def,
     )
     if text_encoder_urls:
         text_encoder_filename = wgp.get_model_filename(
@@ -333,6 +378,7 @@ def _download_model_dependencies(
             wgp.text_encoder_quantization,
             dtype_policy,
             URLs=text_encoder_urls,
+            model_def=model_def,
         )
         if text_encoder_filename:
             wgp.download_models(
@@ -341,6 +387,8 @@ def _download_model_dependencies(
                 file_type=2,
                 submodel_no=-1,
                 force_path=model_def.get("text_encoder_folder"),
+                progress_callback=progress_callback,
+                model_def=model_def,
             )
 
 
@@ -348,11 +396,38 @@ def _download_def_paths(manager: Any, definitions: Any) -> set[Path]:
     return {Path(path) for path in manager._collect_download_def_file_paths(definitions)}
 
 
-def _model_paths(manager: Any, model_type: str) -> set[Path]:
+def _model_paths(
+    manager: Any, model_type: str, model_def: dict[str, Any] | None = None
+) -> set[Path]:
     model_dropdowns = import_module("shared.model_dropdowns")
     deps = manager._build_dropdown_deps([model_type])
     if deps is None:
         raise RuntimeError(f"WanGP Model Manager could not resolve model '{model_type}'")
+    if model_def is not None:
+        original_get_model_def = deps.get_model_def
+        original_get_model_filename = deps.get_model_filename
+        original_get_recursive_prop = deps.get_model_recursive_prop
+
+        def get_model_def(value: str) -> Any:
+            return model_def if value == model_type else original_get_model_def(value)
+
+        def get_model_filename(*args: Any, **kwargs: Any) -> Any:
+            value = kwargs.get("model_type", args[0] if args else None)
+            if value == model_type:
+                kwargs["model_def"] = model_def
+            return original_get_model_filename(*args, **kwargs)
+
+        def get_recursive_prop(value: str, *args: Any, **kwargs: Any) -> Any:
+            if value == model_type:
+                kwargs["model_def"] = model_def
+            return original_get_recursive_prop(value, *args, **kwargs)
+
+        deps = replace(
+            deps,
+            get_model_def=get_model_def,
+            get_model_filename=get_model_filename,
+            get_model_recursive_prop=get_recursive_prop,
+        )
     entries = [
         *model_dropdowns.get_expected_core_file_entries_for_status(deps, model_type),
         *model_dropdowns.get_expected_secondary_file_entries_for_status(deps, model_type),
@@ -362,9 +437,31 @@ def _model_paths(manager: Any, model_type: str) -> set[Path]:
         for entry in entries
         if (path := manager._resolve_expected_entry_path(entry, model_type=model_type))
     }
-    model_def = manager.get_model_def(model_type)
-    paths.update(Path(path) for path in manager._collect_handler_file_paths(model_type, model_def))
+    effective_model_def = model_def or manager.get_model_def(model_type)
+    paths.update(
+        Path(path)
+        for path in manager._collect_handler_file_paths(model_type, effective_model_def)
+    )
     return paths
+
+
+def _pack_model_def(wgp: Any, pack: dict[str, str | list[str]], model_type: str) -> dict[str, Any]:
+    model_def = cast(dict[str, Any], wgp.get_model_def(model_type)).copy()
+    config_id = pack.get("config")
+    if isinstance(config_id, str):
+        config_groups = wgp.get_model_config_groups(model_type, model_def)
+        selected_configs = import_module("shared.config_groups").selected_model_configs
+        for _, _, config_def in selected_configs(config_groups, config_id):
+            model_def.update(config_def)
+    loras = pack.get("loras")
+    if isinstance(loras, list):
+        model_def["loras"] = [
+            *cast(list[str], wgp.get_model_recursive_prop(
+                model_type, "loras", return_list=True, model_def=model_def
+            ) or []),
+            *loras,
+        ]
+    return model_def
 
 
 def _pack_model_types(pack: dict[str, str | list[str]]) -> list[str]:
@@ -420,7 +517,12 @@ def _download_pack(
         _process_download_definitions(wgp, handler.query_download_defs(), progress_callback)
     else:
         for model_type in _pack_model_types(pack):
-            _download_model_dependencies(wgp, model_type)
+            _download_model_dependencies(
+                wgp,
+                model_type,
+                progress_callback,
+                _pack_model_def(wgp, pack, model_type),
+            )
     return _validate_paths(pack_id, _resolve_pack_paths(wgp, manager, pack_id))
 
 
@@ -443,7 +545,7 @@ def _resolve_pack_paths(wgp: Any, manager: Any, pack_id: str) -> set[Path]:
 
     paths: set[Path] = set()
     for model_type in _pack_model_types(pack):
-        paths.update(_model_paths(manager, model_type))
+        paths.update(_model_paths(manager, model_type, _pack_model_def(wgp, pack, model_type)))
     return paths
 
 

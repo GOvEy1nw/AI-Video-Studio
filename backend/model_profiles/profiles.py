@@ -13,7 +13,7 @@ the list from the backend API.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Literal
 
 from model_profiles.policies import (
@@ -26,7 +26,7 @@ from model_profiles.policies import (
     VideoEditPolicy,
     validate_model_profile_policies,
 )
-from wangp_model_packs import PACKS
+from wangp_model_packs import H3_TURBO_FL2VA_LORA_URL, PACKS
 
 MediaType = Literal["image", "video", "audio", "tts"]
 AspectRatio = Literal[
@@ -1519,18 +1519,18 @@ IMAGE_PROFILES: tuple[ModelProfile, ...] = (
 )
 
 
-VIDEO_PROFILES: tuple[ModelProfile, ...] = (
+_VIDEO_PROFILE_TEMPLATES: tuple[ModelProfile, ...] = (
     ModelProfile(
         id="ltx2_22b_distilled",
-        display_name="LTX 2.3 Fast",
+        display_name="LTX 2.5 Fast",
         media_type="video",
         visible=True,
         status="stable",
-        wangp_model_type="ltx2_22B_distilled_1_1",
+        wangp_model_type="ltx2_25_22B_distilled",
         wangp_metadata=WanGPModelMetadata(
             family="ltx2",
             family_label="LTX-2",
-            base_model_type="ltx2_22B",
+            base_model_type="ltx2_25_22B",
             finetune=False,
             main_output=("image", "video"),
             outputs=("image", "video", "audio"),
@@ -1871,6 +1871,95 @@ VIDEO_PROFILES: tuple[ModelProfile, ...] = (
             notes="License scope is subject to the official territorial and use restrictions.",
         ),
     ),
+)
+
+
+def _with_required_pack(profile: ModelProfile, pack_id: str) -> ModelProfile:
+    return replace(
+        profile,
+        required_pack_ids=(pack_id,),
+        video_audio=replace(profile.video_audio, required_pack_ids=(pack_id,)),
+        speech=replace(profile.speech, required_pack_ids=(pack_id,)),
+        sfx=replace(profile.sfx, required_pack_ids=(pack_id,)),
+        video_edits=replace(
+            profile.video_edits,
+            operations=tuple(
+                replace(operation, required_pack_ids=(pack_id,))
+                for operation in profile.video_edits.operations
+            ),
+        ),
+        director=replace(
+            profile.director,
+            render_strategies=tuple(
+                replace(strategy, required_pack_ids=(pack_id,))
+                for strategy in profile.director.render_strategies
+            ),
+        ),
+    )
+
+
+_ltx_turbo_profile, _h3_base_profile = _VIDEO_PROFILE_TEMPLATES
+_ltx_turbo_profile = replace(
+    _ltx_turbo_profile,
+    display_name="LTX 2.5 Turbo",
+    wangp_model_type="ltx2_25_22B",
+    wangp_default_settings={
+        "num_inference_steps": 8,
+        "guidance_scale": 1,
+        "alt_guidance_scale": 1,
+        "alt_scale": 0,
+        "audio_guidance_scale": 1,
+        "sample_solver": "distilled_8_steps",
+        "perturbation_switch": 0,
+    },
+)
+_ltx_base_profile = _with_required_pack(
+    replace(
+        _ltx_turbo_profile,
+        id="ltx2_25_22b",
+        display_name="LTX 2.5 Base",
+        wangp_default_settings={
+            "num_inference_steps": 30,
+            "guidance_scale": 3,
+            "alt_guidance_scale": 3,
+            "alt_scale": 0.7,
+            "audio_guidance_scale": 7,
+            "sample_solver": "euler",
+            "perturbation_switch": 2,
+        },
+    ),
+    "ltx2_base",
+)
+_h3_base_profile = replace(
+    _h3_base_profile,
+    display_name="MiniMax H3 Base",
+    wangp_default_settings={
+        **_h3_base_profile.wangp_default_settings,
+        "num_inference_steps": 20,
+        "flow_shift": 12,
+        "config": "gguf_q4_k_m,fp8mix",
+    },
+)
+_h3_turbo_profile = _with_required_pack(
+    replace(
+        _h3_base_profile,
+        id="minimax_h3_turbo",
+        display_name="MiniMax H3 Turbo",
+        wangp_default_settings={
+            **_h3_base_profile.wangp_default_settings,
+            "num_inference_steps": 4,
+            "flow_shift": 6,
+            "loras_multipliers": "1.0|",
+            "activated_loras": [H3_TURBO_FL2VA_LORA_URL],
+        },
+    ),
+    "minimax-h3-turbo",
+)
+VIDEO_PROFILES: tuple[ModelProfile, ...] = (
+    _ltx_base_profile,
+    _ltx_turbo_profile,
+    _h3_base_profile,
+    _h3_turbo_profile,
 )
 
 
