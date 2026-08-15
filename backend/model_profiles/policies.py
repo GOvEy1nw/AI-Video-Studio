@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Iterable, Literal
 
 if TYPE_CHECKING:
-    from model_profiles.profiles import ModelProfile
+    from model_profiles.types import ModelProfile
 
 HandlerOwner = Literal["video_generation", "director_generation", "retake", "sfx_generation", "speech_generation"]
 PolicyStatus = Literal["stable", "experimental", "hidden"]

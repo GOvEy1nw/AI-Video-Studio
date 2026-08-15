@@ -162,6 +162,7 @@ AiVS is a local-first Electron desktop application for project-based AI image, v
 - AIVS-010 model packs use WanGP config overlays and required LoRA URLs so installed manifests exactly match generation dependencies; H3 compact config is selected for both variants and only Turbo packs add their acceleration LoRA [backend/wangp_model_packs.py]
 - Keep LTX 2.5 Turbo on WanGP's native distilled_8_steps auto-LoRA strength of 0.5; do not explicitly override it [backend/model_profiles/profiles.py]
 - H3 Turbo uses separate Kijai FL2VA and Ref2VA LoRAs at 1.0; the existing validated H3 mode selection chooses the active LoRA and the Turbo pack installs both [backend/handlers/video_generation_handler.py]
+- Keep backend/model_profiles/profiles.py as the stable registry facade; shared profile types live in types.py and curated definitions are split into image_profiles.py, video_profiles.py, and audio_profiles.py with combined validation and public getters preserved. [backend/model_profiles/]
 
 ## Notes
 - gotcha: WanGP TAE previews may be encoded as video/mp4 when PyAV/NVENC is available, so AiVS preview consumers must support video as well as animated WebP. [frontend/views/genspace/components/GenerationPreviewMedia.tsx]

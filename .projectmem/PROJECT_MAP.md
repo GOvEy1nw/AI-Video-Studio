@@ -74,7 +74,11 @@ AiVS is a local-first Electron desktop application for project-based AI image, v
   - `backend/state/` — typed application settings, dependencies, and generation/startup/model state.
   - `backend/services/wangp_bridge.py` — sole normal generation bridge into local WanGP/Wan2GP.
   - `backend/services/` — generation compilation, media transforms, download/runtime helpers, and other heavy side effects.
-  - `backend/model_profiles/profiles.py` — product-visible curated model and capability source of truth.
+  - `backend/model_profiles/profiles.py` — stable curated-profile facade, combined validation, and lookup/visibility API.
+  - `backend/model_profiles/types.py` — shared profile dataclasses, aliases, input roles, and setting-value construction.
+  - `backend/model_profiles/image_profiles.py` — curated image profile definitions and image metadata helpers.
+  - `backend/model_profiles/video_profiles.py` — curated video profile templates, Base/Turbo variants, and pack bindings.
+  - `backend/model_profiles/audio_profiles.py` — curated speech, sound-effect, and music profile definitions.
   - `backend/api_types.py` and `backend/progress_types.py` — typed backend API and progress contracts.
   - `backend/tests/` — focused backend contract and integration tests with lightweight fakes.
 - `scripts/` — supported setup, validation, build, packaging, and WanGP source/runtime workflows.
