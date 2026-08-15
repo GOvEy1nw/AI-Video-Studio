@@ -216,7 +216,9 @@ export function VideoGenPanel({
   const hasAudioInput =
     !!media.inputAudio ||
     media.inputs.some(({ role }) => AUDIO_MEDIA_ROLE_SET.has(role));
-  const isH3Generation = !isPanelMode && selectedProfile?.id === "minimax_h3";
+  const isH3Generation =
+    !isPanelMode &&
+    (selectedProfile?.id === "minimax_h3_fast" || selectedProfile?.id === "minimax_h3_quality");
   const h3ReferenceState = getH3ReferenceState(media.inputs);
   const h3ReferenceAvailability = h3ReferenceState.availability;
   const aspectRatioDisabled = isVideoAspectRatioLocked(

@@ -249,7 +249,7 @@ describe("GenSpace shared controls", () => {
   });
 
   it("keeps H3 references mutually exclusive with frame inputs and hides new FL2VA slots", () => {
-    const profile = { id: "minimax_h3", inputMedia: { supportsImageInputs: true } } as ModelProfile;
+    const profile = { id: "minimax_h3_quality", inputMedia: { supportsImageInputs: true } } as ModelProfile;
     const { rerender } = render(
       <VideoMediaInputs
         inputs={[{ id: "ref", alias: "@image1", type: "image", url: "file:///C:/reference.png", role: "reference_image" }]}
@@ -303,7 +303,7 @@ describe("GenSpace shared controls", () => {
 
   it("keeps H3 soundtrack selection synchronized through a depth disable and restore", () => {
     const profile = {
-      id: "minimax_h3",
+      id: "minimax_h3_quality",
       inputMedia: { supportsImageInputs: true },
     } as ModelProfile;
     function H3Inputs() {
@@ -357,7 +357,7 @@ describe("GenSpace shared controls", () => {
 
   it("allocates distinct aliases when H3 reference imports finish out of order", async () => {
     const profile = {
-      id: "minimax_h3",
+      id: "minimax_h3_quality",
       inputMedia: { supportsImageInputs: true },
     } as ModelProfile;
     const resolvers: Array<(url: string) => void> = [];
@@ -401,7 +401,7 @@ describe("GenSpace shared controls", () => {
 
   it("keeps video reference trim editors mounted without an update loop", () => {
     const profile = {
-      id: "minimax_h3",
+      id: "minimax_h3_quality",
       inputMedia: { supportsImageInputs: true },
     } as ModelProfile;
     const ltxProfile = {

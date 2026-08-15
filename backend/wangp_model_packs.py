@@ -52,30 +52,30 @@ PACKS: dict[str, dict[str, str | list[str]]] = {
         "kind": "model",
         "model_type": "ideogram4_turbotime_int8",
     },
-    "ltx2_base": {"name": "LTX 2.5 Base", "kind": "model", "model_type": "ltx2_25_22B"},
-    "ltx2_turbo": {
-        "name": "LTX 2.5 Turbo",
+    "ltx2_fast": {
+        "name": "LTX 2.5 Fast",
         "kind": "model",
         "model_type": "ltx2_25_22B",
         "loras": [LTX25_DISTILLED_LORA_URL],
     },
+    "ltx2_quality": {"name": "LTX 2.5 Quality", "kind": "model", "model_type": "ltx2_25_22B"},
     "ace_step_15_turbo": {"name": "ACE-Step 1.5 Fast", "kind": "model", "model_type": "ace_step_v1_5_turbo_lm_1_7b"},
     "ace_step_15_xl_turbo": {"name": "ACE-Step 1.5 XL", "kind": "model", "model_type": "ace_step_v1_5_xl_turbo_lm_1_7b"},
     "mmaudio": {"name": "MMAudio Sound Effects", "kind": "audio_processor", "processor": "mmaudio"},
     "omnivoice": {"name": "OmniVoice", "kind": "model", "model_type": "omnivoice"},
     "index_tts2": {"name": "Index TTS 2", "kind": "model", "model_type": "index_tts2"},
-    "minimax-h3": {
-        "name": "MiniMax H3 Base",
-        "kind": "model",
-        "model_types": ["minimax_h3_fl2va_pruned", "minimax_h3_ref2va_pruned"],
-        "config": "gguf_q4_k_m,fp8mix",
-    },
-    "minimax-h3-turbo": {
-        "name": "MiniMax H3 Turbo",
+    "minimax-h3-fast": {
+        "name": "MiniMax H3 Fast",
         "kind": "model",
         "model_types": ["minimax_h3_fl2va_pruned", "minimax_h3_ref2va_pruned"],
         "config": "gguf_q4_k_m,fp8mix",
         "loras": [H3_TURBO_FL2VA_LORA_URL, H3_TURBO_REF2VA_LORA_URL],
+    },
+    "minimax-h3-quality": {
+        "name": "MiniMax H3 Quality",
+        "kind": "model",
+        "model_types": ["minimax_h3_fl2va_pruned", "minimax_h3_ref2va_pruned"],
+        "config": "gguf_q4_k_m,fp8mix",
     },
     "prompt_enhancer": {"name": "Prompt Enhancer", "kind": "prompt"},
 }

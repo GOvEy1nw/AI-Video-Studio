@@ -444,7 +444,7 @@ describe('project-state render isolation', () => {
 
     act(() => controlsRef.current?.addDirectorTimeline(
       project.id,
-      createDirectorSequence('ltx2_22b_distilled', '720p', '16:9'),
+      createDirectorSequence('ltx2_25_fast', '720p', '16:9'),
     ))
     expect(assetRenders).toBe(assetRendersBeforeTimeline)
     const directorRendersAfterDirector = directorRenders

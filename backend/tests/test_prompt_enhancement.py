@@ -11,7 +11,7 @@ def test_enhance_prompt_uses_text_only_mode(client, wangp_bridge):
         json={
             "prompt": "a quiet city street",
             "mode": "video",
-            "modelProfileId": "ltx2_22b_distilled",
+            "modelProfileId": "ltx2_25_fast",
         },
     )
 
@@ -20,7 +20,7 @@ def test_enhance_prompt_uses_text_only_mode(client, wangp_bridge):
     call = wangp_bridge.enhance_prompt_calls[-1]
     assert call.prompt == "a quiet city street"
     assert call.mode == "video"
-    assert call.model_type == "ltx2_25_22B_distilled"
+    assert call.model_type == "ltx2_25_22B"
     assert call.image_path is None
 
 

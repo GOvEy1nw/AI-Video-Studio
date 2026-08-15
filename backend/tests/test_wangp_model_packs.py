@@ -29,30 +29,30 @@ def test_music_packs_use_verified_wangp_model_types() -> None:
     )
 
 
-def test_minimax_h3_pack_combines_both_wangp_model_types() -> None:
-    assert PACKS["minimax-h3"]["model_types"] == [
+def test_minimax_h3_fast_and_quality_packs_share_model_types() -> None:
+    assert PACKS["minimax-h3-fast"]["model_types"] == [
         "minimax_h3_fl2va_pruned",
         "minimax_h3_ref2va_pruned",
     ]
-    assert PACKS["minimax-h3"]["config"] == "gguf_q4_k_m,fp8mix"
-    assert PACKS["minimax-h3-turbo"]["model_types"] == PACKS["minimax-h3"]["model_types"]
-    assert PACKS["minimax-h3-turbo"]["loras"] == [
+    assert PACKS["minimax-h3-fast"]["config"] == "gguf_q4_k_m,fp8mix"
+    assert PACKS["minimax-h3-quality"]["model_types"] == PACKS["minimax-h3-fast"]["model_types"]
+    assert PACKS["minimax-h3-fast"]["loras"] == [
         H3_TURBO_FL2VA_LORA_URL,
         H3_TURBO_REF2VA_LORA_URL,
     ]
 
 
-def test_ltx_packs_share_base_checkpoint_and_turbo_adds_distilled_lora() -> None:
-    assert PACKS["ltx2_base"] == {
-        "name": "LTX 2.5 Base",
-        "kind": "model",
-        "model_type": "ltx2_25_22B",
-    }
-    assert PACKS["ltx2_turbo"] == {
-        "name": "LTX 2.5 Turbo",
+def test_ltx_packs_share_base_checkpoint_and_fast_adds_distilled_lora() -> None:
+    assert PACKS["ltx2_fast"] == {
+        "name": "LTX 2.5 Fast",
         "kind": "model",
         "model_type": "ltx2_25_22B",
         "loras": [LTX25_DISTILLED_LORA_URL],
+    }
+    assert PACKS["ltx2_quality"] == {
+        "name": "LTX 2.5 Quality",
+        "kind": "model",
+        "model_type": "ltx2_25_22B",
     }
 
 
@@ -242,7 +242,7 @@ def test_process_download_definitions_forwards_callback() -> None:
 
 
 def test_pack_progress_callback_emits_safe_structured_event(capsys) -> None:
-    callback = _pack_progress_callback("ltx2_turbo", "LTX 2.5 Fast", 2, 3)
+    callback = _pack_progress_callback("ltx2_fast", "LTX 2.5 Fast", 2, 3)
     callback(
         SimpleNamespace(
             phase="downloading",

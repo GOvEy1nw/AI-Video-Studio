@@ -172,7 +172,7 @@ def test_video_generation_crops_before_trim_and_cleans_derivatives(
         json={
             "prompt": "A dancer",
             "resolution": "540p",
-            "modelProfileId": "ltx2_22b_distilled",
+            "modelProfileId": "ltx2_25_fast",
             "duration": "5",
             "fps": "24",
             "cameraMotion": "none",

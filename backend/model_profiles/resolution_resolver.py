@@ -72,15 +72,15 @@ _RESOLUTION_TABLE: dict[tuple[str, ResolutionTier, AspectRatio], tuple[int, int]
     ("hidream_o1_dev", "1440p", "16:9"): (2560, 1440),
     ("hidream_o1_dev", "1440p", "9:16"): (1440, 2560),
     # LTX 2.5 Fast video
-    ("ltx2_22b_distilled", "540p", "1:1"): (544, 544),
-    ("ltx2_22b_distilled", "540p", "16:9"): (960, 544),
-    ("ltx2_22b_distilled", "540p", "9:16"): (544, 960),
-    ("ltx2_22b_distilled", "720p", "1:1"): (1024, 1024),
-    ("ltx2_22b_distilled", "720p", "16:9"): (1280, 720),
-    ("ltx2_22b_distilled", "720p", "9:16"): (720, 1280),
-    ("ltx2_22b_distilled", "1080p", "1:1"): (1088, 1088),
-    ("ltx2_22b_distilled", "1080p", "16:9"): (1920, 1088),
-    ("ltx2_22b_distilled", "1080p", "9:16"): (1088, 1920),
+    ("ltx2_25_fast", "540p", "1:1"): (544, 544),
+    ("ltx2_25_fast", "540p", "16:9"): (960, 544),
+    ("ltx2_25_fast", "540p", "9:16"): (544, 960),
+    ("ltx2_25_fast", "720p", "1:1"): (1024, 1024),
+    ("ltx2_25_fast", "720p", "16:9"): (1280, 720),
+    ("ltx2_25_fast", "720p", "9:16"): (720, 1280),
+    ("ltx2_25_fast", "1080p", "1:1"): (1088, 1088),
+    ("ltx2_25_fast", "1080p", "16:9"): (1920, 1088),
+    ("ltx2_25_fast", "1080p", "9:16"): (1088, 1920),
 }
 
 _SHARED_IMAGE_RESOLUTION_PROFILE_IDS = (
@@ -97,8 +97,8 @@ for profile_id in _SHARED_IMAGE_RESOLUTION_PROFILE_IDS:
             _RESOLUTION_TABLE[(profile_id, tier, aspect)] = dimensions
 
 for (source_id, tier, aspect), dimensions in tuple(_RESOLUTION_TABLE.items()):
-    if source_id == "ltx2_22b_distilled":
-        for profile_id in ("ltx2_25_22b", "minimax_h3", "minimax_h3_turbo"):
+    if source_id == "ltx2_25_fast":
+        for profile_id in ("ltx2_25_quality", "minimax_h3_fast", "minimax_h3_quality"):
             _RESOLUTION_TABLE[(profile_id, tier, aspect)] = dimensions
 
 # WanGP's built-in list does not contain every requested ratio at every tier.
@@ -143,10 +143,10 @@ _ADDITIONAL_ASPECT_RESOLUTIONS: dict[
 
 _PROFILE_RESOLUTION_TIERS: dict[str, tuple[ResolutionTier, ...]] = {
     "z_image_turbo": ("540p", "720p", "1080p"),
-    "ltx2_25_22b": ("540p", "720p", "1080p"),
-    "ltx2_22b_distilled": ("540p", "720p", "1080p"),
-    "minimax_h3": ("540p", "720p", "1080p"),
-    "minimax_h3_turbo": ("540p", "720p", "1080p"),
+    "ltx2_25_fast": ("540p", "720p", "1080p"),
+    "ltx2_25_quality": ("540p", "720p", "1080p"),
+    "minimax_h3_fast": ("540p", "720p", "1080p"),
+    "minimax_h3_quality": ("540p", "720p", "1080p"),
     **{
         profile_id: ("540p", "720p", "1080p", "1440p")
         for profile_id in (

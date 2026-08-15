@@ -6,6 +6,7 @@ _Last updated: 2026-08-15_
 AiVS is a local-first Electron desktop application for project-based AI image, video, music, and sound-effect creation. It gives Windows/NVIDIA users curated Quick Gen, Director, Video Editor, and Asset Library workflows backed exclusively by the bundled local WanGP/Wan2GP runtime.
 
 ## Recent issues
+- [DONE] #0070 Retake generation relied on the removed legacy model=fast fallback and now constructs a video request without a canonical model profile ID. [backend/handlers/retake_handler.py] -> Retake now explicitly selects canonical LTX 2.5 Fast, preserving retake generation after removal of the legacy model=fast fallback; focused backend suite passed 187 tests. [backend/handlers/retake_handler.py] (fixed)
 - [DONE] #0069 LTX Turbo's solver auto-LoRA is fixed at 0.5 and request-specific LoRA paths overwrite profile LoRAs [backend/handlers/video_generation_handler.py] -> Set H3 Turbo LoRA to 0.75 while retaining WanGP's native LTX distilled_8_steps auto-LoRA strength of 0.5 [backend/model_profiles/profiles.py] (fixed)
   - Partial attempt: Explicitly selected LTX distilled LoRA at 0.6 per phase and composed profile LoRAs with multi-shot/video-tool LoRAs [backend/handlers/video_generation_handler.py]
   - Partial attempt: Ran focused backend tests; implementation passed but three old assertions still expected Turbo to have no explicit distilled LoRA [backend/tests/test_generation.py]
@@ -158,15 +159,16 @@ AiVS is a local-first Electron desktop application for project-based AI image, v
 - Preview controls are now user-configurable through nested app preview_settings while remaining gated to LTX and MiniMax H3 manifests; automatic TAE remains the backward-compatible default [backend/services/wangp_bridge.py]
 - Retain AiVS Ideogram *_int8 WanGP mappings; the reported unknown-model refresh was caused by the user's temporarily unsynced custom finetunes, not an AiVS compatibility change [backend/model_profiles/profiles.py]
 - Replace the curated LTX 2.3 Fast runtime with WanGP LTX 2.5 Distilled while retaining stable AiVS profile `ltx2_22b_distilled` and pack `ltx2_turbo` IDs for saved-state compatibility [backend/model_profiles/profiles.py]
-- AIVS-010 preserves stable saved IDs by keeping minimax_h3 as H3 Base and ltx2_22b_distilled/ltx2_turbo as LTX Turbo, adding only sibling Base/Turbo IDs and packs [backend/model_profiles/profiles.py]
 - AIVS-010 model packs use WanGP config overlays and required LoRA URLs so installed manifests exactly match generation dependencies; H3 compact config is selected for both variants and only Turbo packs add their acceleration LoRA [backend/wangp_model_packs.py]
 - Keep LTX 2.5 Turbo on WanGP's native distilled_8_steps auto-LoRA strength of 0.5; do not explicitly override it [backend/model_profiles/profiles.py]
-- H3 Turbo uses separate Kijai FL2VA and Ref2VA LoRAs at 1.0; the existing validated H3 mode selection chooses the active LoRA and the Turbo pack installs both [backend/handlers/video_generation_handler.py]
 - Keep backend/model_profiles/profiles.py as the stable registry facade; shared profile types live in types.py and curated definitions are split into image_profiles.py, video_profiles.py, and audio_profiles.py with combined validation and public getters preserved. [backend/model_profiles/]
+- AIVS development drops legacy LTX variant compatibility: canonical profiles are ltx2_25_fast and ltx2_25_quality, packs are ltx2_fast and ltx2_quality, with no aliases or migrations [backend/model_profiles/video_profiles.py]
+- MiniMax H3 uses clean AiVS Fast/Quality product identities: minimax_h3_fast is the LoRA-accelerated profile and minimax_h3_quality is the full-step profile; packs are minimax-h3-fast/minimax-h3-quality, with no aliases for old Base/Turbo IDs and no changes to WanGP FL2VA/Ref2VA model IDs. [backend/model_profiles/video_profiles.py]
+- AIVS-010 intentionally drops development-stage saved variant compatibility: LTX uses ltx2_25_fast/ltx2_25_quality with packs ltx2_fast/ltx2_quality, and H3 uses minimax_h3_fast/minimax_h3_quality with packs minimax-h3-fast/minimax-h3-quality; no aliases or migrations. [backend/model_profiles/video_profiles.py]
+- H3 Fast selects separate Kijai FL2VA or Ref2VA acceleration LoRAs through existing mode routing at loras_multipliers 0.75; the Fast pack installs both and H3 Quality activates neither. [backend/handlers/video_generation_handler.py]
+- H3 Quality owns canonical runtime defaults directly; gguf_q4_k_m,fp8mix also remains on both H3 packs because pack config independently selects download-time dependencies. [backend/model_profiles/video_profiles.py]
 
 ## Notes
-- gotcha: WanGP TAE previews may be encoded as video/mp4 when PyAV/NVENC is available, so AiVS preview consumers must support video as well as animated WebP. [frontend/views/genspace/components/GenerationPreviewMedia.tsx]
-- Advanced Settings now exposes persisted WanGP preview controls for LTX and MiniMax H3; defaults remain TAE/adaptive/auto/512/16/72 and unsupported models receive no preview plugin data [frontend/components/SettingsModal.tsx]
 - Correction: the ideogram4_int8 unknown-model refresh was caused by custom finetunes temporarily missing from the user's Wan2GP fork; the AiVS Ideogram mapping change was reverted [backend/wangp_model_packs.py]
 - gotcha: WanGP LTX 2.5 shares `loras/ltx2` with older LTX versions, but the current TAE registry only permits LTX 2.3 IDs; 2.5 keeps RGB fallback until its latent contract is validated upstream [backend/services/wangp_bridge.py]
 - AIVS-008 completed: curated LTX Fast now maps stable AiVS IDs to WanGP `ltx2_25_22B_distilled`; manifest resolves 17 INT8 pack files at ~41.3 GB, with focused tests/typechecks/build passing [backend/wangp_model_packs.py]
@@ -175,6 +177,8 @@ AiVS is a local-first Electron desktop application for project-based AI image, v
 - AIVS-010 final correction verified: H3 Turbo multiplier is 0.75; LTX distilled_8_steps remains native WanGP 0.5. Focused backend 133 passed and Pyright clean. [backend/model_profiles/profiles.py]
 - AIVS-010 H3 Turbo now selects separate Kijai FL2VA/Ref2VA LoRAs at 1.0 via existing validated mode routing; pack installs both. Focused 134 passed, Pyright clean, reviewer ship. [backend/handlers/video_generation_handler.py]
 - gotcha: WanGPSession has no first-class Accelerator Profile list/apply API; WebUI profiles use private get_settings_from_file merge-before semantics, while session.run(profile.json) raw-loads the JSON as a standalone task [backend/services/wangp_bridge.py]
+- AIVS-010 completed in Human Review: LTX 2.5 and MiniMax H3 now expose clean Fast/Quality profiles and packs; H3 Fast uses mode-specific Kijai LoRAs at 0.75 with 6 steps, LTX Fast uses WanGP distilled_8_steps, and focused verification passed 187 backend plus 31 Vitest tests and both typechecks. [backend/model_profiles/video_profiles.py]
+- User runtime-tested and approved AIVS-010 Fast/Quality variants; Backlog task moved from Human Review to Done on 2026-08-15. [backend/model_profiles/video_profiles.py]
 
 ## Key files
 - `.git/backlog.md`

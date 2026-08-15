@@ -182,7 +182,7 @@ describe("GenSpace generation request builders", () => {
   it("keeps a stable H3 media alias in the submitted input", () => {
     const command = buildVideoGenerationCommand({
       prompt: "Use @image4",
-      settings: { ...DEFAULT_VIDEO_SETTINGS, videoProfileId: "minimax_h3" },
+      settings: { ...DEFAULT_VIDEO_SETTINGS, videoProfileId: "minimax_h3_quality" },
       imageInputs: [{
         id: "ref", url: "file:///C:/ref.png", role: "reference_image", type: "image", alias: "@image4",
       }],
@@ -200,7 +200,7 @@ describe("GenSpace generation request builders", () => {
   it("omits the retained disabled H3 video from the submitted request", () => {
     const command = buildVideoGenerationCommand({
       prompt: "Use @video1",
-      settings: { ...DEFAULT_VIDEO_SETTINGS, videoProfileId: "minimax_h3" },
+      settings: { ...DEFAULT_VIDEO_SETTINGS, videoProfileId: "minimax_h3_quality" },
       imageInputs: [
         { id: "video", url: "file:///C:/video.mp4", role: "reference_video", type: "video", alias: "@video1" },
         { id: "depth", url: "file:///C:/depth.mp4", role: "depth", type: "video", alias: "@video2" },

@@ -76,7 +76,7 @@ export function VideoMediaInputs({
   const [editingGuideId, setEditingGuideId] = useState<string | null>(null);
   const [guideDragActive, setGuideDragActive] = useState(false);
   const supportsInputs = !!profile?.inputMedia.supportsImageInputs;
-  const isH3 = profile?.id === "minimax_h3";
+  const isH3 = profile?.id === "minimax_h3_fast" || profile?.id === "minimax_h3_quality";
   const guide = findGuideInput(inputs);
 
   useEffect(() => {

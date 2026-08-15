@@ -1,11 +1,11 @@
 ---
 id: AIVS-011
 title: Split curated model profiles by media type
-status: Human Review
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-08-15 11:09'
-updated_date: '2026-08-15 11:34'
+updated_date: '2026-08-15 12:01'
 labels: []
 dependencies: []
 modified_files:
@@ -66,6 +66,16 @@ Verification: canonical registry SHA256 remained 95819c5787dff7cba3cc8f2ce6e6adf
 
 Independent read-only reviewer verdict: ship, no findings and no residual risks.
 <!-- SECTION:NOTES:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+author: user
+created: 2026-08-15 12:01
+---
+Approved and pushed by the user.
+---
+<!-- COMMENTS:END -->
 
 ## Final Summary
 

@@ -17,7 +17,7 @@ from services.director_compiler import (
 def _request(**updates: object) -> GenerateDirectorRequest:
     payload: dict[str, object] = {
         "schemaVersion": 1,
-        "modelProfileId": "ltx2_22b_distilled",
+        "modelProfileId": "ltx2_25_fast",
         "resolutionTier": "540p",
         "aspectRatio": "16:9",
         "fps": 24,
@@ -35,7 +35,7 @@ def _request(**updates: object) -> GenerateDirectorRequest:
 
 
 def _policy():
-    profile = get_video_profile("ltx2_22b_distilled")
+    profile = get_video_profile("ltx2_25_fast")
     assert profile is not None
     return profile.director
 

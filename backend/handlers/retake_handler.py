@@ -21,6 +21,7 @@ class RetakeHandler:
         generated = self._video_generation.generate(
             GenerateVideoRequest(
                 prompt=prompt,
+                modelProfileId="ltx2_25_fast",
                 duration=str(max(2, round(req.duration))),
                 audio="true" if req.mode != "replace_video" else "false",
                 inputMedia=[

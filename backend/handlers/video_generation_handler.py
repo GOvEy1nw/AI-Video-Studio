@@ -48,7 +48,7 @@ VIDEO_TOOL_LORA_URLS = {
 }
 
 
-_H3_PROFILE_IDS = {"minimax_h3", "minimax_h3_turbo"}
+_H3_PROFILE_IDS = {"minimax_h3_fast", "minimax_h3_quality"}
 _H3_REFERENCE_ROLES = {"reference_image", "reference_video", "reference_audio", "depth"}
 _H3_FL_ONLY_ROLES = {"control_video", "audio_guide"}
 _H3_ALIAS_PATTERN = re.compile(r"@(image|video|audio)([1-9]\d*)")
@@ -563,7 +563,7 @@ class VideoGenerationHandler(StateHandlerBase):
                 steps = 8 if req.model.strip().lower() == "fast" else max(1, settings.pro_model.steps)
             seed = self._resolve_seed()
             default_settings = dict(profile.wangp_default_settings)
-            if profile.id == "minimax_h3_turbo" and h3_uses_ref2va:
+            if profile.id == "minimax_h3_fast" and h3_uses_ref2va:
                 default_settings["activated_loras"] = [H3_TURBO_REF2VA_LORA_URL]
             output_settings = settings.output_settings
             default_settings.update(
@@ -669,11 +669,6 @@ class VideoGenerationHandler(StateHandlerBase):
     @staticmethod
     def _resolve_video_profile(req: GenerateVideoRequest) -> ModelProfile:
         profile_id = req.modelProfileId
-        if not profile_id:
-            # Backwards compatibility for existing clients.
-            legacy_model = req.model.strip().lower()
-            if legacy_model == "fast":
-                profile_id = "ltx2_22b_distilled"
         if not profile_id:
             raise HTTPError(400, "UNKNOWN_VIDEO_MODEL_PROFILE")
         profile = get_video_profile(profile_id)

@@ -152,18 +152,18 @@ class TestCuratedProfiles:
     def test_visible_video_profiles(self) -> None:
         visible = get_visible_video_profiles()
         assert [p.id for p in visible] == [
-            "ltx2_25_22b",
-            "ltx2_22b_distilled",
-            "minimax_h3",
-            "minimax_h3_turbo",
+            "ltx2_25_fast",
+            "ltx2_25_quality",
+            "minimax_h3_fast",
+            "minimax_h3_quality",
         ]
 
     def test_minimax_h3_profile_exposes_curated_limits_and_pack(self) -> None:
-        profile = get_video_profile("minimax_h3")
+        profile = get_video_profile("minimax_h3_quality")
         assert profile is not None
         assert profile.wangp_model_type == "minimax_h3_fl2va_pruned"
         assert profile.wangp_default_settings["config"] == "gguf_q4_k_m,fp8mix"
-        assert profile.required_pack_ids == ("minimax-h3",)
+        assert profile.required_pack_ids == ("minimax-h3-quality",)
         assert profile.input_media.max_reference_images == 9
         assert profile.input_media.max_reference_videos == 2
         assert profile.input_media.max_reference_audios == 2
@@ -172,23 +172,52 @@ class TestCuratedProfiles:
         assert profile.license is not None
         assert profile.license.license_url == "https://huggingface.co/MiniMaxAI/MiniMax-H3/blob/main/LICENSE"
 
-    def test_ltx2_distilled_video_profile(self) -> None:
-        profile = get_video_profile("ltx2_22b_distilled")
-        assert profile is not None
-        assert profile.status == "stable"
-        assert profile.media_type == "video"
-        assert profile.display_name == "LTX 2.5 Turbo"
-        assert profile.wangp_model_type == "ltx2_25_22B"
-        assert profile.wangp_default_settings["sample_solver"] == "distilled_8_steps"
-        assert profile.text_to_video is True
-        assert profile.image_to_video is True
-        assert profile.audio_to_video is True
-        assert profile.start_image is True
-        assert profile.end_image is True
-        assert profile.control_video is True
-        assert profile.sliding_window is True
-        assert profile.default_resolution_tier == "540p"
-        assert profile.allowed_aspect_ratios == CURATED_ASPECT_RATIOS
+    def test_ltx_fast_and_quality_video_profiles(self) -> None:
+        fast = get_video_profile("ltx2_25_fast")
+        quality = get_video_profile("ltx2_25_quality")
+        assert fast is not None
+        assert quality is not None
+        assert fast.status == quality.status == "stable"
+        assert fast.media_type == quality.media_type == "video"
+        assert fast.display_name == "LTX 2.5 Fast"
+        assert quality.display_name == "LTX 2.5 Quality"
+        assert fast.wangp_model_type == quality.wangp_model_type == "ltx2_25_22B"
+        assert fast.wangp_default_settings == {
+            "sample_solver": "distilled_8_steps",
+            "num_inference_steps": 8,
+            "guidance_phases": 2,
+            "guidance_scale": 1.0,
+            "audio_guidance_scale": 1.0,
+            "alt_guidance_scale": 1.0,
+            "alt_scale": 0.0,
+            "perturbation_switch": 0,
+            "perturbation_layers": [28],
+            "perturbation_start_perc": 0,
+            "perturbation_end_perc": 100,
+            "apg_switch": 0,
+            "cfg_star_switch": 0,
+            "self_refiner_setting": 0,
+        }
+        assert quality.wangp_default_settings == {
+            **fast.wangp_default_settings,
+            "sample_solver": "res2s",
+            "num_inference_steps": 15,
+            "guidance_scale": 3.0,
+            "audio_guidance_scale": 7.0,
+            "alt_guidance_scale": 3.0,
+            "alt_scale": 0.45,
+        }
+        assert fast.required_pack_ids == ("ltx2_fast",)
+        assert quality.required_pack_ids == ("ltx2_quality",)
+        assert fast.text_to_video is True
+        assert fast.image_to_video is True
+        assert fast.audio_to_video is True
+        assert fast.start_image is True
+        assert fast.end_image is True
+        assert fast.control_video is True
+        assert fast.sliding_window is True
+        assert fast.default_resolution_tier == "540p"
+        assert fast.allowed_aspect_ratios == CURATED_ASPECT_RATIOS
 
     def test_visible_profile_policies_reference_known_packs_and_handlers(self) -> None:
         validate_model_profile_policies(
@@ -201,7 +230,7 @@ class TestCuratedProfiles:
         )
 
     def test_ltx_system_dependencies_match_backend_video_tools(self) -> None:
-        profile = get_video_profile("ltx2_22b_distilled")
+        profile = get_video_profile("ltx2_25_fast")
         assert profile is not None
         dependency_ids = {
             dependency.id.removeprefix("video_tool_lora_")
@@ -242,7 +271,7 @@ class TestCuratedProfiles:
         ],
     )
     def test_policy_validation_rejects_invalid_runtime_references(self, replacement) -> None:
-        profile = get_video_profile("ltx2_22b_distilled")
+        profile = get_video_profile("ltx2_25_fast")
         assert profile is not None
         with pytest.raises(ValueError):
             validate_model_profile_policies([replacement(profile)], pack_ids=PACKS)
@@ -361,10 +390,10 @@ class TestModelProfilesEndpoint:
         ]
         video_ids = [p["id"] for p in data["profiles"] if p["mediaType"] == "video"]
         assert video_ids == [
-            "ltx2_25_22b",
-            "ltx2_22b_distilled",
-            "minimax_h3",
-            "minimax_h3_turbo",
+            "ltx2_25_fast",
+            "ltx2_25_quality",
+            "minimax_h3_fast",
+            "minimax_h3_quality",
         ]
 
     def test_profile_shape(self, client) -> None:
@@ -395,8 +424,8 @@ class TestModelProfilesEndpoint:
         assert z_image["inputMedia"]["tooltipLabel"] == "Control"
         assert z_image["inputMedia"]["maxImages"] == 1
 
-        ltx = next(p for p in data["profiles"] if p["id"] == "ltx2_22b_distilled")
-        assert ltx["displayName"] == "LTX 2.5 Turbo"
+        ltx = next(p for p in data["profiles"] if p["id"] == "ltx2_25_fast")
+        assert ltx["displayName"] == "LTX 2.5 Fast"
         assert ltx["mediaType"] == "video"
         assert ltx["wangpModelType"] == "ltx2_25_22B"
         assert ltx["capabilities"]["textToVideo"] is True
@@ -408,11 +437,11 @@ class TestModelProfilesEndpoint:
         assert ltx["capabilities"]["slidingWindow"] is True
         assert ltx["wangpMetadata"]["mediaInputs"]["video"]["control"] is True
         assert ltx["ui"]["allowedAspectRatios"] == list(CURATED_ASPECT_RATIOS)
-        assert ltx["requiredPackIds"] == ["ltx2_turbo"]
+        assert ltx["requiredPackIds"] == ["ltx2_fast"]
         assert ltx["videoAudio"] == {
             "status": "stable",
             "handler": "video_generation",
-            "requiredPackIds": ["ltx2_turbo"],
+            "requiredPackIds": ["ltx2_fast"],
             "soundtrack": True,
             "audioConditioning": True,
             "controlVideoAudio": True,
@@ -431,7 +460,7 @@ class TestModelProfilesEndpoint:
             "id": "single_pass",
             "status": "stable",
             "handler": "director_generation",
-            "requiredPackIds": ["ltx2_turbo"],
+            "requiredPackIds": ["ltx2_fast"],
             "maxDurationSeconds": 20,
         }]
         assert all(not dependency["userSelectable"] for dependency in ltx["systemDependencies"])
@@ -441,7 +470,7 @@ class TestModelProfilesEndpoint:
         })
 
     def test_ltx2_video_square_resolution_supported(self) -> None:
-        profile = get_video_profile("ltx2_22b_distilled")
+        profile = get_video_profile("ltx2_25_fast")
         assert profile is not None
         assert resolve_resolution(profile, "1080p", "1:1") == (1088, 1088)
 

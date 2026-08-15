@@ -19,6 +19,7 @@ _T2V_JSON = {
     "prompt": "test",
     "resolution": "540p",
     "model": "fast",
+    "modelProfileId": "ltx2_25_fast",
     "duration": "2",
     "fps": "24",
 }
@@ -38,6 +39,7 @@ class TestGenerate:
                 "prompt": "A beautiful sunset",
                 "resolution": "1080p",
                 "model": "fast",
+                "modelProfileId": "ltx2_25_fast",
                 "duration": "2",
                 "fps": "24",
                 "cameraMotion": "none",
@@ -72,7 +74,7 @@ class TestGenerate:
             json={
                 "prompt": "A beautiful sunset",
                 "resolution": "720p",
-                "modelProfileId": "ltx2_22b_distilled",
+                "modelProfileId": "ltx2_25_fast",
                 "duration": "5",
                 "fps": "24",
                 "aspectRatio": "9:16",
@@ -101,7 +103,7 @@ class TestGenerate:
             "/api/generate",
             json={
                 **_T2V_JSON,
-                "modelProfileId": "minimax_h3",
+                "modelProfileId": "minimax_h3_quality",
                 "inputMedia": [
                     {"role": "start_image", "path": str(start), "type": "image"},
                     {"role": "reference_image", "path": str(reference), "type": "image", "alias": "@image4"},
@@ -116,7 +118,7 @@ class TestGenerate:
         assert call.prompt == "Use <Picture 2> as the subject."
         assert call.reference_image_paths == [str(reference)]
 
-    def test_h3_turbo_routes_ref2va_with_turbo_defaults(
+    def test_h3_fast_routes_ref2va_with_fast_defaults(
         self, client, enable_wangp: FakeWanGPBridge, tmp_path: Path
     ):
         from PIL import Image
@@ -127,7 +129,7 @@ class TestGenerate:
             "/api/generate",
             json={
                 **_T2V_JSON,
-                "modelProfileId": "minimax_h3_turbo",
+                "modelProfileId": "minimax_h3_fast",
                 "inputMedia": [
                     {"role": "reference_image", "path": str(reference), "type": "image", "alias": "@image1"}
                 ],
@@ -138,24 +140,24 @@ class TestGenerate:
         assert response.status_code == 200
         call = enable_wangp.video_calls[-1]
         assert call.model_type == "minimax_h3_ref2va_pruned"
-        assert call.steps == 4
+        assert call.steps == 6
         assert call.default_settings["flow_shift"] == 6
         assert call.default_settings["config"] == "gguf_q4_k_m,fp8mix"
-        assert call.default_settings["loras_multipliers"] == "1.0|"
+        assert call.default_settings["loras_multipliers"] == "0.75|"
         assert call.default_settings["activated_loras"] == [H3_TURBO_REF2VA_LORA_URL]
 
-    def test_h3_turbo_routes_fl2va_with_turbo_lora(
+    def test_h3_fast_routes_fl2va_with_fast_lora(
         self, client, enable_wangp: FakeWanGPBridge
     ):
         response = client.post(
             "/api/generate",
-            json={**_T2V_JSON, "modelProfileId": "minimax_h3_turbo"},
+            json={**_T2V_JSON, "modelProfileId": "minimax_h3_fast"},
         )
 
         assert response.status_code == 200
         call = enable_wangp.video_calls[-1]
         assert call.model_type == "minimax_h3_fl2va_pruned"
-        assert call.default_settings["loras_multipliers"] == "1.0|"
+        assert call.default_settings["loras_multipliers"] == "0.75|"
         assert call.default_settings["activated_loras"] == [H3_TURBO_FL2VA_LORA_URL]
 
     def test_h3_rejects_ltx_only_multi_shot_lora(
@@ -165,7 +167,7 @@ class TestGenerate:
             "/api/generate",
             json={
                 **_T2V_JSON,
-                "modelProfileId": "minimax_h3_turbo",
+                "modelProfileId": "minimax_h3_fast",
                 "shotPrompts": [{"seconds": 2, "prompt": "Move."}],
             },
         )
@@ -178,7 +180,7 @@ class TestGenerate:
             "/api/generate",
             json={
                 **_T2V_JSON,
-                "modelProfileId": "minimax_h3_turbo",
+                "modelProfileId": "minimax_h3_fast",
                 "videoTool": "extend",
             },
         )
@@ -187,23 +189,23 @@ class TestGenerate:
 
         recovery = client.post(
             "/api/generate",
-            json={**_T2V_JSON, "modelProfileId": "minimax_h3_turbo"},
+            json={**_T2V_JSON, "modelProfileId": "minimax_h3_fast"},
         )
         assert recovery.status_code == 200
 
-    def test_ltx_base_uses_dev_settings(self, client, enable_wangp: FakeWanGPBridge):
+    def test_ltx_quality_uses_requested_settings(self, client, enable_wangp: FakeWanGPBridge):
         response = client.post(
             "/api/generate",
-            json={**_T2V_JSON, "modelProfileId": "ltx2_25_22b"},
+            json={**_T2V_JSON, "modelProfileId": "ltx2_25_quality"},
         )
 
         assert response.status_code == 200
         call = enable_wangp.video_calls[-1]
         assert call.model_type == "ltx2_25_22B"
-        assert call.steps == 30
-        assert call.default_settings["sample_solver"] == "euler"
-        assert call.default_settings["guidance_scale"] == 3
-        assert call.default_settings["audio_guidance_scale"] == 7
+        assert call.steps == 15
+        assert call.default_settings["sample_solver"] == "res2s"
+        assert call.default_settings["guidance_scale"] == 3.0
+        assert call.default_settings["audio_guidance_scale"] == 7.0
 
     def test_h3_rejects_mixed_media_and_invalid_alias_kind(
         self, client, enable_wangp: FakeWanGPBridge, tmp_path: Path
@@ -216,7 +218,7 @@ class TestGenerate:
             "/api/generate",
             json={
                 **_T2V_JSON,
-                "modelProfileId": "minimax_h3",
+                "modelProfileId": "minimax_h3_quality",
                 "inputMedia": [
                     {"role": "reference_image", "path": str(reference), "type": "image", "alias": "@image1"},
                     {"role": "control_video", "path": "control.mp4", "type": "video"},
@@ -233,7 +235,7 @@ class TestGenerate:
             "/api/generate",
             json={
                 **_T2V_JSON,
-                "modelProfileId": "minimax_h3",
+                "modelProfileId": "minimax_h3_quality",
                 "inputMedia": [
                     {"role": "reference_image", "path": str(reference), "type": "image", "alias": "@video1"},
                 ],
@@ -248,7 +250,7 @@ class TestGenerate:
             "/api/generate",
             json={
                 **_T2V_JSON,
-                "modelProfileId": "minimax_h3",
+                "modelProfileId": "minimax_h3_quality",
                 "inputMedia": [
                     {"role": "start_image", "path": str(reference), "type": "image"},
                     {"role": "start_image", "path": str(reference), "type": "image"},
@@ -262,7 +264,7 @@ class TestGenerate:
             "/api/generate",
             json={
                 **_T2V_JSON,
-                "modelProfileId": "minimax_h3",
+                "modelProfileId": "minimax_h3_quality",
                 "inputMedia": [
                     {"role": "reference_video", "path": str(reference), "type": "image"},
                 ],
@@ -273,7 +275,7 @@ class TestGenerate:
 
         recovery = client.post(
             "/api/generate",
-            json={**_T2V_JSON, "modelProfileId": "minimax_h3"},
+            json={**_T2V_JSON, "modelProfileId": "minimax_h3_quality"},
         )
         assert recovery.status_code == 200
 
@@ -284,7 +286,7 @@ class TestGenerate:
             "/api/generate",
             json={
                 **_T2V_JSON,
-                "modelProfileId": "minimax_h3",
+                "modelProfileId": "minimax_h3_quality",
                 "inputMedia": [
                     {"role": "depth", "path": "depth.mp4", "type": "video"},
                     {"role": "reference_video", "path": "reference.mp4", "type": "video"},
@@ -303,7 +305,7 @@ class TestGenerate:
             "/api/generate",
             json={
                 **_T2V_JSON,
-                "modelProfileId": "minimax_h3",
+                "modelProfileId": "minimax_h3_quality",
                 "inputMedia": [
                     {
                         "role": "reference_video",
@@ -328,7 +330,7 @@ class TestGenerate:
             json={
                 "prompt": "A beautiful sunset",
                 "resolution": "1080p",
-                "modelProfileId": "ltx2_22b_distilled",
+                "modelProfileId": "ltx2_25_fast",
                 "duration": "5",
                 "fps": "24",
                 "aspectRatio": "1:1",
@@ -348,7 +350,7 @@ class TestGenerate:
             json={
                 "prompt": "Global cinematic style",
                 "resolution": "540p",
-                "modelProfileId": "ltx2_22b_distilled",
+                "modelProfileId": "ltx2_25_fast",
                 "duration": "5",
                 "fps": "24",
                 "enhancePrompt": True,
@@ -383,7 +385,7 @@ class TestGenerate:
             json={
                 "prompt": "Global style",
                 "resolution": "540p",
-                "modelProfileId": "ltx2_22b_distilled",
+                "modelProfileId": "ltx2_25_fast",
                 "duration": "2",
                 "fps": "24",
                 "enhancePrompt": True,
@@ -405,7 +407,7 @@ class TestGenerate:
             json={
                 "prompt": "",
                 "resolution": "540p",
-                "modelProfileId": "ltx2_22b_distilled",
+                "modelProfileId": "ltx2_25_fast",
                 "duration": "5",
                 "fps": "24",
                 "shotPrompts": [
@@ -429,7 +431,7 @@ class TestGenerate:
             json={
                 "prompt": "A single continuous shot.",
                 "resolution": "540p",
-                "modelProfileId": "ltx2_22b_distilled",
+                "modelProfileId": "ltx2_25_fast",
                 "duration": "5",
                 "fps": "24",
             },
@@ -457,7 +459,7 @@ class TestGenerate:
     ):
         r = client.post(
             "/api/generate",
-            json={**_T2V_JSON, "modelProfileId": "ltx2_22b_distilled", "resolution": "1440p"},
+            json={**_T2V_JSON, "modelProfileId": "ltx2_25_fast", "resolution": "1440p"},
         )
 
         assert r.status_code == 400
@@ -514,7 +516,7 @@ class TestGenerate:
             json={
                 "prompt": "A beautiful sunset",
                 "resolution": "540p",
-                "modelProfileId": "ltx2_22b_distilled",
+                "modelProfileId": "ltx2_25_fast",
                 "duration": "2",
                 "fps": "24",
                 "cameraMotion": "none",
@@ -577,7 +579,7 @@ class TestGenerate:
             json={
                 "prompt": "A dancer",
                 "resolution": "540p",
-                "modelProfileId": "ltx2_22b_distilled",
+                "modelProfileId": "ltx2_25_fast",
                 "duration": "10",
                 "fps": "24",
                 "cameraMotion": "none",
@@ -623,7 +625,7 @@ class TestGenerate:
                 "prompt": "Keep walking",
                 "videoTool": "extend",
                 "resolution": "540p",
-                "modelProfileId": "ltx2_22b_distilled",
+                "modelProfileId": "ltx2_25_fast",
                 "duration": "5",
                 "fps": "24",
                 "cameraMotion": "none",
@@ -694,7 +696,7 @@ class TestGenerate:
                 "/api/generate",
                 json={
                     **_T2V_JSON,
-                    "modelProfileId": "ltx2_22b_distilled",
+                    "modelProfileId": "ltx2_25_fast",
                     "videoTool": tool,
                     "enhancePrompt": True,
                     "inputMedia": [
@@ -806,7 +808,7 @@ class TestGenerate:
             json={
                 "prompt": "A music video",
                 "resolution": "540p",
-                "modelProfileId": "ltx2_22b_distilled",
+                "modelProfileId": "ltx2_25_fast",
                 "duration": "10",
                 "fps": "24",
                 "cameraMotion": "none",
@@ -859,7 +861,7 @@ class TestGenerate:
             json={
                 "prompt": "",
                 "resolution": "540p",
-                "modelProfileId": "ltx2_22b_distilled",
+                "modelProfileId": "ltx2_25_fast",
                 "duration": "5",
                 "fps": "24",
                 "cameraMotion": "none",
@@ -909,7 +911,7 @@ class TestGenerate:
             json={
                 "prompt": "extend the office background",
                 "resolution": "540p",
-                "modelProfileId": "ltx2_22b_distilled",
+                "modelProfileId": "ltx2_25_fast",
                 "duration": "5",
                 "fps": "24",
                 "cameraMotion": "none",
@@ -949,7 +951,7 @@ class TestGenerate:
             json={
                 "prompt": "",
                 "resolution": "540p",
-                "modelProfileId": "ltx2_22b_distilled",
+                "modelProfileId": "ltx2_25_fast",
                 "duration": "5",
                 "fps": "24",
                 "cameraMotion": "none",
@@ -981,7 +983,7 @@ class TestGenerate:
             json={
                 "prompt": "outpaint",
                 "resolution": "540p",
-                "modelProfileId": "ltx2_22b_distilled",
+                "modelProfileId": "ltx2_25_fast",
                 "duration": "5",
                 "fps": "24",
                 "cameraMotion": "none",

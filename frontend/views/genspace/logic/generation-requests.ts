@@ -195,7 +195,7 @@ export function buildVideoGenerationCommand({
     },
     audioPath,
     inputMedia: buildGenerationInputMedia(
-      settings.videoProfileId === "minimax_h3"
+      settings.videoProfileId === "minimax_h3_fast" || settings.videoProfileId === "minimax_h3_quality"
         ? getH3ReferenceState(imageInputs).activeInputs
         : imageInputs,
     ),

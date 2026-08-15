@@ -40,14 +40,13 @@ from model_profiles.types import (
 from wangp_model_packs import H3_TURBO_FL2VA_LORA_URL
 
 
-_VIDEO_PROFILE_TEMPLATES: tuple[ModelProfile, ...] = (
-    ModelProfile(
-        id="ltx2_22b_distilled",
+_ltx_fast_profile = ModelProfile(
+        id="ltx2_25_fast",
         display_name="LTX 2.5 Fast",
         media_type="video",
         visible=True,
         status="stable",
-        wangp_model_type="ltx2_25_22B_distilled",
+        wangp_model_type="ltx2_25_22B",
         wangp_metadata=WanGPModelMetadata(
             family="ltx2",
             family_label="LTX-2",
@@ -169,7 +168,22 @@ _VIDEO_PROFILE_TEMPLATES: tuple[ModelProfile, ...] = (
                 },
             },
         ),
-        wangp_default_settings={"num_inference_steps": 8},
+        wangp_default_settings={
+            "sample_solver": "distilled_8_steps",
+            "num_inference_steps": 8,
+            "guidance_phases": 2,
+            "guidance_scale": 1.0,
+            "audio_guidance_scale": 1.0,
+            "alt_guidance_scale": 1.0,
+            "alt_scale": 0.0,
+            "perturbation_switch": 0,
+            "perturbation_layers": [28],
+            "perturbation_start_perc": 0,
+            "perturbation_end_perc": 100,
+            "apg_switch": 0,
+            "cfg_star_switch": 0,
+            "self_refiner_setting": 0,
+        },
         text_to_image=True,
         text_to_video=True,
         image_to_video=True,
@@ -206,7 +220,7 @@ _VIDEO_PROFILE_TEMPLATES: tuple[ModelProfile, ...] = (
         default_resolution_tier="540p",
         allowed_aspect_ratios=CURATED_ASPECT_RATIOS,
         allowed_resolution_tiers=("540p", "720p", "1080p"),
-        required_pack_ids=("ltx2_turbo",),
+        required_pack_ids=("ltx2_fast",),
         system_dependencies=(
             SystemDependency("video_tool_lora_relight", "lora", ("relight",)),
             SystemDependency("video_tool_lora_colorize", "lora", ("colorize",)),
@@ -220,7 +234,7 @@ _VIDEO_PROFILE_TEMPLATES: tuple[ModelProfile, ...] = (
         video_audio=VideoAudioPolicy(
             status="stable",
             handler="video_generation",
-            required_pack_ids=("ltx2_turbo",),
+            required_pack_ids=("ltx2_fast",),
             soundtrack=True,
             audio_conditioning=True,
             control_video_audio=True,
@@ -230,26 +244,26 @@ _VIDEO_PROFILE_TEMPLATES: tuple[ModelProfile, ...] = (
         speech=SpeechPolicy(
             status="experimental",
             handler="video_generation",
-            required_pack_ids=("ltx2_turbo",),
+            required_pack_ids=("ltx2_fast",),
             reference_voice=True,
             max_reference_inputs=1,
         ),
         sfx=SfxPolicy(
             status="experimental",
             handler="video_generation",
-            required_pack_ids=("ltx2_turbo",),
+            required_pack_ids=("ltx2_fast",),
             text=True,
             control_video_audio=True,
             max_duration_seconds=20,
         ),
         video_edits=VideoEditPolicy(
             operations=(
-                VideoEditOperationPolicy("reframe", "stable", "video_generation", ("ltx2_turbo",)),
+                VideoEditOperationPolicy("reframe", "stable", "video_generation", ("ltx2_fast",)),
                 VideoEditOperationPolicy(
                     "extend",
                     "stable",
                     "video_generation",
-                    ("ltx2_turbo",),
+                    ("ltx2_fast",),
                     source_behavior="continue_video",
                     duration_behavior="extend_by",
                 ),
@@ -258,7 +272,7 @@ _VIDEO_PROFILE_TEMPLATES: tuple[ModelProfile, ...] = (
                         operation_id,
                         "experimental",
                         "video_generation",
-                        ("ltx2_turbo",),
+                        ("ltx2_fast",),
                         (f"video_tool_lora_{operation_id}",),
                     )
                     for operation_id in (
@@ -276,7 +290,7 @@ _VIDEO_PROFILE_TEMPLATES: tuple[ModelProfile, ...] = (
                     "retake",
                     "hidden",
                     "retake",
-                    ("ltx2_turbo",),
+                    ("ltx2_fast",),
                     source_behavior="source_video",
                     disabled_reason="Retake is unavailable while the WanGP path is not reliable.",
                 ),
@@ -300,15 +314,17 @@ _VIDEO_PROFILE_TEMPLATES: tuple[ModelProfile, ...] = (
                     "single_pass",
                     "stable",
                     "director_generation",
-                    ("ltx2_turbo",),
+                    ("ltx2_fast",),
                     max_duration_seconds=20,
                 ),
             ),
         ),
-    ),
-    ModelProfile(
-        id="minimax_h3",
-        display_name="MiniMax H3",
+    )
+
+
+_h3_quality_profile = ModelProfile(
+        id="minimax_h3_quality",
+        display_name="MiniMax H3 Quality",
         media_type="video",
         visible=True,
         status="experimental",
@@ -349,6 +365,7 @@ _VIDEO_PROFILE_TEMPLATES: tuple[ModelProfile, ...] = (
             "flow_shift": 12.0,
             "sample_solver": "euler",
             "force_fps": 24,
+            "config": "gguf_q4_k_m,fp8mix",
         },
         text_to_video=True,
         image_to_video=True,
@@ -376,9 +393,9 @@ _VIDEO_PROFILE_TEMPLATES: tuple[ModelProfile, ...] = (
         default_resolution_tier="720p",
         allowed_aspect_ratios=CURATED_ASPECT_RATIOS,
         allowed_resolution_tiers=("540p", "720p", "1080p"),
-        required_pack_ids=("minimax-h3",),
+        required_pack_ids=("minimax-h3-quality",),
         video_audio=VideoAudioPolicy(
-            status="experimental", handler="video_generation", required_pack_ids=("minimax-h3",),
+            status="experimental", handler="video_generation", required_pack_ids=("minimax-h3-quality",),
             soundtrack=True, audio_conditioning=True, control_video_audio=True,
             output_audio=True, max_audio_inputs=2,
         ),
@@ -391,8 +408,7 @@ _VIDEO_PROFILE_TEMPLATES: tuple[ModelProfile, ...] = (
             license_url="https://huggingface.co/MiniMaxAI/MiniMax-H3/blob/main/LICENSE",
             notes="License scope is subject to the official territorial and use restrictions.",
         ),
-    ),
-)
+    )
 
 
 def _with_required_pack(profile: ModelProfile, pack_id: str) -> ModelProfile:
@@ -419,66 +435,41 @@ def _with_required_pack(profile: ModelProfile, pack_id: str) -> ModelProfile:
     )
 
 
-_ltx_turbo_profile, _h3_base_profile = _VIDEO_PROFILE_TEMPLATES
-_ltx_turbo_profile = replace(
-    _ltx_turbo_profile,
-    display_name="LTX 2.5 Turbo",
-    wangp_model_type="ltx2_25_22B",
-    wangp_default_settings={
-        "num_inference_steps": 8,
-        "guidance_scale": 1,
-        "alt_guidance_scale": 1,
-        "alt_scale": 0,
-        "audio_guidance_scale": 1,
-        "sample_solver": "distilled_8_steps",
-        "perturbation_switch": 0,
-    },
-)
-_ltx_base_profile = _with_required_pack(
+_ltx_quality_profile = _with_required_pack(
     replace(
-        _ltx_turbo_profile,
-        id="ltx2_25_22b",
-        display_name="LTX 2.5 Base",
+        _ltx_fast_profile,
+        id="ltx2_25_quality",
+        display_name="LTX 2.5 Quality",
         wangp_default_settings={
-            "num_inference_steps": 30,
-            "guidance_scale": 3,
-            "alt_guidance_scale": 3,
-            "alt_scale": 0.7,
-            "audio_guidance_scale": 7,
-            "sample_solver": "euler",
-            "perturbation_switch": 2,
+            **_ltx_fast_profile.wangp_default_settings,
+            "sample_solver": "res2s",
+            "num_inference_steps": 15,
+            "guidance_scale": 3.0,
+            "audio_guidance_scale": 7.0,
+            "alt_guidance_scale": 3.0,
+            "alt_scale": 0.45,
         },
     ),
-    "ltx2_base",
+    "ltx2_quality",
 )
-_h3_base_profile = replace(
-    _h3_base_profile,
-    display_name="MiniMax H3 Base",
-    wangp_default_settings={
-        **_h3_base_profile.wangp_default_settings,
-        "num_inference_steps": 20,
-        "flow_shift": 12,
-        "config": "gguf_q4_k_m,fp8mix",
-    },
-)
-_h3_turbo_profile = _with_required_pack(
+_h3_fast_profile = _with_required_pack(
     replace(
-        _h3_base_profile,
-        id="minimax_h3_turbo",
-        display_name="MiniMax H3 Turbo",
+        _h3_quality_profile,
+        id="minimax_h3_fast",
+        display_name="MiniMax H3 Fast",
         wangp_default_settings={
-            **_h3_base_profile.wangp_default_settings,
-            "num_inference_steps": 4,
+            **_h3_quality_profile.wangp_default_settings,
+            "num_inference_steps": 6,
             "flow_shift": 6,
             "loras_multipliers": "0.75|",
             "activated_loras": [H3_TURBO_FL2VA_LORA_URL],
         },
     ),
-    "minimax-h3-turbo",
+    "minimax-h3-fast",
 )
 VIDEO_PROFILES: tuple[ModelProfile, ...] = (
-    _ltx_base_profile,
-    _ltx_turbo_profile,
-    _h3_base_profile,
-    _h3_turbo_profile,
+    _ltx_fast_profile,
+    _ltx_quality_profile,
+    _h3_fast_profile,
+    _h3_quality_profile,
 )

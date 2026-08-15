@@ -8,7 +8,7 @@ from services.director_compiler import compile_director_request
 def _payload() -> dict[str, object]:
     return {
         "schemaVersion": 1,
-        "modelProfileId": "ltx2_22b_distilled",
+        "modelProfileId": "ltx2_25_fast",
         "resolutionTier": "540p",
         "aspectRatio": "16:9",
         "fps": 24,
@@ -30,7 +30,7 @@ def test_director_generation_uses_shared_state_and_bridge(client, enable_wangp) 
     assert body["resolvedFrameCount"] == 121
     assert body["compiledPrompt"] == "cinematic scene\n[1:120] walk"
     settings = enable_wangp.director_calls[0].settings
-    assert settings["model_type"] == "ltx2_25_22B_distilled"
+    assert settings["model_type"] == "ltx2_25_22B"
     assert settings["multi_prompts_gen_type"] == "FG"
     assert settings["video_length"] == 121
     assert settings["custom_settings"] == {"prompt_relay_epsilon": 0.001}
@@ -52,7 +52,7 @@ def test_director_settings_exclude_continue_video_prefix(test_state) -> None:
             "trimDuration": 2,
         },
     )
-    profile = get_video_profile("ltx2_22b_distilled")
+    profile = get_video_profile("ltx2_25_fast")
     assert profile is not None
     plan = compile_director_request(
         GenerateDirectorRequest.model_validate(payload), profile.director
