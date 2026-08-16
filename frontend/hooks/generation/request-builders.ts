@@ -134,6 +134,7 @@ export function buildVideoRequestBody({
     }));
   }
   if (shotPrompts?.length) body.shotPrompts = shotPrompts;
+  if (settings.styleId && !reframe && !videoTool) body.styleId = settings.styleId;
   if (reframe) {
     body.prompt = prompt.trim() || "outpaint";
     body.videoPromptType = "VG";

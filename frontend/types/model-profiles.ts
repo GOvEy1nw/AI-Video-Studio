@@ -209,6 +209,13 @@ export interface ModelProfileWanGPMetadata {
   settingValues: Record<string, ModelProfileJsonValue>
 }
 
+export interface ModelProfileStyle {
+  id: string
+  displayName: string
+  thumbnailUrl: string
+  sourceUrl: string
+}
+
 export interface ModelProfile {
   id: string
   displayName: string
@@ -217,6 +224,7 @@ export interface ModelProfile {
   status: ModelProfileStatus
   wangpModelType: string
   wangpMetadata: ModelProfileWanGPMetadata
+  styles?: ModelProfileStyle[]
   capabilities: ModelProfileCapabilities
   ui: ModelProfileUi
   inputMedia: ModelProfileInputMedia

@@ -71,6 +71,7 @@ export interface VideoGenSettings {
   fps: number;
   aspectRatio: string;
   audio: boolean;
+  styleId?: string;
 }
 
 export interface GenSpacePromptController {

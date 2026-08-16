@@ -153,6 +153,10 @@ class FakeWanGPBridge:
     compile_enabled: bool = False
     runtime_preferences: dict[str, object] = field(default_factory=dict)
     preview_options: dict[str, object] = field(default_factory=dict)
+    style_lora_downloads: list[tuple[str, str]] = field(default_factory=list)
+    resolved_profile_calls: list[tuple[str, str | None, str | None]] = field(
+        default_factory=list
+    )
 
     video_calls: list[FakeWangpVideoCall] = field(default_factory=list)
     image_calls: list[FakeWangpImageCall] = field(default_factory=list)
@@ -170,6 +174,7 @@ class FakeWanGPBridge:
     raise_on_director: Exception | None = None
     raise_on_music: Exception | None = None
     raise_on_compose_music_lyrics: Exception | None = None
+    raise_on_resolve_profiles: Exception | None = None
 
     def get_status(self) -> WanGPBridgeStatus:
         return WanGPBridgeStatus(
@@ -187,6 +192,80 @@ class FakeWanGPBridge:
         if not self.available:
             raise RuntimeError(self.unavailable_reason or "WanGP bridge is unavailable")
         self.session_ready = True
+
+    def resolve_profiles(
+        self,
+        model_type: str,
+        *,
+        accelerator_profile_id: str | None = None,
+        preset_profile_id: str | None = None,
+    ) -> dict[str, object]:
+        self.resolved_profile_calls.append(
+            (model_type, accelerator_profile_id, preset_profile_id)
+        )
+        if self.raise_on_resolve_profiles is not None:
+            raise self.raise_on_resolve_profiles
+        if accelerator_profile_id == "ltx2_25_two_stage_distilled_8_3":
+            return {
+                "sample_solver": "distilled_8_steps_ancestral",
+                "num_inference_steps": 8,
+                "guidance_phases": 2,
+                "guidance_scale": 1.0,
+                "audio_guidance_scale": 1.0,
+                "alt_guidance_scale": 1.0,
+                "alt_scale": 0.0,
+                "activated_loras": [
+                    "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.5-22b-distilled-lora-450_bf16.safetensors"
+                ],
+                "loras_multipliers": "0.5",
+            }
+        if accelerator_profile_id == "ltx2_25_two_stage_hq_res2s_15_3":
+            return {
+                "sample_solver": "res2s",
+                "num_inference_steps": 15,
+                "guidance_phases": 2,
+                "guidance_scale": 3.0,
+                "audio_guidance_scale": 7.0,
+                "alt_guidance_scale": 3.0,
+                "alt_scale": 0.45,
+                "activated_loras": [
+                    "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.5-22b-distilled-lora-450_bf16.safetensors"
+                ],
+                "loras_multipliers": "0.5",
+            }
+        if accelerator_profile_id == "aivs_h3_turbo_lightx2v_fl2v_4_steps_v0.1":
+            return {
+                "config": "gguf_q4_k_m,fp8mix",
+                "sample_solver": "euler",
+                "num_inference_steps": 6,
+                "guidance_scale": 1.0,
+                "flow_shift": 12.0,
+                "activated_loras": [
+                    "https://huggingface.co/Kijai/MiniMax-H3_comfy/resolve/main/loras/minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy_resized_avg_rank_21_bf16.safetensors"
+                ],
+                "loras_multipliers": "0.5",
+            }
+        if accelerator_profile_id == "aivs_h3_turbo_lightx2v_ref2v_4_steps_v0.1":
+            return {
+                "config": "gguf_q4_k_m,fp8mix",
+                "sample_solver": "euler",
+                "num_inference_steps": 6,
+                "guidance_scale": 1.0,
+                "flow_shift": 12.0,
+                "activated_loras": [
+                    "https://huggingface.co/Kijai/MiniMax-H3_comfy/resolve/main/loras/minimax_h3_ref2v_lightx2v_turbo_4step_v0.1_resized_avg_rank_20_bf16.safetensors"
+                ],
+                "loras_multipliers": "0.5",
+            }
+        if model_type in {"minimax_h3_fl2va_pruned", "minimax_h3_ref2va_pruned"}:
+            return {
+                "config": "gguf_q4_k_m,fp8mix",
+                "num_inference_steps": 20,
+                "guidance_scale": 1.0,
+                "flow_shift": 12.0,
+                "sample_solver": "euler",
+            }
+        return {}
 
     def set_compile_enabled(self, enabled: bool) -> None:
         self.compile_enabled = enabled
@@ -442,6 +521,18 @@ class FakeWanGPBridge:
             output.setnchannels(1); output.setsampwidth(2); output.setframerate(8_000); output.writeframes(b"\x00\x00" * 800)
         on_progress("generating_sfx", 100)
         return str(output_path)
+
+    def ensure_style_lora(
+        self,
+        *,
+        source_url: str,
+        model_type: str,
+        on_progress: ProgressCallback,
+        is_cancelled: Callable[[], bool],
+    ) -> None:
+        if is_cancelled():
+            raise RuntimeError("Generation was cancelled")
+        self.style_lora_downloads.append((source_url, model_type))
 
     def generate_speech(
         self,

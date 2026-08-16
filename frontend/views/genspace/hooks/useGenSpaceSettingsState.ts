@@ -27,6 +27,7 @@ function toCompatibility({
     ...DEFAULT_VIDEO_SETTINGS,
     model: video.model,
     videoProfileId: video.profileId,
+    styleId: video.styleId,
     duration: video.duration,
     videoResolution: video.resolution,
     fps: video.fps,
@@ -54,6 +55,7 @@ function fromCompatibility(settings: GenSpaceSettings): PanelSettingsState {
     video: {
       model: settings.model,
       profileId: settings.videoProfileId,
+      styleId: settings.styleId,
       duration: settings.duration,
       resolution: settings.videoResolution,
       fps: settings.fps,

@@ -450,6 +450,13 @@ class ModelProfileWanGPMetadata(BaseModel):
     settingValues: JsonObject
 
 
+class ModelProfileStyle(BaseModel):
+    id: str
+    displayName: str
+    thumbnailUrl: str
+    sourceUrl: str
+
+
 class ModelProfileResponse(BaseModel):
     id: str
     displayName: str
@@ -458,6 +465,9 @@ class ModelProfileResponse(BaseModel):
     status: str
     wangpModelType: str
     wangpMetadata: ModelProfileWanGPMetadata
+    styles: list[ModelProfileStyle] = Field(
+        default_factory=lambda: list[ModelProfileStyle]()
+    )
     capabilities: ModelProfileCapabilities
     ui: ModelProfileUi
     inputMedia: ModelProfileInputMedia
@@ -757,6 +767,7 @@ class GenerateVideoRequest(BaseModel):
     resolution: str = "540p"
     model: str = "fast"
     modelProfileId: str | None = None
+    styleId: str | None = Field(default=None, max_length=128)
     cameraMotion: VideoCameraMotion = "none"
     negativePrompt: str = ""
     duration: str = "2"

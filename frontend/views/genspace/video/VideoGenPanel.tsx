@@ -1,5 +1,6 @@
-import { Clock, Image, Monitor, Music, X } from "lucide-react";
+import { Clock, Image, Monitor, Music, Palette, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { StylesLibraryModal } from "../../../components/StylesLibraryModal";
 import { ModelDownloadButton } from "../../../components/ModelDownloadButton";
 import { ModelPicker } from "../../../components/ModelPicker";
 import { SettingsDropdown } from "../../../components/SettingsDropdown";
@@ -185,6 +186,7 @@ export function VideoGenPanel({
   const { prompt, generation, settings, media, profiles, videoTools, framing } =
     controller;
   const videoSettings = settings.value;
+  const [stylesOpen, setStylesOpen] = useState(false);
   const h3ReferenceRequestRef = useRef<(type: GenSpaceMediaKind) => void>(() => undefined);
   const setH3ReferenceRequest = useCallback((request: (type: GenSpaceMediaKind) => void) => {
     h3ReferenceRequestRef.current = request;
@@ -206,6 +208,9 @@ export function VideoGenPanel({
   const isTools = videoTools.mode === "reframe";
   const isReframe = isTools && videoTools.selectedTool === "reframe";
   const isPanelMode = isRetake || isTools;
+  const profileStyles = selectedProfile?.styles ?? [];
+  const styles = !isPanelMode ? profileStyles : [];
+  const selectedStyle = styles.find((style) => style.id === videoSettings.styleId);
   const guide = media.inputs.find(({ role }) => GUIDE_MEDIA_ROLE_SET.has(role));
   const isContinueVideo = isTools
     ? videoTools.selectedTool === "extend"
@@ -255,6 +260,11 @@ export function VideoGenPanel({
       });
     }
   }, [patchVideoSettings, selectedProfile, videoSettings]);
+  useEffect(() => {
+    if (videoSettings.styleId && !profileStyles.some((style) => style.id === videoSettings.styleId)) {
+      patchVideoSettings({ styleId: undefined });
+    }
+  }, [patchVideoSettings, profileStyles, videoSettings.styleId]);
 
   const aspectRatioValue = isReframe
     ? videoTools.reframeAspectMode === "custom"
@@ -373,7 +383,15 @@ export function VideoGenPanel({
           <ModelPicker
             profiles={installedProfiles}
             value={selectedProfile.id}
-            onChange={(profileId) => patchVideoSettings({ profileId })}
+            onChange={(profileId) => {
+              const profile = profiles.options.find((option) => option.id === profileId);
+              patchVideoSettings({
+                profileId,
+                styleId: profile?.styles?.some((style) => style.id === videoSettings.styleId)
+                  ? videoSettings.styleId
+                  : undefined,
+              });
+            }}
             placement="bottom"
             modelDownload={profiles.modelDownload}
             icon={<LightricksIcon className="h-5 w-5" />}
@@ -482,16 +500,31 @@ export function VideoGenPanel({
         }
         actions={
           !isRetake && !isReframe ? (
-            <PromptActions
-              seedLocked={prompt.seedLocked}
-              lockedSeed={prompt.lockedSeed}
-              onSeedChange={prompt.setSeed}
-              disabled={generation.isRunning}
-              prompt={prompt.value}
-              onEnhance={prompt.enhance}
-              enhanceEnabled={prompt.enhanceEnabled}
-              isEnhancing={prompt.isEnhancing}
-            />
+            <div className="flex items-center gap-1">
+              {styles.length ? (
+                <button
+                  type="button"
+                  onClick={() => setStylesOpen(true)}
+                  disabled={generation.isRunning}
+                  aria-haspopup="dialog"
+                  aria-expanded={stylesOpen}
+                  className={`flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] font-medium transition-colors disabled:opacity-40 ${selectedStyle ? "bg-violet-500/15 text-violet-300 hover:bg-violet-500/25" : "text-zinc-400 hover:bg-zinc-800 hover:text-white"}`}
+                >
+                  <Palette className="h-3.5 w-3.5" />
+                  <span>{selectedStyle?.displayName ?? "Styles"}</span>
+                </button>
+              ) : null}
+              <PromptActions
+                seedLocked={prompt.seedLocked}
+                lockedSeed={prompt.lockedSeed}
+                onSeedChange={prompt.setSeed}
+                disabled={generation.isRunning}
+                prompt={prompt.value}
+                onEnhance={prompt.enhance}
+                enhanceEnabled={prompt.enhanceEnabled}
+                isEnhancing={prompt.isEnhancing}
+              />
+            </div>
           ) : undefined
         }
       />
@@ -509,6 +542,14 @@ export function VideoGenPanel({
           icon={generation.icon}
         />
       </div>
+      <StylesLibraryModal
+        open={stylesOpen}
+        styles={styles}
+        selectedStyleId={videoSettings.styleId}
+        onSelect={(styleId) => patchVideoSettings({ styleId })}
+        onClear={() => patchVideoSettings({ styleId: undefined })}
+        onClose={() => setStylesOpen(false)}
+      />
     </>
   );
 }

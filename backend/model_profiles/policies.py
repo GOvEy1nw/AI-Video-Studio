@@ -93,6 +93,7 @@ def validate_model_profile_policies(
 
     known_pack_ids = set(pack_ids)
     for profile in profiles:
+        _validate_styles(profile)
         dependencies = {dependency.id: dependency for dependency in profile.system_dependencies}
         operation_ids = {operation.id for operation in profile.video_edits.operations}
 
@@ -177,6 +178,28 @@ def validate_model_profile_policies(
                 raise ValueError(
                     f"{profile.id}: system dependency {dependency.id} references unknown operations {sorted(unknown_operations)}"
                 )
+
+
+def _validate_styles(profile: ModelProfile) -> None:
+    style_ids: set[str] = set()
+    for style in profile.styles:
+        if not style.id or style.id in style_ids:
+            raise ValueError(f"{profile.id}: style IDs must be unique and non-empty")
+        style_ids.add(style.id)
+        if not style.display_name or not style.thumbnail_url or not style.source_url:
+            raise ValueError(f"{profile.id}: style {style.id} is missing public metadata")
+        has_lora = style.lora_url is not None
+        has_prompt = style.prompt_text is not None
+        if has_lora == has_prompt:
+            raise ValueError(f"{profile.id}: style {style.id} must define exactly one action")
+        if has_lora and not style.lora_url:
+            raise ValueError(f"{profile.id}: style {style.id} has an empty LoRA URL")
+        if has_lora and (style.lora_strength is None or style.lora_strength <= 0):
+            raise ValueError(f"{profile.id}: style {style.id} needs a positive LoRA strength")
+        if style.prompt_text is not None and not style.prompt_text.strip():
+            raise ValueError(f"{profile.id}: style {style.id} has an empty prompt action")
+        if not has_lora and style.lora_strength is not None:
+            raise ValueError(f"{profile.id}: prompt style {style.id} cannot define a LoRA strength")
 
 
 def _validate_policy(

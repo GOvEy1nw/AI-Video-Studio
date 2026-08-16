@@ -7,6 +7,7 @@ from collections import deque
 from contextlib import nullcontext
 from pathlib import Path
 from types import SimpleNamespace
+from typing import cast
 
 import pytest
 
@@ -719,6 +720,86 @@ def test_generate_video_forwards_default_lora_settings() -> None:
     assert captured["settings"]["loras_multipliers"] == "1.0"
 
 
+def test_ensure_style_lora_downloads_through_runtime_module() -> None:
+    bridge = _make_bridge()
+    calls: list[tuple[str, str, int, dict[str, list[str]]]] = []
+
+    class RuntimeModule:
+        def download_models(self, filename, model_type, *, file_type, model_def):  # type: ignore[no-untyped-def]
+            calls.append((filename, model_type, file_type, model_def))
+
+    class Session:
+        def _ensure_runtime(self):  # type: ignore[no-untyped-def]
+            return type("Runtime", (), {"module": RuntimeModule()})()
+
+    bridge._get_session = lambda: Session()  # type: ignore[method-assign]
+    bridge.ensure_style_lora(
+        source_url="https://example.test/style.safetensors",
+        model_type="ltx2_25_22B",
+        on_progress=lambda *_args: None,
+        is_cancelled=lambda: False,
+    )
+
+    assert calls == [
+        ("", "ltx2_25_22B", 1, {"loras": ["https://example.test/style.safetensors"]})
+    ]
+
+
+def test_resolve_profiles_returns_an_isolated_wangp_result() -> None:
+    bridge = _make_bridge()
+    source = {"num_inference_steps": 8, "nested": {"value": 1}}
+
+    class Session:
+        def resolve_profiles(self, model_type, **kwargs):  # type: ignore[no-untyped-def]
+            assert model_type == "ltx2_25_22B"
+            assert kwargs == {
+                "accelerator_profile_id": "ltx2_25_two_stage_distilled_8_3",
+                "preset_profile_id": None,
+            }
+            return source
+
+    bridge._get_session = lambda: Session()  # type: ignore[method-assign]
+    settings = bridge.resolve_profiles(
+        "ltx2_25_22B",
+        accelerator_profile_id="ltx2_25_two_stage_distilled_8_3",
+    )
+    cast(dict[str, int], settings["nested"])["value"] = 2
+
+    assert settings["num_inference_steps"] == 8
+    assert source == {"num_inference_steps": 8, "nested": {"value": 1}}
+
+
+def test_resolve_profiles_loads_isolated_model_defaults_without_profiles() -> None:
+    bridge = _make_bridge()
+    source = {"num_inference_steps": 20, "nested": {"value": 1}}
+
+    class Session:
+        def get_default_settings(self, model_type: str) -> dict[str, object]:
+            assert model_type == "minimax_h3_fl2va_pruned"
+            return source
+
+    bridge._get_session = lambda: Session()  # type: ignore[method-assign]
+    settings = bridge.resolve_profiles("minimax_h3_fl2va_pruned")
+    cast(dict[str, int], settings["nested"])["value"] = 2
+
+    assert settings["num_inference_steps"] == 20
+    assert source == {"num_inference_steps": 20, "nested": {"value": 1}}
+
+
+def test_resolve_profiles_requires_a_supported_wangp_api() -> None:
+    bridge = _make_bridge()
+    bridge._get_session = lambda: object()  # type: ignore[method-assign]
+
+    with pytest.raises(RuntimeError, match="does not support resolve_profiles"):
+        bridge.resolve_profiles(
+            "ltx2_25_22B",
+            accelerator_profile_id="ltx2_25_two_stage_distilled_8_3",
+        )
+
+    with pytest.raises(RuntimeError, match="does not support get_default_settings"):
+        bridge.resolve_profiles("minimax_h3_fl2va_pruned")
+
+
 def test_generate_video_maps_ic_lora_guide_only() -> None:
     bridge = _make_bridge()
     captured: dict[str, object] = {}
@@ -828,10 +909,18 @@ def test_generate_video_uses_source_frame_count_for_video_length() -> None:
         is_cancelled=lambda: False,
         control_video_path="E:/tmp/guide.mp4",
         video_length_frames=150,
+        default_settings={
+            "force_fps": 60,
+            "resolution": "64x64",
+            "video_length": 1,
+            "duration_seconds": 99,
+        },
     )
 
     assert captured["settings"]["force_fps"] == 24
+    assert captured["settings"]["resolution"] == "960x544"
     assert captured["settings"]["video_length"] == 145
+    assert captured["settings"]["duration_seconds"] == 5
 
 
 def test_generate_director_video_submits_exact_backend_settings() -> None:

@@ -15,7 +15,7 @@ from _routes._errors import HTTPError
 from handlers.base import StateHandlerBase
 from handlers.generation_handler import GenerationHandler
 from model_profiles import get_video_profile, is_combination_supported, resolve_resolution
-from model_profiles.profiles import AspectRatio, ModelProfile, ResolutionTier
+from model_profiles.profiles import AspectRatio, ModelProfile, ResolutionTier, StyleDefinition
 from services.media_crop import crop_image_media, crop_video_media
 from services.wangp_bridge import WanGPBridge
 from services.reframe_wangp_mapping import ReframePadding, map_reframe_to_wangp
@@ -27,8 +27,6 @@ from server_utils.media_validation import (
     validate_video_file,
 )
 from state.app_state_types import AppState
-from wangp_model_packs import H3_TURBO_REF2VA_LORA_URL
-
 if TYPE_CHECKING:
     from runtime_config.runtime_config import RuntimeConfig
 
@@ -317,6 +315,9 @@ class VideoGenerationHandler(StateHandlerBase):
 
         try:
             profile = self._resolve_video_profile(req)
+            style = self._resolve_style(profile, req.styleId, is_reframe=is_reframe, video_tool=req.videoTool)
+            if style is not None and style.prompt_text is not None:
+                wangp_prompt = f"{wangp_prompt.rstrip()}\n{style.prompt_text}"
             if is_h3:
                 wangp_prompt, h3_uses_ref2va = _validate_and_compile_h3_prompt(req, wangp_prompt)
                 if h3_uses_ref2va:
@@ -556,15 +557,22 @@ class VideoGenerationHandler(StateHandlerBase):
                     ]
 
             settings = self.state.app_settings.model_copy(deep=True)
-            default_steps = profile.wangp_default_settings.get("num_inference_steps")
+            active_model_type = (
+                "minimax_h3_ref2va_pruned"
+                if is_h3 and h3_uses_ref2va
+                else profile.wangp_model_type
+            )
+            resolved_profile_settings = self._resolve_wangp_profile_settings(
+                profile, active_model_type
+            )
+            default_settings = dict(resolved_profile_settings)
+            default_settings.update(profile.wangp_default_settings)
+            default_steps = default_settings.get("num_inference_steps")
             if isinstance(default_steps, int):
                 steps = max(1, default_steps)
             else:
                 steps = 8 if req.model.strip().lower() == "fast" else max(1, settings.pro_model.steps)
             seed = self._resolve_seed()
-            default_settings = dict(profile.wangp_default_settings)
-            if profile.id == "minimax_h3_fast" and h3_uses_ref2va:
-                default_settings["activated_loras"] = [H3_TURBO_REF2VA_LORA_URL]
             output_settings = settings.output_settings
             default_settings.update(
                 {
@@ -590,8 +598,11 @@ class VideoGenerationHandler(StateHandlerBase):
             else:
                 default_settings["prompt_enhancer"] = ""
             if req.shotPrompts:
-                default_settings["activated_loras"] = [MULTI_SHOT_LORA_FILENAME]
-                default_settings["loras_multipliers"] = MULTI_SHOT_LORA_STRENGTH
+                self._append_lora(
+                    default_settings,
+                    MULTI_SHOT_LORA_FILENAME,
+                    float(MULTI_SHOT_LORA_STRENGTH),
+                )
             if is_lora_tool:
                 assert req.videoTool is not None
                 default_settings.update(
@@ -607,6 +618,14 @@ class VideoGenerationHandler(StateHandlerBase):
             if is_reframe:
                 default_settings["force_fps"] = "auto"
                 default_settings["sliding_window_overlap"] = 33
+            if style is not None and style.lora_url is not None:
+                self._wangp_bridge.ensure_style_lora(
+                    source_url=style.lora_url,
+                    model_type=profile.wangp_model_type,
+                    on_progress=self._generation.update_progress,
+                    is_cancelled=self._generation.is_generation_cancelled,
+                )
+                self._append_lora(default_settings, style.lora_url, style.lora_strength)
 
             output_path = self._wangp_bridge.generate_video(
                 prompt=wangp_prompt,
@@ -622,7 +641,7 @@ class VideoGenerationHandler(StateHandlerBase):
                 audio_path=validated_audio_path,
                 on_progress=self._generation.update_progress,
                 is_cancelled=self._generation.is_generation_cancelled,
-                model_type=("minimax_h3_ref2va_pruned" if is_h3 and h3_uses_ref2va else profile.wangp_model_type),
+                model_type=active_model_type,
                 default_settings=default_settings,
                 start_image_path=validated_start_image_path,
                 end_image_path=validated_end_image_path,
@@ -666,6 +685,15 @@ class VideoGenerationHandler(StateHandlerBase):
                 except OSError:
                     logger.warning("Could not remove temporary input derivative: %s", media_path)
 
+    def _resolve_wangp_profile_settings(
+        self, profile: ModelProfile, model_type: str
+    ) -> dict[str, object]:
+        return self._wangp_bridge.resolve_profiles(
+            model_type,
+            accelerator_profile_id=profile.wangp_accelerator_profile_for(model_type),
+            preset_profile_id=profile.wangp_preset_profile_id,
+        )
+
     @staticmethod
     def _resolve_video_profile(req: GenerateVideoRequest) -> ModelProfile:
         profile_id = req.modelProfileId
@@ -675,6 +703,38 @@ class VideoGenerationHandler(StateHandlerBase):
         if profile is None or not profile.visible:
             raise HTTPError(400, "UNKNOWN_VIDEO_MODEL_PROFILE")
         return profile
+
+    @staticmethod
+    def _resolve_style(
+        profile: ModelProfile,
+        style_id: str | None,
+        *,
+        is_reframe: bool,
+        video_tool: str | None,
+    ) -> StyleDefinition | None:
+        if style_id is None:
+            return None
+        if is_reframe or video_tool is not None:
+            raise HTTPError(400, "STYLE_NOT_SUPPORTED_FOR_VIDEO_OPERATION")
+        style = next((candidate for candidate in profile.styles if candidate.id == style_id), None)
+        if style is None:
+            raise HTTPError(400, "UNKNOWN_OR_INCOMPATIBLE_STYLE")
+        return style
+
+    @staticmethod
+    def _append_lora(
+        settings: dict[str, object],
+        lora_url: str,
+        strength: float | None,
+    ) -> None:
+        active_loras = settings.get("activated_loras")
+        loras = list(cast(list[str], active_loras)) if isinstance(active_loras, list) else []
+        loras.append(lora_url)
+        settings["activated_loras"] = loras
+        multiplier = str(settings.get("loras_multipliers") or "").strip()
+        settings["loras_multipliers"] = " ".join(
+            value for value in (multiplier, str(strength or 1.0)) if value
+        )
 
     @staticmethod
     def _resolve_prompt_and_duration(req: GenerateVideoRequest, duration: int) -> tuple[str, int]:

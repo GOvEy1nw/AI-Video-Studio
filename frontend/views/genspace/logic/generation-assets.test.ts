@@ -157,6 +157,27 @@ describe("GenSpace generated asset builders", () => {
     });
   });
 
+  it("persists a selected normal-generation style for Copy Settings", () => {
+    const snapshot: VideoSubmissionSnapshot = {
+      projectId: "project-a",
+      prompt: "animate",
+      settings: { ...DEFAULT_VIDEO_SETTINGS, styleId: "ltx25_soft_enhance" },
+      inputs: [],
+      inputImage: null,
+      inputAudio: null,
+      assetPaths: [],
+    };
+
+    const asset = buildGeneratedVideoAsset({
+      snapshot,
+      finalPath: "C:\\output.mp4",
+      finalUrl: "file:///C:/output.mp4",
+      createdAt: 1,
+    });
+
+    expect(asset.generationParams?.styleId).toBe("ltx25_soft_enhance");
+  });
+
   it("preserves the resolved Reframe prompt and fields", () => {
     const snapshot: ReframeSubmissionSnapshot = {
       projectId: "project-a",

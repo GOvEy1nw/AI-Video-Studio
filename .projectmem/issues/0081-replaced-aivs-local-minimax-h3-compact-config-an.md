@@ -1,0 +1,5 @@
+# #0081 Replaced AiVS-local MiniMax H3 compact config and Fast acceleration overlays with model-type-specific WanGP accelerator-profile resolution shared by Quick Gen, Director, and model packs; focused tests and Pyright passed.
+
+- 2026-08-16T14:01:28Z `issue`: Replaced AiVS-local MiniMax H3 compact config and Fast acceleration overlays with model-type-specific WanGP accelerator-profile resolution shared by Quick Gen, Director, and model packs; focused tests and Pyright passed. [backend/model_profiles/video_profiles.py]
+- 2026-08-16T14:01:28Z `attempt`: Replaced AiVS-local MiniMax H3 compact config and Fast acceleration overlays with model-type-specific WanGP accelerator-profile resolution shared by Quick Gen, Director, and model packs; focused tests and Pyright passed. [backend/model_profiles/video_profiles.py] (worked)
+- 2026-08-16T14:01:38Z `fix`: AIVS-013 H3 Fast now resolves exact FL2VA/Ref2VA AIVS accelerator IDs by active model type and H3 Quality/default config plus pack dependencies come entirely from WanGP; 153 focused tests and Pyright passed. [backend/model_profiles/video_profiles.py]

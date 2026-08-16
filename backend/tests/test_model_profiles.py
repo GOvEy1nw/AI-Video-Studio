@@ -160,9 +160,19 @@ class TestCuratedProfiles:
 
     def test_minimax_h3_profile_exposes_curated_limits_and_pack(self) -> None:
         profile = get_video_profile("minimax_h3_quality")
+        fast = get_video_profile("minimax_h3_fast")
         assert profile is not None
+        assert fast is not None
         assert profile.wangp_model_type == "minimax_h3_fl2va_pruned"
-        assert profile.wangp_default_settings["config"] == "gguf_q4_k_m,fp8mix"
+        assert profile.wangp_default_settings == {}
+        assert fast.wangp_default_settings == {}
+        assert fast.wangp_accelerator_profile_for("minimax_h3_fl2va_pruned") == (
+            "aivs_h3_turbo_lightx2v_fl2v_4_steps_v0.1"
+        )
+        assert fast.wangp_accelerator_profile_for("minimax_h3_ref2va_pruned") == (
+            "aivs_h3_turbo_lightx2v_ref2v_4_steps_v0.1"
+        )
+        assert profile.wangp_accelerator_profile_for("minimax_h3_fl2va_pruned") is None
         assert profile.required_pack_ids == ("minimax-h3-quality",)
         assert profile.input_media.max_reference_images == 9
         assert profile.input_media.max_reference_videos == 2
@@ -182,31 +192,19 @@ class TestCuratedProfiles:
         assert fast.display_name == "LTX 2.5 Fast"
         assert quality.display_name == "LTX 2.5 Quality"
         assert fast.wangp_model_type == quality.wangp_model_type == "ltx2_25_22B"
-        assert fast.wangp_default_settings == {
-            "sample_solver": "distilled_8_steps",
-            "num_inference_steps": 8,
-            "guidance_phases": 2,
-            "guidance_scale": 1.0,
-            "audio_guidance_scale": 1.0,
-            "alt_guidance_scale": 1.0,
-            "alt_scale": 0.0,
-            "perturbation_switch": 0,
-            "perturbation_layers": [28],
-            "perturbation_start_perc": 0,
-            "perturbation_end_perc": 100,
-            "apg_switch": 0,
-            "cfg_star_switch": 0,
-            "self_refiner_setting": 0,
-        }
-        assert quality.wangp_default_settings == {
-            **fast.wangp_default_settings,
-            "sample_solver": "res2s",
-            "num_inference_steps": 15,
-            "guidance_scale": 3.0,
-            "audio_guidance_scale": 7.0,
-            "alt_guidance_scale": 3.0,
-            "alt_scale": 0.45,
-        }
+        assert fast.wangp_default_settings == quality.wangp_default_settings == {}
+        assert (
+            fast.wangp_accelerator_profile_id
+            == "ltx2_25_two_stage_distilled_8_3"
+        )
+        assert (
+            quality.wangp_accelerator_profile_id
+            == "ltx2_25_two_stage_hq_res2s_15_3"
+        )
+        assert fast.wangp_accelerator_profile_for("ltx2_25_22B") == (
+            "ltx2_25_two_stage_distilled_8_3"
+        )
+        assert fast.wangp_preset_profile_id is quality.wangp_preset_profile_id is None
         assert fast.required_pack_ids == ("ltx2_fast",)
         assert quality.required_pack_ids == ("ltx2_quality",)
         assert fast.text_to_video is True
@@ -218,6 +216,23 @@ class TestCuratedProfiles:
         assert fast.sliding_window is True
         assert fast.default_resolution_tier == "540p"
         assert fast.allowed_aspect_ratios == CURATED_ASPECT_RATIOS
+        assert [style.id for style in fast.styles] == [
+            "ltx25_soft_enhance",
+            "ltx25_fantasy_painterly",
+            "ltx25_pixar_toon",
+            "ltx25_90s_animation",
+            "ltx25_claymation",
+            "ltx25_cozy_felt",
+            "ltx25_fantasy_anime",
+            "ltx25_fantasy_realism",
+            "ltx25_fantasy_puppet",
+            "ltx25_crisp_enhance",
+            "ltx25_post_apocalyptic",
+            "ltx25_paper_cut_out",
+            "ltx25_wild_west",
+            "ltx25_cinematic_sci_fi_cyberpunk",
+        ]
+        assert quality.styles == fast.styles
 
     def test_visible_profile_policies_reference_known_packs_and_handlers(self) -> None:
         validate_model_profile_policies(
@@ -438,6 +453,15 @@ class TestModelProfilesEndpoint:
         assert ltx["wangpMetadata"]["mediaInputs"]["video"]["control"] is True
         assert ltx["ui"]["allowedAspectRatios"] == list(CURATED_ASPECT_RATIOS)
         assert ltx["requiredPackIds"] == ["ltx2_fast"]
+        assert len(ltx["styles"]) == 14
+        assert ltx["styles"][0] == {
+            "id": "ltx25_soft_enhance",
+            "displayName": "Soft Enhance",
+            "thumbnailUrl": "/styles/ltx25/soft-enhance.webp",
+            "sourceUrl": "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Soft_Enhance_Style_LoRa/resolve/main/LTX2.3_Soft_Enhance.safetensors",
+        }
+        h3 = next(p for p in data["profiles"] if p["id"] == "minimax_h3_fast")
+        assert h3["styles"] == []
         assert ltx["videoAudio"] == {
             "status": "stable",
             "handler": "video_generation",

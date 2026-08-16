@@ -182,6 +182,7 @@ export function buildVideoGenerationCommand({
     settings: {
       model: normalizedSettings.model,
       videoProfileId: normalizedSettings.videoProfileId,
+      styleId: normalizedSettings.styleId,
       duration: normalizedSettings.duration,
       videoResolution: normalizedSettings.videoResolution,
       fps: normalizedSettings.fps,
@@ -229,10 +230,14 @@ export function buildVideoToolGenerationCommand({
     useAudioTrack: false,
     enhancePrompt,
   });
-  if (tool !== "extend") return { ...command, videoTool: tool };
+  if (tool !== "extend") return {
+    ...command,
+    settings: { ...command.settings, styleId: undefined },
+    videoTool: tool,
+  };
   return {
     ...command,
-    settings: { ...command.settings, duration: settings.duration },
+    settings: { ...command.settings, duration: settings.duration, styleId: undefined },
     normalizedSettings: {
       ...command.normalizedSettings,
       duration: settings.duration,
@@ -259,6 +264,7 @@ export function buildReframeGenerationCommand(
     settings: {
       model: normalizedSettings.model,
       videoProfileId: normalizedSettings.videoProfileId,
+      styleId: undefined,
       duration: normalizedSettings.duration,
       videoResolution: normalizedSettings.videoResolution,
       fps: normalizedSettings.fps,

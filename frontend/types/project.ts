@@ -103,6 +103,7 @@ export interface GenerationParams {
   imageAspectRatio?: string
   imageSteps?: number
   videoProfileId?: string  // Curated AiVS video model profile id
+  styleId?: string
   videoTool?: VideoToolId
   imageProfileId?: string  // Phase 4 curated AiVS model profile id
   imageProcessMode?: 'create' | 'edit' | 'region'

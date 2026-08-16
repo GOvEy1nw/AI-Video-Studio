@@ -103,6 +103,28 @@ describe("generation transport request builders", () => {
     expect(request.body.enhancePrompt).toBe(true);
   });
 
+  it("sends a selected style only for normal video generation", () => {
+    const normal = buildVideoRequestBody({
+      prompt: "Prompt",
+      imagePath: null,
+      settings: { ...settings, styleId: "ltx25_soft_enhance" },
+    });
+    const reframe = buildVideoRequestBody({
+      prompt: "Prompt",
+      imagePath: null,
+      settings: { ...settings, styleId: "ltx25_soft_enhance" },
+      reframe: {
+        aspectMode: "16:9",
+        padding: { top: 0, bottom: 0, left: 0, right: 0 },
+        controlVideoStartTime: 0,
+        controlVideoDuration: 2,
+      },
+    });
+
+    expect(normal.body.styleId).toBe("ltx25_soft_enhance");
+    expect(reframe.body.styleId).toBeUndefined();
+  });
+
   it("preserves curated image profile payloads", () => {
     expect(
       buildImageRequestBody("prompt", settings, [

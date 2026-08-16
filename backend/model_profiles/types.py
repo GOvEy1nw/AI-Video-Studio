@@ -182,6 +182,19 @@ class WanGPModelMetadata:
 
 
 @dataclass(frozen=True)
+class StyleDefinition:
+    """One backend-curated style action exposed through shared metadata."""
+
+    id: str
+    display_name: str
+    thumbnail_url: str
+    source_url: str
+    lora_url: str | None = None
+    lora_strength: float | None = None
+    prompt_text: str | None = None
+
+
+@dataclass(frozen=True)
 class ModelProfile:
     """A curated AiVS model profile.
 
@@ -198,6 +211,12 @@ class ModelProfile:
     wangp_model_type: str
     wangp_metadata: WanGPModelMetadata
     wangp_default_settings: dict[str, object] = field(default_factory=dict[str, object])
+    wangp_accelerator_profile_id: str | None = None
+    wangp_accelerator_profile_ids: dict[str, str] = field(
+        default_factory=dict[str, str]
+    )
+    wangp_preset_profile_id: str | None = None
+    styles: tuple[StyleDefinition, ...] = ()
     text_to_image: bool = False
     text_to_video: bool = False
     image_to_video: bool = False
@@ -240,6 +259,11 @@ class ModelProfile:
     director: DirectorPolicy = field(default_factory=DirectorPolicy)
     music: MusicPolicy = field(default_factory=MusicPolicy)
     license: ModelLicenseInfo | None = None
+
+    def wangp_accelerator_profile_for(self, model_type: str) -> str | None:
+        return self.wangp_accelerator_profile_ids.get(
+            model_type, self.wangp_accelerator_profile_id
+        )
 
 
 REFERENCE_SUBJECT_ROLE = InputMediaRole(

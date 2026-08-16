@@ -11,6 +11,7 @@ import re
 import sys
 import threading
 import time
+from copy import deepcopy
 from collections import deque
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
@@ -256,6 +257,43 @@ class WanGPBridge:
         session.ensure_ready()
         logger.info("WanGP runtime preloaded successfully")
 
+    def resolve_profiles(
+        self,
+        model_type: str,
+        *,
+        accelerator_profile_id: str | None = None,
+        preset_profile_id: str | None = None,
+    ) -> dict[str, object]:
+        session = self._get_session()
+        has_profiles = (
+            accelerator_profile_id is not None or preset_profile_id is not None
+        )
+        resolver_name = "resolve_profiles" if has_profiles else "get_default_settings"
+        resolver = getattr(session, resolver_name, None)
+        if not callable(resolver):
+            raise RuntimeError(
+                f"WanGP runtime does not support {resolver_name}; update Wan2GP."
+            )
+        try:
+            settings = (
+                resolver(
+                    model_type,
+                    accelerator_profile_id=accelerator_profile_id,
+                    preset_profile_id=preset_profile_id,
+                )
+                if has_profiles
+                else resolver(model_type)
+            )
+        except Exception as exc:
+            raise RuntimeError(
+                f"WanGP {resolver_name} failed for '{model_type}': {exc}"
+            ) from exc
+        if not isinstance(settings, dict):
+            raise RuntimeError(
+                f"WanGP {resolver_name} returned invalid settings for '{model_type}'."
+            )
+        return deepcopy(cast(dict[str, object], settings))
+
     def generate_video(
         self,
         *,
@@ -311,8 +349,9 @@ class WanGPBridge:
         if default_settings:
             for key, value in default_settings.items():
                 settings.setdefault(key, value)
-            if "force_fps" in default_settings:
-                settings["force_fps"] = default_settings["force_fps"]
+            force_fps = default_settings.get("force_fps")
+            if isinstance(force_fps, str) and force_fps in {"auto", "control"}:
+                settings["force_fps"] = force_fps
         if active_model_type.startswith("ltx2_"):
             settings["sliding_window_size"] = 481
         if negative_prompt.strip():
@@ -375,6 +414,26 @@ class WanGPBridge:
             on_progress=on_progress,
             is_cancelled=is_cancelled,
         )
+
+    def ensure_style_lora(
+        self,
+        *,
+        source_url: str,
+        model_type: str,
+        on_progress: ProgressCallback,
+        is_cancelled: CancelledCallback,
+    ) -> None:
+        if is_cancelled():
+            raise RuntimeError("Generation was cancelled")
+        on_progress("downloading_model", 3, None, None, "Downloading selected style")
+        session = self._get_session()
+        runtime = session._ensure_runtime()
+        # ponytail: WanGP's downloader has no cancellation callback; check around its one blocking call.
+        runtime.module.download_models(
+            "", model_type, file_type=1, model_def={"loras": [source_url]}
+        )
+        if is_cancelled():
+            raise RuntimeError("Generation was cancelled")
 
     def generate_director_video(
         self,

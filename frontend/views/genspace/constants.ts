@@ -62,6 +62,7 @@ export const AUDIO_GUIDE_ROLE_OPTIONS = [
 export const DEFAULT_VIDEO_SETTINGS = {
   model: "fast" as "fast" | "pro",
   videoProfileId: "ltx2_25_fast",
+  styleId: undefined as string | undefined,
   duration: 5,
   videoResolution: "540p",
   fps: 24,

@@ -34,7 +34,13 @@ def test_director_generation_uses_shared_state_and_bridge(client, enable_wangp) 
     assert settings["multi_prompts_gen_type"] == "FG"
     assert settings["video_length"] == 121
     assert settings["custom_settings"] == {"prompt_relay_epsilon": 0.001}
-    assert "activated_loras" not in settings
+    assert settings["sample_solver"] == "distilled_8_steps_ancestral"
+    assert settings["activated_loras"] == [
+        "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.5-22b-distilled-lora-450_bf16.safetensors"
+    ]
+    assert enable_wangp.resolved_profile_calls == [
+        ("ltx2_25_22B", "ltx2_25_two_stage_distilled_8_3", None)
+    ]
 
 
 def test_director_settings_exclude_continue_video_prefix(test_state) -> None:

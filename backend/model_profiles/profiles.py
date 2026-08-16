@@ -58,10 +58,11 @@ from model_profiles.types import (
     ResolutionTier,
     SDR_TO_HDR_ROLE,
     START_IMAGE_ROLE,
+    StyleDefinition,
     WanGPModelMetadata,
 )
 from model_profiles.video_profiles import VIDEO_PROFILES
-from wangp_model_packs import H3_TURBO_FL2VA_LORA_URL, PACKS
+from wangp_model_packs import PACKS
 
 
 __all__ = (
@@ -85,7 +86,6 @@ __all__ = (
     "H3_REFERENCE_AUDIO_ROLE",
     "H3_REFERENCE_IMAGE_ROLE",
     "H3_REFERENCE_VIDEO_ROLE",
-    "H3_TURBO_FL2VA_LORA_URL",
     "HUMAN_MOTION_POSE_ROLE",
     "HUMAN_MOTION_ROLE",
     "IMAGE_PROFILES",
@@ -108,6 +108,7 @@ __all__ = (
     "ResolutionTier",
     "SDR_TO_HDR_ROLE",
     "START_IMAGE_ROLE",
+    "StyleDefinition",
     "SpeechPolicy",
     "SfxPolicy",
     "SystemDependency",

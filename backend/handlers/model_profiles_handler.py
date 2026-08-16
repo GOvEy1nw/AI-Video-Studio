@@ -20,6 +20,7 @@ from api_types import (
     ModelProfileLicenseInfo,
     ModelProfileListResponse,
     ModelProfileResponse,
+    ModelProfileStyle,
     ModelProfileSfxPolicy,
     ModelProfileSpeechPolicy,
     ModelProfileSystemDependency,
@@ -96,6 +97,15 @@ class ModelProfilesHandler(StateHandlerBase):
                 capabilities=metadata.capabilities,
                 settingValues=metadata.setting_values,
             ),
+            styles=[
+                ModelProfileStyle(
+                    id=style.id,
+                    displayName=style.display_name,
+                    thumbnailUrl=style.thumbnail_url,
+                    sourceUrl=style.source_url,
+                )
+                for style in profile.styles
+            ],
             capabilities=ModelProfileCapabilities(
                 textToImage=profile.text_to_image,
                 textToVideo=profile.text_to_video,

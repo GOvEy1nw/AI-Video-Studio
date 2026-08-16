@@ -7,6 +7,7 @@ export interface GenerationSettings {
   cameraMotion: string;
   aspectRatio?: string;
   videoProfileId?: string;
+  styleId?: string;
   imageResolution: string;
   imageAspectRatio: string;
   imageSteps: number;

@@ -11,6 +11,7 @@ import { fileUrlToPath } from './url-to-path'
 export type GenSpaceSettingsPatch = {
   model: 'fast' | 'pro'
   videoProfileId: string
+  styleId: string | undefined
   duration: number
   videoResolution: string
   fps: number
@@ -270,6 +271,7 @@ export function settingsPatchFromGenerationParams(
     ...current,
     model,
     videoProfileId: params.videoProfileId || current.videoProfileId,
+    styleId: params.styleId,
     duration: params.duration ?? current.duration,
     videoResolution: params.resolution || current.videoResolution,
     fps: params.fps ?? current.fps,

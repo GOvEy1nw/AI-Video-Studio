@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from copy import deepcopy
 from dataclasses import replace
 from importlib import import_module
 import json
@@ -12,15 +13,21 @@ import sys
 import warnings
 from numbers import Real
 from pathlib import Path
-from typing import Any, Callable, cast
+from typing import Any, Callable, TypeAlias, cast
 
 
-H3_TURBO_FL2VA_LORA_URL = "https://huggingface.co/Kijai/MiniMax-H3_comfy/resolve/main/loras/minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy_resized_avg_rank_21_bf16.safetensors"
-H3_TURBO_REF2VA_LORA_URL = "https://huggingface.co/Kijai/MiniMax-H3_comfy/resolve/main/loras/minimax_h3_ref2v_lightx2v_turbo_4step_v0.1_resized_avg_rank_20_bf16.safetensors"
-LTX25_DISTILLED_LORA_URL = "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.5-22b-distilled-lora-450_bf16.safetensors"
+CURATED_VIDEO_PACK_IDS = frozenset(
+    {
+        "ltx2_fast",
+        "ltx2_quality",
+        "minimax-h3-fast",
+        "minimax-h3-quality",
+    }
+)
+PackValue: TypeAlias = str | list[str] | dict[str, str]
 
 
-PACKS: dict[str, dict[str, str | list[str]]] = {
+PACKS: dict[str, dict[str, PackValue]] = {
     "utility": {"name": "Utility Models", "kind": "utility"},
     "z_image_turbo": {"name": "Z-Image Turbo", "kind": "model", "model_type": "z_image"},
     "flux2_klein_4b": {"name": "Flux 2 Klein 4B", "kind": "model", "model_type": "flux2_klein_4b"},
@@ -56,9 +63,14 @@ PACKS: dict[str, dict[str, str | list[str]]] = {
         "name": "LTX 2.5 Fast",
         "kind": "model",
         "model_type": "ltx2_25_22B",
-        "loras": [LTX25_DISTILLED_LORA_URL],
+        "accelerator_profile_id": "ltx2_25_two_stage_distilled_8_3",
     },
-    "ltx2_quality": {"name": "LTX 2.5 Quality", "kind": "model", "model_type": "ltx2_25_22B"},
+    "ltx2_quality": {
+        "name": "LTX 2.5 Quality",
+        "kind": "model",
+        "model_type": "ltx2_25_22B",
+        "accelerator_profile_id": "ltx2_25_two_stage_hq_res2s_15_3",
+    },
     "ace_step_15_turbo": {"name": "ACE-Step 1.5 Fast", "kind": "model", "model_type": "ace_step_v1_5_turbo_lm_1_7b"},
     "ace_step_15_xl_turbo": {"name": "ACE-Step 1.5 XL", "kind": "model", "model_type": "ace_step_v1_5_xl_turbo_lm_1_7b"},
     "mmaudio": {"name": "MMAudio Sound Effects", "kind": "audio_processor", "processor": "mmaudio"},
@@ -68,14 +80,15 @@ PACKS: dict[str, dict[str, str | list[str]]] = {
         "name": "MiniMax H3 Fast",
         "kind": "model",
         "model_types": ["minimax_h3_fl2va_pruned", "minimax_h3_ref2va_pruned"],
-        "config": "gguf_q4_k_m,fp8mix",
-        "loras": [H3_TURBO_FL2VA_LORA_URL, H3_TURBO_REF2VA_LORA_URL],
+        "accelerator_profile_ids": {
+            "minimax_h3_fl2va_pruned": "aivs_h3_turbo_lightx2v_fl2v_4_steps_v0.1",
+            "minimax_h3_ref2va_pruned": "aivs_h3_turbo_lightx2v_ref2v_4_steps_v0.1",
+        },
     },
     "minimax-h3-quality": {
         "name": "MiniMax H3 Quality",
         "kind": "model",
         "model_types": ["minimax_h3_fl2va_pruned", "minimax_h3_ref2va_pruned"],
-        "config": "gguf_q4_k_m,fp8mix",
     },
     "prompt_enhancer": {"name": "Prompt Enhancer", "kind": "prompt"},
 }
@@ -445,26 +458,103 @@ def _model_paths(
     return paths
 
 
-def _pack_model_def(wgp: Any, pack: dict[str, str | list[str]], model_type: str) -> dict[str, Any]:
+def _pack_model_def(
+    wgp: Any,
+    pack: dict[str, PackValue],
+    model_type: str,
+    profile_settings: dict[str, object] | None = None,
+) -> dict[str, Any]:
     model_def = cast(dict[str, Any], wgp.get_model_def(model_type)).copy()
-    config_id = pack.get("config")
+    config_id = pack.get("config") or (profile_settings or {}).get("config")
     if isinstance(config_id, str):
         config_groups = wgp.get_model_config_groups(model_type, model_def)
         selected_configs = import_module("shared.config_groups").selected_model_configs
         for _, _, config_def in selected_configs(config_groups, config_id):
             model_def.update(config_def)
-    loras = pack.get("loras")
-    if isinstance(loras, list):
+    resolved_loras = (profile_settings or {}).get("activated_loras")
+    explicit_loras = pack.get("loras")
+    profile_loras = (
+        [lora for lora in cast(list[object], resolved_loras) if isinstance(lora, str)]
+        if isinstance(resolved_loras, list)
+        else []
+    )
+    pack_loras = (
+        list(explicit_loras)
+        if isinstance(explicit_loras, list)
+        else []
+    )
+    if profile_loras or pack_loras:
         model_def["loras"] = [
             *cast(list[str], wgp.get_model_recursive_prop(
                 model_type, "loras", return_list=True, model_def=model_def
             ) or []),
-            *loras,
+            *profile_loras,
+            *pack_loras,
         ]
     return model_def
 
 
-def _pack_model_types(pack: dict[str, str | list[str]]) -> list[str]:
+def _resolve_pack_profile_settings(
+    session: Any,
+    pack_id: str,
+    pack: dict[str, PackValue],
+    model_type: str,
+) -> dict[str, object]:
+    if pack_id not in CURATED_VIDEO_PACK_IDS:
+        return {}
+    accelerator_profile_ids = pack.get("accelerator_profile_ids")
+    accelerator_profile_id = (
+        accelerator_profile_ids.get(model_type)
+        if isinstance(accelerator_profile_ids, dict)
+        else pack.get("accelerator_profile_id")
+    )
+    preset_profile_id = pack.get("preset_profile_id")
+    has_profiles = (
+        accelerator_profile_id is not None or preset_profile_id is not None
+    )
+    resolver_name = "resolve_profiles" if has_profiles else "get_default_settings"
+    resolver = getattr(session, resolver_name, None)
+    if not callable(resolver):
+        raise RuntimeError(
+            f"WanGP runtime does not support {resolver_name}; update Wan2GP."
+        )
+    try:
+        settings = (
+            resolver(
+                model_type,
+                accelerator_profile_id=accelerator_profile_id,
+                preset_profile_id=preset_profile_id,
+            )
+            if has_profiles
+            else resolver(model_type)
+        )
+    except Exception as exc:
+        raise RuntimeError(
+            f"WanGP {resolver_name} failed for '{model_type}': {exc}"
+        ) from exc
+    if not isinstance(settings, dict):
+        raise RuntimeError(
+            f"WanGP {resolver_name} returned invalid settings for '{model_type}'."
+        )
+    return deepcopy(cast(dict[str, object], settings))
+
+
+def _effective_pack_model_def(
+    wgp: Any,
+    session: Any,
+    pack_id: str,
+    pack: dict[str, PackValue],
+    model_type: str,
+) -> dict[str, Any]:
+    return _pack_model_def(
+        wgp,
+        pack,
+        model_type,
+        _resolve_pack_profile_settings(session, pack_id, pack, model_type),
+    )
+
+
+def _pack_model_types(pack: dict[str, PackValue]) -> list[str]:
     value = pack.get("model_types")
     if isinstance(value, list):
         return value
@@ -497,6 +587,7 @@ def _process_download_definitions(
 def _download_pack(
     wgp: Any,
     manager: Any,
+    session: Any,
     pack_id: str,
     progress_callback: Callable[[object], None] | None = None,
 ) -> set[Path]:
@@ -521,12 +612,12 @@ def _download_pack(
                 wgp,
                 model_type,
                 progress_callback,
-                _pack_model_def(wgp, pack, model_type),
+                _effective_pack_model_def(wgp, session, pack_id, pack, model_type),
             )
-    return _validate_paths(pack_id, _resolve_pack_paths(wgp, manager, pack_id))
+    return _validate_paths(pack_id, _resolve_pack_paths(wgp, manager, session, pack_id))
 
 
-def _resolve_pack_paths(wgp: Any, manager: Any, pack_id: str) -> set[Path]:
+def _resolve_pack_paths(wgp: Any, manager: Any, session: Any, pack_id: str) -> set[Path]:
     """Resolve expected local files without downloading anything."""
     pack = PACKS[pack_id]
     kind = pack["kind"]
@@ -545,7 +636,13 @@ def _resolve_pack_paths(wgp: Any, manager: Any, pack_id: str) -> set[Path]:
 
     paths: set[Path] = set()
     for model_type in _pack_model_types(pack):
-        paths.update(_model_paths(manager, model_type, _pack_model_def(wgp, pack, model_type)))
+        paths.update(
+            _model_paths(
+                manager,
+                model_type,
+                _effective_pack_model_def(wgp, session, pack_id, pack, model_type),
+            )
+        )
     return paths
 
 
@@ -598,11 +695,16 @@ def main() -> int:
     files_locator.set_checkpoints_paths(checkpoint_paths)
     wgp.server_config["checkpoints_paths"] = checkpoint_paths
     manager = _create_model_manager(wgp)
+    api = import_module("shared.api")
+    profile_session = api.WanGPSession(
+        root=root,
+        config_path=app_data_dir / "wangp_bridge" / "wgp_config.json",
+    )
 
     if args.list:
         installed_packs: list[dict[str, object]] = []
         for pack_id in PACKS:
-            paths = _resolve_pack_paths(wgp, manager, pack_id)
+            paths = _resolve_pack_paths(wgp, manager, profile_session, pack_id)
             installed = bool(paths) and all(path.is_file() for path in paths)
             if installed:
                 manifests[pack_id] = sorted(_manifest_path(root, path) for path in paths)
@@ -628,6 +730,7 @@ def main() -> int:
         paths = _download_pack(
             wgp,
             manager,
+            profile_session,
             pack_id,
             _pack_progress_callback(pack_id, pack_name, pack_index, pack_count),
         )

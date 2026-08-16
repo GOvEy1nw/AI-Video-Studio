@@ -34,10 +34,39 @@ from model_profiles.types import (
     REFERENCE_VOICE_ROLE,
     SDR_TO_HDR_ROLE,
     START_IMAGE_ROLE,
+    StyleDefinition,
     WanGPModelMetadata,
     _image_setting_values,  # pyright: ignore[reportPrivateUsage]
 )
-from wangp_model_packs import H3_TURBO_FL2VA_LORA_URL
+def _ltx25_style(
+    style_id: str, display_name: str, thumbnail_name: str, source_url: str
+) -> StyleDefinition:
+    return StyleDefinition(
+        id=style_id,
+        display_name=display_name,
+        thumbnail_url=f"/styles/ltx25/{thumbnail_name}.webp",
+        source_url=source_url,
+        lora_url=source_url,
+        lora_strength=1.0,
+    )
+
+
+LTX25_STYLES: tuple[StyleDefinition, ...] = (
+    _ltx25_style("ltx25_soft_enhance", "Soft Enhance", "soft-enhance", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Soft_Enhance_Style_LoRa/resolve/main/LTX2.3_Soft_Enhance.safetensors"),
+    _ltx25_style("ltx25_fantasy_painterly", "Fantasy Painterly", "fantasy-painterly", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Fantasy_Painterly_Style_LoRa/resolve/main/Fantasy_Painterly.safetensors"),
+    _ltx25_style("ltx25_pixar_toon", "Pixar Toon", "pixar-toon", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Pixar_Toon_Style_LoRa/resolve/main/Pixar_Toon.safetensors"),
+    _ltx25_style("ltx25_90s_animation", "90s Animation", "90s-animation", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_90s_Animation_Style_LoRa/resolve/main/90sAnimationStyle.safetensors"),
+    _ltx25_style("ltx25_claymation", "Claymation", "claymation", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Clay_Mation_Style_LoRa/resolve/main/Claymation.safetensors"),
+    _ltx25_style("ltx25_cozy_felt", "Cozy Felt", "cozy-felt", "https://huggingface.co/vrgamedevgirl84/LTX2.3_Cozy_Felt_Style_LoRa/resolve/main/CozyFelt.safetensors"),
+    _ltx25_style("ltx25_fantasy_anime", "Fantasy Anime", "fantasy-anime", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Fantasy_Anime_Style_LoRa/resolve/main/Fantasy_Anime.safetensors"),
+    _ltx25_style("ltx25_fantasy_realism", "Fantasy Realism", "fantasy-realism", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Fantasy_Realism_Style_LoRa/resolve/main/Fantasy_Realism.safetensors"),
+    _ltx25_style("ltx25_fantasy_puppet", "Fantasy Puppet", "fantasy-puppet", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Fantasy_Puppet_Style_LoRa/resolve/main/FantasyPuppetStyle.safetensors"),
+    _ltx25_style("ltx25_crisp_enhance", "Crisp Enhance", "crisp-enhance", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Crisp_Enhance_Style_LoRa/resolve/main/LTX2.3_Crisp_Enhance.safetensors"),
+    _ltx25_style("ltx25_post_apocalyptic", "Post-Apocalyptic", "post-apocalyptic", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Post_Apocalyptic_Style_LoRa/resolve/main/Post_Apocalyptic.safetensors"),
+    _ltx25_style("ltx25_paper_cut_out", "Paper Cut Out", "paper-cut-out", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Paper_Cut_Out_Style_LoRa/resolve/main/PaperCutOutStyle.safetensors"),
+    _ltx25_style("ltx25_wild_west", "Wild West", "wild-west", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Wild_West_Style_LoRa/resolve/main/Wild_West.safetensors"),
+    _ltx25_style("ltx25_cinematic_sci_fi_cyberpunk", "Cinematic Sci-fi Cyberpunk", "cinematic-sci-fi-cyberpunk", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Cinematic_Sci-fi-Cyberpunk_Style_LoRa/resolve/main/Cinematic_sci-fi-cyberpunk.safetensors"),
+)
 
 
 _ltx_fast_profile = ModelProfile(
@@ -168,22 +197,8 @@ _ltx_fast_profile = ModelProfile(
                 },
             },
         ),
-        wangp_default_settings={
-            "sample_solver": "distilled_8_steps",
-            "num_inference_steps": 8,
-            "guidance_phases": 2,
-            "guidance_scale": 1.0,
-            "audio_guidance_scale": 1.0,
-            "alt_guidance_scale": 1.0,
-            "alt_scale": 0.0,
-            "perturbation_switch": 0,
-            "perturbation_layers": [28],
-            "perturbation_start_perc": 0,
-            "perturbation_end_perc": 100,
-            "apg_switch": 0,
-            "cfg_star_switch": 0,
-            "self_refiner_setting": 0,
-        },
+        wangp_accelerator_profile_id="ltx2_25_two_stage_distilled_8_3",
+        styles=LTX25_STYLES,
         text_to_image=True,
         text_to_video=True,
         image_to_video=True,
@@ -356,17 +371,6 @@ _h3_quality_profile = ModelProfile(
                 prompt_enhancer={"default": "", "choices": [{"label": "Enhance prompt", "value": "T"}]},
             ),
         ),
-        wangp_default_settings={
-            "video_length": 124,
-            "sliding_window_size": 362,
-            "sliding_window_overlap": 18,
-            "num_inference_steps": 20,
-            "guidance_scale": 1.0,
-            "flow_shift": 12.0,
-            "sample_solver": "euler",
-            "force_fps": 24,
-            "config": "gguf_q4_k_m,fp8mix",
-        },
         text_to_video=True,
         image_to_video=True,
         video_to_video=True,
@@ -440,15 +444,7 @@ _ltx_quality_profile = _with_required_pack(
         _ltx_fast_profile,
         id="ltx2_25_quality",
         display_name="LTX 2.5 Quality",
-        wangp_default_settings={
-            **_ltx_fast_profile.wangp_default_settings,
-            "sample_solver": "res2s",
-            "num_inference_steps": 15,
-            "guidance_scale": 3.0,
-            "audio_guidance_scale": 7.0,
-            "alt_guidance_scale": 3.0,
-            "alt_scale": 0.45,
-        },
+        wangp_accelerator_profile_id="ltx2_25_two_stage_hq_res2s_15_3",
     ),
     "ltx2_quality",
 )
@@ -457,12 +453,9 @@ _h3_fast_profile = _with_required_pack(
         _h3_quality_profile,
         id="minimax_h3_fast",
         display_name="MiniMax H3 Fast",
-        wangp_default_settings={
-            **_h3_quality_profile.wangp_default_settings,
-            "num_inference_steps": 6,
-            "flow_shift": 6,
-            "loras_multipliers": "0.75|",
-            "activated_loras": [H3_TURBO_FL2VA_LORA_URL],
+        wangp_accelerator_profile_ids={
+            "minimax_h3_fl2va_pruned": "aivs_h3_turbo_lightx2v_fl2v_4_steps_v0.1",
+            "minimax_h3_ref2va_pruned": "aivs_h3_turbo_lightx2v_ref2v_4_steps_v0.1",
         },
     ),
     "minimax-h3-fast",

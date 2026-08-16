@@ -148,13 +148,21 @@ class DirectorGenerationHandler(StateHandlerBase):
                     "DIRECTOR_WANGP_MAPPING_UNAVAILABLE: resolution/aspect",
                 ) from exc
             seed = self._resolve_seed()
+            profile_settings = self._wangp_bridge.resolve_profiles(
+                profile.wangp_model_type,
+                accelerator_profile_id=profile.wangp_accelerator_profile_for(
+                    profile.wangp_model_type
+                ),
+                preset_profile_id=profile.wangp_preset_profile_id,
+            )
+            profile_settings.update(profile.wangp_default_settings)
             settings = self._build_settings(
                 plan,
                 profile.wangp_model_type,
                 f"{resolution[0]}x{resolution[1]}",
                 prepared.fps,
                 seed,
-                profile.wangp_default_settings,
+                profile_settings,
                 prepared.promptRelayEpsilon,
             )
             output_path = self._wangp_bridge.generate_director_video(
