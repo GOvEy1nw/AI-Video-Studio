@@ -1,0 +1,8 @@
+# #0083 AIVS-014 first pass left MiniMax unsupported compose controls enabled and persisted unsanitized music snapshot fields after request sanitization.
+
+- 2026-08-16T15:14:09Z `issue`: AIVS-014 first pass left MiniMax unsupported compose controls enabled and persisted unsanitized music snapshot fields after request sanitization. [frontend/views/genspace/music/compile-music-request.ts]
+- 2026-08-16T15:14:16Z `attempt`: Sanitized the submission snapshot from the compiled request and disabled MiniMax-only unsupported compose/seed controls through the existing music policy. [frontend/views/genspace/music/compile-music-request.ts] (partial)
+- 2026-08-16T15:14:42Z `attempt`: Required supportsComposeLyrics truthiness for all profiles; existing partial/profile-less MusicSettings contracts became disabled and two focused tests failed. [frontend/views/genspace/music/MusicSettings.tsx] (failed)
+- 2026-08-16T15:14:55Z `attempt`: Adjusted compose-control gating so explicit unsupported policies disable controls while legacy partial/profile-less contracts preserve prior behavior. [frontend/views/genspace/music/MusicSettings.tsx] (partial)
+- 2026-08-16T15:15:19Z `attempt`: Sanitized saved MiniMax submission snapshots and gated explicit unsupported compose controls while preserving legacy partial-profile behavior; focused frontend tests and TypeScript passed. [frontend/views/genspace/music/compile-music-request.ts] (worked)
+- 2026-08-16T15:15:26Z `fix`: MiniMax Music 3 now persists the effective sanitized music recipe and disables unsupported compose controls without regressing existing ACE/partial-profile MusicSettings behavior. [frontend/views/genspace/music/compile-music-request.ts]

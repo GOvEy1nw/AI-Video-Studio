@@ -18,13 +18,13 @@ afterEach(() => {
 })
 
 describe('Model Manager catalog', () => {
-  it('exposes LTX 2.5 Fast and Quality packs on the same checkpoint', () => {
+  it('exposes LTX 2.5 Fast and Quality packs on their curated checkpoints', () => {
     expect(getModelPacks()).toContainEqual({
       id: 'ltx2_fast',
       name: 'LTX 2.5 Fast',
       estimatedSize: '',
       installed: false,
-      modelType: 'ltx2_25_22B',
+      modelType: 'ltx2_25_22B_distilled',
       groupId: 'ltx2_25',
       groupName: 'LTX 2.5',
       variantName: 'Fast',
@@ -79,5 +79,18 @@ describe('legacy model migration', () => {
     expect(fs.readFileSync(path.join(models, 'checkpoints', 'collision.safetensors'), 'utf8')).toBe('new')
     expect(fs.existsSync(path.join(legacy, 'ckpts', 'collision.safetensors'))).toBe(true)
     expect(fs.readFileSync(path.join(models, 'loras', 'voice.safetensors'), 'utf8')).toBe('lora')
+  })
+
+  it('exposes the experimental MiniMax Music 3 pack', () => {
+    expect(getModelPacks()).toContainEqual({
+      id: 'minimax_music3',
+      name: 'MiniMax Music 3',
+      estimatedSize: '~15.0 GB',
+      installed: false,
+      modelType: 'minimax_music3',
+      mediaTypes: ['audio'],
+      features: ['generate'],
+      licenseUrl: 'https://huggingface.co/MiniMaxAI/MiniMax-Music3/blob/main/LICENSE',
+    })
   })
 })

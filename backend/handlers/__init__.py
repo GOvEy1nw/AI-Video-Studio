@@ -6,6 +6,7 @@ from handlers.health_handler import HealthHandler
 from handlers.image_generation_handler import ImageGenerationHandler
 from handlers.model_profiles_handler import ModelProfilesHandler
 from handlers.music_generation_handler import MusicGenerationHandler
+from handlers.media_upscale_handler import MediaUpscaleHandler
 from handlers.sfx_generation_handler import SfxGenerationHandler
 from handlers.speech_generation_handler import SpeechGenerationHandler
 from handlers.prompt_enhancement_handler import PromptEnhancementHandler
@@ -24,6 +25,7 @@ __all__ = [
     "RetakeHandler",
     "ModelProfilesHandler",
     "MusicGenerationHandler",
+    "MediaUpscaleHandler",
     "SfxGenerationHandler",
     "SpeechGenerationHandler",
 ]

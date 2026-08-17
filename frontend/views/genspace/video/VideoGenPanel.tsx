@@ -19,6 +19,7 @@ import { VideoMediaInputs } from "./VideoMediaInputs";
 import { VideoModeTabs } from "./VideoModeTabs";
 import { VideoToolInput } from "./VideoToolInput";
 import { getVideoToolLabel } from "./video-tools";
+import { UpscalePanel } from "../components/UpscalePanel";
 
 function LightricksIcon({ className }: { className?: string }) {
   return (
@@ -207,6 +208,7 @@ export function VideoGenPanel({
   const isRetake = videoTools.mode === "retake";
   const isTools = videoTools.mode === "reframe";
   const isReframe = isTools && videoTools.selectedTool === "reframe";
+  const isUpscale = isTools && videoTools.selectedTool === "upscale";
   const isPanelMode = isRetake || isTools;
   const profileStyles = selectedProfile?.styles ?? [];
   const styles = !isPanelMode ? profileStyles : [];
@@ -379,7 +381,7 @@ export function VideoGenPanel({
           onToolChange={videoTools.setSelectedTool}
           profile={selectedProfile}
         />
-        {installedProfiles.length ? (
+        {!isUpscale && installedProfiles.length ? (
           <ModelPicker
             profiles={installedProfiles}
             value={selectedProfile.id}
@@ -396,13 +398,13 @@ export function VideoGenPanel({
             modelDownload={profiles.modelDownload}
             icon={<LightricksIcon className="h-5 w-5" />}
           />
-        ) : profiles.options.length ? (
+        ) : !isUpscale && profiles.options.length ? (
           <ModelDownloadButton />
-        ) : (
+        ) : !isUpscale ? (
           <div className="flex items-center gap-1.5 rounded-md bg-zinc-800/50 px-2 py-1.5 text-zinc-500">
             <span>Loading models…</span>
           </div>
-        )}
+        ) : null}
       </GenPanelSection>
       {!isPanelMode ? (
         <VideoMediaInputs
@@ -417,7 +419,9 @@ export function VideoGenPanel({
           onReferenceRequestReady={setH3ReferenceRequest}
         />
       ) : null}
-      {isTools ? (
+      {isUpscale ? (
+        <UpscalePanel mediaKind="video" input={controller.upscale.input} onInputChange={controller.upscale.setInput} methods={controller.upscale.methods} method={controller.upscale.method} onMethodChange={controller.upscale.setMethod} scale={controller.upscale.scale} onScaleChange={controller.upscale.setScale} catalogError={controller.upscale.catalogError} isCatalogLoading={controller.upscale.isCatalogLoading} onRetryCatalog={controller.upscale.retryCatalog} disabled={generation.isRunning} resolveInputFileUrl={media.resolveInputFileUrl} syncInputFileToGallery={media.syncInputFileToGallery} />
+      ) : isTools ? (
         <div className="border-b border-zinc-800/60 bg-zinc-950/20">
           <div className={isReframe ? "max-h-[52vh] overflow-y-auto" : ""}>
             <VideoToolInput
@@ -451,7 +455,7 @@ export function VideoGenPanel({
           {videoTools.panel()}
         </div>
       ) : null}
-      <PromptEditor
+      {!isUpscale ? <PromptEditor
         value={prompt.value}
         onChange={prompt.setValue}
         mediaMentions={
@@ -527,7 +531,7 @@ export function VideoGenPanel({
             </div>
           ) : undefined
         }
-      />
+      /> : null}
       <div className="flex flex-wrap items-center gap-1.5 border-t border-zinc-800/60 px-4 py-3 text-xs text-zinc-400">
         {isRetake ? (
           <div className="pr-2 text-2xs text-zinc-500">

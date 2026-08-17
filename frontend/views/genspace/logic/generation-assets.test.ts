@@ -157,6 +157,37 @@ describe("GenSpace generated asset builders", () => {
     });
   });
 
+  it("persists Image Upscale source and method metadata", () => {
+    const source = { id: "source", url: "file:///C:/source.png", path: "C:\\source.png", role: "upscale_source", type: "image" as const };
+    const asset = buildGeneratedImageAsset({
+      snapshot: {
+        projectId: "project-a", prompt: "", imageMode: "upscale", settings: { ...DEFAULT_VIDEO_SETTINGS },
+        inputs: [source], assetPaths: [],
+        upscale: { mediaKind: "image", method: "seedvr2", scale: 2, source },
+      },
+      finalPath: "C:\\output.png", finalUrl: "file:///C:/output.png", createdAt: 1,
+    });
+
+    expect(asset.generationParams).toMatchObject({
+      mode: "upscale", imageProcessMode: "upscale",
+      upscale: { mediaKind: "image", method: "seedvr2", scale: 2, source: { path: "C:\\source.png" } },
+    });
+  });
+
+  it("preserves the source video duration for Upscale output metadata", () => {
+    const source = { id: "source", url: "file:///C:/source.mp4", path: "C:\\source.mp4", mediaDuration: 12, role: "upscale_source", type: "video" as const };
+    const asset = buildGeneratedVideoAsset({
+      snapshot: {
+        projectId: "project-a", prompt: "", settings: { ...DEFAULT_VIDEO_SETTINGS },
+        inputs: [source], assetPaths: [], inputImage: null, inputAudio: null, videoTool: "upscale",
+        upscale: { mediaKind: "video", method: "lanczos", scale: 2, source },
+      },
+      finalPath: "C:\\output.mp4", finalUrl: "file:///C:/output.mp4", createdAt: 1,
+    });
+
+    expect(asset).toMatchObject({ duration: 12, generationParams: { mode: "upscale", duration: 12 } });
+  });
+
   it("persists a selected normal-generation style for Copy Settings", () => {
     const snapshot: VideoSubmissionSnapshot = {
       projectId: "project-a",

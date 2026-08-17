@@ -12,6 +12,7 @@ import { ImageModelControls } from "./ImageModelControls";
 import { RegionPromptEditor } from "./RegionPromptEditor";
 import { getImageProfilesForMode } from "./image-profile-options";
 import { isImageAspectRatioLocked } from "../logic/media-inputs";
+import { UpscalePanel } from "../components/UpscalePanel";
 
 export function ImageGenPanel({
   controller,
@@ -20,6 +21,17 @@ export function ImageGenPanel({
 }) {
   const { prompt, generation, settings, media, profiles, imageTools, framing } =
     controller;
+  if (imageTools.mode === "upscale") {
+    return (
+      <>
+        <GenPanelSection title="" className="text-xs text-zinc-400 flex gap-2 justify-between items-center" collapsible={false}>
+          <ImageModeTabs mode={imageTools.mode} onChange={imageTools.setMode} />
+        </GenPanelSection>
+        <UpscalePanel mediaKind="image" input={controller.upscale.input} onInputChange={controller.upscale.setInput} methods={controller.upscale.methods} method={controller.upscale.method} onMethodChange={controller.upscale.setMethod} scale={controller.upscale.scale} onScaleChange={controller.upscale.setScale} catalogError={controller.upscale.catalogError} isCatalogLoading={controller.upscale.isCatalogLoading} onRetryCatalog={controller.upscale.retryCatalog} disabled={generation.isRunning} resolveInputFileUrl={media.resolveInputFileUrl} syncInputFileToGallery={media.syncInputFileToGallery} />
+        <div className="flex flex-wrap items-center gap-1.5 border-t border-zinc-800/60 px-4 py-3 text-xs text-zinc-400"><GenerateButton onClick={generation.submit} disabled={!generation.canSubmit} loading={generation.isRunning} label="Upscale" icon={generation.icon} /></div>
+      </>
+    );
+  }
   const modeProfiles = getImageProfilesForMode(
     profiles.options,
     imageTools.mode,

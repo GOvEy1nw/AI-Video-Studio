@@ -24,6 +24,7 @@ export function buildGenSpaceRestorePlan(
   const isSpeech =
     params.mode === "text-to-speech" &&
     (params.speech?.schemaVersion === 1 || params.speech?.schemaVersion === 2);
+  const isUpscale = params.mode === "upscale" && params.upscale?.schemaVersion === 1;
   const mode = genSpaceModeFromParams(params);
   const restoredImageInputs = buildImageInputsFromParams(
     params,
@@ -39,6 +40,9 @@ export function buildGenSpaceRestorePlan(
     : restoredImageInputs.filter(({ role }) => role !== "edit_image");
   const legacy = resolveLegacyInputMedia(params, imageInputs, projectAssets);
   const restoredSettings = settingsPatchFromGenerationParams(params, settings);
+  const upscaleSource = isUpscale
+    ? buildImageInputsFromParams({ ...params, imageInputMedia: [{ ...params.upscale!.source, role: "upscale_source" }] }, projectAssets)[0] ?? null
+    : null;
   const editOutpaint =
     params.imageEditOutpaint?.aspectMode === "custom"
       ? {
@@ -52,11 +56,11 @@ export function buildGenSpaceRestorePlan(
       mode === "image" ? "image" : mode === "music" ? "music" : "video",
     imageMode:
       mode === "image"
-        ? params.imageProcessMode ??
+        ? isUpscale ? "upscale" : params.imageProcessMode ??
           getImageModeForProfileId(restoredSettings.imageProfileId)
         : "create",
-    videoMode: mode === "reframe" || params.videoTool ? "reframe" : "generate",
-    videoTool: params.videoTool ?? "reframe",
+    videoMode: mode === "reframe" || params.videoTool || (isUpscale && params.upscale?.mediaKind === "video") ? "reframe" : "generate",
+    videoTool: isUpscale && params.upscale?.mediaKind === "video" ? "upscale" : params.videoTool ?? "reframe",
     prompt: params.prompt,
     settings: restoredSettings,
     musicSettings:
@@ -106,6 +110,7 @@ export function buildGenSpaceRestorePlan(
       inputImage: editImage ? null : legacy.inputImage,
       inputAudio: legacy.inputAudio,
       videoToolInput,
+      upscaleSource,
     },
     editToolMode: params.imageEditMask
       ? "retouch"

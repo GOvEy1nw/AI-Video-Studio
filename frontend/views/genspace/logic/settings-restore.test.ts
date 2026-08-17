@@ -31,6 +31,21 @@ function asset(generationParams: GenerationParams): Asset {
 const musicSettings: MusicSettings = { ...DEFAULT_MUSIC_SETTINGS };
 
 describe("GenSpace settings restoration", () => {
+  it("restores Upscale into its owning Image or Video tool", () => {
+    const source: Asset = { id: "source", type: "image", path: "D:\\project\\source.png", url: "file:///D:/project/source.png", prompt: "", resolution: "", createdAt: 1 };
+    const imagePlan = buildGenSpaceRestorePlan(asset({
+      mode: "upscale", prompt: "", model: "seedvr2", duration: 0, resolution: "", fps: 0, audio: false, cameraMotion: "none",
+      upscale: { schemaVersion: 1, mediaKind: "image", method: "seedvr2", scale: 2, source: { url: "file:///C:/stale/source.png", path: source.path, type: "image" } },
+    }), [source], DEFAULT_VIDEO_SETTINGS, musicSettings);
+    expect(imagePlan).toMatchObject({ mode: "image", imageMode: "upscale", media: { upscaleSource: { url: source.url } } });
+
+    const videoPlan = buildGenSpaceRestorePlan(asset({
+      mode: "upscale", prompt: "", model: "ltx25", duration: 0, resolution: "", fps: 0, audio: false, cameraMotion: "none",
+      upscale: { schemaVersion: 1, mediaKind: "video", method: "ltx25", scale: 2, source: { url: "file:///C:/source.mp4", path: "C:\\source.mp4", type: "video" } },
+    }), [], DEFAULT_VIDEO_SETTINGS, musicSettings);
+    expect(videoPlan).toMatchObject({ mode: "video", videoMode: "reframe", videoTool: "upscale" });
+  });
+
   it("round-trips Speech settings and refreshes reference-voice lineage", () => {
     const voice: Asset = {
       id: "voice",

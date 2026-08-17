@@ -59,6 +59,7 @@ export function useGenSpaceSettingsRestore({
   setReframeSource,
   setVideoTool,
   setVideoToolInput,
+  setUpscale,
   clearError,
 }: {
   assets: Asset[];
@@ -93,6 +94,7 @@ export function useGenSpaceSettingsRestore({
   }) => void;
   setVideoTool: (tool: VideoToolId) => void;
   setVideoToolInput: (input: GenSpaceMediaInput | null) => void;
+  setUpscale: (value: { method: import("../../../types/upscale").UpscaleMethodId; scale: number }) => void;
   clearError: () => void;
 }) {
   const pendingMedia = useRef<{
@@ -100,6 +102,7 @@ export function useGenSpaceSettingsRestore({
     editImage: GenSpaceMediaInput | null;
     inputImage: string | null;
     inputAudio: string | null;
+    upscaleSource?: GenSpaceMediaInput | null;
     mode: GenSpaceMode;
   } | null>(null);
   const [version, setVersion] = useState(0);
@@ -134,6 +137,11 @@ export function useGenSpaceSettingsRestore({
       setVideoMode(plan.videoMode);
       setVideoTool(plan.videoTool);
       setVideoToolInput(plan.media.videoToolInput);
+      if (plan.media.upscaleSource && asset.generationParams?.upscale) {
+        setUpscale({ method: asset.generationParams.upscale.method, scale: asset.generationParams.upscale.scale });
+        if (asset.generationParams.upscale.mediaKind === "image") setEditImage(plan.media.upscaleSource);
+        else setVideoToolInput(plan.media.upscaleSource);
+      }
       setEditToolMode(plan.editToolMode);
       setEditMask(plan.editMask);
       setEditOutpaint(plan.editOutpaint);
@@ -179,6 +187,7 @@ export function useGenSpaceSettingsRestore({
       setVideoMode,
       setVideoTool,
       setVideoToolInput,
+      setUpscale,
       settings,
     ],
   );
@@ -199,7 +208,11 @@ export function useGenSpaceSettingsRestore({
     if (pending.mode === "video" && videoProfiles.length === 0) return;
     pendingMedia.current = null;
     setInputs(pending.imageInputs);
-    setEditImage(pending.editImage);
+    setEditImage(
+      pending.mode === "image" && pending.upscaleSource
+        ? pending.upscaleSource
+        : pending.editImage,
+    );
     setInputImage(pending.inputImage);
     setInputAudio(pending.inputAudio);
   }, [

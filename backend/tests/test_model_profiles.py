@@ -191,19 +191,15 @@ class TestCuratedProfiles:
         assert fast.media_type == quality.media_type == "video"
         assert fast.display_name == "LTX 2.5 Fast"
         assert quality.display_name == "LTX 2.5 Quality"
-        assert fast.wangp_model_type == quality.wangp_model_type == "ltx2_25_22B"
+        assert fast.wangp_model_type == "ltx2_25_22B_distilled"
+        assert quality.wangp_model_type == "ltx2_25_22B"
         assert fast.wangp_default_settings == quality.wangp_default_settings == {}
-        assert (
-            fast.wangp_accelerator_profile_id
-            == "ltx2_25_two_stage_distilled_8_3"
-        )
+        assert fast.wangp_accelerator_profile_id is None
         assert (
             quality.wangp_accelerator_profile_id
             == "ltx2_25_two_stage_hq_res2s_15_3"
         )
-        assert fast.wangp_accelerator_profile_for("ltx2_25_22B") == (
-            "ltx2_25_two_stage_distilled_8_3"
-        )
+        assert fast.wangp_accelerator_profile_for("ltx2_25_22B_distilled") is None
         assert fast.wangp_preset_profile_id is quality.wangp_preset_profile_id is None
         assert fast.required_pack_ids == ("ltx2_fast",)
         assert quality.required_pack_ids == ("ltx2_quality",)
@@ -442,7 +438,7 @@ class TestModelProfilesEndpoint:
         ltx = next(p for p in data["profiles"] if p["id"] == "ltx2_25_fast")
         assert ltx["displayName"] == "LTX 2.5 Fast"
         assert ltx["mediaType"] == "video"
-        assert ltx["wangpModelType"] == "ltx2_25_22B"
+        assert ltx["wangpModelType"] == "ltx2_25_22B_distilled"
         assert ltx["capabilities"]["textToVideo"] is True
         assert ltx["capabilities"]["imageToVideo"] is True
         assert ltx["capabilities"]["audioToVideo"] is True

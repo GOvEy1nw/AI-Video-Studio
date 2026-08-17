@@ -48,15 +48,12 @@ export function resolveGenerationInputUrl(
   if (storedUrl) {
     const byUrl = assets.find((asset) => asset.url === storedUrl)
     if (byUrl) return byUrl.url
-    if (isUsableMediaUrl(storedUrl)) return storedUrl
   }
 
   const pathToMatch =
     storedPath ||
     (storedUrl?.startsWith('file://') ? fileUrlToPath(storedUrl) : null)
-  if (!pathToMatch) {
-    return isUsableMediaUrl(storedUrl) ? storedUrl : null
-  }
+  if (!pathToMatch) return isUsableMediaUrl(storedUrl) ? storedUrl : null
 
   const normalizedTarget = normalizePath(pathToMatch)
   const byPath = assets.find(
@@ -73,8 +70,7 @@ export function resolveGenerationInputUrl(
     if (byBaseName) return byBaseName.url
   }
 
-  if (storedUrl?.startsWith('file://')) return storedUrl
-  return null
+  return isUsableMediaUrl(storedUrl) ? storedUrl : null
 }
 
 export function resolveInputMediaPath(
@@ -174,6 +170,14 @@ export function recoverGenerationParamsMedia(
     ) {
       changed = true
       next.inputAudioUrl = resolved
+    }
+  }
+
+  if (params.upscale) {
+    const resolved = resolveGenerationInputUrl(params.upscale.source.url, params.upscale.source.path, assets)
+    if (resolved && resolved !== params.upscale.source.url) {
+      changed = true
+      next.upscale = { ...params.upscale, source: { ...params.upscale.source, url: resolved } }
     }
   }
 
@@ -316,7 +320,7 @@ export function resolveLegacyInputMedia(
 export function genSpaceModeFromParams(
   params: GenerationParams,
 ): 'image' | 'video' | 'music' | 'retake' | 'reframe' {
-  if (params.mode === 'text-to-image') return 'image'
+  if (params.mode === 'text-to-image' || (params.mode === 'upscale' && params.upscale?.mediaKind === 'image')) return 'image'
   if (
     params.mode === 'text-to-music' ||
     params.mode === 'text-to-sfx' ||

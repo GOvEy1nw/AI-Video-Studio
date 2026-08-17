@@ -13,6 +13,7 @@ from handlers import (
     ImageGenerationHandler,
     ModelProfilesHandler,
     MusicGenerationHandler,
+    MediaUpscaleHandler,
     PromptEnhancementHandler,
     RetakeHandler,
     SettingsHandler,
@@ -140,6 +141,12 @@ class AppHandler:
         self.speech_generation = SpeechGenerationHandler(
             state=self.state, lock=self._lock, generation_handler=self.generation,
             outputs_dir=config.outputs_dir, wangp_bridge=self.wangp_bridge,
+        )
+        self.media_upscale = MediaUpscaleHandler(
+            state=self.state,
+            lock=self._lock,
+            generation_handler=self.generation,
+            wangp_bridge=self.wangp_bridge,
         )
 
         self.health = HealthHandler(

@@ -24,10 +24,11 @@ import type { GenSpaceSettings } from "./constants";
 import type { SfxGenerationRecipeV1, SfxSettings } from "../../types/sfx";
 import type { SpeechGenerationRecipe, SpeechSettings } from "../../types/speech";
 import type { Asset } from "../../types/project";
+import type { UpscaleMediaKind, UpscaleMethod, UpscaleMethodId } from "../../types/upscale";
 
 export type GenSpaceMode = "image" | "video" | "music";
 export type AudioSubMode = "music" | "speech" | "sfx" | "mixer";
-export type ImageProcessMode = "create" | "edit" | "region";
+export type ImageProcessMode = "create" | "edit" | "region" | "upscale";
 export type VideoProcessMode = "generate" | "reframe" | "retake";
 export type GenSpaceMediaKind = "image" | "video" | "audio";
 
@@ -42,6 +43,7 @@ export interface FramingSettings {
 
 export interface GenSpaceMediaInput {
   id: string;
+  assetId?: string;
   alias?: string;
   url: string;
   path?: string;
@@ -182,6 +184,7 @@ export interface ImageGenPanelController {
   >;
   profiles: GenSpacePanelProfiles;
   imageTools: GenSpaceImageToolsController;
+  upscale: GenSpaceUpscaleController;
   framing: GenSpaceFramingController;
 }
 
@@ -192,6 +195,7 @@ export interface VideoGenPanelController {
   media: GenSpaceMediaController;
   profiles: GenSpacePanelProfiles;
   videoTools: GenSpaceVideoToolsController;
+  upscale: GenSpaceUpscaleController;
   framing: GenSpaceFramingController;
 }
 
@@ -227,6 +231,20 @@ export interface SfxGenPanelController {
   submit: () => void;
 }
 
+export interface GenSpaceUpscaleController {
+  mediaKind: UpscaleMediaKind;
+  input: GenSpaceMediaInput | null;
+  setInput: (input: GenSpaceMediaInput | null) => void;
+  methods: UpscaleMethod[];
+  method: UpscaleMethodId | null;
+  setMethod: (method: UpscaleMethodId) => void;
+  scale: number | null;
+  setScale: (scale: number) => void;
+  catalogError: string | null;
+  isCatalogLoading: boolean;
+  retryCatalog: () => void;
+}
+
 export interface SpeechGenPanelController {
   prompt: GenSpacePromptController;
   settings: SpeechSettings;
@@ -257,6 +275,7 @@ export interface ImageSubmissionSnapshot {
   settings: GenSpaceSettings;
   inputs: GenSpaceMediaInput[];
   assetPaths: Array<{ url: string; path: string }>;
+  upscale?: { mediaKind: UpscaleMediaKind; method: UpscaleMethodId; scale: number; source: GenSpaceMediaInput };
 }
 
 export interface VideoSubmissionSnapshot extends ImageSubmissionSnapshot {

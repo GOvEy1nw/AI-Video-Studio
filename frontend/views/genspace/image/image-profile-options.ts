@@ -17,6 +17,7 @@ const PROFILE_IDS_BY_MODE: Record<ImageProcessMode, readonly string[]> = {
     "hidream_o1_dev",
   ],
   region: ["ideogram4_int8", "ideogram4_turbotime_int8"],
+  upscale: [],
 };
 
 export function getImageProfilesForMode<T extends { id: string }>(

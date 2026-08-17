@@ -25,6 +25,11 @@ def test_music_packs_use_verified_wangp_model_types() -> None:
         PACKS["ace_step_15_xl_turbo"]["model_type"]
         == "ace_step_v1_5_xl_turbo_lm_1_7b"
     )
+    assert PACKS["minimax_music3"] == {
+        "name": "MiniMax Music 3",
+        "kind": "model",
+        "model_type": "minimax_music3",
+    }
 
 
 def test_minimax_h3_fast_and_quality_packs_share_model_types() -> None:
@@ -39,12 +44,11 @@ def test_minimax_h3_fast_and_quality_packs_share_model_types() -> None:
     }
 
 
-def test_ltx_packs_share_base_checkpoint_and_reference_upstream_profiles() -> None:
+def test_ltx_packs_use_curated_checkpoints_and_quality_profile() -> None:
     assert PACKS["ltx2_fast"] == {
         "name": "LTX 2.5 Fast",
         "kind": "model",
-        "model_type": "ltx2_25_22B",
-        "accelerator_profile_id": "ltx2_25_two_stage_distilled_8_3",
+        "model_type": "ltx2_25_22B_distilled",
     }
     assert PACKS["ltx2_quality"] == {
         "name": "LTX 2.5 Quality",
@@ -79,7 +83,7 @@ def test_curated_video_packs_resolve_profiles_or_model_defaults() -> None:
         session,
         "ltx2_fast",
         PACKS["ltx2_fast"],
-        "ltx2_25_22B",
+        "ltx2_25_22B_distilled",
     )
     h3_fast_settings = _resolve_pack_profile_settings(
         session,
@@ -90,22 +94,13 @@ def test_curated_video_packs_resolve_profiles_or_model_defaults() -> None:
 
     assert h3_settings["config"] == "upstream"
     assert source == {"config": "upstream", "nested": {"value": 1}}
-    assert ltx_settings == {
-        "activated_loras": ["ltx2_25_two_stage_distilled_8_3"]
-    }
+    assert ltx_settings == {"config": "upstream", "nested": {"value": 1}}
     assert h3_fast_settings == {
         "activated_loras": ["aivs_h3_turbo_lightx2v_ref2v_4_steps_v0.1"]
     }
     assert calls == [
         ("defaults", ("minimax_h3_fl2va_pruned",), {}),
-        (
-            "profiles",
-            ("ltx2_25_22B",),
-            {
-                "accelerator_profile_id": "ltx2_25_two_stage_distilled_8_3",
-                "preset_profile_id": None,
-            },
-        ),
+        ("defaults", ("ltx2_25_22B_distilled",), {}),
         (
             "profiles",
             ("minimax_h3_ref2va_pruned",),

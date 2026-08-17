@@ -66,6 +66,7 @@ import type {
   GenSpaceSidebarController,
 } from "../types";
 import { useGenSpaceVideoTools } from "./useGenSpaceVideoTools";
+import { useGenSpaceUpscaleState } from "./useGenSpaceUpscaleState";
 import { useGenSpaceSettingsRestore } from "./useGenSpaceSettingsRestore";
 import { useGenSpaceExternalHandoffs } from "./useGenSpaceExternalHandoffs";
 import {
@@ -221,6 +222,7 @@ export function useGenSpaceController(isActive: boolean) {
   const {
     generate,
     generateImage,
+    generateUpscale,
     generateMusic,
     generateSfx,
     generateSpeech,
@@ -251,6 +253,10 @@ export function useGenSpaceController(isActive: boolean) {
     cancel,
     reset,
   } = useGeneration();
+  const upscale = useGenSpaceUpscaleState();
+  const activeUpscaleSelection = upscale.selectionForKind(
+    mode === "image" ? "image" : "video",
+  );
 
   const {
     submitRetake,
@@ -400,6 +406,9 @@ export function useGenSpaceController(isActive: boolean) {
     retakeSubmissionRef,
     generate,
     generateImage,
+    generateUpscale,
+    upscaleMethod: activeUpscaleSelection.method,
+    upscaleScale: activeUpscaleSelection.scale,
     generateMusic,
     generateSfx,
     generateSpeech,
@@ -541,6 +550,55 @@ export function useGenSpaceController(isActive: boolean) {
       setVideoMode,
     ],
   );
+  const handleUpscale = useCallback(
+    (asset: Asset) => {
+      setPrompt("");
+      if (asset.type === "image") {
+        setMode("image");
+        setImageMode("upscale");
+        setVideoMode("generate");
+        setInputImage(null);
+        setInputAudio(null);
+        setImageInputs([]);
+        setEditImage({
+          id: crypto.randomUUID(),
+          assetId: asset.id,
+          url: asset.url,
+          path: asset.path,
+          mediaDuration: asset.duration,
+          role: "upscale_source",
+          type: "image",
+        });
+        return;
+      }
+      if (asset.type === "video") {
+        setMode("video");
+        setVideoMode("reframe");
+        setSelectedTool("upscale");
+        setToolInput({
+          id: crypto.randomUUID(),
+          assetId: asset.id,
+          url: asset.url,
+          path: asset.path,
+          mediaDuration: asset.duration,
+          role: "upscale_source",
+          type: "video",
+        });
+      }
+    },
+    [
+      setEditImage,
+      setImageInputs,
+      setImageMode,
+      setInputAudio,
+      setInputImage,
+      setMode,
+      setPrompt,
+      setSelectedTool,
+      setToolInput,
+      setVideoMode,
+    ],
+  );
   const clearLocalError = useCallback(() => setLocalError(null), []);
 
   const handleCopySettings = useGenSpaceSettingsRestore({
@@ -570,6 +628,10 @@ export function useGenSpaceController(isActive: boolean) {
     setReframeSource,
     setVideoTool: setSelectedTool,
     setVideoToolInput: setToolInput,
+    setUpscale: ({ method, scale }) => {
+      upscale.setMethod(method);
+      upscale.setScale(scale);
+    },
     clearError: clearLocalError,
   });
   const gallery = useGenSpaceGallery({
@@ -659,7 +721,9 @@ export function useGenSpaceController(isActive: boolean) {
             0
         : true;
   const canSubmit = isToolsMode
-    ? isReframeMode
+    ? selectedTool === "upscale"
+      ? !!toolInput && !!activeUpscaleSelection.method && activeUpscaleSelection.scale !== null && !isGenerating
+      : isReframeMode
       ? reframeInput.ready && !!reframeInput.videoPath && !isGenerating
       : !!toolInput && !!prompt.trim() && !isGenerating
     : isRetakeMode
@@ -672,13 +736,15 @@ export function useGenSpaceController(isActive: boolean) {
           : audioSubmode === "speech"
             ? !!speechProfiles.find((profile) => profile.id === speechSettings.profileId) && (speechSettings.references.length === 2 ? [1, 2].every((speaker) => speechSettings.segments.some((segment) => segment.speaker === speaker && segment.text.trim())) : !!prompt.trim() && (!speechProfiles.find((profile) => profile.id === speechSettings.profileId)?.speech.referenceRequired || speechSettings.references.length > 0)) && !isGenerating
             : false
-      : mode === "image" && imageMode === "region"
+      : mode === "image" && imageMode === "upscale"
+        ? !!editImage && !!activeUpscaleSelection.method && activeUpscaleSelection.scale !== null && !isGenerating
+        : mode === "image" && imageMode === "region"
         ? isRegionPromptReady(regionPrompt)
         : mode === "image" && imageMode === "edit"
           ? !!editImage && !!prompt.trim() && editWorkflowReady
           : !!prompt.trim();
   const promptButtonLabel = isToolsMode
-    ? getVideoToolLabel(selectedTool)
+    ? selectedTool === "upscale" ? "Upscale" : getVideoToolLabel(selectedTool)
     : isRetakeMode
       ? "Retake"
       : "Generate";
@@ -749,6 +815,19 @@ export function useGenSpaceController(isActive: boolean) {
         regionPrompt,
         setRegionPrompt,
       },
+      upscale: {
+        mediaKind: "image",
+        input: editImage,
+        setInput: setEditImage,
+        methods: upscale.selectionForKind("image").methods,
+        method: upscale.selectionForKind("image").method,
+        setMethod: upscale.setMethod,
+        scale: upscale.selectionForKind("image").scale,
+        setScale: upscale.setScale,
+        catalogError: upscale.catalogError,
+        isCatalogLoading: upscale.isCatalogLoading,
+        retryCatalog: upscale.retryCatalog,
+      },
       framing: {
         value: framingSettings,
         setValue: setFramingSettings,
@@ -791,6 +870,19 @@ export function useGenSpaceController(isActive: boolean) {
         setSelectedTool,
         toolInput,
         setToolInput,
+      },
+      upscale: {
+        mediaKind: "video",
+        input: toolInput,
+        setInput: setToolInput,
+        methods: upscale.selectionForKind("video").methods,
+        method: upscale.selectionForKind("video").method,
+        setMethod: upscale.setMethod,
+        scale: upscale.selectionForKind("video").scale,
+        setScale: upscale.setScale,
+        catalogError: upscale.catalogError,
+        isCatalogLoading: upscale.isCatalogLoading,
+        retryCatalog: upscale.retryCatalog,
       },
       framing: {
         value: framingSettings,
@@ -1005,9 +1097,13 @@ export function useGenSpaceController(isActive: boolean) {
       },
       onUseImage: handleUseImage,
       onUseVideo: handleUseVideo,
+      onUpscale: handleUpscale,
       onCopySettings: handleCopySettings,
       onDelete: (asset: Asset) =>
         galleryOverlays.requestDeleteAssets([asset.id]),
+      onSelectTake: (assetId: string, takeIndex: number) => {
+        if (currentProjectId) setAssetActiveTake(currentProjectId, assetId, takeIndex);
+      },
     } satisfies GenSpaceSelectedGenerationProps,
     sidebar: sidebarController,
     overlays: {

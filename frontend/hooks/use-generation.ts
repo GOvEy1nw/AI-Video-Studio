@@ -37,6 +37,7 @@ import type {
 } from "./generation/types";
 import { useGenerationJob } from "./generation/useGenerationJob";
 import type { SubmittedVideoToolId } from "../types/video-tools";
+import type { UpscaleMediaKind, UpscaleMethodId } from "../types/upscale";
 
 export type { GenerateMusicResult, MusicOutput };
 export type { GenerateSfxResult };
@@ -65,6 +66,7 @@ export interface UseGenerationReturn extends GenerationState {
     inputMedia?: InputMediaRequest[],
     edit?: ImageEditRequest,
   ) => Promise<void>;
+  generateUpscale: (request: { sourcePath: string; mediaKind: UpscaleMediaKind; method: UpscaleMethodId; scale: number }) => Promise<void>;
   generateMusic: (
     request: GenerateMusicRequest,
   ) => Promise<GenerateMusicResult | null>;
@@ -263,6 +265,29 @@ export function useGeneration(): UseGenerationReturn {
     [runJob],
   );
 
+  const generateUpscale = useCallback<UseGenerationReturn["generateUpscale"]>(
+    async (request) => {
+      await runJob<void>({
+        endpoint: "/api/media-upscale",
+        body: request,
+        initialStatus: "Upscaling media...",
+        failureMessage: "Upscale failed",
+        formatProgress: (progress) => normaliseProgressResponse(progress),
+        parseResponse: async (response) => {
+          const result = (await response.json()) as { status?: string; media_path?: string; error?: string };
+          if (result.error) throw new Error(result.error);
+          if (result.status === "cancelled") return { value: undefined, patch: { statusMessage: "Cancelled" } };
+          if (result.status !== "complete" || !result.media_path) throw new Error("Upscale did not return media");
+          const url = generatedPathToFileUrl(result.media_path);
+          return request.mediaKind === "image"
+            ? { value: undefined, patch: { progress: 100, statusMessage: "Complete!", imageUrl: url, imagePath: result.media_path, imageUrls: [url], imagePaths: [result.media_path] } }
+            : { value: undefined, patch: { progress: 100, statusMessage: "Complete!", videoUrl: url, videoPath: result.media_path } };
+        },
+      });
+    },
+    [runJob],
+  );
+
   const generateMusic = useCallback(
     async (
       request: GenerateMusicRequest,
@@ -359,6 +384,7 @@ export function useGeneration(): UseGenerationReturn {
     generate,
     generateDirector,
     generateImage,
+    generateUpscale,
     generateMusic,
     generateSfx,
     generateSpeech,

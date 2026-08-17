@@ -153,6 +153,54 @@ describe('incremental persisted path approval', () => {
   })
 })
 
+describe('asset take projection', () => {
+  it('projects the active take metadata while retaining legacy take compatibility', async () => {
+    const originalParams = { mode: 'text-to-image' as const, prompt: 'original', model: 'model-a', duration: 5, resolution: '512x512', fps: 24, audio: false, cameraMotion: 'none' }
+    const upscaledParams = { ...originalParams, mode: 'upscale' as const, model: 'lanczos', resolution: '1024x1024' }
+    const project: Project = {
+      id: 'project-a', name: 'Project', createdAt: 1, updatedAt: 1, timelines: [],
+      assets: [
+        { id: 'asset-a', type: 'image', path: 'C:\\original.png', url: 'file:///C:/original.png', prompt: 'original', resolution: '512x512', generationTimeSeconds: 4, generationParams: originalParams, createdAt: 1 },
+        { id: 'uploaded-a', type: 'image', path: 'C:\\uploaded.png', url: 'file:///C:/uploaded.png', prompt: '', resolution: 'Original', createdAt: 1 },
+      ],
+    }
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: { loadProjects: vi.fn().mockResolvedValue([project]) } as unknown as Window['electronAPI'],
+    })
+    const wrapper = ({ children }: { children: React.ReactNode }) => React.createElement(ProjectProvider, null, children)
+    const { result } = renderHook(() => useProjects(), { wrapper })
+    await waitFor(() => expect(result.current.projects).toHaveLength(1))
+
+    act(() => result.current.addTakeToAsset('project-a', 'asset-a', {
+      url: 'file:///C:/upscaled.png', path: 'C:\\upscaled.png', createdAt: 2,
+      prompt: '', resolution: '1024x1024', generationTimeSeconds: 8, generationParams: upscaledParams,
+    }))
+    expect(result.current.projects[0].assets[0]).toMatchObject({
+      path: 'C:\\upscaled.png', resolution: '1024x1024', generationTimeSeconds: 8,
+      generationParams: { mode: 'upscale' }, activeTakeIndex: 1,
+    })
+
+    act(() => result.current.setAssetActiveTake('project-a', 'asset-a', 0))
+    expect(result.current.projects[0].assets[0]).toMatchObject({
+      path: 'C:\\original.png', prompt: 'original', resolution: '512x512', generationTimeSeconds: 4,
+      generationParams: { mode: 'text-to-image' }, activeTakeIndex: 0,
+    })
+
+    act(() => result.current.addTakeToAsset('project-a', 'uploaded-a', {
+      url: 'file:///C:/uploaded-upscaled.png', path: 'C:\\uploaded-upscaled.png', createdAt: 2,
+      prompt: '', resolution: '1024x1024', generationTimeSeconds: 8, generationParams: upscaledParams,
+    }))
+    const uploaded = result.current.projects[0].assets.find(({ id }) => id === 'uploaded-a')!
+    expect(uploaded.takes?.[0]).toMatchObject({ generationTimeSeconds: null, generationParams: null })
+
+    act(() => result.current.setAssetActiveTake('project-a', 'uploaded-a', 0))
+    const original = result.current.projects[0].assets.find(({ id }) => id === 'uploaded-a')!
+    expect(original.generationTimeSeconds).toBeUndefined()
+    expect(original.generationParams).toBeUndefined()
+  })
+})
+
 describe('project storage startup', () => {
   it('persists a project created before async loading completes', async () => {
     let resolveLoad!: (projects: Project[]) => void

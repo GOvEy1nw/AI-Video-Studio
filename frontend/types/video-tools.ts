@@ -8,6 +8,7 @@ export type VideoToolId =
   | "decompression"
   | "sdr_to_hdr"
   | "remove_glare"
-  | "deblur";
+  | "deblur"
+  | "upscale";
 
-export type SubmittedVideoToolId = Exclude<VideoToolId, "reframe">;
+export type SubmittedVideoToolId = Exclude<VideoToolId, "reframe" | "upscale">;

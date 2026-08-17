@@ -41,6 +41,40 @@ import type {
 
 type Projects = ProjectAssetsContextType;
 
+function findUpscaleSourceAsset(
+  snapshot: ImageSubmissionSnapshot | VideoSubmissionSnapshot,
+  assets: Asset[],
+) {
+  const source = snapshot.upscale?.source;
+  if (!source) return undefined;
+  return assets.find((asset) =>
+    asset.type === source.type && (
+      asset.id === source.assetId || [asset, ...(asset.takes ?? [])].some(
+        (candidate) =>
+          (source.path !== undefined && candidate.path === source.path) ||
+          candidate.url === source.url,
+      )
+    ),
+  );
+}
+
+function takeFromGeneratedAsset(
+  asset: Omit<Asset, "id" | "createdAt">,
+  createdAt: number,
+) {
+  return {
+    url: asset.url,
+    path: asset.path,
+    thumbnail: asset.thumbnail,
+    createdAt,
+    duration: asset.duration,
+    prompt: asset.prompt,
+    resolution: asset.resolution,
+    generationTimeSeconds: asset.generationTimeSeconds,
+    generationParams: asset.generationParams,
+  };
+}
+
 export function useGenSpaceResultPersistence({
   videoUrl,
   videoPath,
@@ -118,23 +152,33 @@ export function useGenSpaceResultPersistence({
         const finalPath = copied?.path ?? videoPath;
         const finalUrl = copied?.url ?? videoUrl;
         const createdAt = Date.now();
-        const asset = addAsset(
-          snapshot.projectId,
-          reframe
-            ? buildReframeAsset({
+        const output = reframe
+          ? buildReframeAsset({
                 snapshot: reframe,
                 finalPath,
                 finalUrl,
                 createdAt,
-              })
-            : buildGeneratedVideoAsset({
+            })
+          : buildGeneratedVideoAsset({
                 snapshot: video!,
                 finalPath,
                 finalUrl,
                 createdAt,
-            }),
-        );
-        onAssetAdded?.(asset);
+            });
+        const sourceAsset = !reframe
+          ? findUpscaleSourceAsset(video!, getProjectAssets(snapshot.projectId))
+          : undefined;
+        if (sourceAsset) {
+          addTakeToAsset(
+            snapshot.projectId,
+            sourceAsset.id,
+            takeFromGeneratedAsset(output, createdAt),
+          );
+          onAssetAdded?.(sourceAsset);
+        } else {
+          const asset = addAsset(snapshot.projectId, output);
+          onAssetAdded?.(asset);
+        }
         if (reframe) reframeSubmissionRef.current = null;
         else videoSubmissionRef.current = null;
         reset();
@@ -145,6 +189,8 @@ export function useGenSpaceResultPersistence({
     })();
   }, [
     addAsset,
+    addTakeToAsset,
+    getProjectAssets,
     isGenerating,
     onAssetAdded,
     reframeSubmissionRef,
@@ -214,16 +260,28 @@ export function useGenSpaceResultPersistence({
             : null;
           const finalPath = copied?.path ?? sourcePath ?? imageUrl;
           const finalUrl = copied?.url ?? imageUrl;
-          const asset = addAsset(
-            snapshot.projectId,
-            buildGeneratedImageAsset({
-              snapshot,
-              finalPath,
-              finalUrl,
-              createdAt: Date.now(),
-              }),
+          const createdAt = Date.now();
+          const output = buildGeneratedImageAsset({
+            snapshot,
+            finalPath,
+            finalUrl,
+            createdAt,
+          });
+          const sourceAsset = findUpscaleSourceAsset(
+            snapshot,
+            getProjectAssets(snapshot.projectId),
           );
-          if (index === 0) onAssetAdded?.(asset);
+          if (sourceAsset) {
+            addTakeToAsset(
+              snapshot.projectId,
+              sourceAsset.id,
+              takeFromGeneratedAsset(output, createdAt),
+            );
+            if (index === 0) onAssetAdded?.(sourceAsset);
+          } else {
+            const asset = addAsset(snapshot.projectId, output);
+            if (index === 0) onAssetAdded?.(asset);
+          }
         }
         imageSubmissionRef.current = null;
         reset();
@@ -234,6 +292,8 @@ export function useGenSpaceResultPersistence({
     })();
   }, [
     addAsset,
+    addTakeToAsset,
+    getProjectAssets,
     imagePaths,
     imageSubmissionRef,
     imageUrls,

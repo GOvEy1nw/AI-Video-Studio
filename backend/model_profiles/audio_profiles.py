@@ -25,6 +25,20 @@ _ACE_STEP_LICENSE = ModelLicenseInfo(
     ),
 )
 
+_MINIMAX_MUSIC3_LICENSE = ModelLicenseInfo(
+    project_license="MiniMax-Music3 Community License",
+    weights_license="MiniMax-Music3 Community License",
+    commercial_use="restricted",
+    attribution_required=True,
+    source_project="MiniMax Music 3",
+    source_revision="fbdf52fbaaca799592917417eb05f1899f1255ec",
+    license_url="https://huggingface.co/MiniMaxAI/MiniMax-Music3/blob/main/LICENSE",
+    notes=(
+        "Commercial products and services must visibly attribute MiniMax-Music3; "
+        "organizations with more than US$20M annual revenue need prior authorization."
+    ),
+)
+
 
 def _ace_step_metadata(*, base_model_type: str) -> WanGPModelMetadata:
     return WanGPModelMetadata(
@@ -130,6 +144,44 @@ _ACE_STEP_MUSIC_POLICY = MusicPolicy(
     supports_compose_thinking=True,
 )
 
+_MINIMAX_MUSIC3_MUSIC_POLICY = MusicPolicy(
+    enabled=True,
+    supports_auto_lyrics=True,
+    supports_custom_lyrics=True,
+    auto_lyrics_requires_prompt_enhancer=True,
+    duration_min_seconds=1,
+    duration_max_seconds=300,
+    duration_step_seconds=1,
+    default_duration_seconds=30,
+    default_vocal_mode="auto-lyrics",
+    max_variations=1,
+    supports_description_enhancement=True,
+)
+
+
+_MINIMAX_MUSIC3_METADATA = WanGPModelMetadata(
+    family="music",
+    family_label="Music",
+    base_model_type="minimax_music3",
+    finetune=False,
+    main_output=("audio",),
+    outputs=("audio",),
+    inputs=("text",),
+    media_inputs={"audio": {"prompt": False, "output": True}},
+    capabilities={
+        "text_to_audio": True,
+        "audio_to_audio": False,
+        "audio_output": True,
+        "lora": False,
+    },
+    setting_values={
+        "duration_seconds": {"min": 1, "max": 300, "increment": 1, "default": 30},
+        "num_inference_steps": 30,
+        "guidance_scale": 1.7,
+        "prompt_enhancer": ["T1", "L2O", "B2O", "T1,L2O", "T1,B2O"],
+    },
+)
+
 _MMAUDIO_LICENSE = ModelLicenseInfo(
     project_license="MIT",
     weights_license="Not declared by the DeepBeepMeep/Wan2.1 repository",
@@ -231,5 +283,24 @@ MUSIC_PROFILES: tuple[ModelProfile, ...] = (
         music=_ACE_STEP_MUSIC_POLICY,
         license=_ACE_STEP_LICENSE,
     ),
+    ModelProfile(
+        id="minimax_music3",
+        display_name="MiniMax Music 3",
+        media_type="audio",
+        visible=True,
+        status="experimental",
+        wangp_model_type="minimax_music3",
+        wangp_metadata=_MINIMAX_MUSIC3_METADATA,
+        wangp_default_settings={
+            "num_inference_steps": 30,
+            "guidance_scale": 1.7,
+            "audio_prompt_type": "",
+            "repeat_generation": 1,
+        },
+        text_to_audio=True,
+        audio_output=True,
+        music=_MINIMAX_MUSIC3_MUSIC_POLICY,
+        required_pack_ids=("minimax_music3",),
+        license=_MINIMAX_MUSIC3_LICENSE,
+    ),
 )
-

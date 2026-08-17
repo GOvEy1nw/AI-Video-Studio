@@ -60,9 +60,10 @@ class TestGenerate:
         assert call.aspect_ratio == "16:9"
         assert call.duration_seconds == 2
         assert call.fps == 24
-        assert call.model_type == "ltx2_25_22B"
+        assert call.model_type == "ltx2_25_22B_distilled"
         assert call.default_settings["num_inference_steps"] == 8
-        assert call.default_settings["sample_solver"] == "distilled_8_steps_ancestral"
+        assert "sample_solver" not in call.default_settings
+        assert "activated_loras" not in call.default_settings
         assert call.default_settings["video_output_codec"] == "libx264_8"
         assert call.default_settings["video_container"] == "mp4"
         assert call.default_settings["prompt_enhancer"] == ""
@@ -85,13 +86,13 @@ class TestGenerate:
 
         assert r.status_code == 200
         call = enable_wangp.video_calls[0]
-        assert call.model_type == "ltx2_25_22B"
+        assert call.model_type == "ltx2_25_22B_distilled"
         assert call.resolution_label == "720x1280"
         assert call.aspect_ratio == "9:16"
         assert call.steps == 8
         assert call.default_settings["prompt_enhancer"] == "T"
         assert enable_wangp.resolved_profile_calls == [
-            ("ltx2_25_22B", "ltx2_25_two_stage_distilled_8_3", None)
+            ("ltx2_25_22B_distilled", None, None)
         ]
 
     def test_ltx_style_downloads_and_appends_to_multi_shot_loras(
@@ -109,13 +110,14 @@ class TestGenerate:
         assert response.status_code == 200
         call = enable_wangp.video_calls[-1]
         style_url = "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Soft_Enhance_Style_LoRa/resolve/main/LTX2.3_Soft_Enhance.safetensors"
-        assert enable_wangp.style_lora_downloads == [(style_url, "ltx2_25_22B")]
+        assert enable_wangp.style_lora_downloads == [
+            (style_url, "ltx2_25_22B_distilled")
+        ]
         assert call.default_settings["activated_loras"] == [
-            LTX25_DISTILLED_LORA_URL,
             "LTX-2.3_Cinematic_hardcut.safetensors",
             style_url,
         ]
-        assert call.default_settings["loras_multipliers"] == "0.5 1.0 1.0"
+        assert call.default_settings["loras_multipliers"] == "1.0 1.0"
 
     def test_rejects_unknown_and_incompatible_styles(
         self, client, enable_wangp: FakeWanGPBridge
@@ -271,7 +273,7 @@ class TestGenerate:
         assert call.default_settings["guidance_scale"] == 3.0
         assert call.default_settings["audio_guidance_scale"] == 7.0
         assert call.default_settings["activated_loras"] == [LTX25_DISTILLED_LORA_URL]
-        assert call.default_settings["loras_multipliers"] == "0.5"
+        assert call.default_settings["loras_multipliers"] == "0.5|"
         assert enable_wangp.resolved_profile_calls == [
             ("ltx2_25_22B", "ltx2_25_two_stage_hq_res2s_15_3", None)
         ]
@@ -439,10 +441,9 @@ class TestGenerate:
             "[4s:9s] The dragon breathes fire."
         )
         assert call.default_settings["activated_loras"] == [
-            LTX25_DISTILLED_LORA_URL,
             "LTX-2.3_Cinematic_hardcut.safetensors",
         ]
-        assert call.default_settings["loras_multipliers"] == "0.5 1.0"
+        assert call.default_settings["loras_multipliers"] == "1.0"
         assert call.default_settings["prompt_enhancer"] == "T1"
 
     def test_multi_shot_with_start_image_uses_text_image_relay_enhancer(
@@ -493,10 +494,9 @@ class TestGenerate:
         assert call.duration_seconds == 2
         assert call.prompt == "[0s:2s] Shot-only prompt."
         assert call.default_settings["activated_loras"] == [
-            LTX25_DISTILLED_LORA_URL,
             "LTX-2.3_Cinematic_hardcut.safetensors",
         ]
-        assert call.default_settings["loras_multipliers"] == "0.5 1.0"
+        assert call.default_settings["loras_multipliers"] == "1.0"
 
     def test_regular_video_generation_does_not_activate_multi_shot_lora(
         self, client, enable_wangp: FakeWanGPBridge
@@ -514,8 +514,8 @@ class TestGenerate:
 
         assert r.status_code == 200
         call = enable_wangp.video_calls[0]
-        assert call.default_settings["activated_loras"] == [LTX25_DISTILLED_LORA_URL]
-        assert call.default_settings["loras_multipliers"] == "0.5"
+        assert "activated_loras" not in call.default_settings
+        assert "loras_multipliers" not in call.default_settings
 
     def test_unknown_video_profile_rejected(
         self, client, enable_wangp: FakeWanGPBridge
@@ -723,7 +723,7 @@ class TestGenerate:
         assert call.start_image_path == str(clipped)
         assert call.image_prompt_type == "V"
         assert call.video_length_frames == 217
-        assert call.default_settings["activated_loras"] == [LTX25_DISTILLED_LORA_URL]
+        assert "activated_loras" not in call.default_settings
         assert call.default_settings["prompt_enhancer"] == "T"
 
     def test_curated_video_tools_activate_exact_lora(
@@ -788,6 +788,7 @@ class TestGenerate:
 
             assert response.status_code == 200
             call = enable_wangp.video_calls[-1]
+            assert call.model_type == "ltx2_25_22B_distilled"
             assert call.default_settings["activated_loras"] == [
                 f"https://huggingface.co/buckets/retIbedi/LTX-Loras/resolve/{filename}"
             ]

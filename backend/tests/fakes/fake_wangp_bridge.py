@@ -205,20 +205,6 @@ class FakeWanGPBridge:
         )
         if self.raise_on_resolve_profiles is not None:
             raise self.raise_on_resolve_profiles
-        if accelerator_profile_id == "ltx2_25_two_stage_distilled_8_3":
-            return {
-                "sample_solver": "distilled_8_steps_ancestral",
-                "num_inference_steps": 8,
-                "guidance_phases": 2,
-                "guidance_scale": 1.0,
-                "audio_guidance_scale": 1.0,
-                "alt_guidance_scale": 1.0,
-                "alt_scale": 0.0,
-                "activated_loras": [
-                    "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.5-22b-distilled-lora-450_bf16.safetensors"
-                ],
-                "loras_multipliers": "0.5",
-            }
         if accelerator_profile_id == "ltx2_25_two_stage_hq_res2s_15_3":
             return {
                 "sample_solver": "res2s",
@@ -231,8 +217,10 @@ class FakeWanGPBridge:
                 "activated_loras": [
                     "https://huggingface.co/DeepBeepMeep/LTX-2/resolve/main/ltx-2.5-22b-distilled-lora-450_bf16.safetensors"
                 ],
-                "loras_multipliers": "0.5",
+                "loras_multipliers": "0.5|",
             }
+        if model_type == "ltx2_25_22B_distilled":
+            return {"num_inference_steps": 8}
         if accelerator_profile_id == "aivs_h3_turbo_lightx2v_fl2v_4_steps_v0.1":
             return {
                 "config": "gguf_q4_k_m,fp8mix",

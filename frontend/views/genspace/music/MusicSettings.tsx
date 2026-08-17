@@ -19,11 +19,21 @@ const VOCAL_MODES = [
 export function MusicVocalModeTabs({
   settings,
   onChange,
+  profile,
 }: {
   settings: MusicSettingsValue;
   onChange: (value: MusicSettingsValue) => void;
+  profile?: ModelProfile;
 }) {
-  const vocalMode = resolveMusicVocalMode(settings);
+  const vocalMode = resolveMusicVocalMode(settings, profile);
+  const policy = profile?.music;
+  const vocalModes = VOCAL_MODES.filter(
+    ({ value }) =>
+      !policy ||
+      (value === "instrumental" && policy.supportsInstrumental) ||
+      (value === "auto-lyrics" && policy.supportsAutoLyrics) ||
+      (value === "custom-lyrics" && policy.supportsCustomLyrics),
+  );
   const setVocalMode = (mode: MusicVocalMode) =>
     onChange({
       ...settings,
@@ -35,7 +45,7 @@ export function MusicVocalModeTabs({
     <ModeSelector
       label="Mode"
       value={vocalMode}
-      options={VOCAL_MODES}
+      options={vocalModes}
       onChange={(value) => setVocalMode(value as MusicVocalMode)}
     />
   );
@@ -61,7 +71,7 @@ export function MusicSettings({
   isComposing: boolean;
 }) {
   const policy = profile?.music;
-  const vocalMode = resolveMusicVocalMode(settings);
+  const vocalMode = resolveMusicVocalMode(settings, profile);
   const lyricsValue = settings.customLyrics || settings.lyricsPrompt;
   const update = (patch: Partial<MusicSettingsValue>) =>
     onChange({ ...settings, ...patch });
@@ -121,12 +131,16 @@ export function MusicSettings({
                   lyricsSeed: lockedSeed,
                 })
               }
-              disabled={disabled}
+              disabled={disabled || policy?.supportsComposeLyrics === false}
             />
             <button
               type="button"
               onClick={() => void compose()}
-              disabled={disabled || isComposing}
+              disabled={
+                disabled ||
+                isComposing ||
+                policy?.supportsComposeLyrics === false
+              }
               className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] font-medium text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-zinc-400"
             >
               <Sparkles className="h-3.5 w-3.5" />{" "}

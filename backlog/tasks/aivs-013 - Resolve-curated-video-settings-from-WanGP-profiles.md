@@ -5,7 +5,7 @@ status: Human Review
 assignee:
   - '@codex'
 created_date: '2026-08-16 11:53'
-updated_date: '2026-08-16 14:22'
+updated_date: '2026-08-16 16:34'
 labels: []
 dependencies:
   - AIVS-010
@@ -21,8 +21,11 @@ modified_files:
   - backend/tests/test_generation.py
   - backend/tests/test_director_generation.py
   - backend/tests/test_model_profiles.py
+  - backend/tests/test_prompt_enhancement.py
   - backend/tests/test_wangp_bridge.py
   - backend/tests/test_wangp_model_packs.py
+  - electron/python-setup.ts
+  - electron/python-setup.test.ts
 priority: high
 type: enhancement
 ordinal: 13000
@@ -46,6 +49,7 @@ Use WanGP's new stable profile-resolution API as the source of effective generat
 - [x] #8 Video model-pack dependency resolution starts from the same WanGP model defaults before applying accelerator, preset, and explicit pack overlays.
 - [x] #9 MiniMax H3 Fast resolves the WanGP AIVS accelerator profile compatible with the active FL2VA or Ref2VA model type for both generation and model-pack dependencies.
 - [x] #10 MiniMax H3 compact config and Fast acceleration settings/LoRAs come from WanGP settings and accelerator profiles rather than AiVS-local injection.
+- [x] #11 LTX 2.5 Fast generation, processing operations, and model-pack dependencies use WanGP's fully distilled `ltx2_25_22B_distilled` checkpoint without applying the Dev-checkpoint distilled accelerator/LoRA, while LTX 2.5 Quality remains on `ltx2_25_22B` plus its HQ accelerator and distilled LoRA.
 <!-- AC:END -->
 
 ## Definition of Done
@@ -62,10 +66,10 @@ Use WanGP's new stable profile-resolution API as the source of effective generat
 
 <!-- SECTION:PLAN:BEGIN -->
 1. Keep WanGP effective-settings resolution behind WanGPBridge: configured accelerator/preset IDs use `resolve_profiles`; ID-less curated video profiles use `get_default_settings`.
-2. Store stable backend-only accelerator policy on ModelProfile, including a model-type-specific map with scalar fallback; configure LTX Fast/Quality and H3 Fast with upstream IDs that satisfy WanGP's lowercase `[a-z0-9][a-z0-9._-]*` profile-ID contract, while H3 Quality uses defaults only.
-3. Merge resolved upstream settings before AiVS output/style/mode/request overrides in Quick Gen and Director, selecting H3 FL2VA or Ref2VA before resolution.
-4. Resolve the same defaults/profile IDs during curated video model-pack discovery so config and LoRA dependencies match generation; keep explicit pack overlays last and non-video packs unchanged.
-5. Replace the invalid uppercase H3 accelerator IDs in AiVS profiles, pack metadata, fakes, and focused assertions with the lowercase IDs expected in Wan2GP; validate generation and pack resolver calls, Python typing, and scoped diff. The external Wan2GP checkout remains user-owned/read-only and its two JSON `profile_id` values must be changed separately.
+2. Keep stable AiVS product IDs, but route `ltx2_25_fast` to WanGP `ltx2_25_22B_distilled` with no accelerator profile; explicitly route `ltx2_25_quality` to `ltx2_25_22B` with the HQ Res2S accelerator/distilled LoRA.
+3. Apply the same split to model-pack dependency discovery and the Electron model catalogue so Fast downloads/checks the full distilled checkpoint and Quality downloads/checks Dev plus its resolved LoRA. Preserve unrelated MiniMax Music 3 work already present in overlapping files.
+4. Retain the existing shared video handler path so generation, Director, styles, and processing operations automatically use the selected profile model type; do not add operation-specific model overrides.
+5. Update the nearest backend fake and focused profile/generation/pack/Electron assertions for the checkpoint split, then run focused tests, Python and TypeScript type checks where affected, scoped diff inspection, and independent review. Do not download model weights or run GPU generation.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -108,10 +112,36 @@ Runtime validation exposed the exact upstream contract failure: WanGP `shared/ap
 Lowercase-ID correction completed after user updated the external Wan2GP JSONs. AiVS profile metadata, pack mappings, fake resolver, and focused assertions now use `aivs_h3_turbo_lightx2v_fl2v_4_steps_v0.1` and `aivs_h3_turbo_lightx2v_ref2v_4_steps_v0.1`.
 
 Live API-level verification used the AiVS backend environment against the user's Wan2GP Dev checkout: `WanGPSession.resolve_profiles` succeeded for both pruned H3 model types and returned six steps. Five focused AiVS H3 generation/profile/pack tests passed; stale uppercase-ID search returned zero; scoped diff check exited 0 with only CRLF warnings. A first focused test command used a wrong pytest class node and collected no tests; the corrected command passed.
+
+Human review reopened at the user's request: LTX Fast should use the recommended fully distilled checkpoint for generation and processing workflows; LTX Quality should retain the Dev checkpoint plus HQ accelerator/distilled LoRA. Stable AiVS Fast/Quality product and pack IDs remain unchanged.
+
+Wan2GP Dev verification: `get_default_settings('ltx2_25_22B_distilled')` returns eight steps and no activated LoRA; its model definition architecture is `ltx2_25_22B`. `resolve_profiles('ltx2_25_22B', accelerator_profile_id='ltx2_25_two_stage_hq_res2s_15_3')` returns Res2S, 15 steps, and the distilled LoRA at multiplier `0.5|`. Existing AiVS processing requests use `profile.wangp_model_type`, so the curated Fast mapping is the single routing boundary.
+
+Final LTX checkpoint split: stable AiVS Fast/Quality IDs remain unchanged. Fast now maps to WanGP `ltx2_25_22B_distilled` with no accelerator or distilled-LoRA overlay; Quality explicitly maps to Dev `ltx2_25_22B` plus `ltx2_25_two_stage_hq_res2s_15_3`, whose resolved distilled LoRA multiplier is `0.5|`. The shared profile model type carries the Fast checkpoint through Quick Gen, Director, prompt enhancement, Styles, and curated processing tools without operation-specific branches. Model-pack resolution and the Electron catalogue use the same split. Unrelated AIVS-014 MiniMax Music 3 edits in overlapping pack/catalogue files were preserved.
+
+Final verification: focused backend profile/generation/Director/pack suite passed 153 tests; Electron `python-setup.test.ts` passed 4 tests; primary critical routing rerun passed 7 tests; prompt-enhancement regression passed 2 tests after correcting its stale expectation; `pnpm typecheck:py` passed with 0 errors and `pnpm typecheck:ts` exited 0; scoped `git diff --check` exited 0 with only CRLF conversion warnings. Independent re-review verdict: ship, no findings. No GPU generation, live LoRA execution, or model download was run; runtime validation remains for human testing.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
 
 <!-- SECTION:FINAL_SUMMARY:BEGIN -->
-Completed WanGP-backed effective settings for curated AiVS video models. LTX Fast/Quality use upstream defaults plus their stable accelerator profiles. MiniMax H3 Quality uses WanGP defaults exclusively, including compact config from pruned saved settings. MiniMax H3 Fast selects the dedicated upstream FL2VA or Ref2VA accelerator by active routed model type, shared by Quick Gen, Director, and model-pack dependency discovery; AiVS no longer injects H3 config, steps, flow, multiplier, or acceleration LoRA URLs. Runtime feedback exposed that WanGP explicit profile IDs are lowercase-only, so both Wan2GP JSONs and every AiVS reference now use validator-compliant `aivs_h3_...` IDs. Actual WanGPSession resolution succeeded for both H3 modes at six steps, five focused casing/regression tests passed, the broader earlier focused suite passed 153 tests, Pyright reported zero errors, scoped diff checks were clean, and independent review found no defects. Full GPU generation and real pack download remain for user validation.
+## Summary
+
+- Video generation and model-pack settings now resolve WanGP model defaults and stable accelerator/preset profiles, keeping upstream sampling, config, and dependency data authoritative while AiVS request values remain last.
+- MiniMax H3 Fast selects the matching lowercase AIVS FL2VA/Ref2VA accelerator; H3 Quality uses upstream defaults. Compact config and Fast LoRAs are no longer injected locally.
+- LTX 2.5 Fast now uses the full `ltx2_25_22B_distilled` checkpoint with no Dev distilled-LoRA overlay. LTX 2.5 Quality remains on `ltx2_25_22B` with the HQ Res2S accelerator and its upstream distilled LoRA.
+- Quick Gen, Director, prompt enhancement, Styles, processing tools, model packs, and the Electron catalogue follow the same curated checkpoint mapping.
+
+## Verification
+
+- Backend focused suite: 153 passed.
+- Primary critical routing selection: 7 passed.
+- Prompt enhancement: 2 passed.
+- Electron model catalogue: 4 passed.
+- `pnpm typecheck:py`: 0 errors.
+- `pnpm typecheck:ts`: passed.
+- Scoped `git diff --check`: passed; CRLF conversion warnings only.
+- Independent final review: ship, no findings.
+
+No GPU generation or model download was performed; live Wan2GP runtime validation remains for human review.
 <!-- SECTION:FINAL_SUMMARY:END -->

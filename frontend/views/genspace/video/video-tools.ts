@@ -11,6 +11,7 @@ export const VIDEO_TOOL_OPTIONS = [
   { value: "sdr_to_hdr", label: "SDR to HDR" },
   { value: "remove_glare", label: "Remove Glare" },
   { value: "deblur", label: "Deblur" },
+  { value: "upscale", label: "Upscale" },
 ] as const satisfies ReadonlyArray<{ value: VideoToolId; label: string }>;
 
 export type { VideoToolId } from "../../../types/video-tools";

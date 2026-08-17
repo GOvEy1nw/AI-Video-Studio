@@ -27,7 +27,7 @@ export function VideoModeTabs({
     profile ? selectVideoEditOperations(profile).map(({ id }) => id) : [],
   );
   const availableTools = VIDEO_TOOL_OPTIONS.filter(({ value }) =>
-    availableToolIds.has(value),
+    value === "upscale" || availableToolIds.has(value),
   );
   const retake = operations.find(({ id }) => id === "retake");
   const retakeReason = retake
@@ -35,7 +35,7 @@ export function VideoModeTabs({
     : "This capability is unavailable.";
 
   useEffect(() => {
-    if (!profile || mode !== "reframe" || availableToolIds.has(selectedTool)) return;
+    if (!profile || mode !== "reframe" || selectedTool === "upscale" || availableToolIds.has(selectedTool)) return;
     const fallback = availableTools[0]?.value;
     if (fallback) onToolChange?.(fallback);
     else onChange("generate");

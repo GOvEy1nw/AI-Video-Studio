@@ -41,6 +41,7 @@ export function MusicGenPanel({
         <MusicVocalModeTabs
           settings={music.settings}
           onChange={music.setSettings}
+          profile={selectedProfile}
         />
         {selectedProfile ? (
           <ModelPicker
@@ -60,6 +61,7 @@ export function MusicGenPanel({
       <MusicMediaInputs
         coverInput={music.settings.coverAudioInput}
         referenceTimbreInput={music.settings.referenceTimbreAudioInput}
+        profile={selectedProfile}
         coverStrength={music.settings.coverStrength}
         onInputChange={(role, input) =>
           music.setSettings({

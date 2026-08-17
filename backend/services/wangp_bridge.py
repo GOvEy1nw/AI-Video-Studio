@@ -190,6 +190,37 @@ class WanGPBridge:
         except (OSError, ValueError, json.JSONDecodeError) as exc:
             logger.warning("Could not update WanGP runtime settings: %s", exc)
 
+    def _ensure_flashvsr_config(self) -> None:
+        """Seed only the missing Media Flow default in AiVS-owned config."""
+        config_path = self._resolve_session_config_path()
+        try:
+            payload: dict[str, object] = {}
+            if config_path.exists():
+                loaded = json.loads(config_path.read_text(encoding="utf-8"))
+                if not isinstance(loaded, dict):
+                    raise ValueError("WanGP config must contain a JSON object")
+                payload = cast(dict[str, object], loaded)
+            else:
+                template = Path(os.environ.get("AIVS_WANGP_CONFIG_TEMPLATE", ""))
+                if template.is_file():
+                    loaded = json.loads(template.read_text(encoding="utf-8"))
+                    if not isinstance(loaded, dict):
+                        raise ValueError("WanGP config template must contain a JSON object")
+                    payload = cast(dict[str, object], loaded)
+            spatial = payload.get("spatial_upsamplers")
+            if not isinstance(spatial, dict):
+                spatial = {}
+                payload["spatial_upsamplers"] = spatial
+            if "flashvsr" in spatial:
+                return
+            spatial["flashvsr"] = {"mode": 1, "backend": "auto", "topk_ratio": 0.0}
+            config_path.parent.mkdir(parents=True, exist_ok=True)
+            temporary_path = config_path.with_name(f".{config_path.name}.tmp")
+            temporary_path.write_text(json.dumps(payload, indent=4) + "\n", encoding="utf-8")
+            temporary_path.replace(config_path)
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            logger.warning("Could not seed FlashVSR runtime settings: %s", exc)
+
     @property
     def has_session(self) -> bool:
         return self._session is not None
@@ -849,6 +880,7 @@ class WanGPBridge:
 
         with self._session_lock:
             if self._session is None:
+                self._ensure_flashvsr_config()
                 self._write_runtime_config(
                     {
                         "fit_canvas": 0,
@@ -863,6 +895,35 @@ class WanGPBridge:
                     cli_args=self._extra_args,
                 )
             return self._session
+
+    def upscale_media(
+        self,
+        *,
+        source_path: str,
+        spatial_upsampler: str,
+        media_kind: str,
+        on_progress: ProgressCallback,
+        is_cancelled: CancelledCallback,
+    ) -> str:
+        session = self._get_session()
+        self._output_dir.mkdir(parents=True, exist_ok=True)
+        self._config_dir.mkdir(parents=True, exist_ok=True)
+        on_progress("starting_wangp", 2, None, None)
+        job = session.submit_media_postprocessing(
+            str(Path(source_path).resolve()),
+            spatial_upsampling=spatial_upsampler,
+            return_media=False,
+        )
+        suffixes = {".png", ".jpg", ".jpeg", ".webp"} if media_kind == "image" else {".mp4", ".mov", ".mkv", ".avi", ".webm"}
+        outputs = self._wait_for_job(
+            job=job,
+            media_suffixes=suffixes,
+            on_progress=on_progress,
+            is_cancelled=is_cancelled,
+        )
+        if not outputs:
+            raise RuntimeError("WanGP completed without producing upscaled media")
+        return self._select_final_output(outputs)
 
     def _run_manifest(
         self,
@@ -883,6 +944,21 @@ class WanGPBridge:
         self._apply_output_settings(session, manifest)
         logger.info("Submitting WanGP manifest: %s", json.dumps(manifest, indent=2))
         job = session.submit_manifest(manifest)
+        return self._wait_for_job(
+            job=job,
+            media_suffixes=media_suffixes,
+            on_progress=on_progress,
+            is_cancelled=is_cancelled,
+        )
+
+    def _wait_for_job(
+        self,
+        *,
+        job: Any,
+        media_suffixes: set[str],
+        on_progress: ProgressCallback,
+        is_cancelled: CancelledCallback,
+    ) -> list[str]:
         self._last_preview_write_at = 0.0
         error_lines: deque[str] = deque(maxlen=40)
         cancel_requested = False

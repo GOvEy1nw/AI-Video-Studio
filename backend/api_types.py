@@ -624,6 +624,29 @@ class GenerateSfxResponse(BaseModel):
     resolvedSeed: int | None = None
 
 
+class MediaUpscaleMethod(BaseModel):
+    id: Literal["lanczos", "flashvsr", "flashvsr2pass", "seedvr2", "ltx25"]
+    label: str
+    mediaKinds: list[Literal["image", "video"]]
+    scales: list[float]
+
+
+class MediaUpscaleCatalogResponse(BaseModel):
+    methods: list[MediaUpscaleMethod]
+
+
+class MediaUpscaleRequest(BaseModel):
+    sourcePath: str
+    mediaKind: Literal["image", "video"]
+    method: Literal["lanczos", "flashvsr", "flashvsr2pass", "seedvr2", "ltx25"]
+    scale: float = Field(gt=0)
+
+
+class MediaUpscaleResponse(BaseModel):
+    status: Literal["complete", "cancelled"]
+    media_path: str | None = None
+
+
 class SpeechReferenceInput(BaseModel):
     path: str
     trimStartTime: float | None = Field(default=None, ge=0)

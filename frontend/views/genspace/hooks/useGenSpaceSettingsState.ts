@@ -134,16 +134,32 @@ export function useGenSpaceSettingsState(musicProfiles: ModelProfile[]) {
           Math.max(policy.durationMinSeconds, current.manualDurationSeconds),
         ),
         variations: Math.min(policy.maxVariations, current.variations),
+        instrumental: policy.supportsInstrumental ? current.instrumental : false,
+        advancedLyricsMode:
+          current.advancedLyricsMode === "custom" && !policy.supportsCustomLyrics
+            ? "auto"
+            : current.advancedLyricsMode,
+        durationMode: policy.supportsAutoDuration ? current.durationMode : "manual",
+        enhanceDescription: policy.supportsDescriptionEnhancement
+          ? current.enhanceDescription
+          : false,
         bpm: policy.supportsBpm ? current.bpm : null,
         timeSignature: policy.supportsTimeSignature
           ? current.timeSignature
           : null,
         keyScale: policy.supportsKeyScale ? current.keyScale : null,
+        coverAudioInput: policy.supportsCover ? current.coverAudioInput : null,
+        referenceTimbreAudioInput: policy.supportsReferenceTimbre
+          ? current.referenceTimbreAudioInput
+          : null,
         vocalLanguage:
           policy.supportedLanguages.includes(current.vocalLanguage) ||
           current.vocalLanguage === "auto"
             ? current.vocalLanguage
             : policy.defaultVocalLanguage,
+        vocalGender: policy.supportsVocalGenderConditioning
+          ? current.vocalGender
+          : "auto",
       };
     });
   }, [musicProfiles, musicSettings.profileId]);

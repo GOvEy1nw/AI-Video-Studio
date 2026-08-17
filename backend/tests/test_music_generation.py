@@ -76,6 +76,69 @@ def test_auto_lyrics_are_composed_by_wangp_during_generation(client, enable_wang
     assert call.default_settings["prompt_enhancer"] == "T"
 
 
+def test_minimax_music3_maps_verified_defaults_and_prompt_enhancers(
+    client, enable_wangp
+) -> None:
+    response = client.post(
+        "/api/generate-music",
+        json=_request(
+            modelProfileId="minimax_music3",
+            vocalMode="custom-lyrics",
+            lyrics="[Verse]\nHello",
+            durationMode="manual",
+            durationSeconds=300,
+            vocalLanguage="auto",
+            enhanceDescription=False,
+        ),
+    )
+    assert response.status_code == 200
+    call = enable_wangp.music_calls[0]
+    assert call.model_type == "minimax_music3"
+    assert call.description == "Warm cinematic ambient music"
+    assert call.lyrics == "[Verse]\nHello"
+    assert call.duration_seconds == 300
+    assert call.default_settings["num_inference_steps"] == 30
+    assert call.default_settings["guidance_scale"] == 1.7
+    assert call.default_settings["prompt_enhancer"] == ""
+
+    response = client.post(
+        "/api/generate-music",
+        json=_request(
+            modelProfileId="minimax_music3",
+            vocalMode="auto-lyrics",
+            vocalLanguage="auto",
+            enhanceDescription=True,
+        ),
+    )
+    assert response.status_code == 200
+    assert enable_wangp.music_calls[1].default_settings["prompt_enhancer"] == "T1,B2O"
+
+    response = client.post(
+        "/api/generate-music",
+        json=_request(
+            modelProfileId="minimax_music3",
+            vocalMode="auto-lyrics",
+            vocalLanguage="auto",
+            enhanceDescription=False,
+        ),
+    )
+    assert response.status_code == 200
+    assert enable_wangp.music_calls[2].default_settings["prompt_enhancer"] == "T1"
+
+    response = client.post(
+        "/api/generate-music",
+        json=_request(
+            modelProfileId="minimax_music3",
+            vocalMode="custom-lyrics",
+            lyrics="[Verse]\nHello",
+            vocalLanguage="auto",
+            enhanceDescription=True,
+        ),
+    )
+    assert response.status_code == 200
+    assert enable_wangp.music_calls[3].default_settings["prompt_enhancer"] == "B2O"
+
+
 def test_empty_custom_lyrics_are_rejected_before_generation(
     client, enable_wangp
 ) -> None:

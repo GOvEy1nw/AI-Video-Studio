@@ -178,4 +178,81 @@ describe("useGenSpaceResultPersistence", () => {
     expect(onAssetAdded).toHaveBeenCalledWith(addedAssets[0]);
     expect(reset).toHaveBeenCalledOnce();
   });
+
+  it("stacks an upscale result onto its source asset in the submission project", async () => {
+    const wrongType: Asset = {
+      id: "wrong-type",
+      type: "audio",
+      path: "C:\\source.mp4",
+      url: "file:///C:/source.mp4",
+      prompt: "",
+      resolution: "Original",
+      createdAt: 0,
+    };
+    const source: Asset = {
+      id: "source-asset",
+      type: "video",
+      path: "C:\\source.mp4",
+      url: "file:///C:/source.mp4",
+      prompt: "Source",
+      resolution: "720p",
+      createdAt: 1,
+      takes: [{ url: "file:///C:/source.mp4", path: "C:\\source.mp4", createdAt: 1 }],
+    };
+    const addAsset = vi.fn();
+    const addTakeToAsset = vi.fn();
+    const onAssetAdded = vi.fn();
+    const videoSubmissionRef: { current: VideoSubmissionSnapshot | null } = {
+      current: {
+        projectId: "project-b",
+        prompt: "",
+        settings: { ...DEFAULT_VIDEO_SETTINGS },
+        inputs: [],
+        inputImage: null,
+        inputAudio: null,
+        assetPaths: [],
+        videoTool: "upscale",
+        upscale: { mediaKind: "video", method: "lanczos", scale: 2, source: { id: "input-1", assetId: source.id, url: source.url, path: source.path, role: "upscale_source", type: "video" } },
+      },
+    };
+
+    renderHook(() => useGenSpaceResultPersistence({
+      videoUrl: "file:///C:/upscaled.mp4", videoPath: "C:\\upscaled.mp4", isGenerating: false,
+      addAsset, reset: vi.fn(), videoSubmissionRef,
+      reframeSubmissionRef: { current: null }, retakeResult: null, isRetaking: false,
+      retakeSubmissionRef: { current: null }, getProjectAssets: vi.fn((projectId) => projectId === "project-b" ? [wrongType, source] : []),
+      activeRetakeSource: null, setActiveRetakeSource: vi.fn(), addTakeToAsset,
+      setPendingRetakeUpdate: vi.fn(), resetRetake: vi.fn(), imageUrls: [], imagePaths: [],
+      imageSubmissionRef: { current: null }, musicResult: null, musicSubmissionRef: { current: null },
+      onAssetAdded,
+    }));
+
+    await waitFor(() => expect(addTakeToAsset).toHaveBeenCalledWith(
+      "project-b", source.id, expect.objectContaining({ path: "C:\\upscaled.mp4", generationParams: expect.objectContaining({ mode: "upscale" }) }),
+    ));
+    expect(addAsset).not.toHaveBeenCalled();
+    expect(onAssetAdded).toHaveBeenCalledWith(source);
+  });
+
+  it("adds an upscale result when its source is not in the submission project", async () => {
+    const addAsset = vi.fn(() => ({ id: "upscaled", type: "video" as const, path: "C:\\upscaled.mp4", url: "file:///C:/upscaled.mp4", prompt: "", resolution: "720p", createdAt: 2 }));
+    const videoSubmissionRef: { current: VideoSubmissionSnapshot | null } = {
+      current: {
+        projectId: "project-b", prompt: "", settings: { ...DEFAULT_VIDEO_SETTINGS }, inputs: [], inputImage: null, inputAudio: null, assetPaths: [], videoTool: "upscale",
+        upscale: { mediaKind: "video", method: "lanczos", scale: 2, source: { id: "input-2", assetId: "other-project-source", url: "file:///C:/source.mp4", path: "C:\\source.mp4", role: "upscale_source", type: "video" } },
+      },
+    };
+
+    renderHook(() => useGenSpaceResultPersistence({
+      videoUrl: "file:///C:/upscaled.mp4", videoPath: "C:\\upscaled.mp4", isGenerating: false,
+      addAsset, reset: vi.fn(), videoSubmissionRef,
+      reframeSubmissionRef: { current: null }, retakeResult: null, isRetaking: false,
+      retakeSubmissionRef: { current: null }, getProjectAssets: vi.fn(() => []),
+      activeRetakeSource: null, setActiveRetakeSource: vi.fn(), addTakeToAsset: vi.fn(),
+      setPendingRetakeUpdate: vi.fn(), resetRetake: vi.fn(), imageUrls: [], imagePaths: [],
+      imageSubmissionRef: { current: null }, musicResult: null, musicSubmissionRef: { current: null },
+    }));
+
+    await waitFor(() => expect(addAsset).toHaveBeenCalledWith("project-b", expect.objectContaining({ generationParams: expect.objectContaining({ mode: "upscale" }) })));
+  });
 });

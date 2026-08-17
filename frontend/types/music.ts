@@ -63,8 +63,8 @@ export interface GenerateMusicRequest {
     strength?: number;
     durationSeconds?: number;
   }>;
-  weirdness: number;
-  promptInfluence: number;
+  weirdness?: number;
+  promptInfluence?: number;
   variations: number;
 }
 

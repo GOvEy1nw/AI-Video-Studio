@@ -62,8 +62,7 @@ PACKS: dict[str, dict[str, PackValue]] = {
     "ltx2_fast": {
         "name": "LTX 2.5 Fast",
         "kind": "model",
-        "model_type": "ltx2_25_22B",
-        "accelerator_profile_id": "ltx2_25_two_stage_distilled_8_3",
+        "model_type": "ltx2_25_22B_distilled",
     },
     "ltx2_quality": {
         "name": "LTX 2.5 Quality",
@@ -73,6 +72,7 @@ PACKS: dict[str, dict[str, PackValue]] = {
     },
     "ace_step_15_turbo": {"name": "ACE-Step 1.5 Fast", "kind": "model", "model_type": "ace_step_v1_5_turbo_lm_1_7b"},
     "ace_step_15_xl_turbo": {"name": "ACE-Step 1.5 XL", "kind": "model", "model_type": "ace_step_v1_5_xl_turbo_lm_1_7b"},
+    "minimax_music3": {"name": "MiniMax Music 3", "kind": "model", "model_type": "minimax_music3"},
     "mmaudio": {"name": "MMAudio Sound Effects", "kind": "audio_processor", "processor": "mmaudio"},
     "omnivoice": {"name": "OmniVoice", "kind": "model", "model_type": "omnivoice"},
     "index_tts2": {"name": "Index TTS 2", "kind": "model", "model_type": "index_tts2"},

@@ -37,6 +37,14 @@ from state.app_state_types import AppState
 _AUDIO_SUFFIXES = {".wav", ".mp3", ".flac", ".ogg", ".m4a", ".aac"}
 
 
+def _resolve_prompt_enhancer(profile: ModelProfile, req: GenerateMusicRequest) -> str:
+    if profile.id != "minimax_music3":
+        return "T" if req.vocalMode == "auto-lyrics" else ""
+    if req.vocalMode == "auto-lyrics":
+        return "T1,B2O" if req.enhanceDescription else "T1"
+    return "B2O" if req.enhanceDescription else ""
+
+
 class MusicGenerationHandler(StateHandlerBase):
     def __init__(
         self,
@@ -114,9 +122,7 @@ class MusicGenerationHandler(StateHandlerBase):
                     )
 
                 default_settings = dict(profile.wangp_default_settings)
-                default_settings["prompt_enhancer"] = (
-                    "T" if req.vocalMode == "auto-lyrics" else ""
-                )
+                default_settings["prompt_enhancer"] = _resolve_prompt_enhancer(profile, req)
                 path = self._wangp_bridge.generate_music(
                     description=description,
                     lyrics=resolved_lyrics,

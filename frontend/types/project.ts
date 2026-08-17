@@ -3,6 +3,7 @@
 import type { DirectorGenerationMetadata, DirectorSequenceV1 } from './director'
 import type { MediaCropRecipe } from './media-crop'
 import type { VideoToolId } from './video-tools'
+import type { UpscaleRecipe } from './upscale'
 import type { SfxGenerationRecipeV1 } from './sfx'
 import type { SpeechGenerationRecipe } from './speech'
 import type {
@@ -92,7 +93,7 @@ export type MusicGenerationMetadata =
 
 // Parameters needed to regenerate a shot
 export interface GenerationParams {
-  mode: 'text-to-video' | 'image-to-video' | 'audio-to-video' | 'text-to-image' | 'text-to-music' | 'text-to-sfx' | 'text-to-speech' | 'retake' | 'reframe'
+  mode: 'text-to-video' | 'image-to-video' | 'audio-to-video' | 'text-to-image' | 'text-to-music' | 'text-to-sfx' | 'text-to-speech' | 'retake' | 'reframe' | 'upscale'
   prompt: string
   model: string
   duration: number
@@ -106,9 +107,10 @@ export interface GenerationParams {
   styleId?: string
   videoTool?: VideoToolId
   imageProfileId?: string  // Phase 4 curated AiVS model profile id
-  imageProcessMode?: 'create' | 'edit' | 'region'
+  imageProcessMode?: 'create' | 'edit' | 'region' | 'upscale'
   imageEditMask?: ImageEditMaskRecipe
   imageEditOutpaint?: ImageEditOutpaintRecipe
+  upscale?: UpscaleRecipe
   inputImageUrl?: string // For I2V: the input image used
   inputImagePath?: string
   imageInputRole?: string
@@ -156,6 +158,10 @@ export interface AssetTake {
   thumbnail?: string
   createdAt: number
   duration?: number
+  prompt?: string
+  resolution?: string
+  generationTimeSeconds?: number | null
+  generationParams?: GenerationParams | null
   seed?: number
   variationIndex?: number
 }

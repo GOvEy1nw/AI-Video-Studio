@@ -52,8 +52,10 @@ export interface GenSpaceSelectedGenerationProps {
   onToggleFavorite: (asset: Asset) => void;
   onUseImage: (asset: Asset, target: ImageUseTarget) => void;
   onUseVideo: (asset: Asset, target: VideoUseTarget) => void;
+  onUpscale: (asset: Asset) => void;
   onCopySettings: (asset: Asset) => void;
   onDelete: (asset: Asset) => void;
+  onSelectTake: (assetId: string, takeIndex: number) => void;
 }
 
 function ActionButton({
@@ -465,10 +467,35 @@ export function GenSpaceSelectedGeneration({
   onToggleFavorite,
   onUseImage,
   onUseVideo,
+  onUpscale,
   onCopySettings,
   onDelete,
+  onSelectTake,
 }: GenSpaceSelectedGenerationProps) {
   const showingGeneration = generation.isRunning && generation.isSelected;
+  const takeTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const handleTakeTabKeyDown = (
+    event: React.KeyboardEvent<HTMLButtonElement>,
+    takeIndex: number,
+  ) => {
+    if (!asset?.takes) return;
+    const lastIndex = asset.takes.length - 1;
+    const nextIndex = event.key === "ArrowLeft"
+      ? (takeIndex + lastIndex) % asset.takes.length
+      : event.key === "ArrowRight"
+        ? (takeIndex + 1) % asset.takes.length
+        : event.key === "Home"
+          ? 0
+          : event.key === "End"
+            ? lastIndex
+            : null;
+    if (nextIndex === null) return;
+    event.preventDefault();
+    event.stopPropagation();
+    onSelectTake(asset.id, nextIndex);
+    takeTabRefs.current[nextIndex]?.focus();
+  };
+  const activeTake = asset?.takes?.[asset.activeTakeIndex ?? 0];
   const metadata = asset
     ? [
         ["Model", modelName ?? "Unknown"],
@@ -487,7 +514,7 @@ export function GenSpaceSelectedGeneration({
           new Intl.DateTimeFormat(undefined, {
             dateStyle: "medium",
             timeStyle: "short",
-          }).format(asset.createdAt),
+          }).format(activeTake?.createdAt ?? asset.createdAt),
         ],
       ]
     : [];
@@ -599,6 +626,46 @@ export function GenSpaceSelectedGeneration({
         </div>
       ) : asset ? (
         <>
+          {(asset.type === "image" || asset.type === "video") && asset.takes && asset.takes.length > 1 ? (
+            <div
+              role="tablist"
+              aria-label="Asset versions"
+              className="flex shrink-0 justify-center gap-2 border-b border-zinc-800 bg-black/40 px-5 py-3"
+            >
+              {asset.takes.map((take, index) => {
+                const active = (asset.activeTakeIndex ?? 0) === index;
+                const label = index === 0
+                  ? "Original"
+                  : take.generationParams?.mode === "upscale"
+                    ? `Upscaled version ${index}`
+                    : `Version ${index + 1}`;
+                return (
+                  <button
+                    key={`${take.createdAt}-${index}`}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    aria-label={label}
+                    tabIndex={active ? 0 : -1}
+                    onClick={() => onSelectTake(asset.id, index)}
+                    onKeyDown={(event) => handleTakeTabKeyDown(event, index)}
+                    ref={(node) => {
+                      takeTabRefs.current[index] = node;
+                    }}
+                    className={`h-14 w-14 overflow-hidden rounded-lg border-2 bg-zinc-900 transition-colors ${
+                      active ? "border-blue-500 ring-2 ring-blue-500/30" : "border-zinc-800 hover:border-zinc-600"
+                    }`}
+                  >
+                    {asset.type === "video" ? (
+                      <video src={take.url} muted preload="metadata" tabIndex={-1} className="h-full w-full object-cover" />
+                    ) : (
+                      <img src={take.url} alt="" className="h-full w-full object-cover" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
           <div className="flex min-h-0 flex-1 overflow-hidden bg-black/40">
             <AssetPreview asset={asset} isActive={isActive} />
           </div>
@@ -631,6 +698,13 @@ export function GenSpaceSelectedGeneration({
               {asset.type === "video" ? (
                 <UseVideoDropdown
                   onSelect={(target) => onUseVideo(asset, target)}
+                />
+              ) : null}
+              {asset.type === "image" || asset.type === "video" ? (
+                <ActionButton
+                  label="Upscale"
+                  icon={<Sparkles className="h-4 w-4" />}
+                  onClick={() => onUpscale(asset)}
                 />
               ) : null}
               <ActionButton

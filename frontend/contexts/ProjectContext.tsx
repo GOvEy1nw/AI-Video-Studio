@@ -22,6 +22,35 @@ function createProjectId(name: string, createdAt: number, existingIds: Set<strin
   return id
 }
 
+function projectTake(asset: Asset, take: AssetTake, activeTakeIndex: number): Asset {
+  return {
+    ...asset,
+    activeTakeIndex,
+    url: take.url,
+    path: take.path,
+    thumbnail: take.thumbnail ?? asset.thumbnail,
+    prompt: take.prompt ?? asset.prompt,
+    resolution: take.resolution ?? asset.resolution,
+    duration: take.duration ?? asset.duration,
+    generationTimeSeconds: take.generationTimeSeconds === null ? undefined : take.generationTimeSeconds ?? asset.generationTimeSeconds,
+    generationParams: take.generationParams === null ? undefined : take.generationParams ?? asset.generationParams,
+  }
+}
+
+function takeFromAsset(asset: Asset): AssetTake {
+  return {
+    url: asset.url,
+    path: asset.path,
+    thumbnail: asset.thumbnail,
+    createdAt: asset.createdAt,
+    duration: asset.duration,
+    prompt: asset.prompt,
+    resolution: asset.resolution,
+    generationTimeSeconds: asset.generationTimeSeconds ?? null,
+    generationParams: asset.generationParams ?? null,
+  }
+}
+
 export interface ProjectContextType {
   persistenceStatus: { pendingCount: number; saving: boolean; lastError: string | null }
   retryProjectPersistence: () => void
@@ -735,23 +764,14 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
         assets: p.assets.map(a => {
           if (a.id !== assetId) return a
           // Initialize takes array if it doesn't exist (original asset becomes take 0)
-          const existingTakes: AssetTake[] = a.takes || [{
-            url: a.url,
-            path: a.path,
-            thumbnail: a.thumbnail,
-            createdAt: a.createdAt,
-          }]
-          const newTakes = [...existingTakes, take]
+          const existingTakes: AssetTake[] = a.takes || [takeFromAsset(a)]
+          const activeIndex = Math.max(0, Math.min(a.activeTakeIndex ?? existingTakes.length - 1, existingTakes.length - 1))
+          const enrichedTakes = existingTakes.map((existingTake, index) =>
+            index === activeIndex ? { ...takeFromAsset(a), ...existingTake } : existingTake,
+          )
+          const newTakes = [...enrichedTakes, take]
           const newIndex = newTakes.length - 1
-          return {
-            ...a,
-            takes: newTakes,
-            activeTakeIndex: newIndex,
-            // Update the main url/path to the new take
-            url: take.url,
-            path: take.path,
-            thumbnail: take.thumbnail || a.thumbnail,
-          }
+          return projectTake({ ...a, takes: newTakes }, take, newIndex)
         }),
         updatedAt: Date.now(),
       }
@@ -768,18 +788,12 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
           if (a.id !== assetId || !a.takes || a.takes.length <= 1) return a // Never delete the last take
           const newTakes = a.takes.filter((_, i) => i !== takeIndex)
           // Adjust activeTakeIndex
-          let newActiveIdx = a.activeTakeIndex ?? newTakes.length - 1
+          const oldActiveIdx = a.activeTakeIndex ?? a.takes.length - 1
+          let newActiveIdx = takeIndex < oldActiveIdx ? oldActiveIdx - 1 : oldActiveIdx
           if (newActiveIdx >= newTakes.length) newActiveIdx = newTakes.length - 1
           if (newActiveIdx < 0) newActiveIdx = 0
           const activeTake = newTakes[newActiveIdx]
-          return {
-            ...a,
-            takes: newTakes,
-            activeTakeIndex: newActiveIdx,
-            url: activeTake.url,
-            path: activeTake.path,
-            thumbnail: activeTake.thumbnail || a.thumbnail,
-          }
+          return projectTake({ ...a, takes: newTakes }, activeTake, newActiveIdx)
         }),
         updatedAt: Date.now(),
       }
@@ -795,13 +809,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
           if (a.id !== assetId || !a.takes) return a
           const idx = Math.max(0, Math.min(takeIndex, a.takes.length - 1))
           const take = a.takes[idx]
-          return {
-            ...a,
-            activeTakeIndex: idx,
-            url: take.url,
-            path: take.path,
-            thumbnail: take.thumbnail || a.thumbnail,
-          }
+          return projectTake(a, take, idx)
         }),
         updatedAt: Date.now(),
       }

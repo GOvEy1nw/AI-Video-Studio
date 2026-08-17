@@ -49,6 +49,8 @@ import {
 import { buildSfxGenerationCommand } from "../logic/sfx-request";
 import { buildSpeechGenerationCommand } from "../logic/speech-request";
 import type { SpeechSettings } from "../../../types/speech";
+import { fileUrlToPath } from "../../../lib/url-to-path";
+import type { UpscaleMethodId } from "../../../types/upscale";
 
 interface RetakeInput {
   videoPath: string | null;
@@ -94,6 +96,9 @@ export function useGenSpaceGenerationActions({
   generateMusic,
   generateSfx,
   generateSpeech,
+  generateUpscale,
+  upscaleMethod = null,
+  upscaleScale = null,
   submitRetake,
 }: {
   mode: GenSpaceMode;
@@ -132,6 +137,9 @@ export function useGenSpaceGenerationActions({
   generateMusic: UseGenerationReturn["generateMusic"];
   generateSfx?: UseGenerationReturn["generateSfx"];
   generateSpeech?: UseGenerationReturn["generateSpeech"];
+  generateUpscale?: UseGenerationReturn["generateUpscale"];
+  upscaleMethod?: UpscaleMethodId | null;
+  upscaleScale?: number | null;
   submitRetake: (params: RetakeSubmitParams) => Promise<void>;
 }) {
   const imageSubmissionRef = useRef<ImageSubmissionSnapshot | null>(null);
@@ -140,6 +148,23 @@ export function useGenSpaceGenerationActions({
   const sfxSubmissionRef = useRef<SfxSubmissionSnapshot | null>(null);
   const speechSubmissionRef = useRef<SpeechSubmissionSnapshot | null>(null);
   const submit = useCallback(async () => {
+    const upscaleMediaKind = mode === "image" && imageMode === "upscale"
+      ? "image" as const
+      : mode === "video" && videoMode === "reframe" && selectedVideoTool === "upscale"
+        ? "video" as const
+        : null;
+    if (upscaleMediaKind) {
+      if (!generateUpscale || !upscaleMethod || upscaleScale === null) return;
+      const source = upscaleMediaKind === "image" ? editImage : videoToolInput;
+      const sourcePath = source?.path ?? (source ? fileUrlToPath(source.url) : null);
+      if (!currentProjectId || !source || !sourcePath) return;
+      const upscale = { mediaKind: upscaleMediaKind, method: upscaleMethod, scale: upscaleScale, source: { ...source, path: sourcePath } };
+      const snapshot = { projectId: currentProjectId, submittedAt: Date.now(), prompt: "", settings: { ...settings }, inputs: [upscale.source], assetPaths: projectAssets.map(({ url, path }) => ({ url, path })), upscale };
+      if (upscaleMediaKind === "image") imageSubmissionRef.current = { ...snapshot, imageMode: "upscale" };
+      else videoSubmissionRef.current = { ...snapshot, inputImage: null, inputAudio: null, videoTool: "upscale" };
+      await generateUpscale({ sourcePath, mediaKind: upscaleMediaKind, method: upscaleMethod, scale: upscaleScale });
+      return;
+    }
     if (
       mode === "video" &&
       videoMode === "reframe" &&
@@ -247,6 +272,7 @@ export function useGenSpaceGenerationActions({
       videoMode === "reframe" &&
       selectedVideoTool !== "reframe"
     ) {
+      if (selectedVideoTool === "upscale") return;
       if (!currentProjectId || !prompt.trim()) return;
       const command = buildVideoToolGenerationCommand({
         tool: selectedVideoTool,
@@ -415,6 +441,7 @@ export function useGenSpaceGenerationActions({
     generateMusic,
     generateSfx,
     generateSpeech,
+    generateUpscale,
     audioSubmode,
     imageInputs,
     imageMode,
@@ -446,6 +473,8 @@ export function useGenSpaceGenerationActions({
     useAudioTrack,
     videoMode,
     videoToolInput,
+    upscaleMethod,
+    upscaleScale,
   ]);
   return {
     submit,

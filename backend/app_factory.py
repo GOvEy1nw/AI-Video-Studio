@@ -20,6 +20,7 @@ from _routes.health import router as health_router
 from _routes.image_gen import router as image_gen_router
 from _routes.model_profiles import router as model_profiles_router
 from _routes.music_gen import router as music_gen_router
+from _routes.media_upscale import router as media_upscale_router
 from _routes.audio_sfx import router as audio_sfx_router
 from _routes.audio_speech import router as audio_speech_router
 from _routes.retake import router as retake_router
@@ -113,6 +114,7 @@ def create_app(
     app.include_router(music_gen_router)
     app.include_router(audio_sfx_router)
     app.include_router(audio_speech_router)
+    app.include_router(media_upscale_router)
     app.include_router(director_router)
 
     return app

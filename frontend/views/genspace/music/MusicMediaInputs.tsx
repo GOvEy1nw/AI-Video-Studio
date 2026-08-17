@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { fileUrlToPath } from "../../../lib/url-to-path";
+import type { ModelProfile } from "../../../types/model-profiles";
 import type {
   MusicAudioInputDraft,
   MusicAudioRole,
@@ -11,6 +12,7 @@ import { MediaRoleMenu } from "../components/MediaRoleMenu";
 export function MusicMediaInputs({
   coverInput,
   referenceTimbreInput,
+  profile,
   coverStrength,
   onInputChange,
   onCoverStrengthChange,
@@ -19,6 +21,7 @@ export function MusicMediaInputs({
 }: {
   coverInput: MusicAudioInputDraft | null;
   referenceTimbreInput: MusicAudioInputDraft | null;
+  profile?: ModelProfile;
   coverStrength: number;
   onInputChange: (
     role: MusicAudioRole,
@@ -161,20 +164,23 @@ export function MusicMediaInputs({
     />
   );
 
+  const policy = profile?.music;
+  if (!policy?.supportsCover && !policy?.supportsReferenceTimbre) return null;
+
   return (
     <GenPanelSection title="Media inputs" collapsible>
       <div className="relative flex items-center gap-2 overflow-visible">
-        {slot("Cover Song", "cover", coverInput, coverRef)}
-        {slot(
+        {policy.supportsCover ? slot("Cover Song", "cover", coverInput, coverRef) : null}
+        {policy.supportsReferenceTimbre ? slot(
           "Transfer Timbre",
           "reference-timbre",
           referenceTimbreInput,
           timbreRef,
-        )}
+        ) : null}
       </div>
-      {fileInput("cover", coverRef)}
-      {fileInput("reference-timbre", timbreRef)}
-      {coverInput ? (
+      {policy.supportsCover ? fileInput("cover", coverRef) : null}
+      {policy.supportsReferenceTimbre ? fileInput("reference-timbre", timbreRef) : null}
+      {policy.supportsCover && coverInput ? (
         <label className="mt-3 block text-2xs text-zinc-500">
           <span className="flex justify-between">
             <span>Source Audio Strength</span>

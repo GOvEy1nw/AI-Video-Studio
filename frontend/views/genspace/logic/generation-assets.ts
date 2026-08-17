@@ -69,6 +69,7 @@ export function buildGeneratedImageAsset({
   createdAt: number;
 }): NewAsset {
   const firstInput = snapshot.inputs[0];
+  const upscale = snapshot.upscale;
   return {
     type: "image",
     path: finalPath,
@@ -81,9 +82,9 @@ export function buildGeneratedImageAsset({
     ),
     source: "generated",
     generationParams: {
-      mode: "text-to-image",
+      mode: upscale ? "upscale" : "text-to-image",
       prompt: snapshot.prompt,
-      model: snapshot.settings.imageProfileId || "z_image_turbo",
+      model: upscale?.method ?? (snapshot.settings.imageProfileId || "z_image_turbo"),
       duration: 5,
       resolution: snapshot.settings.imageResolution,
       fps: 24,
@@ -94,6 +95,13 @@ export function buildGeneratedImageAsset({
       imageSteps: snapshot.settings.imageSteps,
       imageProfileId: snapshot.settings.imageProfileId,
       imageProcessMode: snapshot.imageMode ?? "create",
+      upscale: upscale ? {
+        schemaVersion: 1,
+        mediaKind: upscale.mediaKind,
+        method: upscale.method,
+        scale: upscale.scale,
+        source: { url: upscale.source.url, path: upscale.source.path ?? resolvePath(upscale.source.url, snapshot.assetPaths), type: upscale.mediaKind },
+      } : undefined,
       imageEditMask: snapshot.editMask
         ? {
             schemaVersion: 1,
@@ -142,7 +150,11 @@ export function buildGeneratedVideoAsset({
   );
   const inputImageUrl = startImage?.url || snapshot.inputImage || undefined;
   const inputAudioUrl = audio?.url || snapshot.inputAudio || undefined;
-  const mode = inputAudioUrl
+  const upscale = snapshot.upscale;
+  const duration = upscale
+    ? upscale.source.mediaDuration ?? snapshot.settings.duration
+    : snapshot.settings.duration;
+  const mode = upscale ? "upscale" : inputAudioUrl
     ? "audio-to-video"
     : inputImageUrl
       ? "image-to-video"
@@ -153,7 +165,7 @@ export function buildGeneratedVideoAsset({
     url: finalUrl,
     prompt: snapshot.prompt,
     resolution: snapshot.settings.videoResolution,
-    duration: snapshot.settings.duration,
+    duration,
     generationTimeSeconds: generationTimeSeconds(
       snapshot.submittedAt,
       createdAt,
@@ -162,11 +174,18 @@ export function buildGeneratedVideoAsset({
     generationParams: {
       mode,
       prompt: snapshot.prompt,
-      model: snapshot.settings.model,
+      model: upscale?.method ?? snapshot.settings.model,
       videoProfileId: snapshot.settings.videoProfileId,
       styleId: snapshot.videoTool ? undefined : snapshot.settings.styleId,
       videoTool: snapshot.videoTool,
-      duration: snapshot.settings.duration,
+      upscale: upscale ? {
+        schemaVersion: 1,
+        mediaKind: upscale.mediaKind,
+        method: upscale.method,
+        scale: upscale.scale,
+        source: { url: upscale.source.url, path: upscale.source.path ?? resolvePath(upscale.source.url, snapshot.assetPaths), type: upscale.mediaKind },
+      } : undefined,
+      duration,
       resolution: snapshot.settings.videoResolution,
       fps: snapshot.settings.fps,
       audio: snapshot.settings.audio || false,

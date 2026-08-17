@@ -12,6 +12,7 @@ export function MusicAdvancedSettings({
   profile?: ModelProfile;
 }) {
   const policy = profile?.music;
+  const supportsSampling = Boolean(profile?.wangpMetadata.settingValues.sampling);
   const update = (patch: Partial<MusicSettings>) =>
     onChange({ ...settings, ...patch });
 
@@ -35,16 +36,20 @@ export function MusicAdvancedSettings({
               className="mt-1 w-full accent-emerald-400"
             />
           </label>
-          <RangeControl
-            label="Weirdness"
-            value={settings.weirdness}
-            onChange={(weirdness) => update({ weirdness })}
-          />
-          <RangeControl
-            label="Prompt Influence"
-            value={settings.promptInfluence}
-            onChange={(promptInfluence) => update({ promptInfluence })}
-          />
+          {supportsSampling ? (
+            <>
+              <RangeControl
+                label="Weirdness"
+                value={settings.weirdness}
+                onChange={(weirdness) => update({ weirdness })}
+              />
+              <RangeControl
+                label="Prompt Influence"
+                value={settings.promptInfluence}
+                onChange={(promptInfluence) => update({ promptInfluence })}
+              />
+            </>
+          ) : null}
         </div>
       </div>
     </GenPanelSection>
