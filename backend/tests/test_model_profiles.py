@@ -163,16 +163,16 @@ class TestCuratedProfiles:
         fast = get_video_profile("minimax_h3_fast")
         assert profile is not None
         assert fast is not None
-        assert profile.wangp_model_type == "minimax_h3_fl2va_pruned"
+        assert profile.wangp_model_type == "aivs_minimax_h3_fl2va_hybrid_20b"
         assert profile.wangp_default_settings == {}
         assert fast.wangp_default_settings == {}
-        assert fast.wangp_accelerator_profile_for("minimax_h3_fl2va_pruned") == (
+        assert fast.wangp_accelerator_profile_for("aivs_minimax_h3_fl2va_hybrid_20b") == (
             "aivs_h3_turbo_lightx2v_fl2v_4_steps_v0.1"
         )
-        assert fast.wangp_accelerator_profile_for("minimax_h3_ref2va_pruned") == (
-            "aivs_h3_turbo_lightx2v_ref2v_4_steps_v0.1"
+        assert fast.wangp_accelerator_profile_for("aivs_minimax_h3_ref2va_hybrid_20b") == (
+            "aivs_h3_turbo_lightx2v_fl2v_4_steps_v0.1"
         )
-        assert profile.wangp_accelerator_profile_for("minimax_h3_fl2va_pruned") is None
+        assert profile.wangp_accelerator_profile_for("aivs_minimax_h3_fl2va_hybrid_20b") is None
         assert profile.required_pack_ids == ("minimax-h3-quality",)
         assert profile.input_media.max_reference_images == 9
         assert profile.input_media.max_reference_videos == 2
@@ -191,8 +191,8 @@ class TestCuratedProfiles:
         assert fast.media_type == quality.media_type == "video"
         assert fast.display_name == "LTX 2.5 Fast"
         assert quality.display_name == "LTX 2.5 Quality"
-        assert fast.wangp_model_type == "ltx2_25_22B_distilled"
-        assert quality.wangp_model_type == "ltx2_25_22B"
+        assert fast.wangp_model_type == "aivs_ltx2_25_22B_distilled"
+        assert quality.wangp_model_type == "aivs_ltx2_25_22B"
         assert fast.wangp_default_settings == quality.wangp_default_settings == {}
         assert fast.wangp_accelerator_profile_id is None
         assert (

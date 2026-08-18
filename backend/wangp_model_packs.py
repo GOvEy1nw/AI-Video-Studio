@@ -52,22 +52,22 @@ PACKS: dict[str, dict[str, PackValue]] = {
     "ideogram4_int8": {
         "name": "Ideogram 4 Standard",
         "kind": "model",
-        "model_type": "ideogram4_int8",
+        "model_type": "aivs_ideogram4_int8",
     },
     "ideogram4_turbotime_int8": {
         "name": "Ideogram 4 TurboTime",
         "kind": "model",
-        "model_type": "ideogram4_turbotime_int8",
+        "model_type": "aivs_ideogram4_turbotime_int8",
     },
     "ltx2_fast": {
         "name": "LTX 2.5 Fast",
         "kind": "model",
-        "model_type": "ltx2_25_22B_distilled",
+        "model_type": "aivs_ltx2_25_22B_distilled",
     },
     "ltx2_quality": {
         "name": "LTX 2.5 Quality",
         "kind": "model",
-        "model_type": "ltx2_25_22B",
+        "model_type": "aivs_ltx2_25_22B",
         "accelerator_profile_id": "ltx2_25_two_stage_hq_res2s_15_3",
     },
     "ace_step_15_turbo": {"name": "ACE-Step 1.5 Fast", "kind": "model", "model_type": "ace_step_v1_5_turbo_lm_1_7b"},
@@ -79,16 +79,16 @@ PACKS: dict[str, dict[str, PackValue]] = {
     "minimax-h3-fast": {
         "name": "MiniMax H3 Fast",
         "kind": "model",
-        "model_types": ["minimax_h3_fl2va_pruned", "minimax_h3_ref2va_pruned"],
+        "model_types": ["aivs_minimax_h3_fl2va_hybrid_20b", "aivs_minimax_h3_ref2va_hybrid_20b"],
         "accelerator_profile_ids": {
-            "minimax_h3_fl2va_pruned": "aivs_h3_turbo_lightx2v_fl2v_4_steps_v0.1",
-            "minimax_h3_ref2va_pruned": "aivs_h3_turbo_lightx2v_ref2v_4_steps_v0.1",
+            "aivs_minimax_h3_fl2va_hybrid_20b": "aivs_h3_turbo_lightx2v_fl2v_4_steps_v0.1",
+            "aivs_minimax_h3_ref2va_hybrid_20b": "aivs_h3_turbo_lightx2v_fl2v_4_steps_v0.1",
         },
     },
     "minimax-h3-quality": {
         "name": "MiniMax H3 Quality",
         "kind": "model",
-        "model_types": ["minimax_h3_fl2va_pruned", "minimax_h3_ref2va_pruned"],
+        "model_types": ["aivs_minimax_h3_fl2va_hybrid_20b", "aivs_minimax_h3_ref2va_hybrid_20b"],
     },
     "prompt_enhancer": {"name": "Prompt Enhancer", "kind": "prompt"},
 }
