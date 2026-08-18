@@ -18,11 +18,10 @@ type GalleryAssetListProps = {
   assets: Asset[]
   selectedAssetIds?: Set<string>
   multiSelectMode?: boolean
-  onToggleSelection?: (asset: Asset) => void
   getAssetColorLabel?: (asset: Asset) => ColorLabel | undefined
   getThumbnailUrl?: (asset: Asset) => string | undefined
   previewEnabled?: boolean
-  onAssetClick?: (event: MouseEvent<HTMLDivElement>, asset: Asset) => void
+  onAssetClick?: (event: MouseEvent<HTMLDivElement>, asset: Asset, assetOrder: Asset[]) => void
   onAssetDoubleClick?: (event: MouseEvent<HTMLDivElement>, asset: Asset) => void
   onAssetContextMenu?: (event: MouseEvent<HTMLDivElement>, asset: Asset) => void
   onAssetDragStart?: (event: DragEvent<HTMLDivElement>, asset: Asset) => void
@@ -62,7 +61,6 @@ export function GalleryAssetList({
   assets,
   selectedAssetIds = EMPTY_SET,
   multiSelectMode = false,
-  onToggleSelection,
   getAssetColorLabel,
   getThumbnailUrl,
   previewEnabled = false,
@@ -160,25 +158,29 @@ export function GalleryAssetList({
             key={asset.id}
             data-asset-card
             data-asset-id={asset.id}
-            role={multiSelectMode ? 'checkbox' : undefined}
+            role={multiSelectMode ? 'checkbox' : 'button'}
             aria-checked={multiSelectMode ? selectedAssetIds.has(asset.id) : undefined}
-            aria-label={multiSelectMode ? `${asset.type} asset` : undefined}
-            tabIndex={multiSelectMode ? 0 : undefined}
+            aria-label={`${asset.type} asset`}
+            tabIndex={0}
             draggable={Boolean(onAssetDragStart) && !multiSelectMode}
             onDragStart={(event) => onAssetDragStart?.(event, asset)}
-            onClick={(event) => onAssetClick?.(event, asset)}
+            onClick={(event) => onAssetClick?.(event, asset, sortedAssets)}
             onKeyDown={(event) => {
               if (
-                !multiSelectMode ||
                 event.target !== event.currentTarget ||
                 (event.key !== 'Enter' && event.key !== ' ')
               ) return
               event.preventDefault()
-              onToggleSelection?.(asset)
+              event.currentTarget.dispatchEvent(new window.MouseEvent('click', {
+                bubbles: true,
+                ctrlKey: event.ctrlKey,
+                metaKey: event.metaKey,
+                shiftKey: event.shiftKey,
+              }))
             }}
             onDoubleClick={(event) => onAssetDoubleClick?.(event, asset)}
             onContextMenu={(event) => onAssetContextMenu?.(event, asset)}
-            className={`group flex cursor-pointer items-center gap-1 px-2 py-1 transition-all ${
+            className={`group flex cursor-pointer items-center gap-1 px-2 py-1 outline-none transition-all focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-400/70 ${
               selectedAssetIds.has(asset.id)
                 ? 'bg-blue-600/20 ring-1 ring-blue-500/50'
                 : 'hover:bg-zinc-800/60'

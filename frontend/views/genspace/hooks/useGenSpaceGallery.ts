@@ -358,6 +358,7 @@ export function useGenSpaceGallery({
       selectedAssetIds: selectedAsset
         ? new Set([selectedAsset.id])
         : new Set<string>(),
+      onSelectedAssetIdsChange: setContextSelectedAssetIds,
       onAssetClick: (event, asset) => {
         event.stopPropagation();
         setSelectedAsset(asset);
@@ -373,7 +374,6 @@ export function useGenSpaceGallery({
           x: event.clientX,
           y: event.clientY,
         });
-        setContextSelectedAssetIds(new Set([asset.id]));
         setBinContextMenu(null);
       },
       onDeleteAsset: (asset) => requestDeleteAssets([asset.id]),

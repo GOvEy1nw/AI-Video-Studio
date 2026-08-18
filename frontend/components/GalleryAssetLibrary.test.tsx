@@ -77,26 +77,147 @@ describe("Asset Library", () => {
     expect(toggleGalleryFilterValue(["image"], "image")).toEqual([]);
   });
 
-  it("selects by click and keyboard, clears selection, then requests bulk deletion", () => {
-    const onDeleteAssets = vi.fn();
-    render(<GalleryAssetLibrary {...makeLibraryProps({ onDeleteAssets })} />);
+  it("ctrl-click toggles assets, shift-click selects a range, and plain click exits multi-select", () => {
+    const onAssetClick = vi.fn();
+    const assets = [
+      makeAsset("asset-one", "image"),
+      makeAsset("asset-two", "video"),
+      makeAsset("asset-three", "audio"),
+    ];
+    const { container } = render(
+      <GalleryAssetLibrary {...makeLibraryProps({ assets, visibleAssets: assets, onAssetClick })} />,
+    );
 
-    fireEvent.click(screen.getByRole("button", { name: "Enter multi-select mode" }));
-    const [firstCard, secondCard] = screen.getAllByRole("checkbox");
-    fireEvent.click(firstCard);
-    fireEvent.keyDown(secondCard, { key: " " });
-    expect(screen.getByText("2 selected")).toBeTruthy();
+    const cards = container.querySelectorAll("[data-asset-card]");
+    fireEvent.click(cards[0], { ctrlKey: true });
+    fireEvent.click(cards[2], { ctrlKey: true });
+    expect(screen.getAllByRole("checkbox", { checked: true })).toHaveLength(2);
 
-    fireEvent.click(screen.getByRole("button", { name: "Clear selection" }));
-    fireEvent.click(secondCard);
-    fireEvent.click(screen.getByRole("button", { name: "Delete selected assets" }));
+    fireEvent.click(cards[1], { ctrlKey: true });
+    expect(screen.getAllByRole("checkbox", { checked: true })).toHaveLength(3);
 
-    expect(onDeleteAssets).toHaveBeenCalledWith(["asset-two"]);
+    fireEvent.click(cards[2], { shiftKey: true });
+    expect(screen.getAllByRole("checkbox", { checked: true })).toHaveLength(2);
+    expect(screen.queryByText(/selected/)).toBeNull();
+
+    fireEvent.click(cards[0]);
+    expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+    expect(onAssetClick).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ id: "asset-one" }));
+  });
+
+  it("keeps the existing selection when ctrl-click starts multi-select", () => {
+    const { container } = render(
+      <GalleryAssetLibrary
+        {...makeLibraryProps({ selectedAssetIds: new Set(["asset-one"]) })}
+      />,
+    );
+
+    fireEvent.click(container.querySelectorAll("[data-asset-card]")[1], { ctrlKey: true });
+
+    expect(screen.getAllByRole("checkbox", { checked: true }).map((card) => card.dataset.assetId)).toEqual([
+      "asset-one",
+      "asset-two",
+    ]);
+  });
+
+  it("falls back to the clicked asset when a range anchor is filtered out", () => {
+    const assets = [
+      makeAsset("asset-one", "image"),
+      makeAsset("asset-two", "image"),
+      makeAsset("asset-three", "image"),
+    ];
+    const { container, rerender } = render(
+      <GalleryAssetLibrary {...makeLibraryProps({ assets, visibleAssets: assets })} />,
+    );
+
+    fireEvent.click(container.querySelectorAll("[data-asset-card]")[0], { ctrlKey: true });
+    rerender(
+      <GalleryAssetLibrary
+        {...makeLibraryProps({ assets, visibleAssets: assets.slice(1) })}
+      />,
+    );
+    fireEvent.click(container.querySelectorAll("[data-asset-card]")[1], { shiftKey: true });
+
+    expect(screen.getAllByRole("checkbox", { checked: true }).map((card) => card.dataset.assetId)).toEqual([
+      "asset-three",
+    ]);
+  });
+
+  it("keeps a ctrl-selected context-menu set and has no bulk action bar", () => {
+    const onSelectedAssetIdsChange = vi.fn();
+    const { container } = render(
+      <GalleryAssetLibrary {...makeLibraryProps({ onSelectedAssetIdsChange })} />,
+    );
+
+    const cards = container.querySelectorAll("[data-asset-card]");
+    fireEvent.click(cards[0], { ctrlKey: true });
+    fireEvent.click(cards[1], { ctrlKey: true });
+    fireEvent.contextMenu(cards[1]);
+
+    expect(onSelectedAssetIdsChange).toHaveBeenLastCalledWith(new Set(["asset-one", "asset-two"]));
+    expect(screen.queryByRole("button", { name: "Clear selection" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Delete selected assets" })).toBeNull();
+  });
+
+  it("enters multi-select from focused grid cards and list rows", () => {
+    const onAssetClick = vi.fn();
+    const { container, unmount } = render(
+      <GalleryAssetLibrary {...makeLibraryProps({ onAssetClick })} />,
+    );
+    const gridCard = container.querySelector<HTMLElement>("[data-asset-card]")!;
+    expect(gridCard.getAttribute("role")).toBe("button");
+    gridCard.focus();
+    fireEvent.keyDown(gridCard, { key: "Enter" });
+    expect(onAssetClick).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ id: "asset-one" }));
+    fireEvent.keyDown(gridCard, { key: "Enter", ctrlKey: true });
+    expect(screen.getAllByRole("checkbox", { checked: true })).toHaveLength(1);
+
+    unmount();
+    const list = render(
+      <GalleryAssetLibrary {...makeLibraryProps({ viewMode: "list" })} />,
+    );
+    const listRow = list.container.querySelector<HTMLElement>("[data-asset-card]")!;
+    expect(listRow.getAttribute("role")).toBe("button");
+    listRow.focus();
+    fireEvent.keyDown(listRow, { key: " ", ctrlKey: true });
+    expect(screen.getAllByRole("checkbox", { checked: true })).toHaveLength(1);
+  });
+
+  it("uses the current list sort order for shift ranges", () => {
+    const assets = [
+      makeAsset("charlie", "image"),
+      makeAsset("alpha", "image"),
+      makeAsset("bravo", "image"),
+    ];
+    const { container } = render(
+      <GalleryAssetLibrary {...makeLibraryProps({ assets, visibleAssets: assets, viewMode: "list" })} />,
+    );
+
+    const rows = container.querySelectorAll<HTMLElement>("[data-asset-card]");
+    expect([...rows].map((row) => row.dataset.assetId)).toEqual(["alpha", "bravo", "charlie"]);
+    fireEvent.click(rows[0], { ctrlKey: true });
+    fireEvent.click(rows[1], { shiftKey: true });
+
+    expect(screen.getAllByRole("checkbox", { checked: true }).map((row) => row.dataset.assetId)).toEqual(["alpha", "bravo"]);
+  });
+
+  it("clears multi-select from header controls", () => {
+    const { container } = render(<GalleryAssetLibrary {...makeLibraryProps()} />);
+    fireEvent.click(container.querySelectorAll("[data-asset-card]")[0], {
+      ctrlKey: true,
+    });
+    expect(screen.getAllByRole("checkbox")).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole("button", { name: "List view" }));
+
+    expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
   });
 
   it("keeps a card pointer gesture out of marquee capture", () => {
     const { container } = render(<GalleryAssetLibrary {...makeLibraryProps()} />);
-    fireEvent.click(screen.getByRole("button", { name: "Enter multi-select mode" }));
+    fireEvent.click(container.querySelectorAll("[data-asset-card]")[0], {
+      ctrlKey: true,
+    });
     const card = screen.getAllByRole("checkbox")[0];
     const surface = container.querySelector(".gallery-scrollbar");
     const setPointerCapture = vi.fn();

@@ -13,6 +13,7 @@ import {
   Copy,
   FolderOpen,
   Heart,
+  Maximize,
   Pause,
   Play,
   Sparkles,
@@ -182,6 +183,7 @@ function MediaPlayerControls({
   onPlayPause,
   onSeek,
   onToggleMuted,
+  onFullscreen,
 }: {
   currentTime: number;
   duration: number;
@@ -191,6 +193,7 @@ function MediaPlayerControls({
   onPlayPause: () => void;
   onSeek: (time: number) => void;
   onToggleMuted: () => void;
+  onFullscreen?: () => void;
 }) {
   return (
     <div
@@ -244,6 +247,16 @@ function MediaPlayerControls({
                 <Volume2 className="h-4 w-4" />
               )}
             </button>
+            {onFullscreen ? (
+              <button
+                type="button"
+                onClick={onFullscreen}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
+                aria-label="Full screen"
+              >
+                <Maximize className="h-4 w-4" />
+              </button>
+            ) : null}
           </>
         ) : null}
       </div>
@@ -353,6 +366,10 @@ function PlayableAssetPreview({
     setMuted(media.muted);
   };
 
+  const handleFullscreen = () => {
+    void mediaRef.current?.requestFullscreen?.().catch(() => undefined);
+  };
+
   const mediaEvents = {
     onLoadedMetadata: (event: React.SyntheticEvent<HTMLMediaElement>) =>
       syncDuration(event.currentTarget),
@@ -420,32 +437,215 @@ function PlayableAssetPreview({
         onPlayPause={handlePlayPause}
         onSeek={handleSeek}
         onToggleMuted={handleToggleMuted}
+        onFullscreen={audio ? undefined : handleFullscreen}
       />
     </div>
   );
 }
 
-function AssetPreview({
-  asset,
-  isActive,
+type ImageTransform = { scale: number; offset: { x: number; y: number } };
+
+function ImageViewport({
+  transform,
+  onTransformChange,
+  children,
+  transformContent = true,
 }: {
+  transform: ImageTransform;
+  onTransformChange: (transform: ImageTransform) => void;
+  children: ReactNode;
+  transformContent?: boolean;
+}) {
+  const dragStartRef = useRef<{
+    x: number;
+    y: number;
+    offsetX: number;
+    offsetY: number;
+  } | null>(null);
+  const zoomed = transform.scale > 1 || transform.offset.x !== 0 || transform.offset.y !== 0;
+  return (
+    <div
+      className="relative flex h-full w-full touch-none items-center justify-center overflow-hidden p-5"
+      onWheel={(event) => {
+        event.preventDefault();
+        const scale = Math.min(4, Math.max(1, transform.scale + (event.deltaY < 0 ? 0.25 : -0.25)));
+        onTransformChange({
+          scale,
+          offset: scale === 1 ? { x: 0, y: 0 } : transform.offset,
+        });
+      }}
+      onPointerDown={(event) => {
+        if (
+          transform.scale <= 1 ||
+          (event.target as HTMLElement).closest("button, input, select, textarea, a, [role='slider']")
+        ) {
+          return;
+        }
+        dragStartRef.current = {
+          x: event.clientX,
+          y: event.clientY,
+          offsetX: transform.offset.x,
+          offsetY: transform.offset.y,
+        };
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+      }}
+      onPointerMove={(event) => {
+        const dragStart = dragStartRef.current;
+        if (!dragStart) return;
+        onTransformChange({
+          ...transform,
+          offset: {
+            x: dragStart.offsetX + event.clientX - dragStart.x,
+            y: dragStart.offsetY + event.clientY - dragStart.y,
+          },
+        });
+      }}
+      onPointerUp={(event) => {
+        dragStartRef.current = null;
+        if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+          event.currentTarget.releasePointerCapture?.(event.pointerId);
+        }
+      }}
+      onPointerCancel={(event) => {
+        dragStartRef.current = null;
+        if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+          event.currentTarget.releasePointerCapture?.(event.pointerId);
+        }
+      }}
+    >
+      <div
+        className="relative flex h-full w-full items-center justify-center"
+        style={
+          transformContent
+            ? {
+                transform: `translate(${transform.offset.x}px, ${transform.offset.y}px) scale(${transform.scale})`,
+              }
+            : undefined
+        }
+      >
+        {children}
+      </div>
+      <button
+        type="button"
+        onClick={() => onTransformChange({ scale: 1, offset: { x: 0, y: 0 } })}
+        disabled={!zoomed}
+        className="absolute bottom-4 right-4 rounded-md border border-zinc-700 bg-zinc-900/90 px-3 py-1.5 text-xs text-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
+        aria-label="Reset zoom"
+      >
+        Reset Zoom
+      </button>
+    </div>
+  );
+}
+
+function AssetPreview({ asset, isActive, transform, onTransformChange }: {
   asset: Asset;
   isActive: boolean;
+  transform: ImageTransform;
+  onTransformChange: (transform: ImageTransform) => void;
 }) {
   if (asset.type === "video" || asset.type === "audio") {
-    return (
-      <PlayableAssetPreview key={asset.url} asset={asset} isActive={isActive} />
-    );
+    return <PlayableAssetPreview key={asset.url} asset={asset} isActive={isActive} />;
   }
   return (
-    <div className="flex h-full w-full items-center justify-center p-5">
-      <img
-        key={asset.url}
-        src={asset.url}
-        alt={asset.prompt}
-        className="max-h-full max-w-full object-contain"
-      />
-    </div>
+    <ImageViewport transform={transform} onTransformChange={onTransformChange}>
+      <img key={asset.url} src={asset.url} alt={asset.prompt} className="max-h-full max-w-full select-none object-contain" draggable={false} />
+    </ImageViewport>
+  );
+}
+
+function ImageComparePreview({ first, second, transform, onTransformChange }: {
+  first: string;
+  second: string;
+  transform: ImageTransform;
+  onTransformChange: (transform: ImageTransform) => void;
+}) {
+  const [reveal, setReveal] = useState(50);
+  const dividerDraggingRef = useRef(false);
+  const updateReveal = (clientX: number, viewer: HTMLElement | null) => {
+    const bounds = viewer?.getBoundingClientRect();
+    if (!bounds || bounds.width <= 0) return;
+    setReveal(Math.round(Math.max(0, Math.min(100, ((clientX - bounds.left) / bounds.width) * 100))));
+  };
+  return (
+    <ImageViewport
+      transform={transform}
+      onTransformChange={onTransformChange}
+      transformContent={false}
+    >
+      <div
+        data-testid="compare-image-a"
+        className="absolute inset-0"
+        style={{ transform: `translate(${transform.offset.x}px, ${transform.offset.y}px) scale(${transform.scale})` }}
+      >
+        <img
+          src={first}
+          alt="Version A"
+          className="h-full w-full select-none object-contain"
+          draggable={false}
+        />
+      </div>
+      <div
+        className="absolute inset-0 flex items-center justify-center overflow-hidden"
+        style={{ clipPath: `inset(0 ${100 - reveal}% 0 0)` }}
+      >
+        <div
+          data-testid="compare-image-b"
+          className="absolute inset-0"
+          style={{ transform: `translate(${transform.offset.x}px, ${transform.offset.y}px) scale(${transform.scale})` }}
+        >
+          <img
+            src={second}
+            alt="Version B"
+            className="h-full w-full select-none object-contain"
+            draggable={false}
+          />
+        </div>
+      </div>
+      <span className="absolute left-2 top-2 rounded bg-black/70 px-2 py-1 text-xs text-white">A</span>
+      <span className="absolute right-2 top-2 rounded bg-black/70 px-2 py-1 text-xs text-white">B</span>
+      <button
+        type="button"
+        role="slider"
+        tabIndex={0}
+        aria-label="A/B reveal"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={reveal}
+        aria-valuetext={`${reveal}% Version B`}
+        onKeyDown={(event) => {
+          const next = event.key === "Home" ? 0 : event.key === "End" ? 100 : event.key === "ArrowLeft" || event.key === "ArrowDown" ? Math.max(0, reveal - 1) : event.key === "ArrowRight" || event.key === "ArrowUp" ? Math.min(100, reveal + 1) : null;
+          if (next === null) return;
+          event.preventDefault();
+          event.stopPropagation();
+          setReveal(next);
+        }}
+        onPointerDown={(event) => {
+          event.stopPropagation();
+          dividerDraggingRef.current = true;
+          event.currentTarget.setPointerCapture?.(event.pointerId);
+          updateReveal(event.clientX, event.currentTarget.parentElement);
+        }}
+        onPointerMove={(event) => {
+          if (dividerDraggingRef.current) {
+            updateReveal(event.clientX, event.currentTarget.parentElement);
+          }
+        }}
+        onPointerUp={(event) => {
+          dividerDraggingRef.current = false;
+          if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture?.(event.pointerId);
+        }}
+        onPointerCancel={(event) => {
+          dividerDraggingRef.current = false;
+          if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture?.(event.pointerId);
+        }}
+        className="absolute inset-y-0 z-10 w-6 -translate-x-1/2 cursor-col-resize touch-none outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+        style={{ left: `${reveal}%` }}
+      >
+        <span className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.5)]" />
+        <span className="absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/80 bg-violet-500 shadow" />
+      </button>
+    </ImageViewport>
   );
 }
 
@@ -474,6 +674,18 @@ export function GenSpaceSelectedGeneration({
 }: GenSpaceSelectedGenerationProps) {
   const showingGeneration = generation.isRunning && generation.isSelected;
   const takeTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const [comparisonTakeIndex, setComparisonTakeIndex] = useState<number | null>(null);
+  const [imageTransform, setImageTransform] = useState<ImageTransform>({
+    scale: 1,
+    offset: { x: 0, y: 0 },
+  });
+  const activeTakeIndex = asset?.activeTakeIndex ?? 0;
+  useEffect(() => {
+    setComparisonTakeIndex(null);
+  }, [asset?.id, activeTakeIndex]);
+  useEffect(() => {
+    setImageTransform({ scale: 1, offset: { x: 0, y: 0 } });
+  }, [asset?.id]);
   const handleTakeTabKeyDown = (
     event: React.KeyboardEvent<HTMLButtonElement>,
     takeIndex: number,
@@ -492,10 +704,16 @@ export function GenSpaceSelectedGeneration({
     if (nextIndex === null) return;
     event.preventDefault();
     event.stopPropagation();
+    setComparisonTakeIndex(null);
     onSelectTake(asset.id, nextIndex);
     takeTabRefs.current[nextIndex]?.focus();
   };
-  const activeTake = asset?.takes?.[asset.activeTakeIndex ?? 0];
+  const activeTake = asset?.takes?.[activeTakeIndex];
+  const comparedTakes =
+    asset?.type === "image" && comparisonTakeIndex !== null
+      ? [activeTake, asset.takes?.[comparisonTakeIndex]]
+          .filter((take): take is NonNullable<typeof take> => Boolean(take))
+      : [];
   const metadata = asset
     ? [
         ["Model", modelName ?? "Unknown"],
@@ -633,26 +851,50 @@ export function GenSpaceSelectedGeneration({
               className="flex shrink-0 justify-center gap-2 border-b border-zinc-800 bg-black/40 px-5 py-3"
             >
               {asset.takes.map((take, index) => {
-                const active = (asset.activeTakeIndex ?? 0) === index;
+                const active = activeTakeIndex === index;
                 const label = index === 0
                   ? "Original"
                   : take.generationParams?.mode === "upscale"
                     ? `Upscaled version ${index}`
                     : `Version ${index + 1}`;
+                const comparisonLabel = comparisonTakeIndex === null
+                  ? null
+                  : active
+                    ? "A"
+                    : comparisonTakeIndex === index
+                      ? "B"
+                      : null;
                 return (
                   <button
                     key={`${take.createdAt}-${index}`}
                     type="button"
                     role="tab"
                     aria-selected={active}
-                    aria-label={label}
+                    aria-label={
+                      comparisonLabel
+                        ? `${label}, comparison ${comparisonLabel}`
+                        : label
+                    }
                     tabIndex={active ? 0 : -1}
-                    onClick={() => onSelectTake(asset.id, index)}
+                    onClick={(event) => {
+                      if (asset.type === "image" && (event.ctrlKey || event.metaKey)) {
+                        if (index === activeTakeIndex) {
+                          setComparisonTakeIndex(null);
+                        } else {
+                          setComparisonTakeIndex((current) =>
+                            current === index ? null : index,
+                          );
+                        }
+                        return;
+                      }
+                      setComparisonTakeIndex(null);
+                      onSelectTake(asset.id, index);
+                    }}
                     onKeyDown={(event) => handleTakeTabKeyDown(event, index)}
                     ref={(node) => {
                       takeTabRefs.current[index] = node;
                     }}
-                    className={`h-14 w-14 overflow-hidden rounded-lg border-2 bg-zinc-900 transition-colors ${
+                    className={`relative h-14 w-14 overflow-hidden rounded-lg border-2 bg-zinc-900 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 ${
                       active ? "border-blue-500 ring-2 ring-blue-500/30" : "border-zinc-800 hover:border-zinc-600"
                     }`}
                   >
@@ -661,13 +903,33 @@ export function GenSpaceSelectedGeneration({
                     ) : (
                       <img src={take.url} alt="" className="h-full w-full object-cover" />
                     )}
+                    {comparisonLabel ? (
+                      <span className="absolute right-0 top-0 rounded-bl bg-violet-500 px-1 text-[10px] font-semibold text-white">
+                        {comparisonLabel}
+                      </span>
+                    ) : null}
                   </button>
                 );
               })}
             </div>
           ) : null}
           <div className="flex min-h-0 flex-1 overflow-hidden bg-black/40">
-            <AssetPreview asset={asset} isActive={isActive} />
+            {comparedTakes.length === 2 ? (
+              <ImageComparePreview
+                key={`${comparedTakes[0].url}-${comparedTakes[1].url}`}
+                first={comparedTakes[0].url}
+                second={comparedTakes[1].url}
+                transform={imageTransform}
+                onTransformChange={setImageTransform}
+              />
+            ) : (
+              <AssetPreview
+                asset={asset}
+                isActive={isActive}
+                transform={imageTransform}
+                onTransformChange={setImageTransform}
+              />
+            )}
           </div>
           <div className="shrink-0 border-t bg-zinc-900 border-zinc-800 px-5 py-4">
             <div className="flex flex-wrap gap-2">

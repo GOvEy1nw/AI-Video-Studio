@@ -105,6 +105,12 @@ export function AssetContextMenu({
   setClips,
 }: AssetContextMenuProps) {
   const isMulti = targetIds.length > 1;
+  const selectedAssets = targetIds
+    .map((id) => assets.find((candidate) => candidate.id === id))
+    .filter((candidate): candidate is Asset => Boolean(candidate));
+  const canStackSelected =
+    selectedAssets.length > 1 &&
+    selectedAssets.every((candidate) => candidate.type === asset.type);
 
   return (
     <FloatingMenu
@@ -382,33 +388,91 @@ export function AssetContextMenu({
           <div className="h-px bg-zinc-700 my-1" />
           <button
             onClick={() => {
-              if (!currentProjectId) return;
-              const selectedAssets = assets.filter((a) =>
-                targetIds.includes(a.id),
-              );
-              if (selectedAssets.length < 2) return;
+              if (!currentProjectId || !canStackSelected) return;
               pushAssetUndoRef?.current?.();
-              const primary = selectedAssets[0];
-              const newTakes = selectedAssets.map((a) => ({
-                url: a.url,
-                path: a.path,
-                thumbnail: a.thumbnail,
-                createdAt: a.createdAt,
-              }));
-              updateAsset(currentProjectId, primary.id, {
-                takes: newTakes,
-                activeTakeIndex: 0,
+              const flattenedAssets = [
+                asset,
+                ...selectedAssets.filter((candidate) => candidate.id !== asset.id),
+              ];
+              const newTakes = flattenedAssets.flatMap((candidate) => {
+                if (!candidate.takes?.length) {
+                  return [{
+                      url: candidate.url,
+                      path: candidate.path,
+                      thumbnail: candidate.thumbnail,
+                      createdAt: candidate.createdAt,
+                      duration: candidate.duration,
+                      prompt: candidate.prompt,
+                      resolution: candidate.resolution,
+                      generationTimeSeconds:
+                        candidate.generationTimeSeconds ?? null,
+                      generationParams: candidate.generationParams ?? null,
+                    }];
+                }
+                const activeTakeIndex = Math.max(
+                  0,
+                  Math.min(
+                    candidate.activeTakeIndex ?? 0,
+                    candidate.takes.length - 1,
+                  ),
+                );
+                return candidate.takes.map((take, index) => {
+                  const active = index === activeTakeIndex;
+                  return {
+                    ...take,
+                    ...(active
+                      ? { url: candidate.url, path: candidate.path }
+                      : {}),
+                    thumbnail: active
+                      ? candidate.thumbnail ?? take.thumbnail
+                      : take.thumbnail ?? candidate.thumbnail,
+                    duration: active
+                      ? candidate.duration ?? take.duration
+                      : take.duration ?? candidate.duration,
+                    prompt: active
+                      ? candidate.prompt ?? take.prompt
+                      : take.prompt ?? candidate.prompt,
+                    resolution: active
+                      ? candidate.resolution ?? take.resolution
+                      : take.resolution ?? candidate.resolution,
+                    generationTimeSeconds: active
+                      ? candidate.generationTimeSeconds ??
+                        take.generationTimeSeconds ??
+                        null
+                      : take.generationTimeSeconds === undefined
+                        ? candidate.generationTimeSeconds ?? null
+                        : take.generationTimeSeconds,
+                    generationParams: active
+                      ? candidate.generationParams ?? take.generationParams ?? null
+                      : take.generationParams === undefined
+                        ? candidate.generationParams ?? null
+                        : take.generationParams,
+                  };
+                });
               });
-              selectedAssets
+              updateAsset(currentProjectId, asset.id, {
+                takes: newTakes,
+                activeTakeIndex: Math.min(
+                  asset.activeTakeIndex ?? 0,
+                  Math.max(0, (asset.takes?.length ?? 1) - 1),
+                ),
+              });
+              flattenedAssets
                 .slice(1)
-                .forEach((a) => deleteAsset(currentProjectId, a.id));
+                .forEach((candidate) => deleteAsset(currentProjectId, candidate.id));
               setSelectedAssetIds(new Set());
               setAssetContextMenu(null);
             }}
-            className="w-full text-left px-3 py-1.5 text-blue-300 hover:bg-zinc-700 flex items-center gap-3"
+            disabled={!canStackSelected}
+            title={
+              canStackSelected
+                ? "Stack selected assets"
+                : "Only assets of the same type can be stacked"
+            }
+            className="flex w-full items-center gap-3 px-3 py-1.5 text-left text-blue-300 hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <GitMerge className="h-3.5 w-3.5" />
-            <span>Group as Takes</span>
+            <span>Stack Selected</span>
           </button>
           <button
             onClick={() => {
