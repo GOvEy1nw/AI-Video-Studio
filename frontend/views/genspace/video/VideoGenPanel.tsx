@@ -1,7 +1,6 @@
-import { Clock, Image, Monitor, Music, Palette, X } from "lucide-react";
+import { Clock, Image, Monitor, Music, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { StylesLibraryModal } from "../../../components/StylesLibraryModal";
-import { ModelDownloadButton } from "../../../components/ModelDownloadButton";
 import { ModelPicker } from "../../../components/ModelPicker";
 import { SettingsDropdown } from "../../../components/SettingsDropdown";
 import { isModelProfileInstalled } from "../../../lib/model-profile-availability";
@@ -14,12 +13,20 @@ import { GenPanelSection } from "../components/GenPanelSection";
 import { PromptActions } from "../components/PromptActions";
 import { PromptEditor } from "../components/PromptEditor";
 import type { GenSpaceMediaKind, VideoGenPanelController } from "../types";
-import { getH3PromptAliases, getH3ReferenceState, isVideoAspectRatioLocked } from "../logic/media-inputs";
+import {
+  getH3PromptAliases,
+  getH3ReferenceState,
+  isVideoAspectRatioLocked,
+} from "../logic/media-inputs";
 import { VideoMediaInputs } from "./VideoMediaInputs";
 import { VideoModeTabs } from "./VideoModeTabs";
 import { VideoToolInput } from "./VideoToolInput";
 import { getVideoToolLabel } from "./video-tools";
 import { UpscalePanel } from "../components/UpscalePanel";
+import {
+  getCompatibleVideoProfiles,
+  type QuickGenWorkflowId,
+} from "../workflows";
 
 function LightricksIcon({ className }: { className?: string }) {
   return (
@@ -186,33 +193,53 @@ export function VideoGenPanel({
 }) {
   const { prompt, generation, settings, media, profiles, videoTools, framing } =
     controller;
+  const workflow = controller.workflow ?? {
+    favouriteIds: [],
+    toggleFavourite: () => undefined,
+  };
   const videoSettings = settings.value;
   const [stylesOpen, setStylesOpen] = useState(false);
-  const h3ReferenceRequestRef = useRef<(type: GenSpaceMediaKind) => void>(() => undefined);
-  const setH3ReferenceRequest = useCallback((request: (type: GenSpaceMediaKind) => void) => {
-    h3ReferenceRequestRef.current = request;
-  }, []);
-  const patchVideoSettings = settings.patch;
-  const installedProfiles = profiles.options.filter((profile) =>
-    isModelProfileInstalled(profile.availability),
+  const h3ReferenceRequestRef = useRef<(type: GenSpaceMediaKind) => void>(
+    () => undefined,
   );
-  const curatedSelectedProfile =
-    profiles.options.find(
-      (profile) => profile.id === videoSettings.profileId,
-    ) ?? profiles.options[0];
-  const selectedProfile = installedProfiles.length
-    ? (installedProfiles.find(
-        (profile) => profile.id === videoSettings.profileId,
-      ) ?? installedProfiles[0])
-    : curatedSelectedProfile;
+  const setH3ReferenceRequest = useCallback(
+    (request: (type: GenSpaceMediaKind) => void) => {
+      h3ReferenceRequestRef.current = request;
+    },
+    [],
+  );
+  const patchVideoSettings = settings.patch;
   const isRetake = videoTools.mode === "retake";
   const isTools = videoTools.mode === "reframe";
   const isReframe = isTools && videoTools.selectedTool === "reframe";
   const isUpscale = isTools && videoTools.selectedTool === "upscale";
   const isPanelMode = isRetake || isTools;
+  const workflowId: Extract<QuickGenWorkflowId, `video:${string}`> = isTools
+    ? `video:tool:${videoTools.selectedTool}`
+    : isRetake
+      ? "video:retake"
+      : "video:generate";
+  const compatibleProfiles = isUpscale
+    ? profiles.options
+    : getCompatibleVideoProfiles(profiles.options, workflowId);
+  const installedProfiles = compatibleProfiles.filter((profile) =>
+    isModelProfileInstalled(profile.availability),
+  );
+  const selectedCompatibleProfile =
+    installedProfiles.find(
+      (profile) => profile.id === videoSettings.profileId,
+    ) ?? installedProfiles[0];
+  const selectedProfile =
+    profiles.options.find(
+      (profile) => profile.id === videoSettings.profileId,
+    ) ??
+    selectedCompatibleProfile ??
+    profiles.options[0];
   const profileStyles = selectedProfile?.styles ?? [];
   const styles = !isPanelMode ? profileStyles : [];
-  const selectedStyle = styles.find((style) => style.id === videoSettings.styleId);
+  const selectedStyle = styles.find(
+    (style) => style.id === videoSettings.styleId,
+  );
   const guide = media.inputs.find(({ role }) => GUIDE_MEDIA_ROLE_SET.has(role));
   const isContinueVideo = isTools
     ? videoTools.selectedTool === "extend"
@@ -225,7 +252,8 @@ export function VideoGenPanel({
     media.inputs.some(({ role }) => AUDIO_MEDIA_ROLE_SET.has(role));
   const isH3Generation =
     !isPanelMode &&
-    (selectedProfile?.id === "minimax_h3_fast" || selectedProfile?.id === "minimax_h3_quality");
+    (selectedProfile?.id === "minimax_h3_fast" ||
+      selectedProfile?.id === "minimax_h3_quality");
   const h3ReferenceState = getH3ReferenceState(media.inputs);
   const h3ReferenceAvailability = h3ReferenceState.availability;
   const aspectRatioDisabled = isVideoAspectRatioLocked(
@@ -239,31 +267,35 @@ export function VideoGenPanel({
     "1080p",
   ];
   useEffect(() => {
-    if (!selectedProfile) return;
-    const aspect = selectedProfile.ui.allowedAspectRatios.includes(
+    if (!selectedCompatibleProfile) return;
+    const profile = selectedCompatibleProfile;
+    const aspect = profile.ui.allowedAspectRatios.includes(
       videoSettings.aspectRatio,
     )
       ? videoSettings.aspectRatio
-      : selectedProfile.ui.defaultAspectRatio;
-    const resolution = selectedProfile.ui.allowedResolutionTiers.includes(
+      : profile.ui.defaultAspectRatio;
+    const resolution = profile.ui.allowedResolutionTiers.includes(
       videoSettings.resolution,
     )
       ? videoSettings.resolution
-      : selectedProfile.ui.defaultResolutionTier;
+      : profile.ui.defaultResolutionTier;
     if (
-      videoSettings.profileId !== selectedProfile.id ||
+      videoSettings.profileId !== profile.id ||
       videoSettings.aspectRatio !== aspect ||
       videoSettings.resolution !== resolution
     ) {
       patchVideoSettings({
-        profileId: selectedProfile.id,
+        profileId: profile.id,
         aspectRatio: aspect,
         resolution,
       });
     }
-  }, [patchVideoSettings, selectedProfile, videoSettings]);
+  }, [patchVideoSettings, selectedCompatibleProfile, videoSettings]);
   useEffect(() => {
-    if (videoSettings.styleId && !profileStyles.some((style) => style.id === videoSettings.styleId)) {
+    if (
+      videoSettings.styleId &&
+      !profileStyles.some((style) => style.id === videoSettings.styleId)
+    ) {
       patchVideoSettings({ styleId: undefined });
     }
   }, [patchVideoSettings, profileStyles, videoSettings.styleId]);
@@ -379,17 +411,29 @@ export function VideoGenPanel({
           onChange={videoTools.setMode}
           selectedTool={videoTools.selectedTool}
           onToolChange={videoTools.setSelectedTool}
-          profile={selectedProfile}
+          profiles={profiles.options}
+          favouriteIds={workflow.favouriteIds}
+          onToggleFavourite={workflow.toggleFavourite}
         />
-        {!isUpscale && installedProfiles.length ? (
+      </GenPanelSection>
+      {!isUpscale && selectedCompatibleProfile ? (
+        <GenPanelSection
+          title=""
+          className="text-xs text-zinc-400 flex gap-2 justify-between items-center"
+          collapsible={false}
+        >
           <ModelPicker
             profiles={installedProfiles}
-            value={selectedProfile.id}
+            value={selectedCompatibleProfile.id}
             onChange={(profileId) => {
-              const profile = profiles.options.find((option) => option.id === profileId);
+              const profile = profiles.options.find(
+                (option) => option.id === profileId,
+              );
               patchVideoSettings({
                 profileId,
-                styleId: profile?.styles?.some((style) => style.id === videoSettings.styleId)
+                styleId: profile?.styles?.some(
+                  (style) => style.id === videoSettings.styleId,
+                )
                   ? videoSettings.styleId
                   : undefined,
               });
@@ -398,14 +442,31 @@ export function VideoGenPanel({
             modelDownload={profiles.modelDownload}
             icon={<LightricksIcon className="h-5 w-5" />}
           />
-        ) : !isUpscale && profiles.options.length ? (
-          <ModelDownloadButton />
-        ) : !isUpscale ? (
+        </GenPanelSection>
+      ) : !isUpscale && profiles.options.length ? (
+        <GenPanelSection
+          title=""
+          className="text-xs text-zinc-400 flex gap-2 justify-between items-center"
+          collapsible={false}
+        >
+          <div
+            className="rounded-md bg-amber-500/10 px-2 py-1.5 text-2xs text-amber-200"
+            aria-live="polite"
+          >
+            No compatible installed model.
+          </div>
+        </GenPanelSection>
+      ) : !isUpscale ? (
+        <GenPanelSection
+          title=""
+          className="text-xs text-zinc-400 flex gap-2 justify-between items-center"
+          collapsible={false}
+        >
           <div className="flex items-center gap-1.5 rounded-md bg-zinc-800/50 px-2 py-1.5 text-zinc-500">
             <span>Loading models…</span>
           </div>
-        ) : null}
-      </GenPanelSection>
+        </GenPanelSection>
+      ) : null}
       {!isPanelMode ? (
         <VideoMediaInputs
           inputs={media.inputs}
@@ -417,10 +478,29 @@ export function VideoGenPanel({
           syncInputFileToGallery={media.syncInputFileToGallery}
           reservedAliases={getH3PromptAliases(prompt.value)}
           onReferenceRequestReady={setH3ReferenceRequest}
+          styles={styles}
+          selectedStyle={selectedStyle}
+          onOpenStyles={() => setStylesOpen(true)}
+          stylesDisabled={generation.isRunning}
         />
       ) : null}
       {isUpscale ? (
-        <UpscalePanel mediaKind="video" input={controller.upscale.input} onInputChange={controller.upscale.setInput} methods={controller.upscale.methods} method={controller.upscale.method} onMethodChange={controller.upscale.setMethod} scale={controller.upscale.scale} onScaleChange={controller.upscale.setScale} catalogError={controller.upscale.catalogError} isCatalogLoading={controller.upscale.isCatalogLoading} onRetryCatalog={controller.upscale.retryCatalog} disabled={generation.isRunning} resolveInputFileUrl={media.resolveInputFileUrl} syncInputFileToGallery={media.syncInputFileToGallery} />
+        <UpscalePanel
+          mediaKind="video"
+          input={controller.upscale.input}
+          onInputChange={controller.upscale.setInput}
+          methods={controller.upscale.methods}
+          method={controller.upscale.method}
+          onMethodChange={controller.upscale.setMethod}
+          scale={controller.upscale.scale}
+          onScaleChange={controller.upscale.setScale}
+          catalogError={controller.upscale.catalogError}
+          isCatalogLoading={controller.upscale.isCatalogLoading}
+          onRetryCatalog={controller.upscale.retryCatalog}
+          disabled={generation.isRunning}
+          resolveInputFileUrl={media.resolveInputFileUrl}
+          syncInputFileToGallery={media.syncInputFileToGallery}
+        />
       ) : isTools ? (
         <div className="border-b border-zinc-800/60 bg-zinc-950/20">
           <div className={isReframe ? "max-h-[52vh] overflow-y-auto" : ""}>
@@ -455,83 +535,84 @@ export function VideoGenPanel({
           {videoTools.panel()}
         </div>
       ) : null}
-      {!isUpscale ? <PromptEditor
-        value={prompt.value}
-        onChange={prompt.setValue}
-        mediaMentions={
-          isH3Generation
-            ? h3ReferenceState.activeInputs.flatMap((input) => input.alias && input.type ? [{ alias: input.alias, type: input.type, url: input.url }] : [])
-            : undefined
-        }
-        onAddMedia={isH3Generation ? (type) => h3ReferenceRequestRef.current(type) : undefined}
-        mediaAddDisabled={isH3Generation ? {
-          image: !h3ReferenceAvailability.image,
-          video: !h3ReferenceAvailability.video,
-          audio: !h3ReferenceAvailability.audio,
-        } : undefined}
-        onSubmit={generation.submit}
-        canSubmit={generation.canSubmit}
-        disabled={generation.isRunning}
-        placeholder={
-          isReframe
-            ? "optional text prompt to drive outpainting..."
-            : isRetake
-              ? "Describe what should happen in the selected section..."
-              : isTools
-                ? `Describe the ${getVideoToolLabel(videoTools.selectedTool).toLowerCase()} result...`
-                : "The woman sips from a cup of coffee..."
-        }
-        leading={
-          !isPanelMode && !selectedProfile?.inputMedia.supportsImageInputs ? (
-            <LegacyPromptMedia controller={controller} />
-          ) : undefined
-        }
-        bottomRight={
-          !isRetake ? (
-            <div className="flex flex-wrap items-center justify-end gap-1">
-              {durationControl}
-              {!isTools ? resolutionControl : null}
-              {!isTools ? aspectRatioControl : null}
-              {!isPanelMode ? (
-                <FramingControl
-                  value={framing.value}
-                  onChange={framing.setValue}
+      {!isUpscale ? (
+        <PromptEditor
+          value={prompt.value}
+          onChange={prompt.setValue}
+          mediaMentions={
+            isH3Generation
+              ? h3ReferenceState.activeInputs.flatMap((input) =>
+                  input.alias && input.type
+                    ? [{ alias: input.alias, type: input.type, url: input.url }]
+                    : [],
+                )
+              : undefined
+          }
+          onAddMedia={
+            isH3Generation
+              ? (type) => h3ReferenceRequestRef.current(type)
+              : undefined
+          }
+          mediaAddDisabled={
+            isH3Generation
+              ? {
+                  image: !h3ReferenceAvailability.image,
+                  video: !h3ReferenceAvailability.video,
+                  audio: !h3ReferenceAvailability.audio,
+                }
+              : undefined
+          }
+          onSubmit={generation.submit}
+          canSubmit={generation.canSubmit}
+          disabled={generation.isRunning}
+          placeholder={
+            isReframe
+              ? "optional text prompt to drive outpainting..."
+              : isRetake
+                ? "Describe what should happen in the selected section..."
+                : isTools
+                  ? `Describe the ${getVideoToolLabel(videoTools.selectedTool).toLowerCase()} result...`
+                  : "The woman sips from a cup of coffee..."
+          }
+          leading={
+            !isPanelMode && !selectedProfile?.inputMedia.supportsImageInputs ? (
+              <LegacyPromptMedia controller={controller} />
+            ) : undefined
+          }
+          bottomRight={
+            !isRetake ? (
+              <div className="flex flex-wrap items-center justify-end gap-1">
+                {durationControl}
+                {!isTools ? resolutionControl : null}
+                {!isTools ? aspectRatioControl : null}
+                {!isPanelMode ? (
+                  <FramingControl
+                    value={framing.value}
+                    onChange={framing.setValue}
+                    disabled={generation.isRunning}
+                  />
+                ) : null}
+              </div>
+            ) : undefined
+          }
+          actions={
+            !isRetake && !isReframe ? (
+              <div className="flex items-center gap-1">
+                <PromptActions
+                  seedLocked={prompt.seedLocked}
+                  lockedSeed={prompt.lockedSeed}
+                  onSeedChange={prompt.setSeed}
                   disabled={generation.isRunning}
+                  prompt={prompt.value}
+                  onEnhance={prompt.enhance}
+                  enhanceEnabled={prompt.enhanceEnabled}
+                  isEnhancing={prompt.isEnhancing}
                 />
-              ) : null}
-            </div>
-          ) : undefined
-        }
-        actions={
-          !isRetake && !isReframe ? (
-            <div className="flex items-center gap-1">
-              {styles.length ? (
-                <button
-                  type="button"
-                  onClick={() => setStylesOpen(true)}
-                  disabled={generation.isRunning}
-                  aria-haspopup="dialog"
-                  aria-expanded={stylesOpen}
-                  className={`flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] font-medium transition-colors disabled:opacity-40 ${selectedStyle ? "bg-violet-500/15 text-violet-300 hover:bg-violet-500/25" : "text-zinc-400 hover:bg-zinc-800 hover:text-white"}`}
-                >
-                  <Palette className="h-3.5 w-3.5" />
-                  <span>{selectedStyle?.displayName ?? "Styles"}</span>
-                </button>
-              ) : null}
-              <PromptActions
-                seedLocked={prompt.seedLocked}
-                lockedSeed={prompt.lockedSeed}
-                onSeedChange={prompt.setSeed}
-                disabled={generation.isRunning}
-                prompt={prompt.value}
-                onEnhance={prompt.enhance}
-                enhanceEnabled={prompt.enhanceEnabled}
-                isEnhancing={prompt.isEnhancing}
-              />
-            </div>
-          ) : undefined
-        }
-      /> : null}
+              </div>
+            ) : undefined
+          }
+        />
+      ) : null}
       <div className="flex flex-wrap items-center gap-1.5 border-t border-zinc-800/60 px-4 py-3 text-xs text-zinc-400">
         {isRetake ? (
           <div className="pr-2 text-2xs text-zinc-500">

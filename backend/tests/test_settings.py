@@ -44,6 +44,7 @@ class TestGetSettings:
             "previewFps": 16,
             "webpQuality": 72,
         }
+        assert data["quickGenFavouriteWorkflows"] == []
         assert "ltxApiKey" not in data
         assert "falApiKey" not in data
         assert "geminiApiKey" not in data
@@ -147,6 +148,16 @@ class TestPostSettings:
         r = client.post("/api/settings", json={"lockedSeed": 9_999_999_999})
         assert r.status_code == 200
         assert test_state.state.app_settings.locked_seed == 2_147_483_647
+
+    def test_favourite_workflows_are_bounded_and_persisted(self, client, test_state):
+        favourites = [f"video:tool:{index}" for index in range(40)]
+        response = client.post(
+            "/api/settings",
+            json={"quickGenFavouriteWorkflows": favourites},
+        )
+
+        assert response.status_code == 200
+        assert test_state.state.app_settings.quick_gen_favourite_workflows == favourites[:32]
 
     def test_unknown_field_rejected(self, client):
         r = client.post("/api/settings", json={"unknownSetting": True})

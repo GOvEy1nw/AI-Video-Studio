@@ -7,7 +7,7 @@ import {
   type ReactNode,
   type SetStateAction,
 } from "react";
-import { Image, Music, Plus, Video } from "lucide-react";
+import { Image, Music, Palette, Plus, Video } from "lucide-react";
 import { detectMediaType } from "../../../lib/media-import";
 import type { ModelProfile } from "../../../types/model-profiles";
 import {
@@ -53,6 +53,10 @@ export function VideoMediaInputs({
   syncInputFileToGallery,
   reservedAliases = [],
   onReferenceRequestReady,
+  styles = [],
+  selectedStyle,
+  onOpenStyles,
+  stylesDisabled = false,
 }: {
   inputs: GenSpaceMediaInput[];
   onChange: Dispatch<SetStateAction<GenSpaceMediaInput[]>>;
@@ -65,7 +69,13 @@ export function VideoMediaInputs({
   ) => Promise<string | null>;
   syncInputFileToGallery?: (file: File) => Promise<string | null>;
   reservedAliases?: readonly string[];
-  onReferenceRequestReady?: (request: (type: GenSpaceMediaKind) => void) => void;
+  onReferenceRequestReady?: (
+    request: (type: GenSpaceMediaKind) => void,
+  ) => void;
+  styles?: readonly { id: string; displayName: string }[];
+  selectedStyle?: { id: string; displayName: string };
+  onOpenStyles?: () => void;
+  stylesDisabled?: boolean;
 }) {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const guideInputRef = useRef<HTMLInputElement>(null);
@@ -76,7 +86,8 @@ export function VideoMediaInputs({
   const [editingGuideId, setEditingGuideId] = useState<string | null>(null);
   const [guideDragActive, setGuideDragActive] = useState(false);
   const supportsInputs = !!profile?.inputMedia.supportsImageInputs;
-  const isH3 = profile?.id === "minimax_h3_fast" || profile?.id === "minimax_h3_quality";
+  const isH3 =
+    profile?.id === "minimax_h3_fast" || profile?.id === "minimax_h3_quality";
   const guide = findGuideInput(inputs);
 
   useEffect(() => {
@@ -271,7 +282,7 @@ export function VideoMediaInputs({
     ) : null;
 
   return (
-    <GenPanelSection title="Media inputs">
+    <GenPanelSection title="References" collapsible={false}>
       {guide && editingGuideId === guide.id ? (
         <GuideMediaTrimEditor
           item={guide}
@@ -286,6 +297,24 @@ export function VideoMediaInputs({
         />
       ) : null}
       <div className="relative flex items-center gap-2 overflow-visible">
+        {styles.length && onOpenStyles ? (
+          <button
+            type="button"
+            onClick={onOpenStyles}
+            disabled={stylesDisabled}
+            aria-haspopup="dialog"
+            className={`flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-lg border border-dashed text-2xs transition-colors focus-visible:outline-2 focus-visible:outline-violet-400 disabled:opacity-40 ${
+              selectedStyle
+                ? "border-violet-400/50 bg-violet-500/10 text-violet-200"
+                : "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white"
+            }`}
+          >
+            <Palette className="mb-0.5 h-4 w-4" />
+            <span className="max-w-10 truncate">
+              {selectedStyle?.displayName ?? "Style"}
+            </span>
+          </button>
+        ) : null}
         {frameSlot("start_image", "Image 1 (Start)")}
         {frameSlot("end_image", "Image 2 (End)")}
         <div
@@ -406,9 +435,14 @@ function H3MediaInputs({
   inputs: GenSpaceMediaInput[];
   onChange: Dispatch<SetStateAction<GenSpaceMediaInput[]>>;
   reservedAliases: readonly string[];
-  resolveInputFileUrl: (file: File, sync?: (file: File) => Promise<string | null>) => Promise<string | null>;
+  resolveInputFileUrl: (
+    file: File,
+    sync?: (file: File) => Promise<string | null>,
+  ) => Promise<string | null>;
   syncInputFileToGallery?: (file: File) => Promise<string | null>;
-  onReferenceRequestReady?: (request: (type: GenSpaceMediaKind) => void) => void;
+  onReferenceRequestReady?: (
+    request: (type: GenSpaceMediaKind) => void,
+  ) => void;
 }) {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
@@ -418,7 +452,11 @@ function H3MediaInputs({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const editing = inputs.find((input) => input.id === editingId);
-  const hasReferences = inputs.some((input) => H3_REFERENCE_TYPES.some((entry) => entry.role === input.role) || input.role === "depth");
+  const hasReferences = inputs.some(
+    (input) =>
+      H3_REFERENCE_TYPES.some((entry) => entry.role === input.role) ||
+      input.role === "depth",
+  );
   const referenceState = getH3ReferenceState(inputs);
   const referenceAvailability = referenceState.availability;
   const renderedRoles = new Set([
@@ -434,10 +472,15 @@ function H3MediaInputs({
       const reference = H3_REFERENCE_TYPES.find((entry) => entry.role === role);
       const id = crypto.randomUUID();
       onChange((current) => {
-        const currentHasReferences = current.some((input) =>
-          H3_REFERENCE_TYPES.some((entry) => entry.role === input.role) || input.role === "depth",
+        const currentHasReferences = current.some(
+          (input) =>
+            H3_REFERENCE_TYPES.some((entry) => entry.role === input.role) ||
+            input.role === "depth",
         );
-        if ((reference && !getH3ReferenceAvailability(current)[type]) || (!reference && currentHasReferences)) {
+        if (
+          (reference && !getH3ReferenceAvailability(current)[type]) ||
+          (!reference && currentHasReferences)
+        ) {
           return current;
         }
         const next: GenSpaceMediaInput = {
@@ -467,39 +510,54 @@ function H3MediaInputs({
     if (url) add(url, type, role);
   };
 
-  const dropFor = (role: string, type: GenSpaceMediaKind) => async (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    const asset = readGalleryAsset(event);
-    if (asset?.type === type) {
-      add(asset.url, type, role);
-      return;
-    }
-    const file = event.dataTransfer.files?.[0];
-    if (file) await addFile(file, role);
-  };
+  const dropFor =
+    (role: string, type: GenSpaceMediaKind) =>
+    async (event: React.DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      const asset = readGalleryAsset(event);
+      if (asset?.type === type) {
+        add(asset.url, type, role);
+        return;
+      }
+      const file = event.dataTransfer.files?.[0];
+      if (file) await addFile(file, role);
+    };
 
   const update = (id: string, patch: Partial<GenSpaceMediaInput>) =>
-    onChange((current) => current.map((input) => input.id === id ? { ...input, ...patch } : input));
+    onChange((current) =>
+      current.map((input) =>
+        input.id === id ? { ...input, ...patch } : input,
+      ),
+    );
 
   const setVideoRole = (id: string, role: "reference_video" | "depth") =>
-    onChange((current) => current.map((input) => input.id === id ? { ...input, role } : input));
+    onChange((current) =>
+      current.map((input) => (input.id === id ? { ...input, role } : input)),
+    );
 
   const setSoundtrack = (enabled: boolean) =>
     onChange((current) => {
       const state = getH3ReferenceState(current);
-      if (enabled && state.audioCount - state.soundtrackCount > 0) return current;
+      if (enabled && state.audioCount - state.soundtrackCount > 0)
+        return current;
       return current.map((input) =>
-        input.type === "video" && (input.role === "reference_video" || input.role === "depth")
+        input.type === "video" &&
+        (input.role === "reference_video" || input.role === "depth")
           ? { ...input, useAudioTrack: enabled }
           : input,
       );
     });
 
-  const openReferencePicker = useCallback((type: GenSpaceMediaKind) => {
-    if (!referenceAvailability[type]) return;
-    setPendingRole(H3_REFERENCE_ROLE_FOR_TYPE[type]);
-    ({ image: imageInputRef, video: videoInputRef, audio: audioInputRef }[type]).current?.click();
-  }, [referenceAvailability]);
+  const openReferencePicker = useCallback(
+    (type: GenSpaceMediaKind) => {
+      if (!referenceAvailability[type]) return;
+      setPendingRole(H3_REFERENCE_ROLE_FOR_TYPE[type]);
+      ({ image: imageInputRef, video: videoInputRef, audio: audioInputRef })[
+        type
+      ].current?.click();
+    },
+    [referenceAvailability],
+  );
 
   const addReferenceFile = async (file: File) => {
     const type = detectMediaType(file.name, file.type);
@@ -514,7 +572,12 @@ function H3MediaInputs({
 
   const dropReference = async (event: React.DragEvent<HTMLElement>) => {
     event.preventDefault();
-    if (!referenceAvailability.image && !referenceAvailability.video && !referenceAvailability.audio) return;
+    if (
+      !referenceAvailability.image &&
+      !referenceAvailability.video &&
+      !referenceAvailability.audio
+    )
+      return;
     const asset = readGalleryAsset(event);
     if (asset) {
       add(asset.url, asset.type, H3_REFERENCE_ROLE_FOR_TYPE[asset.type]);
@@ -545,47 +608,88 @@ function H3MediaInputs({
       ) : null}
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-2">
-        {(["start_image", "end_image"] as const).map((role) => {
-          const item = inputs.find((input) => input.role === role);
-          return (
-            <CroppableMediaInputSlot
-              key={role}
-              item={item}
-              kind="image"
-              label={role === "start_image" ? "Start image" : "End image"}
-              badge={item ? (role === "start_image" ? "Start Frame" : "End Frame") : undefined}
-              title={hasReferences && !item ? "Remove references before adding a frame" : "Click or drop an image"}
-              disabled={!item && hasReferences}
-              sizeClassName="aspect-square w-full"
-              active={activeId === role}
-              inputRef={imageInputRef}
-              onAdd={() => setPendingRole(role)}
-              onToggle={() => setActiveId((current) => current === role ? null : role)}
-              onRemove={() => item && onChange((current) => removeMediaInput(current, item.id))}
-              removeLabel={role === "start_image" ? "start image" : "end image"}
-              onDrop={dropFor(role, "image")}
-              onCropChange={(crop) => item && update(item.id, { crop: crop ?? undefined })}
-              menu={item ? <MediaRoleMenu title="H3 Frame" selectedRole={item.role} options={[]} onSelect={() => undefined} /> : null}
-            />
-          );
-        })}
+          {(["start_image", "end_image"] as const).map((role) => {
+            const item = inputs.find((input) => input.role === role);
+            return (
+              <CroppableMediaInputSlot
+                key={role}
+                item={item}
+                kind="image"
+                label={role === "start_image" ? "Start image" : "End image"}
+                badge={
+                  item
+                    ? role === "start_image"
+                      ? "Start Frame"
+                      : "End Frame"
+                    : undefined
+                }
+                title={
+                  hasReferences && !item
+                    ? "Remove references before adding a frame"
+                    : "Click or drop an image"
+                }
+                disabled={!item && hasReferences}
+                sizeClassName="aspect-square w-full"
+                active={activeId === role}
+                inputRef={imageInputRef}
+                onAdd={() => setPendingRole(role)}
+                onToggle={() =>
+                  setActiveId((current) => (current === role ? null : role))
+                }
+                onRemove={() =>
+                  item &&
+                  onChange((current) => removeMediaInput(current, item.id))
+                }
+                removeLabel={
+                  role === "start_image" ? "start image" : "end image"
+                }
+                onDrop={dropFor(role, "image")}
+                onCropChange={(crop) =>
+                  item && update(item.id, { crop: crop ?? undefined })
+                }
+                menu={
+                  item ? (
+                    <MediaRoleMenu
+                      title="H3 Frame"
+                      selectedRole={item.role}
+                      options={[]}
+                      onSelect={() => undefined}
+                    />
+                  ) : null
+                }
+              />
+            );
+          })}
         </div>
         <button
           type="button"
           aria-label="Add media"
-          disabled={!referenceAvailability.image && !referenceAvailability.video && !referenceAvailability.audio}
+          disabled={
+            !referenceAvailability.image &&
+            !referenceAvailability.video &&
+            !referenceAvailability.audio
+          }
           title="Add media references"
           onClick={() => referenceInputRef.current?.click()}
           onDragOver={(event) => {
-            if (referenceAvailability.image || referenceAvailability.video || referenceAvailability.audio) event.preventDefault();
+            if (
+              referenceAvailability.image ||
+              referenceAvailability.video ||
+              referenceAvailability.audio
+            )
+              event.preventDefault();
           }}
           onDrop={(event) => void dropReference(event)}
           className="flex w-full items-center gap-2 rounded-lg border-2 border-dashed border-zinc-700 px-3 py-4 text-zinc-300 hover:border-zinc-500 disabled:cursor-not-allowed disabled:border-zinc-800 disabled:text-zinc-600"
         >
           {(["image", "video", "audio"] as const).map((type) => {
-            const Icon = type === "image" ? Image : type === "video" ? Video : Music;
+            const Icon =
+              type === "image" ? Image : type === "video" ? Video : Music;
             return (
-              <span key={type} className="flex h-7 w-7 items-center justify-center rounded-full border border-zinc-700 bg-zinc-800/70 text-zinc-400">
+              <span
+                key={type}
+                className="flex h-7 w-7 items-center justify-center rounded-full border border-zinc-700 bg-zinc-800/70 text-zinc-400"
+              >
                 <Icon className="h-3.5 w-3.5" />
               </span>
             );
@@ -594,24 +698,89 @@ function H3MediaInputs({
           <span className="text-sm">Add media</span>
         </button>
         <div className="flex flex-wrap gap-2">
-          {H3_REFERENCE_TYPES.flatMap((entry) => inputs.filter((input) => input.role === entry.role).map((item) => ({ entry, item }))).concat(inputs.filter((input) => input.role === "depth").map((item) => ({ entry: H3_REFERENCE_TYPES[1], item }))).map(({ entry, item }) => (
-                <CroppableMediaInputSlot
-                  key={item.id}
-                  item={item}
-                  kind={entry.type}
-                  badge={item.alias}
-                  title={referenceState.disabledVideoIds.has(item.id) ? "Disabled while a depth reference is active" : "Click for actions"}
-                  sizeClassName="h-14 w-16"
-                  disabled={referenceState.disabledVideoIds.has(item.id)}
-                  active={activeId === item.id}
-                  onToggle={() => setActiveId((current) => current === item.id ? null : item.id)}
-                  onRemove={() => onChange((current) => removeMediaInput(current, item.id))}
-                  removeLabel={item.alias ?? entry.label}
-                  onDrop={dropFor(entry.role, entry.type)}
-                  onCropChange={(crop) => update(item.id, { crop: crop ?? undefined })}
-                  menu={<MediaRoleMenu title={entry.type === "video" ? "Video reference" : entry.label} selectedRole={item.role} options={entry.type === "video" ? [{ role: "reference_video", label: "Reference" }, { role: "depth", label: "Depth" }] : []} onSelect={(role) => { if (role === "reference_video" || role === "depth") setVideoRole(item.id, role); setActiveId(null); }} onTrim={entry.type === "image" ? undefined : () => { setEditingId(item.id); setActiveId(null); }} extra={entry.type === "video" && !referenceState.disabledVideoIds.has(item.id) ? <label className="mt-1 flex items-center gap-2 border-t border-zinc-700 px-2 pt-2 text-xs text-zinc-300"><span>Use Audio Track</span><input type="checkbox" checked={referenceState.soundtrackCount > 0} onChange={(event) => setSoundtrack(event.target.checked)} /></label> : null} />}
-                />
-          ))}
+          {H3_REFERENCE_TYPES.flatMap((entry) =>
+            inputs
+              .filter((input) => input.role === entry.role)
+              .map((item) => ({ entry, item })),
+          )
+            .concat(
+              inputs
+                .filter((input) => input.role === "depth")
+                .map((item) => ({ entry: H3_REFERENCE_TYPES[1], item })),
+            )
+            .map(({ entry, item }) => (
+              <CroppableMediaInputSlot
+                key={item.id}
+                item={item}
+                kind={entry.type}
+                badge={item.alias}
+                title={
+                  referenceState.disabledVideoIds.has(item.id)
+                    ? "Disabled while a depth reference is active"
+                    : "Click for actions"
+                }
+                sizeClassName="h-14 w-16"
+                disabled={referenceState.disabledVideoIds.has(item.id)}
+                active={activeId === item.id}
+                onToggle={() =>
+                  setActiveId((current) =>
+                    current === item.id ? null : item.id,
+                  )
+                }
+                onRemove={() =>
+                  onChange((current) => removeMediaInput(current, item.id))
+                }
+                removeLabel={item.alias ?? entry.label}
+                onDrop={dropFor(entry.role, entry.type)}
+                onCropChange={(crop) =>
+                  update(item.id, { crop: crop ?? undefined })
+                }
+                menu={
+                  <MediaRoleMenu
+                    title={
+                      entry.type === "video" ? "Video reference" : entry.label
+                    }
+                    selectedRole={item.role}
+                    options={
+                      entry.type === "video"
+                        ? [
+                            { role: "reference_video", label: "Reference" },
+                            { role: "depth", label: "Depth" },
+                          ]
+                        : []
+                    }
+                    onSelect={(role) => {
+                      if (role === "reference_video" || role === "depth")
+                        setVideoRole(item.id, role);
+                      setActiveId(null);
+                    }}
+                    onTrim={
+                      entry.type === "image"
+                        ? undefined
+                        : () => {
+                            setEditingId(item.id);
+                            setActiveId(null);
+                          }
+                    }
+                    extra={
+                      entry.type === "video" &&
+                      !referenceState.disabledVideoIds.has(item.id) ? (
+                        <label className="mt-1 flex items-center gap-2 border-t border-zinc-700 px-2 pt-2 text-xs text-zinc-300">
+                          <span>Use Audio Track</span>
+                          <input
+                            type="checkbox"
+                            checked={referenceState.soundtrackCount > 0}
+                            onChange={(event) =>
+                              setSoundtrack(event.target.checked)
+                            }
+                          />
+                        </label>
+                      ) : null
+                    }
+                  />
+                }
+              />
+            ))}
         </div>
         <div className="flex flex-wrap gap-2">
           {restoredInputs.map((item) => {
@@ -634,11 +803,54 @@ function H3MediaInputs({
           })}
         </div>
       </div>
-      <p className="mt-2 text-2xs text-zinc-500">Reference videos and audio should be 2–15 seconds each, with no more than 15 seconds total. Use Trim before generating.</p>
-      <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) void addFile(file, pendingRole); event.target.value = ""; }} />
-      <input ref={videoInputRef} type="file" accept="video/*" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) void addFile(file, pendingRole); event.target.value = ""; }} />
-      <input ref={audioInputRef} type="file" accept="audio/*,.mp3,.wav,.ogg,.aac,.flac,.m4a" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) void addFile(file, pendingRole); event.target.value = ""; }} />
-      <input ref={referenceInputRef} type="file" accept="image/*,video/*,audio/*,.mp3,.wav,.ogg,.aac,.flac,.m4a" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) void addReferenceFile(file); event.target.value = ""; }} />
+      <p className="mt-2 text-2xs text-zinc-500">
+        Reference videos and audio should be 2–15 seconds each, with no more
+        than 15 seconds total. Use Trim before generating.
+      </p>
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) void addFile(file, pendingRole);
+          event.target.value = "";
+        }}
+      />
+      <input
+        ref={videoInputRef}
+        type="file"
+        accept="video/*"
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) void addFile(file, pendingRole);
+          event.target.value = "";
+        }}
+      />
+      <input
+        ref={audioInputRef}
+        type="file"
+        accept="audio/*,.mp3,.wav,.ogg,.aac,.flac,.m4a"
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) void addFile(file, pendingRole);
+          event.target.value = "";
+        }}
+      />
+      <input
+        ref={referenceInputRef}
+        type="file"
+        accept="image/*,video/*,audio/*,.mp3,.wav,.ogg,.aac,.flac,.m4a"
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) void addReferenceFile(file);
+          event.target.value = "";
+        }}
+      />
     </GenPanelSection>
   );
 }

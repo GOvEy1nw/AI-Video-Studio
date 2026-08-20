@@ -76,6 +76,14 @@ import {
 import { getImageProfilesForMode } from "../image/image-profile-options";
 import type { VideoToolId } from "../../../types/video-tools";
 import { getVideoToolLabel } from "../video/video-tools";
+import {
+  getCompatibleVideoProfiles,
+  getQuickGenWorkflow,
+  isSelectedInstalledVideoProfile,
+  normalizeQuickGenFavouriteWorkflows,
+  selectPreferredInstalledProfile,
+  type QuickGenWorkflowId,
+} from "../workflows";
 
 export function usePromptEnhancementPreference(
   isToolsMode: boolean,
@@ -123,7 +131,7 @@ export function useGenSpaceController(isActive: boolean) {
     setGenSpaceRetakeSource,
     setPendingRetakeUpdate,
   } = useGenSpaceHandoffs();
-  const { updateSettings, isLoaded: appSettingsLoaded } = useAppSettings();
+  const { settings: appSettings, updateSettings, isLoaded: appSettingsLoaded } = useAppSettings();
   const {
     prompt,
     setPrompt,
@@ -290,6 +298,100 @@ export function useGenSpaceController(isActive: boolean) {
     isRetaking,
     retakeStatus,
   });
+  const favouriteWorkflowIds = useMemo(
+    () => normalizeQuickGenFavouriteWorkflows(appSettings.quickGenFavouriteWorkflows),
+    [appSettings.quickGenFavouriteWorkflows],
+  );
+  useEffect(() => {
+    if (!appSettingsLoaded) return;
+    if (
+      favouriteWorkflowIds.length === appSettings.quickGenFavouriteWorkflows.length &&
+      favouriteWorkflowIds.every((id, index) => id === appSettings.quickGenFavouriteWorkflows[index])
+    ) return;
+    updateSettings({ quickGenFavouriteWorkflows: favouriteWorkflowIds });
+  }, [appSettings.quickGenFavouriteWorkflows, appSettingsLoaded, favouriteWorkflowIds, updateSettings]);
+  const toggleFavouriteWorkflow = useCallback(
+    (workflowId: QuickGenWorkflowId) => {
+      updateSettings((current) => {
+        const favourites = normalizeQuickGenFavouriteWorkflows(current.quickGenFavouriteWorkflows);
+        return {
+          ...current,
+          quickGenFavouriteWorkflows: favourites.includes(workflowId)
+            ? favourites.filter((id) => id !== workflowId)
+            : normalizeQuickGenFavouriteWorkflows([...favourites, workflowId]),
+        };
+      });
+    },
+    [updateSettings],
+  );
+  const activeWorkflowId: QuickGenWorkflowId =
+    mode === "image"
+      ? `image:${imageMode}`
+      : mode === "video"
+        ? videoMode === "reframe"
+          ? `video:tool:${selectedTool}`
+          : `video:${videoMode}`
+        : `audio:${audioSubmode}`;
+  const selectWorkflow = useCallback(
+    (workflowId: QuickGenWorkflowId) => {
+      const workflow = getQuickGenWorkflow(workflowId);
+      if (!workflow) return;
+      if (workflow.media === "image") {
+        const imageWorkflow = workflowId.slice(6) as typeof imageMode;
+        handleModeChange("image");
+        setImageMode(imageWorkflow);
+        if (imageWorkflow === "upscale") return;
+        const candidate = selectPreferredInstalledProfile(
+          getImageProfilesForMode(imageProfiles, imageWorkflow),
+          imageSettings.profileId,
+        );
+        if (candidate && candidate.id !== imageSettings.profileId) patchImageSettings({ profileId: candidate.id });
+        return;
+      }
+      if (workflow.media === "video") {
+        const isUpscale = workflowId === "video:tool:upscale";
+        const compatible = getCompatibleVideoProfiles(
+          videoProfiles,
+          workflowId as Extract<QuickGenWorkflowId, `video:${string}`>,
+        );
+        const candidate = isUpscale
+          ? undefined
+          : selectPreferredInstalledProfile(
+              compatible,
+              videoSettings.profileId,
+            );
+        if (!isUpscale && !candidate) return;
+        handleModeChange("video");
+        if (workflowId === "video:generate") {
+          handleVideoModeChange("generate");
+        } else if (workflowId === "video:retake") {
+          handleVideoModeChange("retake");
+        } else {
+          handleVideoModeChange("reframe");
+          setSelectedTool(workflowId.slice(11) as VideoToolId);
+        }
+        if (isUpscale) return;
+        if (candidate && candidate.id !== videoSettings.profileId) {
+          patchVideoSettings({ profileId: candidate.id, styleId: undefined });
+        }
+        return;
+      }
+      handleModeChange("music");
+      const audioWorkflow = workflowId.slice(6) as typeof audioSubmode;
+      setAudioSubmode(audioWorkflow);
+      if (audioWorkflow === "music") {
+        const candidate = selectPreferredInstalledProfile(musicProfiles, musicSettings.profileId);
+        if (candidate && candidate.id !== musicSettings.profileId) setMusicSettings({ ...musicSettings, profileId: candidate.id });
+      } else if (audioWorkflow === "sfx") {
+        const candidate = selectPreferredInstalledProfile(sfxProfiles, sfxSettings.profileId);
+        if (candidate && candidate.id !== sfxSettings.profileId) setSfxSettings({ ...sfxSettings, profileId: candidate.id });
+      } else if (audioWorkflow === "speech") {
+        const candidate = selectPreferredInstalledProfile(speechProfiles, speechSettings.profileId);
+        if (candidate && candidate.id !== speechSettings.profileId) setSpeechSettings({ ...speechSettings, profileId: candidate.id });
+      }
+    },
+    [audioSubmode, handleModeChange, handleVideoModeChange, imageMode, imageProfiles, imageSettings.profileId, musicProfiles, musicSettings, patchImageSettings, patchVideoSettings, setAudioSubmode, setImageMode, setMusicSettings, setSelectedTool, setSfxSettings, setSpeechSettings, sfxProfiles, sfxSettings, speechProfiles, speechSettings, videoProfiles, videoSettings.profileId],
+  );
   const [promptEnhancementEnabled, setPromptEnhancementEnabled] =
     usePromptEnhancementPreference(isToolsMode, selectedTool);
   const [activeRetakeSource, setActiveRetakeSource] =
@@ -720,14 +822,29 @@ export function useGenSpaceController(isActive: boolean) {
             editOutpaint.padding.right >
             0
         : true;
+  const activeVideoWorkflowId: Extract<QuickGenWorkflowId, `video:${string}`> =
+    isToolsMode
+      ? `video:tool:${selectedTool}`
+      : isRetakeMode
+        ? "video:retake"
+        : "video:generate";
+  const selectedVideoProfileReady =
+    activeVideoWorkflowId === "video:tool:upscale" ||
+    isSelectedInstalledVideoProfile(
+      videoProfiles,
+      activeVideoWorkflowId,
+      videoSettings.profileId,
+    );
   const canSubmit = isToolsMode
     ? selectedTool === "upscale"
       ? !!toolInput && !!activeUpscaleSelection.method && activeUpscaleSelection.scale !== null && !isGenerating
       : isReframeMode
-      ? reframeInput.ready && !!reframeInput.videoPath && !isGenerating
-      : !!toolInput && !!prompt.trim() && !isGenerating
+      ? selectedVideoProfileReady && reframeInput.ready && !!reframeInput.videoPath && !isGenerating
+      : selectedVideoProfileReady && !!toolInput && !!prompt.trim() && !isGenerating
     : isRetakeMode
-      ? retakeInput.ready && !!retakeInput.videoPath && !isRetaking
+      ? selectedVideoProfileReady && retakeInput.ready && !!retakeInput.videoPath && !isRetaking
+      : mode === "video"
+        ? selectedVideoProfileReady && !!prompt.trim() && !isGenerating
       : mode === "music"
       ? audioSubmode === "music"
         ? musicCanSubmit
@@ -784,6 +901,12 @@ export function useGenSpaceController(isActive: boolean) {
   const sidebarController: GenSpaceSidebarController = {
     mode,
     setMode: handleModeChange,
+    workflow: {
+      activeId: activeWorkflowId,
+      select: selectWorkflow,
+      favouriteIds: favouriteWorkflowIds,
+      toggleFavourite: toggleFavouriteWorkflow,
+    },
     image: {
       prompt: promptController,
       generation: generationController,
@@ -803,7 +926,7 @@ export function useGenSpaceController(isActive: boolean) {
       },
       imageTools: {
         mode: imageMode,
-        setMode: setImageMode,
+        setMode: (nextMode) => selectWorkflow(`image:${nextMode}`),
         editImage,
         setEditImage,
         editToolMode,
@@ -832,6 +955,10 @@ export function useGenSpaceController(isActive: boolean) {
         value: framingSettings,
         setValue: setFramingSettings,
       },
+      workflow: {
+        favouriteIds: favouriteWorkflowIds,
+        toggleFavourite: toggleFavouriteWorkflow,
+      },
     },
     video: {
       prompt: promptController,
@@ -858,7 +985,12 @@ export function useGenSpaceController(isActive: boolean) {
       },
       videoTools: {
         mode: videoMode,
-        setMode: handleVideoModeChange,
+        setMode: (nextMode) =>
+          selectWorkflow(
+            nextMode === "reframe"
+              ? `video:tool:${selectedTool}`
+              : `video:${nextMode}`,
+          ),
         panel: videoToolPanel,
         reframeDurationSeconds: reframeInput.duration,
         reframeAspectMode: reframeInput.aspectMode,
@@ -867,7 +999,7 @@ export function useGenSpaceController(isActive: boolean) {
         onReframePanelChange: handleReframePanelChange,
         setReframeAspectMode,
         selectedTool,
-        setSelectedTool,
+        setSelectedTool: (tool) => selectWorkflow(`video:tool:${tool}`),
         toolInput,
         setToolInput,
       },
@@ -888,10 +1020,18 @@ export function useGenSpaceController(isActive: boolean) {
         value: framingSettings,
         setValue: setFramingSettings,
       },
+      workflow: {
+        favouriteIds: favouriteWorkflowIds,
+        toggleFavourite: toggleFavouriteWorkflow,
+      },
     },
     audio: {
       submode: audioSubmode,
-      setSubmode: setAudioSubmode,
+      setSubmode: (submode) => selectWorkflow(`audio:${submode}`),
+      workflow: {
+        favouriteIds: favouriteWorkflowIds,
+        toggleFavourite: toggleFavouriteWorkflow,
+      },
       music: {
         prompt: promptController,
         generation: generationController,

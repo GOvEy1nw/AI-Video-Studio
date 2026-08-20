@@ -102,22 +102,69 @@ class TestGenerate:
             "/api/generate",
             json={
                 **_T2V_JSON,
-                "styleId": "ltx25_soft_enhance",
+                "styleId": "ltx25_fantasy_painterly",
                 "shotPrompts": [{"seconds": 2, "prompt": "Cut closer."}],
             },
         )
 
         assert response.status_code == 200
         call = enable_wangp.video_calls[-1]
-        style_url = "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Soft_Enhance_Style_LoRa/resolve/main/LTX2.3_Soft_Enhance.safetensors"
+        style_url = "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Fantasy_Painterly_Style_LoRa/resolve/main/Fantasy_Painterly.safetensors"
         assert enable_wangp.style_lora_downloads == [
-            (style_url, "ltx2_25_22B_distilled")
+            (style_url, "aivs_ltx2_25_22B_distilled")
         ]
         assert call.default_settings["activated_loras"] == [
             "LTX-2.3_Cinematic_hardcut.safetensors",
             style_url,
         ]
         assert call.default_settings["loras_multipliers"] == "1.0 1.0"
+        assert call.prompt == "test\n[0s:2s] Cut closer.\nD4rkP41nt3r"
+
+        unstyled_response = client.post("/api/generate", json=_T2V_JSON)
+        assert unstyled_response.status_code == 200
+        assert enable_wangp.video_calls[-1].prompt == "test"
+
+        neutral_response = client.post(
+            "/api/generate", json={**_T2V_JSON, "styleId": "ltx25_soft_enhance"}
+        )
+        assert neutral_response.status_code == 200
+        assert enable_wangp.video_calls[-1].prompt == "test"
+
+    def test_ltx_prompt_only_style_appends_without_downloading_lora(
+        self, client, enable_wangp: FakeWanGPBridge, monkeypatch
+    ):
+        from dataclasses import replace
+
+        from handlers import video_generation_handler
+        from model_profiles import get_video_profile
+
+        profile = get_video_profile("ltx2_25_fast")
+        assert profile is not None
+        style_prompt = "prompt-only-style-suffix"
+        prompt_only_style = replace(
+            profile.styles[0],
+            id="ltx25_prompt_only",
+            lora_url=None,
+            lora_strength=None,
+            style_prompt=style_prompt,
+        )
+        monkeypatch.setattr(
+            video_generation_handler,
+            "get_video_profile",
+            lambda profile_id: replace(profile, styles=(prompt_only_style,))
+            if profile_id == profile.id
+            else get_video_profile(profile_id),
+        )
+
+        response = client.post(
+            "/api/generate", json={**_T2V_JSON, "styleId": prompt_only_style.id}
+        )
+
+        assert response.status_code == 200
+        call = enable_wangp.video_calls[-1]
+        assert call.prompt == f"test\n{style_prompt}"
+        assert call.prompt.count(style_prompt) == 1
+        assert enable_wangp.style_lora_downloads == []
 
     def test_rejects_unknown_and_incompatible_styles(
         self, client, enable_wangp: FakeWanGPBridge

@@ -12,12 +12,14 @@ export function MusicAdvancedSettings({
   profile?: ModelProfile;
 }) {
   const policy = profile?.music;
-  const supportsSampling = Boolean(profile?.wangpMetadata.settingValues.sampling);
+  const supportsSampling = Boolean(
+    profile?.wangpMetadata.settingValues.sampling,
+  );
   const update = (patch: Partial<MusicSettings>) =>
     onChange({ ...settings, ...patch });
 
   return (
-    <GenPanelSection title="Advanced Settings" collapsed={true}>
+    <GenPanelSection title="Advanced Settings" collapsible={false}>
       <div className="space-y-3">
         <div className="space-y-3">
           <label className="block text-2xs text-zinc-500">

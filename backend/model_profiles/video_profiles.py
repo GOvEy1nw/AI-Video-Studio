@@ -39,7 +39,11 @@ from model_profiles.types import (
     _image_setting_values,  # pyright: ignore[reportPrivateUsage]
 )
 def _ltx25_style(
-    style_id: str, display_name: str, thumbnail_name: str, source_url: str
+    style_id: str,
+    display_name: str,
+    thumbnail_name: str,
+    source_url: str,
+    style_prompt: str | None = None,
 ) -> StyleDefinition:
     return StyleDefinition(
         id=style_id,
@@ -48,24 +52,25 @@ def _ltx25_style(
         source_url=source_url,
         lora_url=source_url,
         lora_strength=1.0,
+        style_prompt=style_prompt,
     )
 
 
 LTX25_STYLES: tuple[StyleDefinition, ...] = (
     _ltx25_style("ltx25_soft_enhance", "Soft Enhance", "soft-enhance", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Soft_Enhance_Style_LoRa/resolve/main/LTX2.3_Soft_Enhance.safetensors"),
-    _ltx25_style("ltx25_fantasy_painterly", "Fantasy Painterly", "fantasy-painterly", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Fantasy_Painterly_Style_LoRa/resolve/main/Fantasy_Painterly.safetensors"),
-    _ltx25_style("ltx25_pixar_toon", "Pixar Toon", "pixar-toon", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Pixar_Toon_Style_LoRa/resolve/main/Pixar_Toon.safetensors"),
-    _ltx25_style("ltx25_90s_animation", "90s Animation", "90s-animation", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_90s_Animation_Style_LoRa/resolve/main/90sAnimationStyle.safetensors"),
-    _ltx25_style("ltx25_claymation", "Claymation", "claymation", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Clay_Mation_Style_LoRa/resolve/main/Claymation.safetensors"),
-    _ltx25_style("ltx25_cozy_felt", "Cozy Felt", "cozy-felt", "https://huggingface.co/vrgamedevgirl84/LTX2.3_Cozy_Felt_Style_LoRa/resolve/main/CozyFelt.safetensors"),
-    _ltx25_style("ltx25_fantasy_anime", "Fantasy Anime", "fantasy-anime", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Fantasy_Anime_Style_LoRa/resolve/main/Fantasy_Anime.safetensors"),
-    _ltx25_style("ltx25_fantasy_realism", "Fantasy Realism", "fantasy-realism", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Fantasy_Realism_Style_LoRa/resolve/main/Fantasy_Realism.safetensors"),
-    _ltx25_style("ltx25_fantasy_puppet", "Fantasy Puppet", "fantasy-puppet", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Fantasy_Puppet_Style_LoRa/resolve/main/FantasyPuppetStyle.safetensors"),
+    _ltx25_style("ltx25_fantasy_painterly", "Fantasy Painterly", "fantasy-painterly", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Fantasy_Painterly_Style_LoRa/resolve/main/Fantasy_Painterly.safetensors", "D4rkP41nt3r, fantasy painterly style"),
+    _ltx25_style("ltx25_pixar_toon", "Pixar Toon", "pixar-toon", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Pixar_Toon_Style_LoRa/resolve/main/Pixar_Toon.safetensors", "P1x4r, pixar style character"),
+    _ltx25_style("ltx25_90s_animation", "90s Animation", "90s-animation", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_90s_Animation_Style_LoRa/resolve/main/90sAnimationStyle.safetensors", "9o4n1m, hand-painted grotesque animation"),
+    _ltx25_style("ltx25_claymation", "Claymation", "claymation", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Clay_Mation_Style_LoRa/resolve/main/Claymation.safetensors", "claymation style, handcrafted clay character"),
+    _ltx25_style("ltx25_cozy_felt", "Cozy Felt", "cozy-felt", "https://huggingface.co/vrgamedevgirl84/LTX2.3_Cozy_Felt_Style_LoRa/resolve/main/CozyFelt.safetensors", "F3ltCut0u7, felt cutout style"),
+    _ltx25_style("ltx25_fantasy_anime", "Fantasy Anime", "fantasy-anime", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Fantasy_Anime_Style_LoRa/resolve/main/Fantasy_Anime.safetensors", "f4nt4sy4n1m6, cinematic fantasy anime cel-shaded illustration"),
+    _ltx25_style("ltx25_fantasy_realism", "Fantasy Realism", "fantasy-realism", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Fantasy_Realism_Style_LoRa/resolve/main/Fantasy_Realism.safetensors", "f4nt4sy, cinematic fantasy realism"),
+    _ltx25_style("ltx25_fantasy_puppet", "Fantasy Puppet", "fantasy-puppet", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Fantasy_Puppet_Style_LoRa/resolve/main/FantasyPuppetStyle.safetensors", "6u8p3t, fantasy puppet style"),
     _ltx25_style("ltx25_crisp_enhance", "Crisp Enhance", "crisp-enhance", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Crisp_Enhance_Style_LoRa/resolve/main/LTX2.3_Crisp_Enhance.safetensors"),
-    _ltx25_style("ltx25_post_apocalyptic", "Post-Apocalyptic", "post-apocalyptic", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Post_Apocalyptic_Style_LoRa/resolve/main/Post_Apocalyptic.safetensors"),
-    _ltx25_style("ltx25_paper_cut_out", "Paper Cut Out", "paper-cut-out", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Paper_Cut_Out_Style_LoRa/resolve/main/PaperCutOutStyle.safetensors"),
-    _ltx25_style("ltx25_wild_west", "Wild West", "wild-west", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Wild_West_Style_LoRa/resolve/main/Wild_West.safetensors"),
-    _ltx25_style("ltx25_cinematic_sci_fi_cyberpunk", "Cinematic Sci-fi Cyberpunk", "cinematic-sci-fi-cyberpunk", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Cinematic_Sci-fi-Cyberpunk_Style_LoRa/resolve/main/Cinematic_sci-fi-cyberpunk.safetensors"),
+    _ltx25_style("ltx25_post_apocalyptic", "Post-Apocalyptic", "post-apocalyptic", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Post_Apocalyptic_Style_LoRa/resolve/main/Post_Apocalyptic.safetensors", "P0st4p0c0, cinematic post-apocalyptic photorealistic video"),
+    _ltx25_style("ltx25_paper_cut_out", "Paper Cut Out", "paper-cut-out", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Paper_Cut_Out_Style_LoRa/resolve/main/PaperCutOutStyle.safetensors", "Pap3rCut0u7, paper cutout style"),
+    _ltx25_style("ltx25_wild_west", "Wild West", "wild-west", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Wild_West_Style_LoRa/resolve/main/Wild_West.safetensors", "W1ldW4st, cinematic realistic Wild West video"),
+    _ltx25_style("ltx25_cinematic_sci_fi_cyberpunk", "Cinematic Sci-fi Cyberpunk", "cinematic-sci-fi-cyberpunk", "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Cinematic_Sci-fi-Cyberpunk_Style_LoRa/resolve/main/Cinematic_sci-fi-cyberpunk.safetensors", "C6b4rP8nk, cinematic cyberpunk neo-noir aesthetic"),
 )
 
 

@@ -113,6 +113,7 @@ export function MusicMediaInputs({
       <div
         onDragEnter={() => setDragRole(role)}
         onDragLeave={() => setDragRole(null)}
+        className="w-full"
       >
         <MediaInputSlot
           item={item}
@@ -123,6 +124,7 @@ export function MusicMediaInputs({
           ariaLabel={input ? `${label} actions` : `Add ${label}`}
           active={activeRole === role}
           dragActive={dragRole === role}
+          sizeClassName="w-full h-16"
           removeLabel={label}
           onRemove={() => {
             onInputChange(role, null);
@@ -168,18 +170,24 @@ export function MusicMediaInputs({
   if (!policy?.supportsCover && !policy?.supportsReferenceTimbre) return null;
 
   return (
-    <GenPanelSection title="Media inputs" collapsible>
+    <GenPanelSection title="References" collapsible={false}>
       <div className="relative flex items-center gap-2 overflow-visible">
-        {policy.supportsCover ? slot("Cover Song", "cover", coverInput, coverRef) : null}
-        {policy.supportsReferenceTimbre ? slot(
-          "Transfer Timbre",
-          "reference-timbre",
-          referenceTimbreInput,
-          timbreRef,
-        ) : null}
+        {policy.supportsCover
+          ? slot("Cover Song", "cover", coverInput, coverRef)
+          : null}
+        {policy.supportsReferenceTimbre
+          ? slot(
+              "Transfer Timbre",
+              "reference-timbre",
+              referenceTimbreInput,
+              timbreRef,
+            )
+          : null}
       </div>
       {policy.supportsCover ? fileInput("cover", coverRef) : null}
-      {policy.supportsReferenceTimbre ? fileInput("reference-timbre", timbreRef) : null}
+      {policy.supportsReferenceTimbre
+        ? fileInput("reference-timbre", timbreRef)
+        : null}
       {policy.supportsCover && coverInput ? (
         <label className="mt-3 block text-2xs text-zinc-500">
           <span className="flex justify-between">

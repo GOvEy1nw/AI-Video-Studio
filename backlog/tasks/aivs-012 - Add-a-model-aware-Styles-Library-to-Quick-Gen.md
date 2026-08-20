@@ -5,7 +5,7 @@ status: Human Review
 assignee:
   - '@codex'
 created_date: '2026-08-15 18:01'
-updated_date: '2026-08-15 19:20'
+updated_date: '2026-08-19 12:16'
 labels: []
 dependencies: []
 references:
@@ -98,6 +98,8 @@ Add a shared Styles Library experience to Quick Gen so users choose a model-appr
 - [x] #5 Models without curated styles keep their existing generation behavior and do not expose a misleading usable Styles selection.
 - [x] #6 The backend remains the single curated source of truth for style compatibility and implementation details, including future prompt-backed styles.
 - [x] #7 Focused automated checks cover the stable catalogue/request-compilation contract, and the Styles modal is visually smoke-tested in Electron.
+- [x] #8 A curated style may define one backend-only style prompt with or without a LoRA; generation appends that prompt exactly once, while styles without one and requests without a style preserve their prompt.
+- [x] #9 During first-time style LoRA download, generation progress remains serializable: phaseIndex stays null or integer and "Downloading selected style" is reported via statusDetail.
 <!-- AC:END -->
 
 ## Definition of Done
@@ -113,11 +115,9 @@ Add a shared Styles Library experience to Quick Gen so users choose a model-appr
 ## Implementation Plan
 
 <!-- SECTION:PLAN:BEGIN -->
-1. Extend the existing backend model-profile registry with an internal style definition (stable ID, display name, thumbnail/source metadata, and exactly one backend action: LoRA or prompt text), then attach the fourteen supplied entries to both LTX 2.5 profiles and serialize only the unified public style metadata.
-2. Carry one optional style ID through existing Quick Gen video settings, request compilation, Copy Settings-compatible generation settings, and the backend request model. Clear it when the user selects a profile that does not expose that style.
-3. Add one shared Styles Library modal and a compact Styles control beside the existing prompt actions. Show it only for normal generation profiles with curated styles; support select, reopen, replace, clear, Escape/backdrop close, keyboard focus, and scrollable thumbnail grid.
-4. At the backend trust boundary, reject unknown/incompatible style IDs. For prompt-backed styles, append the curated text only to the submitted prompt. For LoRA-backed styles, reuse WanGP's existing LoRA downloader before submission, then append the style LoRA and multiplier to the active LoRA settings without replacing profile/system or multi-shot LoRAs. Treat first-use download as part of generation progress; do not add a second download subsystem.
-5. Protect the stable catalogue/request contract with the nearest focused backend and request-builder tests, run TypeScript/Python type checks plus focused tests and frontend build, then smoke-test the modal in the real Electron app and inspect the complete diff.
+1. Correct the existing style LoRA download progress callback so its message occupies the statusDetail slot.
+2. Extend the closest WanGP bridge regression test to assert the exact callback payload.
+3. Run the focused bridge test and backend typecheck, inspect the scoped diff, and return the task to Human Review.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -130,10 +130,26 @@ Final verification: primary focused backend style contracts 3 passed; primary fo
 Electron smoke in the real app passed: 14 style cards, 14 loaded thumbnails, selection/reopen/clear/Escape, no renderer console errors. Post-review focus smoke passed initial Close focus, Shift+Tab/Tab containment, Escape close, and focus restoration to the Styles trigger.
 
 Independent final review verdict: ship, no findings. A broader backend run had 162 passed and one pre-existing unrelated Director exact-settings assertion failure. No live first-time third-party LoRA download and GPU generation was run; remote availability and runtime loading remain the human validation boundary.
+
+Human Review follow-up: user requested prompt injection for LTX 2.5 style LoRAs, then refined the internal contract from trigger_words to a versatile style_prompt usable by both LoRA-backed and future prompt-only styles. Upstream Hugging Face model cards were checked for the recommended/main prompt phrases.
+
+Follow-up implementation: renamed the internal prompt action to `style_prompt`; styles may now be LoRA-only, prompt-only, or LoRA plus prompt. Twelve applicable LTX catalogue entries carry their upstream main/recommended suffix; Soft Enhance and Crisp Enhance remain prompt-neutral. The existing pre-WanGP injection point appends the suffix once and the public style DTO remains unchanged.
+
+Follow-up verification: `rtk uv run pytest` over the prompted-LoRA/catalogue/policy nodes passed 3 tests; the reviewer-requested synthetic prompt-only generation node passed separately and proves exact-once injection with no LoRA download. `rtk pnpm typecheck:py` reported 0 errors/0 warnings. Full `rtk git diff --check` passed. Fresh independent correction review verdict: ship, no findings. No live GPU generation was run because this changes backend prompt compilation only.
+
+Human Review regression follow-up (2026-08-19): the supplied runtime log showed GET /api/generation/progress returning HTTP 500 because ensure_style_lora passed "Downloading selected style" as the fifth callback argument, which maps to phaseIndex rather than statusDetail. The fix is scoped to the callback payload and its existing bridge test.
+
+Regression fix (2026-08-19): `ensure_style_lora` now supplies eight positional metadata values before the human-readable message, so `phaseIndex` remains null and the message maps to `statusDetail`. The existing bridge test now asserts the exact nine-value callback tuple as well as the WanGP download request.
+
+Regression verification: `rtk uv run pytest tests/test_wangp_bridge.py::test_ensure_style_lora_downloads_through_runtime_module -q` passed (1 test); `rtk pnpm typecheck:py` passed with 0 errors/0 warnings; full `git diff --check` passed. Fresh independent correction review verdict: ship, no findings. A live first-time model download and end-to-end HTTP poll were not rerun because the deterministic callback contract directly covers the logged validation failure.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
 
 <!-- SECTION:FINAL_SUMMARY:BEGIN -->
-Added a backend-curated, model-aware Styles Library to Quick Gen. Both LTX 2.5 Fast and Quality now expose the fourteen supplied style LoRAs through one accessible thumbnail-grid modal, while the renderer persists and submits only a stable styleId. The backend validates compatibility, keeps future prompt-backed and LoRA-backed actions behind the same UX, downloads selected LoRAs on demand through WanGP's LoRA-only path, and preserves existing profile/multi-shot LoRAs. Copy Settings and normal-generation request restoration retain the selection; reframe/video-tool flows omit it. Added fourteen AiVS-owned WebP thumbnails and focused catalogue/request/bridge tests. TypeScript, Pyright, focused frontend/backend checks, frontend build, diff check, two Electron interaction smokes, and fresh independent review passed. Remaining human validation: a real first-time remote LoRA download plus LTX 2.5 GPU generation.
+The Styles Library now uses the backend-owned `style_prompt` contract for LoRA-backed and future prompt-only styles. LTX 2.5 catalogue prompts are injected exactly once without changing the public style DTO or required profile LoRAs.
+
+This Human Review regression follow-up also fixes first-download progress polling: `ensure_style_lora` now places "Downloading selected style" in `statusDetail` rather than `phaseIndex`, preventing `/api/generation/progress` response validation failures. The closest bridge test asserts the complete callback payload.
+
+Verification: focused style-prompt tests passed previously; the new bridge regression passed (1 test); backend Pyright passed with 0 errors/0 warnings; full `git diff --check` passed. Fresh independent review verdict: ship. No live GPU generation or first-time remote LoRA download was run.
 <!-- SECTION:FINAL_SUMMARY:END -->

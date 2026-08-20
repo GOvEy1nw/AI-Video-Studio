@@ -1,10 +1,10 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { ModelProfile } from "../../../types/model-profiles";
 import { VideoModeTabs } from "./VideoModeTabs";
 
 describe("VideoModeTabs", () => {
-  it("keeps unavailable Retake disabled and selects a concrete tool", () => {
+  it("keeps unavailable Retake disabled and selects a concrete tool", async () => {
     const onChange = vi.fn();
     const onToolChange = vi.fn();
 
@@ -14,7 +14,7 @@ describe("VideoModeTabs", () => {
         onChange={onChange}
         selectedTool="reframe"
         onToolChange={onToolChange}
-        profile={{
+        profiles={[{
           availability: "available",
           videoEdits: {
             operations: [
@@ -29,19 +29,28 @@ describe("VideoModeTabs", () => {
               },
             ],
           },
-        } as ModelProfile}
+        } as ModelProfile]}
       />,
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Choose mode" }));
-    const retake = screen.getByRole("button", {
-      name: "Retake: Retake is not yet compatible with WanGP",
-    });
+    const retake = screen.getByRole("button", { name: "Retake: No compatible installed model is available." });
     expect((retake as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.queryByRole("button", { name: "Relight" })).toBeNull();
+    expect((screen.getByRole("button", { name: "Relight: No compatible installed model is available." }) as HTMLButtonElement).disabled).toBe(true);
 
     fireEvent.click(screen.getByRole("button", { name: "Extend" }));
     expect(onChange).toHaveBeenCalledWith("reframe");
     expect(onToolChange).toHaveBeenCalledWith("extend");
+
+    const trigger = screen.getByRole("button", { name: "Choose mode" });
+    fireEvent.click(trigger);
+    expect(screen.getByRole("dialog", { name: "Tools catalogue" })).toBeTruthy();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "Tools catalogue" })).toBeNull();
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getByRole("button", { name: "Close Tools catalogue" }));
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
   });
 });

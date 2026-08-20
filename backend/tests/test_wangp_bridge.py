@@ -723,6 +723,7 @@ def test_generate_video_forwards_default_lora_settings() -> None:
 def test_ensure_style_lora_downloads_through_runtime_module() -> None:
     bridge = _make_bridge()
     calls: list[tuple[str, str, int, dict[str, list[str]]]] = []
+    progress_events: list[tuple[object, ...]] = []
 
     class RuntimeModule:
         def download_models(self, filename, model_type, *, file_type, model_def):  # type: ignore[no-untyped-def]
@@ -736,10 +737,23 @@ def test_ensure_style_lora_downloads_through_runtime_module() -> None:
     bridge.ensure_style_lora(
         source_url="https://example.test/style.safetensors",
         model_type="ltx2_25_22B",
-        on_progress=lambda *_args: None,
+        on_progress=lambda *args: progress_events.append(args),
         is_cancelled=lambda: False,
     )
 
+    assert progress_events == [
+        (
+            "downloading_model",
+            3,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            "Downloading selected style",
+        )
+    ]
     assert calls == [
         ("", "ltx2_25_22B", 1, {"loras": ["https://example.test/style.safetensors"]})
     ]

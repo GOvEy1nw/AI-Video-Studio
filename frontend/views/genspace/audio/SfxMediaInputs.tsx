@@ -22,7 +22,12 @@ export function SfxMediaInputs({
   const [dragActive, setDragActive] = useState(false);
 
   const importFile = async (file: File | undefined) => {
-    if (!file || (!file.type.startsWith("video/") && !file.name.match(/\.(mp4|mov|avi|webm|mkv)$/i))) return;
+    if (
+      !file ||
+      (!file.type.startsWith("video/") &&
+        !file.name.match(/\.(mp4|mov|avi|webm|mkv)$/i))
+    )
+      return;
     const url = await resolveInputFileUrl(file, syncInputFileToGallery);
     const path = url ? fileUrlToPath(url) : null;
     if (url && path) onChange({ path, url });
@@ -40,7 +45,8 @@ export function SfxMediaInputs({
           url?: string;
           path?: string;
         };
-        const path = asset.path ?? (asset.url ? fileUrlToPath(asset.url) : null);
+        const path =
+          asset.path ?? (asset.url ? fileUrlToPath(asset.url) : null);
         if (asset.type === "video" && asset.url && path) {
           onChange({ assetId: asset.id, path, url: asset.url });
           return;
@@ -63,7 +69,7 @@ export function SfxMediaInputs({
     : undefined;
 
   return (
-    <GenPanelSection title="Media inputs" collapsible>
+    <GenPanelSection title="References" collapsible={false}>
       <div
         className="relative flex items-center gap-2 overflow-visible"
         onDragEnter={() => setDragActive(true)}
@@ -74,8 +80,12 @@ export function SfxMediaInputs({
           kind="video"
           label="Video Clip"
           badge={video ? "Video Clip" : undefined}
-          title={video ? "Replace optional video clip" : "Add optional video clip"}
-          ariaLabel={video ? "Replace optional video clip" : "Add optional video clip"}
+          title={
+            video ? "Replace optional video clip" : "Add optional video clip"
+          }
+          ariaLabel={
+            video ? "Replace optional video clip" : "Add optional video clip"
+          }
           dragActive={dragActive}
           inputRef={inputRef}
           onRemove={() => onChange(null)}

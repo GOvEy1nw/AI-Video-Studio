@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 export function GenPanelSection({
   title,
   children,
-  borderBottom = true,
+  borderBottom = false,
   className = "",
   collapsible = true,
   collapsed = false,

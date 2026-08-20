@@ -20,7 +20,7 @@ import { MediaInputSlot } from "../components/MediaInputSlot";
 import { MediaRoleMenu } from "../components/MediaRoleMenu";
 
 export function ImageMediaInputs({
-  title = "Media inputs",
+  title = "References",
   inputs,
   onChange,
   policy,
@@ -111,7 +111,7 @@ export function ImageMediaInputs({
   if (!policy?.supportsImageInputs) return null;
 
   return (
-    <GenPanelSection title={title}>
+    <GenPanelSection title={title} collapsible={false}>
       <div className="relative flex items-center gap-2 overflow-visible">
         {inputs.map((input) => {
           const role = policy.roles.find(({ role }) => role === input.role);

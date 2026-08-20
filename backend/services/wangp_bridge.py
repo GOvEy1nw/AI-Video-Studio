@@ -456,7 +456,17 @@ class WanGPBridge:
     ) -> None:
         if is_cancelled():
             raise RuntimeError("Generation was cancelled")
-        on_progress("downloading_model", 3, None, None, "Downloading selected style")
+        on_progress(
+            "downloading_model",
+            3,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            "Downloading selected style",
+        )
         session = self._get_session()
         runtime = session._ensure_runtime()
         # ponytail: WanGP's downloader has no cancellation callback; check around its one blocking call.

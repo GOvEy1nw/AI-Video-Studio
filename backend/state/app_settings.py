@@ -122,6 +122,7 @@ class AppSettings(SettingsBaseModel):
     locked_seed: int = 42
     output_settings: OutputSettings = Field(default_factory=OutputSettings)
     preview_settings: PreviewSettings = Field(default_factory=PreviewSettings)
+    quick_gen_favourite_workflows: list[str] = Field(default_factory=list)
 
     @field_validator("prompt_cache_size", mode="before")
     @classmethod
@@ -140,6 +141,13 @@ class AppSettings(SettingsBaseModel):
     @classmethod
     def _clamp_locked_seed(cls, value: Any) -> int:
         return _clamp_int(value, minimum=0, maximum=2_147_483_647, default=42)
+
+    @field_validator("quick_gen_favourite_workflows", mode="before")
+    @classmethod
+    def _limit_favourite_workflows(cls, value: Any) -> list[str]:
+        if not isinstance(value, list):
+            return []
+        return [item.strip() for item in cast(list[object], value) if isinstance(item, str) and item.strip()][:32]
 
 
 SettingsModelT = TypeVar("SettingsModelT", bound=SettingsBaseModel)
@@ -202,6 +210,7 @@ class SettingsResponse(SettingsBaseModel):
     locked_seed: int = 42
     output_settings: OutputSettings = Field(default_factory=OutputSettings)
     preview_settings: PreviewSettings = Field(default_factory=PreviewSettings)
+    quick_gen_favourite_workflows: list[str] = Field(default_factory=list)
 
 
 def to_settings_response(settings: AppSettings) -> SettingsResponse:

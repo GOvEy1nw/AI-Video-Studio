@@ -316,8 +316,8 @@ class VideoGenerationHandler(StateHandlerBase):
         try:
             profile = self._resolve_video_profile(req)
             style = self._resolve_style(profile, req.styleId, is_reframe=is_reframe, video_tool=req.videoTool)
-            if style is not None and style.prompt_text is not None:
-                wangp_prompt = f"{wangp_prompt.rstrip()}\n{style.prompt_text}"
+            if style is not None and style.style_prompt is not None:
+                wangp_prompt = f"{wangp_prompt.rstrip()}\n{style.style_prompt}"
             if is_h3:
                 wangp_prompt, h3_uses_ref2va = _validate_and_compile_h3_prompt(req, wangp_prompt)
                 if h3_uses_ref2va:

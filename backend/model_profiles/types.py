@@ -191,7 +191,7 @@ class StyleDefinition:
     source_url: str
     lora_url: str | None = None
     lora_strength: float | None = None
-    prompt_text: str | None = None
+    style_prompt: str | None = None
 
 
 @dataclass(frozen=True)

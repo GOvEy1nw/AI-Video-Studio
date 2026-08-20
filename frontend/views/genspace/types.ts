@@ -25,6 +25,7 @@ import type { SfxGenerationRecipeV1, SfxSettings } from "../../types/sfx";
 import type { SpeechGenerationRecipe, SpeechSettings } from "../../types/speech";
 import type { Asset } from "../../types/project";
 import type { UpscaleMediaKind, UpscaleMethod, UpscaleMethodId } from "../../types/upscale";
+import type { QuickGenWorkflowId } from "./workflows";
 
 export type GenSpaceMode = "image" | "video" | "music";
 export type AudioSubMode = "music" | "speech" | "sfx" | "mixer";
@@ -186,6 +187,7 @@ export interface ImageGenPanelController {
   imageTools: GenSpaceImageToolsController;
   upscale: GenSpaceUpscaleController;
   framing: GenSpaceFramingController;
+  workflow?: Pick<GenSpaceSidebarController["workflow"], "favouriteIds" | "toggleFavourite">;
 }
 
 export interface VideoGenPanelController {
@@ -197,6 +199,7 @@ export interface VideoGenPanelController {
   videoTools: GenSpaceVideoToolsController;
   upscale: GenSpaceUpscaleController;
   framing: GenSpaceFramingController;
+  workflow?: Pick<GenSpaceSidebarController["workflow"], "favouriteIds" | "toggleFavourite">;
 }
 
 export interface MusicGenPanelController {
@@ -216,6 +219,7 @@ export interface AudioGenPanelController {
   music: MusicGenPanelController;
   sfx?: SfxGenPanelController;
   speech?: SpeechGenPanelController;
+  workflow?: Pick<GenSpaceSidebarController["workflow"], "favouriteIds" | "toggleFavourite">;
 }
 
 export interface SfxGenPanelController {
@@ -260,6 +264,12 @@ export interface SpeechGenPanelController {
 export interface GenSpaceSidebarController {
   mode: GenSpaceMode;
   setMode: (mode: GenSpaceMode) => void;
+  workflow: {
+    activeId: QuickGenWorkflowId;
+    select: (workflowId: QuickGenWorkflowId) => void;
+    favouriteIds: readonly QuickGenWorkflowId[];
+    toggleFavourite: (workflowId: QuickGenWorkflowId) => void;
+  };
   image: ImageGenPanelController;
   video: VideoGenPanelController;
   audio: AudioGenPanelController;

@@ -228,7 +228,58 @@ class TestCuratedProfiles:
             "ltx25_wild_west",
             "ltx25_cinematic_sci_fi_cyberpunk",
         ]
+        assert {style.id: style.style_prompt for style in fast.styles} == {
+            "ltx25_soft_enhance": None,
+            "ltx25_fantasy_painterly": "D4rkP41nt3r",
+            "ltx25_pixar_toon": "P1x4r",
+            "ltx25_90s_animation": "9o4n1m",
+            "ltx25_claymation": "claymation style",
+            "ltx25_cozy_felt": "F3ltCut0u7",
+            "ltx25_fantasy_anime": "f4nt4sy4n1m6",
+            "ltx25_fantasy_realism": "f4nt4sy",
+            "ltx25_fantasy_puppet": "6u8p3t",
+            "ltx25_crisp_enhance": None,
+            "ltx25_post_apocalyptic": "P0st4p0c0",
+            "ltx25_paper_cut_out": "Pap3rCut0u7",
+            "ltx25_wild_west": "W1ldW4st",
+            "ltx25_cinematic_sci_fi_cyberpunk": "C6b4rP8nk",
+        }
         assert quality.styles == fast.styles
+
+    def test_style_validation_accepts_prompt_actions_and_rejects_no_action(self) -> None:
+        profile = get_video_profile("ltx2_25_fast")
+        assert profile is not None
+        style = profile.styles[0]
+        validate_model_profile_policies(
+            [
+                replace(
+                    profile,
+                    styles=(
+                        replace(style, style_prompt="suffix"),
+                        replace(
+                            style,
+                            id="prompt-only",
+                            lora_url=None,
+                            lora_strength=None,
+                            style_prompt="suffix",
+                        ),
+                    ),
+                )
+            ],
+            pack_ids=PACKS,
+        )
+        with pytest.raises(ValueError, match="must define a LoRA or style prompt"):
+            validate_model_profile_policies(
+                [
+                    replace(
+                        profile,
+                        styles=(
+                            replace(style, lora_url=None, lora_strength=None),
+                        ),
+                    )
+                ],
+                pack_ids=PACKS,
+            )
 
     def test_visible_profile_policies_reference_known_packs_and_handlers(self) -> None:
         validate_model_profile_policies(

@@ -1,28 +1,38 @@
-import { AudioLines, Mic, Music, SlidersHorizontal } from "lucide-react";
 import { ModeSelector } from "../components/ModeSelector";
 import type { AudioSubMode } from "../types";
-
-const AUDIO_SUBMODES = [
-  { value: "music", label: "Music", icon: Music },
-  { value: "speech", label: "Speech", icon: Mic },
-  { value: "sfx", label: "SFX", icon: AudioLines },
-  { value: "mixer", label: "Mixer", icon: SlidersHorizontal },
-] as const;
+import {
+  getQuickGenWorkflowsForMedia,
+  type QuickGenWorkflowId,
+} from "../workflows";
 
 export function AudioModeSelector({
   mode,
   onChange,
+  favouriteIds = [],
+  onToggleFavourite,
 }: {
   mode: AudioSubMode;
   onChange: (mode: AudioSubMode) => void;
+  favouriteIds?: readonly QuickGenWorkflowId[];
+  onToggleFavourite?: (workflowId: QuickGenWorkflowId) => void;
 }) {
+  const options = getQuickGenWorkflowsForMedia("music");
   return (
     <ModeSelector
-      label="Type"
-      triggerLabel="Choose audio type"
-      value={mode}
-      onChange={(value) => onChange(value as AudioSubMode)}
-      options={AUDIO_SUBMODES}
+      label="Tool"
+      triggerLabel="Choose tool"
+      value={`audio:${mode}`}
+      onChange={(value) => onChange(value.slice(6) as AudioSubMode)}
+      favouriteValues={favouriteIds}
+      onToggleFavourite={(value) =>
+        onToggleFavourite?.(value as QuickGenWorkflowId)
+      }
+      options={options.map(({ id, label, description, icon }) => ({
+        value: id,
+        label,
+        description,
+        icon,
+      }))}
     />
   );
 }

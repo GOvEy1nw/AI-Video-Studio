@@ -1,32 +1,29 @@
-import { Pencil, Scan, Sparkles, ZoomIn } from "lucide-react";
 import { ModeSelector } from "../components/ModeSelector";
 import type { ImageProcessMode } from "../types";
-
-const MODES: Array<{
-  id: ImageProcessMode;
-  label: string;
-  icon: typeof Sparkles;
-}> = [
-  { id: "create", label: "Generate", icon: Sparkles },
-  { id: "edit", label: "Edit", icon: Pencil },
-  { id: "region", label: "Region", icon: Scan },
-  { id: "upscale", label: "Upscale", icon: ZoomIn },
-];
+import { getQuickGenWorkflowsForMedia, type QuickGenWorkflowId } from "../workflows";
 
 export function ImageModeTabs({
   mode,
   onChange,
+  favouriteIds = [],
+  onToggleFavourite,
 }: {
   mode: ImageProcessMode;
   onChange: (mode: ImageProcessMode) => void;
+  favouriteIds?: readonly QuickGenWorkflowId[];
+  onToggleFavourite?: (workflowId: QuickGenWorkflowId) => void;
 }) {
+  const options = getQuickGenWorkflowsForMedia("image");
   return (
     <ModeSelector
-      value={mode}
-      onChange={(value) => onChange(value as ImageProcessMode)}
-      options={MODES.map(({ id, label, icon }) => ({
+      value={`image:${mode}`}
+      onChange={(value) => onChange(value.slice(6) as ImageProcessMode)}
+      favouriteValues={favouriteIds}
+      onToggleFavourite={(value) => onToggleFavourite?.(value as QuickGenWorkflowId)}
+      options={options.map(({ id, label, description, icon }) => ({
         value: id,
         label,
+        description,
         icon,
       }))}
     />

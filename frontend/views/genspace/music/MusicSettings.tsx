@@ -103,7 +103,7 @@ export function MusicSettings({
   if (vocalMode !== "custom-lyrics") return null;
 
   return (
-    <GenPanelSection title="Lyrics">
+    <GenPanelSection title="Lyrics" collapsible={false}>
       <div className="flex items-start rounded-lg border border-zinc-800 bg-zinc-950/35">
         <div className="flex min-w-0 flex-1 flex-col">
           <textarea

@@ -248,6 +248,25 @@ describe("GenSpace shared controls", () => {
     ]);
   });
 
+  it("opens Styles from the video media area", () => {
+    const onOpenStyles = vi.fn();
+    render(
+      <VideoMediaInputs
+        inputs={[]}
+        onChange={vi.fn()}
+        profile={{ inputMedia: { supportsImageInputs: true, roles: [] } } as unknown as ModelProfile}
+        useAudioTrack={false}
+        onUseAudioTrackChange={vi.fn()}
+        resolveInputFileUrl={vi.fn(async () => null)}
+        styles={[{ id: "cinematic", displayName: "Cinematic" }]}
+        onOpenStyles={onOpenStyles}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Style" }));
+    expect(onOpenStyles).toHaveBeenCalledOnce();
+  });
+
   it("keeps H3 references mutually exclusive with frame inputs and hides new FL2VA slots", () => {
     const profile = { id: "minimax_h3_quality", inputMedia: { supportsImageInputs: true } } as ModelProfile;
     const { rerender } = render(

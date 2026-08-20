@@ -44,6 +44,7 @@ export interface AppSettings {
   lockedSeed: number
   outputSettings: OutputSettings
   previewSettings: PreviewSettings
+  quickGenFavouriteWorkflows: string[]
 }
 
 const DEFAULT_OUTPUT_SETTINGS: OutputSettings = {
@@ -79,6 +80,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   lockedSeed: 42,
   outputSettings: DEFAULT_OUTPUT_SETTINGS,
   previewSettings: DEFAULT_PREVIEW_SETTINGS,
+  quickGenFavouriteWorkflows: [],
 }
 
 interface AppSettingsContextValue {
@@ -112,6 +114,7 @@ function normalizeAppSettings(data: Partial<AppSettings>): AppSettings {
       ...DEFAULT_PREVIEW_SETTINGS,
       ...(data.previewSettings ?? {}),
     },
+    quickGenFavouriteWorkflows: data.quickGenFavouriteWorkflows ?? DEFAULT_APP_SETTINGS.quickGenFavouriteWorkflows,
   }
 }
 

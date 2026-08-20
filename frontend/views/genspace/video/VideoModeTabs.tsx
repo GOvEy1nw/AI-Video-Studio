@@ -1,74 +1,63 @@
-import { Scissors, Sparkles, Wrench } from "lucide-react";
-import { useEffect } from "react";
-import {
-  getPolicyDisabledReason,
-  selectVideoEditOperations,
-} from "../../../lib/model-profile-policy";
 import type { ModelProfile } from "../../../types/model-profiles";
 import { ModeSelector } from "../components/ModeSelector";
 import type { VideoProcessMode } from "../types";
-import { VIDEO_TOOL_OPTIONS, type VideoToolId } from "./video-tools";
+import {
+  getCompatibleVideoProfiles,
+  getQuickGenWorkflowsForMedia,
+  type QuickGenWorkflowId,
+} from "../workflows";
+import type { VideoToolId } from "./video-tools";
 
 export function VideoModeTabs({
   mode,
   onChange,
   selectedTool = "reframe",
   onToolChange,
-  profile,
+  profiles,
+  favouriteIds = [],
+  onToggleFavourite,
 }: {
   mode: VideoProcessMode;
   onChange: (mode: VideoProcessMode) => void;
   selectedTool?: VideoToolId;
   onToolChange?: (tool: VideoToolId) => void;
-  profile?: ModelProfile;
+  profiles: readonly ModelProfile[];
+  favouriteIds?: readonly QuickGenWorkflowId[];
+  onToggleFavourite?: (workflowId: QuickGenWorkflowId) => void;
 }) {
-  const operations = profile?.videoEdits.operations ?? [];
-  const availableToolIds = new Set(
-    profile ? selectVideoEditOperations(profile).map(({ id }) => id) : [],
-  );
-  const availableTools = VIDEO_TOOL_OPTIONS.filter(({ value }) =>
-    value === "upscale" || availableToolIds.has(value),
-  );
-  const retake = operations.find(({ id }) => id === "retake");
-  const retakeReason = retake
-    ? getPolicyDisabledReason(retake, profile?.availability)
-    : "This capability is unavailable.";
-
-  useEffect(() => {
-    if (!profile || mode !== "reframe" || selectedTool === "upscale" || availableToolIds.has(selectedTool)) return;
-    const fallback = availableTools[0]?.value;
-    if (fallback) onToolChange?.(fallback);
-    else onChange("generate");
-  }, [mode, onChange, onToolChange, profile, selectedTool]);
-
-  const selectedValue = mode === "reframe" ? `tool:${selectedTool}` : mode;
-  const options = [
-    { value: "generate", label: "Generate", icon: Sparkles },
-    ...availableTools.map(({ value, label }) => ({
-      value: `tool:${value}`,
-      label,
-      icon: Wrench,
-    })),
-    {
-      value: "retake",
-      label: "Retake",
-      icon: Scissors,
-      disabled: retakeReason !== null,
-      tooltip: retakeReason ?? undefined,
-    },
-  ];
+  const selectedValue =
+    mode === "reframe" ? `video:tool:${selectedTool}` : `video:${mode}`;
+  const options = getQuickGenWorkflowsForMedia("video").map((workflow) => {
+    const compatible = getCompatibleVideoProfiles(
+      profiles,
+      workflow.id as Extract<QuickGenWorkflowId, `video:${string}`>,
+    );
+    const unavailable = workflow.id !== "video:tool:upscale" && compatible.length === 0;
+    return {
+      ...workflow,
+      value: workflow.id,
+      disabled: unavailable,
+      tooltip: unavailable ? "No compatible installed model is available." : undefined,
+    };
+  });
 
   return (
     <ModeSelector
       value={selectedValue}
       options={options}
+      favouriteValues={favouriteIds}
+      onToggleFavourite={(value) => onToggleFavourite?.(value as QuickGenWorkflowId)}
       onChange={(value) => {
-        if (value.startsWith("tool:")) {
-          onChange("reframe");
-          onToolChange?.(value.slice(5) as VideoToolId);
+        if (value === "video:generate") {
+          onChange("generate");
           return;
         }
-        onChange(value as VideoProcessMode);
+        if (value === "video:retake") {
+          onChange("retake");
+          return;
+        }
+        onChange("reframe");
+        onToolChange?.(value.slice(11) as VideoToolId);
       }}
     />
   );

@@ -1,5 +1,12 @@
 import { Image, Music, Video } from "lucide-react";
-import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 import { GenPanelSection } from "./GenPanelSection";
 
 type MediaMention = {
@@ -14,7 +21,9 @@ function getActiveMention(value: string, end: number): ActiveMention | null {
   let start = end;
   while (start > 0 && !/\s/.test(value[start - 1])) start -= 1;
   const token = value.slice(start, end);
-  return token.startsWith("@") ? { start, end, query: token.slice(1).toLowerCase() } : null;
+  return token.startsWith("@")
+    ? { start, end, query: token.slice(1).toLowerCase() }
+    : null;
 }
 
 function MentionIcon({ type }: { type: MediaMention["type"] }) {
@@ -66,17 +75,31 @@ export function PromptEditor({
   const [activeIndex, setActiveIndex] = useState(0);
   const mentionOptions = mention
     ? [
-        ...(["image", "video", "audio"] as const).map((type) => ({ kind: "add" as const, type, label: `Add ${type}` })),
+        ...(["image", "video", "audio"] as const).map((type) => ({
+          kind: "add" as const,
+          type,
+          label: `Add ${type}`,
+        })),
         ...(mediaMentions ?? [])
-          .filter((item) => item.alias.slice(1).toLowerCase().includes(mention.query))
-          .map((item) => ({ kind: "alias" as const, ...item, label: item.alias.slice(1) })),
+          .filter((item) =>
+            item.alias.slice(1).toLowerCase().includes(mention.query),
+          )
+          .map((item) => ({
+            kind: "alias" as const,
+            ...item,
+            label: item.alias.slice(1),
+          })),
       ]
     : [];
 
   useEffect(() => {
     if (!mention) return;
     const close = (event: PointerEvent) => {
-      if (menuRef.current?.contains(event.target as Node) || editorRef.current?.contains(event.target as Node)) return;
+      if (
+        menuRef.current?.contains(event.target as Node) ||
+        editorRef.current?.contains(event.target as Node)
+      )
+        return;
       setMention(null);
     };
     document.addEventListener("pointerdown", close);
@@ -84,7 +107,11 @@ export function PromptEditor({
   }, [mention]);
 
   const updateMention = (target: HTMLTextAreaElement) => {
-    setMention(mediaMentions ? getActiveMention(target.value, target.selectionEnd) : null);
+    setMention(
+      mediaMentions
+        ? getActiveMention(target.value, target.selectionEnd)
+        : null,
+    );
     setActiveIndex(0);
   };
 
@@ -93,7 +120,9 @@ export function PromptEditor({
     if (!mention || !option) return;
     if (option.kind === "add" && mediaAddDisabled?.[option.type]) return;
     const replacement = option.kind === "alias" ? option.alias : "";
-    onChange(`${value.slice(0, mention.start)}${replacement}${value.slice(mention.end)}`);
+    onChange(
+      `${value.slice(0, mention.start)}${replacement}${value.slice(mention.end)}`,
+    );
     if (option.kind === "add") onAddMedia?.(option.type);
     setMention(null);
     requestAnimationFrame(() => {
@@ -107,7 +136,12 @@ export function PromptEditor({
     if (mention && mentionOptions.length) {
       if (event.key === "ArrowDown" || event.key === "ArrowUp") {
         event.preventDefault();
-        setActiveIndex((current) => (current + (event.key === "ArrowDown" ? 1 : mentionOptions.length - 1)) % mentionOptions.length);
+        setActiveIndex(
+          (current) =>
+            (current +
+              (event.key === "ArrowDown" ? 1 : mentionOptions.length - 1)) %
+            mentionOptions.length,
+        );
         return;
       }
       if (event.key === "Enter") {
@@ -128,7 +162,7 @@ export function PromptEditor({
   };
 
   return (
-    <GenPanelSection title={title}>
+    <GenPanelSection title={title} collapsible={false}>
       <div className="flex items-start rounded-lg border border-zinc-800 bg-zinc-950/35">
         {leading}
         <div className="relative flex min-w-0 flex-1 flex-col">
@@ -142,24 +176,39 @@ export function PromptEditor({
               }}
               onKeyDown={handleKeyDown}
               onKeyUp={(event) => {
-                if (!["ArrowDown", "ArrowUp", "Enter", "Escape"].includes(event.key)) updateMention(event.currentTarget);
+                if (
+                  !["ArrowDown", "ArrowUp", "Enter", "Escape"].includes(
+                    event.key,
+                  )
+                )
+                  updateMention(event.currentTarget);
               }}
               onClick={(event) => updateMention(event.currentTarget)}
               onBlur={(event) => {
-                if (!menuRef.current?.contains(event.relatedTarget as Node)) setMention(null);
+                if (!menuRef.current?.contains(event.relatedTarget as Node))
+                  setMention(null);
               }}
               aria-expanded={!!mention}
               aria-controls={mention ? menuId : undefined}
-              aria-activedescendant={mention ? `${menuId}-option-${activeIndex}` : undefined}
+              aria-activedescendant={
+                mention ? `${menuId}-option-${activeIndex}` : undefined
+              }
               maxLength={maxLength}
               placeholder={placeholder}
               className={`${height} w-full resize-none overflow-y-auto bg-transparent px-3 pb-3 pt-3 text-sm leading-5 text-white placeholder:text-zinc-500 focus:outline-hidden`}
             />
           )}
           {mention ? (
-            <div ref={menuRef} id={menuId} role="listbox" aria-label="Media references" className="absolute left-2 top-12 z-30 w-60 rounded-xl border border-zinc-700 bg-zinc-900 p-1 shadow-xl">
+            <div
+              ref={menuRef}
+              id={menuId}
+              role="listbox"
+              aria-label="Media references"
+              className="absolute left-2 top-12 z-30 w-60 rounded-xl border border-zinc-700 bg-zinc-900 p-1 shadow-xl"
+            >
               {mentionOptions.map((option, index) => {
-                const disabledOption = option.kind === "add" && mediaAddDisabled?.[option.type];
+                const disabledOption =
+                  option.kind === "add" && mediaAddDisabled?.[option.type];
                 return (
                   <button
                     key={option.kind === "add" ? option.type : option.alias}
@@ -172,7 +221,25 @@ export function PromptEditor({
                     onClick={() => selectMention(index)}
                     className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-zinc-100 disabled:cursor-not-allowed disabled:opacity-45 ${index === activeIndex ? "bg-zinc-700" : "hover:bg-zinc-800"}`}
                   >
-                    {option.kind === "alias" && option.type === "image" ? <img src={option.url} alt="" className="h-5 w-5 rounded object-cover" /> : option.kind === "alias" && option.type === "video" ? <video src={option.url} muted playsInline preload="metadata" className="h-5 w-5 rounded object-cover" /> : <span className="flex h-5 w-5 items-center justify-center rounded bg-zinc-800 text-violet-300"><MentionIcon type={option.type} /></span>}
+                    {option.kind === "alias" && option.type === "image" ? (
+                      <img
+                        src={option.url}
+                        alt=""
+                        className="h-5 w-5 rounded object-cover"
+                      />
+                    ) : option.kind === "alias" && option.type === "video" ? (
+                      <video
+                        src={option.url}
+                        muted
+                        playsInline
+                        preload="metadata"
+                        className="h-5 w-5 rounded object-cover"
+                      />
+                    ) : (
+                      <span className="flex h-5 w-5 items-center justify-center rounded bg-zinc-800 text-violet-300">
+                        <MentionIcon type={option.type} />
+                      </span>
+                    )}
                     <span>{option.label}</span>
                   </button>
                 );

@@ -161,12 +161,12 @@ export function SettingsDropdown({
       data-genspace-theme-ignore={
         variant === "model" || variant === "mode" ? "" : undefined
       }
-      className={`relative ${variant === "model" ? "" : ""}`}
+      className={`relative ${variant === "model" ? "w-full" : ""}`}
     >
       {variant === "model" ? (
         <div
           ref={modelTriggerRef}
-          className={`flex w-fit min-w-[165px] items-center justify-between rounded-xl border bg-zinc-800/70 transition-colors ${
+          className={`flex flex-col w-full min-w-[165px] p-2.5 justify-between rounded-xl border bg-zinc-800/70 transition-colors ${
             disabled
               ? "cursor-not-allowed border-zinc-700 opacity-50"
               : isOpen
@@ -180,23 +180,35 @@ export function SettingsDropdown({
             aria-expanded={isOpen}
             onClick={() => setIsOpen(!isOpen)}
             disabled={disabled}
-            className="flex min-w-0 flex-1 items-center px-3 py-1 text-left"
+            className="flex min-w-0 flex-1 items-center text-left"
           >
-            {trigger}
+            <span className="mb-0.5 text-2xs w-full text-zinc-400">Model</span>
           </button>
-          {triggerControls}
-          <button
-            type="button"
-            aria-label={triggerLabel ?? "Open model picker"}
-            aria-expanded={isOpen}
-            onClick={() => setIsOpen(!isOpen)}
-            disabled={disabled}
-            className="flex h-8 w-8 shrink-0 items-center justify-center text-zinc-500 transition-colors hover:text-zinc-300 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-zinc-400"
-          >
-            <ChevronDown
-              className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`}
-            />
-          </button>
+          <div className="flex w-full items-center justify-between gap-2.5">
+            <button
+              type="button"
+              aria-label={triggerLabel}
+              aria-expanded={isOpen}
+              onClick={() => setIsOpen(!isOpen)}
+              disabled={disabled}
+              className="flex min-w-0 flex-1 items-center text-left"
+            >
+              {trigger}
+            </button>
+            {triggerControls}
+            <button
+              type="button"
+              aria-label={triggerLabel ?? "Open model picker"}
+              aria-expanded={isOpen}
+              onClick={() => setIsOpen(!isOpen)}
+              disabled={disabled}
+              className="flex shrink-0 items-center justify-center text-zinc-500 transition-colors hover:text-zinc-300 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-zinc-400"
+            >
+              <ChevronDown
+                className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+          </div>
         </div>
       ) : (
         <button

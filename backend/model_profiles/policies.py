@@ -189,14 +189,14 @@ def _validate_styles(profile: ModelProfile) -> None:
         if not style.display_name or not style.thumbnail_url or not style.source_url:
             raise ValueError(f"{profile.id}: style {style.id} is missing public metadata")
         has_lora = style.lora_url is not None
-        has_prompt = style.prompt_text is not None
-        if has_lora == has_prompt:
-            raise ValueError(f"{profile.id}: style {style.id} must define exactly one action")
+        has_prompt = style.style_prompt is not None
+        if not has_lora and not has_prompt:
+            raise ValueError(f"{profile.id}: style {style.id} must define a LoRA or style prompt")
         if has_lora and not style.lora_url:
             raise ValueError(f"{profile.id}: style {style.id} has an empty LoRA URL")
         if has_lora and (style.lora_strength is None or style.lora_strength <= 0):
             raise ValueError(f"{profile.id}: style {style.id} needs a positive LoRA strength")
-        if style.prompt_text is not None and not style.prompt_text.strip():
+        if style.style_prompt is not None and not style.style_prompt.strip():
             raise ValueError(f"{profile.id}: style {style.id} has an empty prompt action")
         if not has_lora and style.lora_strength is not None:
             raise ValueError(f"{profile.id}: prompt style {style.id} cannot define a LoRA strength")
