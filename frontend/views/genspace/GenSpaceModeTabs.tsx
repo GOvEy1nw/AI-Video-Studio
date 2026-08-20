@@ -65,7 +65,7 @@ export function GenSpaceModeTabs({
                 title={workflow.label}
                 onClick={() => onSelectWorkflow(workflow.id)}
                 style={getGenSpaceModeAccentStyle(workflow.media)}
-                className="flex h-9 w-9 items-center justify-center rounded-md border border-[color-mix(in_srgb,var(--genspace-mode-accent)_35%,transparent)] bg-[color-mix(in_srgb,var(--genspace-mode-accent)_14%,transparent)] text-[var(--genspace-mode-accent-hover)] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--genspace-mode-accent-hover)]"
+                className="flex h-9 w-9 items-center justify-center rounded-md border border-[color-mix(in_srgb,var(--genspace-mode-accent)_35%,transparent)] bg-[color-mix(in_srgb,var(--genspace-mode-accent)_25%,transparent)] text-[color-mix(in_srgb,var(--genspace-mode-accent-hover)_50%,white)] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--genspace-mode-accent-hover)]"
               >
                 <Icon className="h-3.5 w-3.5" />
               </button>

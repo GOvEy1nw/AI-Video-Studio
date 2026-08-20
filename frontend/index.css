@@ -207,6 +207,8 @@ body {
   button.genspace-mode-tab:not(
       [data-genspace-tool],
       [data-genspace-tool] *,
+      [data-genspace-tool-selector],
+      [data-genspace-tool-selector] *,
       [data-genspace-theme-ignore],
       [data-genspace-theme-ignore] *
     ) {
@@ -223,9 +225,9 @@ body {
   button:not(:disabled):not(.genspace-mode-tab):not(
       [data-genspace-dropzone]
     ):not([data-genspace-tool], [data-genspace-tool] *):not(
-      [data-genspace-theme-ignore],
-      [data-genspace-theme-ignore] *
-    ) {
+      [data-genspace-tool-selector],
+      [data-genspace-tool-selector] *
+    ):not([data-genspace-theme-ignore], [data-genspace-theme-ignore] *) {
     &:hover {
       background-color: var(--genspace-mode-accent-hover);
       color: white;
@@ -304,6 +306,24 @@ body {
       background-color: color-mix(
         in srgb,
         var(--genspace-mode-accent) 30%,
+        transparent
+      );
+      color: white;
+    }
+  }
+
+  [data-genspace-tool-selector]:not(
+    [data-genspace-theme-ignore],
+    [data-genspace-theme-ignore] *
+  ) {
+    /* Base state */
+    color: var(--color-zinc-400);
+    /* Hover and drag-active states */
+    &:hover {
+      border-color: var(--genspace-mode-accent);
+      background-color: color-mix(
+        in srgb,
+        var(--genspace-mode-accent) 20%,
         transparent
       );
       color: white;

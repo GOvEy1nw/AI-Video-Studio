@@ -111,7 +111,7 @@ export function MediaInputSlot({
           </>
         ) : (
           <>
-            <Icon className="h-4 w-4 text-zinc-500" />
+            <Icon className="h-4 w-4" />
             {label ? (
               <span className="mt-1 select-none text-2xs uppercase">
                 {label}

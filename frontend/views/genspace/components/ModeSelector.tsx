@@ -112,10 +112,12 @@ export function ModeSelector({
           return (
             <div
               key={option.value}
+              data-genspace-tool-selector
               className="group flex items-center gap-2 rounded-lg pr-1 hover:bg-zinc-900"
             >
               <button
                 type="button"
+                data-genspace-theme-ignore
                 disabled={option.disabled}
                 title={option.disabled ? option.tooltip : undefined}
                 aria-label={
@@ -129,19 +131,17 @@ export function ModeSelector({
                   requestAnimationFrame(() => triggerRef.current?.focus());
                 }}
                 className={`flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors focus-visible:outline-2 focus-visible:outline-violet-400 ${
-                  option.disabled
-                    ? "cursor-not-allowed opacity-45"
-                    : "hover:bg-zinc-800"
+                  option.disabled ? "cursor-not-allowed opacity-45" : ""
                 }`}
               >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--genspace-mode-accent)_18%,transparent)] text-[var(--genspace-mode-accent-hover)]">
+                <span className="flex h-9 w-9 items-center justify-center rounded-md border border-[color-mix(in_srgb,var(--genspace-mode-accent)_35%,transparent)] bg-[color-mix(in_srgb,var(--genspace-mode-accent)_14%,transparent)] text-[color-mix(in_srgb,var(--genspace-mode-accent-hover)_50%,white)]">
                   <Icon className="h-5 w-5" />
                 </span>
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-medium text-zinc-100">
                     {option.label}
                   </span>
-                  <span className="block truncate text-xs text-zinc-500">
+                  <span className="block truncate text-xs">
                     {option.disabled
                       ? (option.tooltip ?? "Unavailable")
                       : option.description}
@@ -151,13 +151,14 @@ export function ModeSelector({
               {onToggleFavourite ? (
                 <button
                   type="button"
+                  data-genspace-theme-ignore
                   aria-label={`${isFavourite ? "Remove" : "Add"} ${option.label} ${isFavourite ? "from" : "to"} favourites`}
                   aria-pressed={isFavourite}
                   onClick={() => onToggleFavourite(option.value)}
                   className={`rounded-md p-2 transition-colors focus-visible:outline-2 focus-visible:outline-violet-400 ${
                     isFavourite
-                      ? "text-violet-300"
-                      : "text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
+                      ? "text-zinc-100"
+                      : "text-zinc-700 hover:text-zinc-300"
                   }`}
                 >
                   {isFavourite ? (

@@ -81,13 +81,13 @@ function ReferenceAddButton({
         return (
           <span
             key={type}
-            className="flex h-7 w-7 items-center justify-center rounded-full border border-zinc-700 bg-zinc-800/70 text-zinc-400"
+            className="flex h-7 w-7 items-center justify-center rounded-full border border-zinc-700"
           >
             <Icon className="h-3.5 w-3.5" />
           </span>
         );
       })}
-      <Plus className="h-3.5 w-3.5 text-zinc-500" />
+      <Plus className="h-3.5 w-3.5" />
       <span className="text-2xs">Add media</span>
     </button>
   );

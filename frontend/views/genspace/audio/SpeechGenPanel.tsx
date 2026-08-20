@@ -109,7 +109,8 @@ export function SpeechGenPanel({
           url?: string;
           path?: string;
         };
-        const path = asset.path ?? (asset.url ? fileUrlToPath(asset.url) : null);
+        const path =
+          asset.path ?? (asset.url ? fileUrlToPath(asset.url) : null);
         if (asset.type === "audio" && asset.url && path) {
           replaceOrAddReference(index, {
             assetId: asset.id,
@@ -128,9 +129,7 @@ export function SpeechGenPanel({
   const removeReference = (index: number) => {
     setActiveReference(null);
     setEditingReference(null);
-    const next = references.filter(
-      (_, currentIndex) => currentIndex !== index,
-    );
+    const next = references.filter((_, currentIndex) => currentIndex !== index);
     controller.setSettings({
       ...controller.settings,
       references: next,
@@ -173,9 +172,7 @@ export function SpeechGenPanel({
   const promptActions = (
     <PromptActions
       seedLocked={controller.settings.seed !== null}
-      lockedSeed={
-        controller.settings.seed ?? controller.prompt.lockedSeed
-      }
+      lockedSeed={controller.settings.seed ?? controller.prompt.lockedSeed}
       onSeedChange={(seed) => {
         controller.prompt.setSeed(seed);
         controller.setSettings({
@@ -196,7 +193,7 @@ export function SpeechGenPanel({
 
   return (
     <>
-      <GenPanelSection title="Voice references" collapsible>
+      <GenPanelSection title="References" collapsible={false}>
         {editingItem ? (
           <GuideMediaTrimEditor
             item={{
@@ -209,9 +206,7 @@ export function SpeechGenPanel({
               trimDuration: editingItem.trimDuration,
               mediaDuration: editingItem.mediaDuration,
             }}
-            onChange={(patch) =>
-              updateReference(editingReference!, patch)
-            }
+            onChange={(patch) => updateReference(editingReference!, patch)}
             onConfirm={() => setEditingReference(null)}
           />
         ) : null}
