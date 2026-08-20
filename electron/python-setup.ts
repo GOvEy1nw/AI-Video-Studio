@@ -248,9 +248,9 @@ const MODEL_PACKS: Omit<ModelPack, 'installed'>[] = [
   },
   {
     id: 'index_tts2',
-    name: 'Index TTS 2',
+    name: 'Index TTS 2.5',
     estimatedSize: '~5.2 GB',
-    modelType: 'index_tts2',
+    modelType: 'index_tts25',
     mediaTypes: ['audio'],
     features: ['generate'],
   },

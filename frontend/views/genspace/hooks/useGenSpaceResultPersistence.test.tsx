@@ -98,6 +98,53 @@ describe("useGenSpaceResultPersistence", () => {
     expect(reset).toHaveBeenCalledOnce();
   });
 
+  it("keeps an upscaled video unpersisted when its project transfer fails", async () => {
+    const addAsset = vi.fn();
+    const addTakeToAsset = vi.fn();
+    const reset = vi.fn();
+    const onPersistenceError = vi.fn();
+    const videoSubmissionRef: { current: VideoSubmissionSnapshot | null } = {
+      current: {
+        projectId: "project-a",
+        prompt: "",
+        settings: { ...DEFAULT_VIDEO_SETTINGS },
+        inputs: [],
+        inputImage: null,
+        inputAudio: null,
+        assetPaths: [],
+        videoTool: "upscale",
+        upscale: {
+          mediaKind: "video",
+          method: "lanczos",
+          scale: 2,
+          source: {
+            id: "source",
+            url: "file:///C:/source.mp4",
+            path: "C:\\source.mp4",
+            role: "upscale_source",
+            type: "video",
+          },
+        },
+      },
+    };
+
+    renderHook(() => useGenSpaceResultPersistence({
+      videoUrl: "file:///C:/upscaled.mp4", videoPath: "C:\\upscaled.mp4", isGenerating: false,
+      addAsset, reset, videoSubmissionRef,
+      reframeSubmissionRef: { current: null }, retakeResult: null, isRetaking: false,
+      retakeSubmissionRef: { current: null }, getProjectAssets: () => [], activeRetakeSource: null,
+      setActiveRetakeSource: vi.fn(), addTakeToAsset, setPendingRetakeUpdate: vi.fn(), resetRetake: vi.fn(),
+      imageUrls: [], imagePaths: [], imageSubmissionRef: { current: null }, musicResult: null,
+      musicSubmissionRef: { current: null }, onPersistenceError,
+    }));
+
+    await waitFor(() => expect(onPersistenceError).toHaveBeenCalledOnce());
+    expect(addAsset).not.toHaveBeenCalled();
+    expect(addTakeToAsset).not.toHaveBeenCalled();
+    expect(reset).not.toHaveBeenCalled();
+    expect(videoSubmissionRef.current).not.toBeNull();
+  });
+
   it("keeps multi-output image persistence while selecting its first result", async () => {
     const addedAssets: Asset[] = [
       {
@@ -202,6 +249,7 @@ describe("useGenSpaceResultPersistence", () => {
     const addAsset = vi.fn();
     const addTakeToAsset = vi.fn();
     const onAssetAdded = vi.fn();
+    copyMock.mockResolvedValueOnce({ path: "C:\\project-b\\generated\\upscaled.mp4", url: "file:///C:/project-b/generated/upscaled.mp4" });
     const videoSubmissionRef: { current: VideoSubmissionSnapshot | null } = {
       current: {
         projectId: "project-b",
@@ -228,7 +276,7 @@ describe("useGenSpaceResultPersistence", () => {
     }));
 
     await waitFor(() => expect(addTakeToAsset).toHaveBeenCalledWith(
-      "project-b", source.id, expect.objectContaining({ path: "C:\\upscaled.mp4", generationParams: expect.objectContaining({ mode: "upscale" }) }),
+      "project-b", source.id, expect.objectContaining({ path: "C:\\project-b\\generated\\upscaled.mp4", generationParams: expect.objectContaining({ mode: "upscale" }) }),
     ));
     expect(addAsset).not.toHaveBeenCalled();
     expect(onAssetAdded).toHaveBeenCalledWith(source);
@@ -236,6 +284,7 @@ describe("useGenSpaceResultPersistence", () => {
 
   it("adds an upscale result when its source is not in the submission project", async () => {
     const addAsset = vi.fn(() => ({ id: "upscaled", type: "video" as const, path: "C:\\upscaled.mp4", url: "file:///C:/upscaled.mp4", prompt: "", resolution: "720p", createdAt: 2 }));
+    copyMock.mockResolvedValueOnce({ path: "C:\\project-b\\generated\\upscaled.mp4", url: "file:///C:/project-b/generated/upscaled.mp4" });
     const videoSubmissionRef: { current: VideoSubmissionSnapshot | null } = {
       current: {
         projectId: "project-b", prompt: "", settings: { ...DEFAULT_VIDEO_SETTINGS }, inputs: [], inputImage: null, inputAudio: null, assetPaths: [], videoTool: "upscale",

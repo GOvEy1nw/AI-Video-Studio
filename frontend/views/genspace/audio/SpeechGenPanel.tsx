@@ -193,7 +193,7 @@ export function SpeechGenPanel({
 
   return (
     <>
-      <GenPanelSection title="References" collapsible={false}>
+      <GenPanelSection title={`References (${references.length}/2)`} collapsible={false}>
         {editingItem ? (
           <GuideMediaTrimEditor
             item={{

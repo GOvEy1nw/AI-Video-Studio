@@ -58,7 +58,7 @@ export function MediaInputSlot({
 
   return (
     <div
-      className="w-full"
+      className="relative group w-full"
       onDragOver={(event) => {
         if (disabled) return;
         event.preventDefault();

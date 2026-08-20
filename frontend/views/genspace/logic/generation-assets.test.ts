@@ -13,6 +13,7 @@ import {
   buildGeneratedMusicAsset,
   buildGeneratedVideoAsset,
   buildReframeAsset,
+  getAssetModelId,
 } from "./generation-assets";
 
 const input = {
@@ -48,6 +49,7 @@ describe("GenSpace generated asset builders", () => {
       finalPath: "C:\\output.png",
       finalUrl: "file:///C:/output.png",
       createdAt: 15_000,
+      seed: 123,
     });
 
     expect(asset.generationParams?.imageInputMedia).toEqual([
@@ -65,6 +67,7 @@ describe("GenSpace generated asset builders", () => {
     expect(asset.prompt).toBe("enhanced portrait");
     expect(asset.generationParams?.prompt).toBe("enhanced portrait");
     expect(asset.generationTimeSeconds).toBe(14);
+    expect(asset.takes?.[0]?.seed).toBe(123);
   });
 
   it("persists the Edit master, mask, and outpaint recipe", () => {
@@ -140,6 +143,7 @@ describe("GenSpace generated asset builders", () => {
       finalPath: "C:\\output.mp4",
       finalUrl: "file:///C:/output.mp4",
       createdAt: 1,
+      seed: 321,
     });
 
     expect(asset.generationParams).toMatchObject({
@@ -155,6 +159,7 @@ describe("GenSpace generated asset builders", () => {
         },
       ],
     });
+    expect(asset.takes?.[0]?.seed).toBe(321);
   });
 
   it("persists Image Upscale source and method metadata", () => {
@@ -172,6 +177,7 @@ describe("GenSpace generated asset builders", () => {
       mode: "upscale", imageProcessMode: "upscale",
       upscale: { mediaKind: "image", method: "seedvr2", scale: 2, source: { path: "C:\\source.png" } },
     });
+    expect(getAssetModelId({ id: "upscale", ...asset, createdAt: 1 })).toBe("seedvr2");
   });
 
   it("preserves the source video duration for Upscale output metadata", () => {

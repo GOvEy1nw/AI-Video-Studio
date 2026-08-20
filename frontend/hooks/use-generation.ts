@@ -142,6 +142,7 @@ export function useGeneration(): UseGenerationReturn {
           const result = (await response.json()) as {
             status?: string;
             video_path?: string;
+            resolvedSeed?: number;
             error?: string;
           };
           if (result.error) throw new Error(result.error);
@@ -163,6 +164,7 @@ export function useGeneration(): UseGenerationReturn {
               statusMessage: "Complete!",
               videoUrl: generatedPathToFileUrl(result.video_path),
               videoPath: result.video_path,
+              videoSeed: result.resolvedSeed ?? null,
               directorResult: directorRequest
                 ? (result as GenerateDirectorResponse)
                 : null,
@@ -230,6 +232,7 @@ export function useGeneration(): UseGenerationReturn {
             status?: string;
             image_paths?: string[];
             image_path?: string;
+            resolvedSeed?: number;
             error?: string;
           };
           if (result.error) throw new Error(result.error);
@@ -257,6 +260,7 @@ export function useGeneration(): UseGenerationReturn {
               imagePath: paths[0],
               imageUrls: urls,
               imagePaths: paths,
+              imageSeed: result.resolvedSeed ?? null,
             },
           };
         },

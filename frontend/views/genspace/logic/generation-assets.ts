@@ -24,6 +24,9 @@ function generationTimeSeconds(
 }
 
 export function getAssetModelId(asset: Asset): string | undefined {
+  if (asset.generationParams?.mode === "upscale") {
+    return asset.generationParams.upscale?.method ?? asset.generationParams.model;
+  }
   return (
     asset.generationParams?.imageProfileId ??
     asset.generationParams?.videoProfileId ??
@@ -62,11 +65,13 @@ export function buildGeneratedImageAsset({
   finalPath,
   finalUrl,
   createdAt,
+  seed,
 }: {
   snapshot: ImageSubmissionSnapshot;
   finalPath: string;
   finalUrl: string;
   createdAt: number;
+  seed?: number;
 }): NewAsset {
   const firstInput = snapshot.inputs[0];
   const upscale = snapshot.upscale;
@@ -128,7 +133,7 @@ export function buildGeneratedImageAsset({
         storedInput(input, snapshot.assetPaths),
       ),
     },
-    takes: [{ url: finalUrl, path: finalPath, createdAt }],
+    takes: [{ url: finalUrl, path: finalPath, createdAt, seed }],
     activeTakeIndex: 0,
   };
 }
@@ -138,11 +143,13 @@ export function buildGeneratedVideoAsset({
   finalPath,
   finalUrl,
   createdAt,
+  seed,
 }: {
   snapshot: VideoSubmissionSnapshot;
   finalPath: string;
   finalUrl: string;
   createdAt: number;
+  seed?: number;
 }): NewAsset {
   const startImage = snapshot.inputs.find(({ role }) => role === "start_image");
   const audio = snapshot.inputs.find(({ role }) =>
@@ -200,7 +207,7 @@ export function buildGeneratedVideoAsset({
         storedInput(input, snapshot.assetPaths),
       ),
     },
-    takes: [{ url: finalUrl, path: finalPath, createdAt }],
+    takes: [{ url: finalUrl, path: finalPath, createdAt, seed }],
     activeTakeIndex: 0,
   };
 }

@@ -69,7 +69,7 @@ export function SfxMediaInputs({
     : undefined;
 
   return (
-    <GenPanelSection title="References" collapsible={false}>
+    <GenPanelSection title={`References (${video ? 1 : 0}/1)`} collapsible={false}>
       <div
         className="relative flex items-center gap-2 overflow-visible"
         onDragEnter={() => setDragActive(true)}

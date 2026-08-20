@@ -1,10 +1,7 @@
 import {
   Clock3,
-  Gauge,
-  KeyRound,
-  Languages,
-  ListMusic,
   Mic2,
+  Music2,
 } from "lucide-react";
 import { SettingsDropdown } from "../../../components/SettingsDropdown";
 import type { ModelProfile } from "../../../types/model-profiles";
@@ -113,104 +110,104 @@ export function MusicPromptControls({
       />
       <SettingsDropdown
         {...common}
-        title=""
-        triggerLabel="Music BPM"
+        title="MUSIC"
+        triggerLabel="Music BPM, key, and time signature"
         disabled={disabled}
-        trigger={<Gauge className="h-3.5 w-3.5" />}
+        trigger={<Music2 className="h-3.5 w-3.5" />}
         content={
-          <label className="block w-48 text-2xs text-zinc-400">
-            <span className="mb-2 flex justify-between gap-4">
-              <span>BPM</span>
-              <span className="font-mono text-zinc-200">
-                {settings.bpm ?? "Auto"}
+          <div className="w-48 space-y-3 text-2xs text-zinc-400">
+            <label className="block">
+              <span className="mb-2 flex justify-between gap-4">
+                <span>BPM</span>
+                <span className="font-mono text-zinc-200">
+                  {settings.bpm ?? "Auto"}
+                </span>
               </span>
-            </span>
-            <input
-              type="range"
-              aria-label="Music BPM value"
-              min={0}
-              max={policy?.bpmMax ?? 300}
-              value={settings.bpm ?? 0}
-              onChange={(event) => {
-                const value = Number(event.currentTarget.value);
-                update({
-                  bpm:
-                    value === 0 ? null : Math.max(policy?.bpmMin ?? 30, value),
-                });
-              }}
-              className="w-full cursor-pointer accent-green-500"
-            />
-          </label>
+              <input
+                type="range"
+                aria-label="Music BPM value"
+                min={0}
+                max={policy?.bpmMax ?? 300}
+                value={settings.bpm ?? 0}
+                onChange={(event) => {
+                  const value = Number(event.currentTarget.value);
+                  update({
+                    bpm:
+                      value === 0
+                        ? null
+                        : Math.max(policy?.bpmMin ?? 30, value),
+                  });
+                }}
+                className="w-full cursor-pointer accent-green-500"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block">KEY & SCALE</span>
+              <select
+                aria-label="Music key and scale"
+                value={settings.keyScale ?? ""}
+                onChange={(event) => update({ keyScale: event.currentTarget.value || null })}
+                className="w-full rounded-md border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-xs text-zinc-200"
+              >
+                <option value="">Auto</option>
+                {KEY_OPTIONS.map((key) => <option key={key} value={key}>{key}</option>)}
+              </select>
+            </label>
+            <label className="block">
+              <span className="mb-1 block">TIME SIGNATURE</span>
+              <select
+                aria-label="Music time signature"
+                value={settings.timeSignature ?? ""}
+                onChange={(event) => update({ timeSignature: (event.currentTarget.value || null) as MusicTimeSignature | null })}
+                className="w-full rounded-md border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-xs text-zinc-200"
+              >
+                <option value="">Auto</option>
+                {(policy?.timeSignatures ?? ["2/4", "3/4", "4/4", "6/8"]).map((value) => <option key={value} value={value}>{value}</option>)}
+              </select>
+            </label>
+          </div>
         }
-      />
-      <SettingsDropdown
-        {...common}
-        title="KEY & SCALE"
-        value={settings.keyScale ?? ""}
-        options={[
-          { value: "", label: "Auto" },
-          ...KEY_OPTIONS.map((key) => ({ value: key, label: key })),
-        ]}
-        onChange={(value) => update({ keyScale: value || null })}
-        triggerLabel="Music key and scale"
-        disabled={disabled}
-        trigger={<KeyRound className="h-3.5 w-3.5" />}
-      />
-      <SettingsDropdown
-        {...common}
-        title="TIME SIGNATURE"
-        value={settings.timeSignature ?? ""}
-        options={[
-          { value: "", label: "Auto" },
-          ...(policy?.timeSignatures ?? ["2/4", "3/4", "4/4", "6/8"]).map(
-            (value) => ({ value, label: value }),
-          ),
-        ]}
-        onChange={(value) =>
-          update({
-            timeSignature: (value || null) as MusicTimeSignature | null,
-          })
-        }
-        triggerLabel="Music time signature"
-        disabled={disabled}
-        trigger={<ListMusic className="h-3.5 w-3.5" />}
       />
       {vocalMode !== "instrumental" ? (
         <>
           <SettingsDropdown
             {...common}
-            title="LANGUAGE"
-            value={settings.vocalLanguage}
-            options={[
-              { value: "auto", label: "Auto Detect" },
-              ...(policy?.supportedLanguages ?? ["en"])
-                .filter((language) => language !== "unknown")
-                .map((language) => ({
-                  value: language,
-                  label: language.toUpperCase(),
-                })),
-            ]}
-            onChange={(value) => update({ vocalLanguage: value })}
-            triggerLabel="Music language"
-            disabled={disabled}
-            trigger={<Languages className="h-3.5 w-3.5" />}
-          />
-          <SettingsDropdown
-            {...common}
-            title="VOICE"
-            value={settings.vocalGender}
-            options={[
-              { value: "auto", label: "Auto" },
-              { value: "female", label: "Female" },
-              { value: "male", label: "Male" },
-              { value: "mixed", label: "Mixed / Duet" },
-            ]}
-            onChange={(value) =>
-              update({ vocalGender: value as MusicVocalGender })
-            }
-            triggerLabel="Music vocal character"
+            title="VOCALS"
+            triggerLabel="Music language and voice"
             disabled={disabled}
             trigger={<Mic2 className="h-3.5 w-3.5" />}
+            content={
+              <div className="w-48 space-y-3 text-2xs text-zinc-400">
+                <label className="block">
+                  <span className="mb-1 block">LANGUAGE</span>
+                  <select
+                    aria-label="Music language"
+                    value={settings.vocalLanguage}
+                    onChange={(event) => update({ vocalLanguage: event.currentTarget.value })}
+                    className="w-full rounded-md border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-xs text-zinc-200"
+                  >
+                    <option value="auto">Auto Detect</option>
+                    {(policy?.supportedLanguages ?? ["en"])
+                      .filter((language) => language !== "unknown")
+                      .map((language) => <option key={language} value={language}>{language.toUpperCase()}</option>)}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="mb-1 block">VOICE</span>
+                  <select
+                    aria-label="Music vocal character"
+                    value={settings.vocalGender}
+                    onChange={(event) => update({ vocalGender: event.currentTarget.value as MusicVocalGender })}
+                    className="w-full rounded-md border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-xs text-zinc-200"
+                  >
+                    <option value="auto">Auto</option>
+                    <option value="female">Female</option>
+                    <option value="male">Male</option>
+                    <option value="mixed">Mixed / Duet</option>
+                  </select>
+                </label>
+              </div>
+            }
           />
         </>
       ) : null}

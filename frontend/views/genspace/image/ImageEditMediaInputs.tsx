@@ -20,12 +20,6 @@ import type { GenSpaceMediaInput } from "../types";
 import { ImageMaskEditor } from "./ImageMaskEditor";
 import { ImageMediaInputs } from "./ImageMediaInputs";
 
-const EDIT_TOOLS: Array<{ id: ImageEditToolMode; label: string }> = [
-  { id: "edit", label: "Edit" },
-  { id: "retouch", label: "Retouch" },
-  { id: "reframe", label: "Reframe" },
-];
-
 const DEFAULT_OUTPAINT: ImageEditOutpaintRecipe = {
   aspectMode: "16:9",
   padding: { top: 0, bottom: 0, left: 0, right: 0 },
@@ -74,8 +68,6 @@ export function ImageEditMediaInputs({
     sourceSize.width > 0 && sourceSize.height > 0
       ? sourceSize.width / sourceSize.height
       : 1;
-  const inpaintingAvailable = !!profile?.capabilities.inpainting;
-  const outpaintingAvailable = !!profile?.capabilities.outpainting;
 
   useEffect(() => {
     setSourceSize({ width: 0, height: 0 });
@@ -85,10 +77,14 @@ export function ImageEditMediaInputs({
     if (width > 0 && height > 0) setSourceSize({ width, height });
   };
 
-  const resetTools = () => {
-    onToolModeChange("edit");
+  const clearSourceRecipes = () => {
     onMaskChange(null);
     onOutpaintChange(null);
+  };
+
+  const resetTools = () => {
+    onToolModeChange("edit");
+    clearSourceRecipes();
   };
 
   const assignUrl = (url: string) => {
@@ -98,7 +94,7 @@ export function ImageEditMediaInputs({
       role: "edit_image",
       type: "image",
     });
-    resetTools();
+    clearSourceRecipes();
   };
 
   const assignFile = async (file: File) => {
@@ -219,41 +215,6 @@ export function ImageEditMediaInputs({
             >
               <X className="h-3.5 w-3.5" />
             </button>
-            <div
-              role="tablist"
-              aria-label="Image edit workflow"
-              className="flex flex-row w-fit mx-auto justify-center mt-2 overflow-hidden rounded-lg gap-2 bg-zinc-800/35 p-2"
-            >
-              {EDIT_TOOLS.map(({ id, label }) => {
-                const supported =
-                  id === "edit" ||
-                  (id === "retouch"
-                    ? inpaintingAvailable
-                    : outpaintingAvailable);
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    role="tab"
-                    aria-selected={toolMode === id}
-                    disabled={disabled || !supported}
-                    title={
-                      supported
-                        ? undefined
-                        : `${label} is not supported by this model`
-                    }
-                    onClick={() => onToolModeChange(id)}
-                    className={`flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
-                      toolMode === id
-                        ? "bg-blue-500 text-white shadow-sm"
-                        : "text-zinc-500 hover:bg-zinc-900 hover:text-zinc-300"
-                    } disabled:cursor-not-allowed disabled:opacity-35`}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
           </div>
         ) : (
           <>

@@ -78,6 +78,7 @@ function takeFromGeneratedAsset(
 export function useGenSpaceResultPersistence({
   videoUrl,
   videoPath,
+  videoSeed = null,
   isGenerating,
   addAsset,
   reset,
@@ -94,6 +95,7 @@ export function useGenSpaceResultPersistence({
   resetRetake,
   imageUrls,
   imagePaths,
+  imageSeed = null,
   imageSubmissionRef,
   musicResult,
   musicSubmissionRef,
@@ -102,9 +104,11 @@ export function useGenSpaceResultPersistence({
   speechResult = null,
   speechSubmissionRef,
   onAssetAdded,
+  onPersistenceError,
 }: {
   videoUrl: string | null;
   videoPath: string | null;
+  videoSeed?: number | null;
   isGenerating: boolean;
   addAsset: Projects["addAsset"];
   reset: () => void;
@@ -121,6 +125,7 @@ export function useGenSpaceResultPersistence({
   resetRetake: () => void;
   imageUrls: string[];
   imagePaths: string[];
+  imageSeed?: number | null;
   imageSubmissionRef: MutableRefObject<ImageSubmissionSnapshot | null>;
   musicResult: GenerateMusicResult | null;
   musicSubmissionRef: MutableRefObject<MusicSubmissionSnapshot | null>;
@@ -129,6 +134,7 @@ export function useGenSpaceResultPersistence({
   speechResult?: GenerateSpeechResult | null;
   speechSubmissionRef?: MutableRefObject<SpeechSubmissionSnapshot | null>;
   onAssetAdded?: (asset: Asset) => void;
+  onPersistenceError?: (message: string) => void;
 }) {
   const persistedVideoKey = useRef<string | null>(null);
   const persistedImageKey = useRef<string | null>(null);
@@ -141,6 +147,7 @@ export function useGenSpaceResultPersistence({
     const reframe = reframeSubmissionRef.current;
     const video = videoSubmissionRef.current;
     const snapshot = reframe ?? video;
+    const isUpscale = !reframe && video?.upscale !== undefined;
     if (!snapshot) return;
     const key = `${videoUrl}|${videoPath}`;
     if (persistedVideoKey.current === key) return;
@@ -149,6 +156,9 @@ export function useGenSpaceResultPersistence({
     void (async () => {
       try {
         const copied = await copyToAssetFolder(videoPath, snapshot.projectId);
+        if (!copied && isUpscale) {
+          throw new Error("Could not move the upscaled result into this project");
+        }
         const finalPath = copied?.path ?? videoPath;
         const finalUrl = copied?.url ?? videoUrl;
         const createdAt = Date.now();
@@ -164,6 +174,7 @@ export function useGenSpaceResultPersistence({
                 finalPath,
                 finalUrl,
                 createdAt,
+                seed: videoSeed ?? undefined,
             });
         const sourceAsset = !reframe
           ? findUpscaleSourceAsset(video!, getProjectAssets(snapshot.projectId))
@@ -183,7 +194,11 @@ export function useGenSpaceResultPersistence({
         else videoSubmissionRef.current = null;
         reset();
       } catch (error) {
-        persistedVideoKey.current = null;
+        if (isUpscale) {
+          onPersistenceError?.("Could not move the upscaled result into this project. The completed file remains in the app output folder; run Upscale again to retry.");
+        } else {
+          persistedVideoKey.current = null;
+        }
         logger.error(`Failed to persist generated video asset: ${error}`);
       }
     })();
@@ -193,10 +208,12 @@ export function useGenSpaceResultPersistence({
     getProjectAssets,
     isGenerating,
     onAssetAdded,
+    onPersistenceError,
     reframeSubmissionRef,
     reset,
     videoPath,
     videoSubmissionRef,
+    videoSeed,
     videoUrl,
   ]);
 
@@ -258,6 +275,9 @@ export function useGenSpaceResultPersistence({
           const copied = sourcePath
             ? await copyToAssetFolder(sourcePath, snapshot.projectId)
             : null;
+          if (sourcePath && !copied && snapshot.upscale) {
+            throw new Error("Could not move the upscaled result into this project");
+          }
           const finalPath = copied?.path ?? sourcePath ?? imageUrl;
           const finalUrl = copied?.url ?? imageUrl;
           const createdAt = Date.now();
@@ -266,6 +286,7 @@ export function useGenSpaceResultPersistence({
             finalPath,
             finalUrl,
             createdAt,
+            seed: imageSeed === null ? undefined : imageSeed + index,
           });
           const sourceAsset = findUpscaleSourceAsset(
             snapshot,
@@ -286,7 +307,11 @@ export function useGenSpaceResultPersistence({
         imageSubmissionRef.current = null;
         reset();
       } catch (error) {
-        persistedImageKey.current = null;
+        if (snapshot.upscale) {
+          onPersistenceError?.("Could not move the upscaled result into this project. The completed file remains in the app output folder; run Upscale again to retry.");
+        } else {
+          persistedImageKey.current = null;
+        }
         logger.error(`Failed to persist generated image asset: ${error}`);
       }
     })();
@@ -296,9 +321,11 @@ export function useGenSpaceResultPersistence({
     getProjectAssets,
     imagePaths,
     imageSubmissionRef,
+    imageSeed,
     imageUrls,
     isGenerating,
     onAssetAdded,
+    onPersistenceError,
     reset,
   ]);
 

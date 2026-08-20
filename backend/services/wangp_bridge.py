@@ -691,7 +691,7 @@ class WanGPBridge:
         elif len(reference_audio_paths) == 2:
             settings["audio_guide"] = str(Path(reference_audio_paths[0]).resolve())
             settings["audio_guide2"] = str(Path(reference_audio_paths[1]).resolve())
-            settings["audio_prompt_type"] = "AB2" if model_type == "index_tts2" else "AB"
+            settings["audio_prompt_type"] = "AB2" if model_type == "index_tts25" else "AB"
         if seed is not None:
             settings["seed"] = seed
         outputs = self._run_manifest(

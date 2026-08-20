@@ -284,8 +284,12 @@ def test_generate_speech_uses_wangp_defaults_and_curated_inputs(tmp_path: Path) 
     reference = tmp_path / "voice.wav"
     bridge.generate_speech(
         text="Speaker 1: Welcome\nSpeaker 2: Hello",
-        model_type="index_tts2",
-        default_settings={"audio_prompt_type": "A"},
+        model_type="index_tts25",
+        default_settings={
+            "audio_prompt_type": "A",
+            "model_mode": "EN",
+            "custom_settings": {"speech_speed": 1.0, "text_normalization": "Yes"},
+        },
         reference_audio_paths=[str(reference), str(tmp_path / "second.wav")],
         enhance_prompt=True,
         seed=None,
@@ -305,7 +309,9 @@ def test_generate_speech_uses_wangp_defaults_and_curated_inputs(tmp_path: Path) 
     assert manifests[1][0]["params"] == {
         "audio_prompt_type": "AB2",
         "duration_seconds": 0,
-        "model_type": "index_tts2",
+        "model_type": "index_tts25",
+        "model_mode": "EN",
+        "custom_settings": {"speech_speed": 1.0, "text_normalization": "Yes"},
         "prompt": "Speaker 1: Welcome\nSpeaker 2: Hello",
         "audio_guide": str(reference.resolve()),
         "audio_guide2": str((tmp_path / "second.wav").resolve()),

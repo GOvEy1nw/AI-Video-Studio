@@ -21,6 +21,7 @@ def test_speech_profiles_are_curated_and_expose_reference_requirements(client) -
     assert profiles["index_tts2"]["speech"]["referenceRequired"] is True
     assert profiles["index_tts2"]["speech"]["maxReferenceInputs"] == 2
     assert profiles["index_tts2"]["license"]["commercialUse"] == "restricted"
+    assert profiles["index_tts2"]["displayName"] == "Index TTS 2.5"
 
 
 def test_omnivoice_text_only_and_index_reference_validation(client, enable_wangp, tmp_path: Path) -> None:
@@ -43,7 +44,14 @@ def test_omnivoice_text_only_and_index_reference_validation(client, enable_wangp
         output.writeframes(b"\x00\x00" * 800)
     response = client.post("/api/generate-speech", json=request(modelProfileId="index_tts2", referenceAudioPath=str(reference)))
     assert response.status_code == 200
-    assert enable_wangp.speech_calls[-1].reference_audio_paths == [str(reference.resolve())]
+    call = enable_wangp.speech_calls[-1]
+    assert call.model_type == "index_tts25"
+    assert call.reference_audio_paths == [str(reference.resolve())]
+    assert call.default_settings == {
+        "audio_prompt_type": "A",
+        "model_mode": "EN",
+        "custom_settings": {"speech_speed": 1.0, "text_normalization": "Yes"},
+    }
 
 
 def test_speech_dialogue_requires_both_speakers_and_preserves_references(client, enable_wangp, tmp_path: Path) -> None:

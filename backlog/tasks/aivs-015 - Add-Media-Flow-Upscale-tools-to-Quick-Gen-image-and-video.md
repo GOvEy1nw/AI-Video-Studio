@@ -5,7 +5,7 @@ status: Human Review
 assignee:
   - '@codex'
 created_date: '2026-08-16 19:02'
-updated_date: '2026-08-17 10:35'
+updated_date: '2026-08-20 17:10'
 labels:
   - Quick Gen
   - WanGP
@@ -16,37 +16,46 @@ modified_files:
   - backend/app_factory.py
   - backend/app_handler.py
   - backend/handlers/__init__.py
+  - backend/handlers/image_generation_handler.py
   - backend/handlers/media_upscale_handler.py
+  - backend/handlers/video_generation_handler.py
   - backend/_routes/media_upscale.py
   - backend/services/wangp_bridge.py
+  - backend/tests/test_generation.py
   - backend/tests/test_media_upscale.py
-  - frontend/contexts/ProjectContext.tsx
+  - electron/lib/project-asset-import.test.ts
+  - electron/lib/project-asset-import.ts
+  - frontend/components/SettingsDropdown.tsx
   - frontend/contexts/ProjectContext.test.ts
+  - frontend/contexts/ProjectContext.tsx
+  - frontend/hooks/generation/types.ts
   - frontend/hooks/use-generation.ts
   - frontend/lib/apply-generation-params.ts
   - frontend/types/project.ts
   - frontend/types/upscale.ts
   - frontend/types/video-tools.ts
-  - frontend/views/genspace/GenSpaceSelectedGeneration.tsx
   - frontend/views/genspace/GenSpaceSelectedGeneration.test.tsx
+  - frontend/views/genspace/GenSpaceSelectedGeneration.tsx
   - frontend/views/genspace/components/UpscalePanel.tsx
   - frontend/views/genspace/hooks/useGenSpaceController.tsx
   - frontend/views/genspace/hooks/useGenSpaceGenerationActions.ts
-  - frontend/views/genspace/hooks/useGenSpaceResultPersistence.ts
   - frontend/views/genspace/hooks/useGenSpaceResultPersistence.test.tsx
+  - frontend/views/genspace/hooks/useGenSpaceResultPersistence.ts
   - frontend/views/genspace/hooks/useGenSpaceSettingsRestore.ts
-  - frontend/views/genspace/hooks/useGenSpaceUpscaleState.ts
   - frontend/views/genspace/hooks/useGenSpaceUpscaleState.test.ts
+  - frontend/views/genspace/hooks/useGenSpaceUpscaleState.ts
   - frontend/views/genspace/image/ImageGenPanel.tsx
   - frontend/views/genspace/image/ImageModeTabs.tsx
   - frontend/views/genspace/image/image-profile-options.ts
-  - frontend/views/genspace/logic/generation-assets.ts
   - frontend/views/genspace/logic/generation-assets.test.ts
-  - frontend/views/genspace/logic/settings-restore.ts
+  - frontend/views/genspace/logic/generation-assets.ts
   - frontend/views/genspace/logic/settings-restore.test.ts
+  - frontend/views/genspace/logic/settings-restore.ts
   - frontend/views/genspace/types.ts
+  - frontend/views/genspace/video/RetakePanel.tsx
   - frontend/views/genspace/video/VideoGenPanel.tsx
   - frontend/views/genspace/video/VideoModeTabs.tsx
+  - frontend/views/genspace/video/VideoSourceDropZone.tsx
   - frontend/views/genspace/video/video-tools.ts
 priority: medium
 type: feature
@@ -73,6 +82,18 @@ Add a curated Upscale tool mode to Quick Gen Image and Video so users can enhanc
 - [x] #10 The selected-generation footer places an Upscale action between Use Image/Use Video and Remove, and invoking it opens the matching Quick Gen Upscale mode with that asset as the source.
 - [x] #11 Completed upscale outputs are persisted as linked versions of their source asset, are grouped into one Asset Library stack instead of separate cards, and preserve project isolation and existing unstacked asset compatibility.
 - [x] #12 Selecting a stacked asset opens its versions as accessible thumbnail tabs in the selected-generation viewer; switching tabs changes the displayed media and associated metadata/actions without duplicating or deleting the underlying assets.
+- [x] #13 Completed image/video upscales are always moved into the immutable submission project's generated folder before persistence; move/save failures surface as recoverable errors and do not silently leave the project pointing at the app output staging path.
+- [x] #14 Video processing tools other than Generate use the same media dropzone presentation as Video Upscale without changing their source-media behavior.
+- [x] #15 Image and Video Upscale place the method selector in the same location and visual treatment as the standard model selector/dropdown.
+- [x] #16 The Selected Generation information bar displays the active version's seed when available.
+- [x] #17 Selected Generation reports the actual decoded final image/video resolution rather than only requested or stored metadata.
+- [x] #18 Selected Generation formats generation duration as mm:ss instead of raw seconds.
+- [x] #19 The Selected Generation Copy Prompt action is removed without changing Copy Settings or other footer actions.
+- [x] #20 Clicking the selected video toggles play/pause in addition to the existing playback button.
+- [x] #21 Selected video playback includes a loop toggle that is enabled by default.
+- [x] #22 Upscaled image/video versions without a prompt are titled Upscale #x using their recorded scale multiplier.
+- [x] #23 Upscaled versions identify the actual upscale method instead of inheriting the source generation model.
+- [x] #24 A/B comparison renders the active A image on the A side and the Ctrl-selected B image on the B side.
 <!-- AC:END -->
 
 ## Definition of Done
@@ -88,17 +109,11 @@ Add a curated Upscale tool mode to Quick Gen Image and Video so users can enhanc
 ## Implementation Plan
 
 <!-- SECTION:PLAN:BEGIN -->
-1. Add a backend-owned curated upscale catalog and typed Media Upscale GET/POST route. Validate approved image/video source paths, media-method compatibility, and allowed scale factors in one domain handler that uses the existing shared generation state.
-2. Extend WanGPBridge with a media-postprocessing call built on WanGPSession.submit_media_postprocessing and the existing SessionJob event/cancel/output loop. Seed only missing app-owned FlashVSR defaults; preserve explicit user configuration.
-3. Add one shared Quick Gen upscale state/control surface. Expose Upscale as an Image process mode and as a Video tool entry, with compatible method/scale choices fetched from the backend catalog and existing project/file media input handling.
-4. Submit upscale through useGenerationJob, then reuse immutable project-scoped result persistence. Store source, media kind, method, and scale in GenerationParams so Copy Settings restores the correct Image or Video Upscale mode.
-5. Protect the stable contracts with focused backend bridge/route and frontend request/restore/persistence tests. Run the task-required TypeScript/Python type checks, frontend production build, and an Electron interaction smoke; report live GPU/model validation separately.
-
-Boundary: initial curated methods are Lanczos, FlashVSR, FlashVSR 2-pass, SeedVR2 for image/video at WanGP-supported scales, plus LTX 2.5 Pixel Spatial Upscale for video at 2x. Model-backed methods use WanGP automatic first-run downloads and the existing job model-download progress; no separate Model Manager pack is added because WanGPSession exposes no complete postprocessor download/availability manifest.
-
-6. Human-review UI follow-up: replace the native method `<select>` with the shared `SettingsDropdown` used by resolution controls; render catalog loading/error only in the disabled trigger and existing alert, never as a loaded menu option. Replace the scale `<select>` with one native range slider whose integer positions map to the selected method's discrete supported scale list, displaying the current multiplier. Verify with TypeScript, production frontend build, focused interaction coverage only if an existing stable test boundary is practical, and an Electron visual smoke.
-
-7. Integrated Upscale follow-up: (a) make the backend-owned curated catalog expose only 2x–4x scales so UI and request validation share the same minimum; (b) add a selected-generation Upscale action that directly sets the existing Image/Video Upscale controller mode and preserves the source Asset ID; (c) reuse Asset.takes as the version stack, extending optional per-take metadata so active-version preview, model/settings, and metadata remain coherent while retaining stable Asset IDs and old-project compatibility; (d) have upscale result persistence append a take when the source matches the current project by ID/path/URL, otherwise preserve the current add-new-asset behavior for approved local sources; (e) render accessible compact take tabs in the selected-generation pane using the existing setAssetActiveTake owner. Preserve whole-stack Remove semantics and existing per-take deletion through the current take UI. Protect catalog minimum, take persistence/project isolation, footer handoff, and tab switching with focused tests; run TypeScript/Pyright, production build, backend focused pytest, independent review, and real-Electron visual QA.
+1. Harden the existing project-asset move path with bounded Windows transient retries, and prevent upscale completion from persisting an AppData staging path when transfer still fails; surface the existing local error and retain the result for recovery. Verify with the focused native transfer and GenSpace persistence regressions.
+2. Carry the actual resolved image/video seed through the existing backend response, generation state, immutable submission result, AssetTake, and active-take projection without changing stable asset IDs or project schema shape. Verify with focused backend/frontend generation-asset tests.
+3. Reuse the shared MediaInputSlot and model-dropdown trigger patterns for video tools and both Upscale panels. Verify with TypeScript and the frontend build; avoid brittle layout assertions.
+4. Update Selected Generation to use decoded media dimensions, mm:ss generation time, seed metadata, upscale-aware title/method attribution, click-to-toggle video playback, default-on loop control, no Copy Prompt action, and correct A/B visual identity. Verify in the existing focused Selected Generation test.
+5. Inspect the complete diff, run the narrowest combined checks, perform Electron visual smoke testing where the desktop runtime permits, obtain an independent review, record projectmem fixes, and move AIVS-015 to Human Review with exact evidence.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -125,6 +140,12 @@ Selected image/video stacks render compact accessible version tabs. Active take 
 Verification: backend `rtk uv run pytest tests/test_media_upscale.py -q` 2 passed; frontend focused four-file Vitest 25 passed; retry/catalog hook Vitest 2 passed; `rtk pnpm typecheck:ts` passed; `rtk pnpm typecheck:py` 0 errors/warnings; `rtk pnpm build:frontend` passed renderer/main/preload with existing large-chunk advisory; `rtk git diff --check` passed. Independent correction re-review found no remaining issues.
 
 Final real-Electron smoke reached backend Ready but the initial catalog request displayed its retryable load-error state; the allotted recovery rerun did not reach Retry. No project data was mutated. Loaded-catalog controls were verified in the earlier Electron smoke, while this follow-up's footer/stack visual journey remains covered by focused component, context, and persistence tests rather than a fresh runtime traversal. No GPU upscale/model download was run.
+
+AIVS-015 follow-up completed. Native generated-output moves now retry transient Windows locks, preserve/restore colliding destinations, treat stale-backup cleanup as best-effort, and never persist an upscale staging path after transfer failure. Resolved seeds flow backend response -> generation state -> AssetTake. Video tools share the Upscale source slot; Upscale Method uses the model-selector presentation. Selected Generation now uses decoded dimensions, zero-padded mm:ss, active-take seed and upscale method/title, click-to-toggle video, default-on loop, no Copy Prompt, and correct A/B identity.
+
+Follow-up verification: combined focused frontend/native suite 5 files / 42 tests passed; correction suite Selected Generation + native transfer 2 files / 19 tests passed; final native retry/restore/cleanup suite 16 tests passed. Backend seed tests 4 passed (56 deselected). `pnpm typecheck:ts` passed; `pnpm typecheck:py` reported 0 errors; `pnpm build:frontend` passed renderer, Electron main, and preload (existing large-chunk advisory only); `git diff --check` exited 0 with CRLF conversion warnings only. Independent final review verdict: ship.
+
+Electron visual QA limitation: the actual app was running against Vite, but exposed no CDP endpoint or desktop-control surface; a remote-debug launch exited before port 9222 listened. No screenshot or interaction evidence was obtainable, so Retake/dropdown appearance and playback interactions remain for human visual review. No live GPU upscale was run.
 <!-- SECTION:NOTES:END -->
 
 ## Comments
@@ -141,28 +162,18 @@ created: 2026-08-17 10:00
 ---
 Human review requested minimum 2x scales, an Upscale action in the selected-generation footer, and source/upscaled version stacking in the Asset Library with selected-generation tabs.
 ---
+
+author: @codex
+created: 2026-08-20 16:33
+---
+User requested a new follow-up batch covering intermittent upscale output relocation, upscale/tool control consistency, and Selected Generation metadata/playback/comparison corrections.
+---
 <!-- COMMENTS:END -->
 
 ## Final Summary
 
 <!-- SECTION:FINAL_SUMMARY:BEGIN -->
-## Summary
+Follow-up refinement completed for Quick Gen Upscale and Selected Generation. Project output moves are now resilient to transient Windows locks and collision-safe: failed replacements restore the prior project file, successful moves remain successful if old-backup cleanup fails, and failed upscale persistence never creates a project asset pointing at AppData staging. Image/video generation responses now carry the resolved seed into per-take metadata. Video tools reuse the Upscale-style source slot, and image/video Upscale Method controls reuse the model-selector presentation.
 
-- Integrated Upscale into selected-generation workflows: image/video assets now have an Upscale footer action that opens the matching Quick Gen mode with stable source identity.
-- Limited product-visible scales to 2x and above through the backend-owned catalog.
-- Reused the existing persisted `Asset.takes` version model so source and upscaled outputs share one Asset Library card and stable asset ID; unmatched approved local inputs retain normal add-new-asset behavior.
-- Added per-take generation metadata projection and compact accessible image/video version tabs. Switching versions updates preview, settings, metadata, and creation time while preserving legacy project compatibility and existing whole-stack Remove semantics.
-- Isolated tab keyboard navigation from global gallery shortcuts; independent re-review found no remaining findings.
-
-## Verification
-
-- Backend focused pytest: 2 passed.
-- Frontend focused Vitest: 25 passed across stacking/context/persistence/assets; catalog retry state: 2 passed.
-- TypeScript: passed. Pyright: 0 errors and 0 warnings.
-- Renderer, Electron main, and preload production bundles: passed; existing large-chunk advisory only.
-- Diff whitespace check: passed.
-
-## Runtime limits
-
-The final real-Electron run reached backend Ready but its initial catalog request remained in the retryable load-error state, and the bounded recovery attempt did not reach Retry. Earlier real-Electron coverage verified the loaded shared dropdown/slider surface and 2x default. This follow-up did not mutate project data to fabricate a stack, and no GPU upscale or model download was run; footer/stack behavior is established by focused component, context, and persistence tests.
+Selected Generation now reports decoded final dimensions, active-take seed, zero-padded mm:ss generation time, upscale-aware title and method, click-to-play/pause, default-on loop control, and correct A/B orientation; Copy Prompt was removed. Focused frontend/native tests, backend seed tests, TypeScript/Python checks, production renderer/main/preload build, diff check, and independent review passed. Electron visual QA was inconclusive because no controllable Electron inspection surface was available; no live GPU upscale was performed.
 <!-- SECTION:FINAL_SUMMARY:END -->

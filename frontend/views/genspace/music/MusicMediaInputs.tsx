@@ -170,7 +170,10 @@ export function MusicMediaInputs({
   if (!policy?.supportsCover && !policy?.supportsReferenceTimbre) return null;
 
   return (
-    <GenPanelSection title="References" collapsible={false}>
+    <GenPanelSection
+      title={`References (${[coverInput, referenceTimbreInput].filter(Boolean).length}/${Number(policy.supportsCover) + Number(policy.supportsReferenceTimbre)})`}
+      collapsible={false}
+    >
       <div className="relative flex items-center gap-2 overflow-visible">
         {policy.supportsCover
           ? slot("Cover Song", "cover", coverInput, coverRef)

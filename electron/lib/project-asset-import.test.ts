@@ -91,4 +91,71 @@ describe('project asset import', () => {
     expect(fs.readFileSync(path.join(destination, 'source.mp4'), 'utf8')).toBe('video')
     fs.rmSync(root, { recursive: true, force: true })
   })
+
+  it('retries a transient Windows move failure', async () => {
+    const rename = vi
+      .fn<() => Promise<void>>()
+      .mockRejectedValueOnce(Object.assign(new Error('locked'), { code: 'EPERM' }))
+      .mockResolvedValueOnce(undefined)
+
+    await transferFile('C:\\staging\\output.mp4', 'C:\\project\\generated\\output.mp4', 'move', {
+      copyFile: vi.fn(),
+      unlink: vi.fn(),
+      rename,
+    })
+
+    expect(rename).toHaveBeenCalledTimes(2)
+  })
+
+  it('restores an existing destination when an overwrite move fails', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aivs-project-restore-'))
+    const source = path.join(root, 'source.mp4')
+    const destination = path.join(root, 'generated.mp4')
+    fs.writeFileSync(source, 'new')
+    fs.writeFileSync(destination, 'existing')
+
+    const rename = vi.fn(async (from: string, to: string) => {
+      if (from === source) {
+        throw Object.assign(new Error('rename failed'), { code: 'EIO' })
+      }
+      await fsPromises.rename(from, to)
+    })
+
+    await expect(transferFile(source, destination, 'move', {
+      copyFile: fsPromises.copyFile,
+      unlink: fsPromises.unlink,
+      rename,
+    })).rejects.toThrow('rename failed')
+
+    expect(fs.readFileSync(destination, 'utf8')).toBe('existing')
+    expect(fs.readFileSync(source, 'utf8')).toBe('new')
+    fs.rmSync(root, { recursive: true, force: true })
+  })
+
+  it('keeps a successful overwrite when backup cleanup fails', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aivs-project-cleanup-'))
+    const source = path.join(root, 'source.mp4')
+    const destination = path.join(root, 'generated.mp4')
+    fs.writeFileSync(source, 'new')
+    fs.writeFileSync(destination, 'existing')
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    await transferFile(source, destination, 'move', {
+      copyFile: fsPromises.copyFile,
+      rename: fsPromises.rename,
+      unlink: vi.fn(async (filePath: string) => {
+        if (filePath.includes('.aivs-backup')) {
+          throw Object.assign(new Error('cleanup failed'), { code: 'EIO' })
+        }
+        await fsPromises.unlink(filePath)
+      }),
+    })
+
+    expect(fs.readFileSync(destination, 'utf8')).toBe('new')
+    expect(fs.existsSync(source)).toBe(false)
+    expect(fs.readdirSync(root).some((fileName) => fileName.includes('.aivs-backup'))).toBe(true)
+    expect(warn).toHaveBeenCalledOnce()
+    warn.mockRestore()
+    fs.rmSync(root, { recursive: true, force: true })
+  })
 })

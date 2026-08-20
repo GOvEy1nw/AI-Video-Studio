@@ -147,6 +147,12 @@ describe("GenSpaceSelectedGeneration", () => {
     expect(queryByRole("slider", { name: "A/B reveal" })).toBeNull();
     fireEvent.click(tabs[0], { ctrlKey: true });
     expect(getByRole("slider", { name: "A/B reveal" })).toBeTruthy();
+    expect(getByTestId("compare-image-a").querySelector("img")?.getAttribute("src")).toBe(
+      "file:///C:/upscaled.png",
+    );
+    expect(getByTestId("compare-image-b").querySelector("img")?.getAttribute("src")).toBe(
+      "file:///C:/original.png",
+    );
     fireEvent.click(tabs[1], { ctrlKey: true });
     expect(queryByRole("slider", { name: "A/B reveal" })).toBeNull();
     fireEvent.click(tabs[0], { shiftKey: true });
@@ -245,19 +251,84 @@ describe("GenSpaceSelectedGeneration", () => {
     expect((getByRole("button", { name: "Reset zoom" }) as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it("requests native full screen for selected video", () => {
+  it("shows final upscale metadata and controls selected video playback", () => {
     const requestFullscreen = vi.fn().mockResolvedValue(undefined);
+    const play = vi
+      .spyOn(HTMLMediaElement.prototype, "play")
+      .mockResolvedValue(undefined);
+    play.mockClear();
     Object.defineProperty(HTMLVideoElement.prototype, "requestFullscreen", {
       configurable: true,
       value: requestFullscreen,
     });
-    const video: Asset = { ...asset, type: "video" };
+    const video: Asset = {
+      ...asset,
+      type: "video",
+      path: "C:\\upscaled.mp4",
+      url: "file:///C:/upscaled.mp4",
+      prompt: "",
+      resolution: "stale requested resolution",
+      generationTimeSeconds: 65,
+      generationParams: {
+        mode: "upscale",
+        prompt: "",
+        model: "flashvsr2pass",
+        duration: 5,
+        resolution: "stale requested resolution",
+        fps: 24,
+        audio: false,
+        cameraMotion: "none",
+        upscale: {
+          schemaVersion: 1,
+          mediaKind: "video",
+          method: "flashvsr2pass",
+          scale: 2.5,
+          source: {
+            url: "file:///C:/source.mp4",
+            path: "C:\\source.mp4",
+            type: "video",
+          },
+        },
+      },
+      takes: [
+        {
+          url: "file:///C:/upscaled.mp4",
+          path: "C:\\upscaled.mp4",
+          createdAt: 1_700_000_000_000,
+          seed: 123,
+        },
+      ],
+      activeTakeIndex: 0,
+    };
 
-    const { getByRole } = render(
-      <GenSpaceSelectedGeneration {...props} asset={video} isActive={true} />,
+    const { container, getByRole, getByText, queryByRole } = render(
+      <GenSpaceSelectedGeneration
+        {...props}
+        asset={video}
+        modelName="FlashVSR 2-pass"
+        isActive={true}
+      />,
     );
 
+    const videoElement = container.querySelector("video")!;
+    Object.defineProperties(videoElement, {
+      videoWidth: { configurable: true, value: 3840 },
+      videoHeight: { configurable: true, value: 2160 },
+    });
+    fireEvent.loadedMetadata(videoElement);
+    fireEvent.click(videoElement);
+    expect(play).toHaveBeenCalledOnce();
+    expect(videoElement.loop).toBe(true);
+    fireEvent.click(getByRole("button", { name: "Disable loop" }));
+    expect(videoElement.loop).toBe(false);
+    expect(getByRole("button", { name: "Enable loop" })).toBeTruthy();
     fireEvent.click(getByRole("button", { name: "Full screen" }));
     expect(requestFullscreen).toHaveBeenCalledOnce();
+    expect(getByText("Upscale 2.5x")).toBeTruthy();
+    expect(getByText("FlashVSR 2-pass")).toBeTruthy();
+    expect(getByText("3840 × 2160")).toBeTruthy();
+    expect(getByText("01:05")).toBeTruthy();
+    expect(getByText("123")).toBeTruthy();
+    expect(queryByRole("button", { name: "Copy prompt" })).toBeNull();
   });
 });

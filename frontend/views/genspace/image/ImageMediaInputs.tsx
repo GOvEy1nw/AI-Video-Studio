@@ -16,8 +16,8 @@ import {
 import type { GenSpaceMediaInput } from "../types";
 import { GenPanelSection } from "../components/GenPanelSection";
 import { CroppableMediaInputSlot } from "../components/CroppableMediaInputSlot";
-import { MediaInputSlot } from "../components/MediaInputSlot";
 import { MediaRoleMenu } from "../components/MediaRoleMenu";
+import { ReferenceAddButton } from "../components/ReferenceAddButton";
 
 export function ImageMediaInputs({
   title = "References",
@@ -91,7 +91,7 @@ export function ImageMediaInputs({
     if (url) addUrl(url);
   };
 
-  const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
+  const handleDrop = async (event: React.DragEvent<HTMLElement>) => {
     event.preventDefault();
     setIsDragOver(false);
     const raw = event.dataTransfer.getData("asset");
@@ -111,7 +111,10 @@ export function ImageMediaInputs({
   if (!policy?.supportsImageInputs) return null;
 
   return (
-    <GenPanelSection title={title} collapsible={false}>
+    <GenPanelSection
+      title={`${title} (${inputs.length}/${policy.maxImages})`}
+      collapsible={false}
+    >
       <div className="relative flex items-center gap-2 overflow-visible">
         {inputs.map((input) => {
           const role = policy.roles.find(({ role }) => role === input.role);
@@ -167,19 +170,14 @@ export function ImageMediaInputs({
           );
         })}
         {canAdd ? (
-          <div
+          <ReferenceAddButton
+            dragActive={isDragOver}
+            onClick={() => inputRef.current?.click()}
             onDragEnter={() => setIsDragOver(true)}
             onDragLeave={() => setIsDragOver(false)}
-          >
-            <MediaInputSlot
-              kind="image"
-              label={policy.tooltipLabel}
-              title={policy.tooltipLabel}
-              dragActive={isDragOver}
-              inputRef={inputRef}
-              onDrop={handleDrop}
-            />
-          </div>
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => void handleDrop(event)}
+          />
         ) : null}
       </div>
       <input

@@ -24,6 +24,7 @@ export function ImageGenPanel({
   const workflow = controller.workflow ?? {
     favouriteIds: [],
     toggleFavourite: () => undefined,
+    select: undefined,
   };
   if (imageTools.mode === "upscale") {
     return (
@@ -36,6 +37,9 @@ export function ImageGenPanel({
           <ImageModeTabs
             mode={imageTools.mode}
             onChange={imageTools.setMode}
+            editToolMode={imageTools.editToolMode}
+            onEditToolModeChange={imageTools.setEditToolMode}
+            onSelectWorkflow={workflow.select}
             favouriteIds={workflow.favouriteIds}
             onToggleFavourite={workflow.toggleFavourite}
           />
@@ -152,6 +156,9 @@ export function ImageGenPanel({
         <ImageModeTabs
           mode={imageTools.mode}
           onChange={imageTools.setMode}
+          editToolMode={imageTools.editToolMode}
+          onEditToolModeChange={imageTools.setEditToolMode}
+          onSelectWorkflow={workflow.select}
           favouriteIds={workflow.favouriteIds}
           onToggleFavourite={workflow.toggleFavourite}
         />

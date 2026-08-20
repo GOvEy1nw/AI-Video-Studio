@@ -5,7 +5,6 @@ import {
   Pause,
   Volume2,
   VolumeX,
-  Upload,
   Trash2,
   RefreshCw,
 } from "lucide-react";
@@ -16,6 +15,7 @@ import {
   VideoTrimPanel,
   formatTrimTimecode,
 } from "./VideoTrimPanel";
+import { VideoSourceDropZone } from "./VideoSourceDropZone";
 
 interface RetakePanelProps {
   initialVideoUrl?: string | null;
@@ -64,7 +64,6 @@ export function RetakePanel({
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrenTime] = useState(0);
-  const [isDragOver, setIsDragOver] = useState(false);
 
   const [selStart, setSelStart] = useState(0);
   const [selEnd, setSelEnd] = useState(0);
@@ -233,7 +232,6 @@ export function RetakePanel({
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-    setIsDragOver(false);
 
     const assetData = e.dataTransfer.getData("asset");
     if (assetData) {
@@ -302,31 +300,11 @@ export function RetakePanel({
       </div>
 
       {!videoUrl ? (
-        <div
-          data-genspace-dropzone
-          data-drag-active={isDragOver || undefined}
-          className="m-4 flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed text-2xs border-zinc-700 p-8 transition-colors"
-          onDragOver={(e) => {
-            e.preventDefault();
-            setIsDragOver(true);
-          }}
-          onDragLeave={() => setIsDragOver(false)}
+        <VideoSourceDropZone
+          prompt="Drop a video to retake"
+          onBrowse={handleBrowse}
           onDrop={handleDrop}
-        >
-          <div className="p-3 rounded-full bg-zinc-800">
-            <Upload className="h-5 w-5 text-zinc-400" />
-          </div>
-          <div className="text-center">
-            <p className="text-sm text-white">Drop a video to retake</p>
-            <p className="text-xs text-zinc-500">mp4, mov, avi, webm, mkv</p>
-          </div>
-          <button
-            onClick={handleBrowse}
-            className="px-4 py-1.5 text-xs font-medium rounded-md bg-white text-black hover:bg-zinc-200 transition-colors"
-          >
-            Browse
-          </button>
-        </div>
+        />
       ) : (
         <div className="flex-1 min-h-0 flex flex-col">
           <div

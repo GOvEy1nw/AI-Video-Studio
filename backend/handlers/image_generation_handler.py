@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import secrets
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -78,7 +79,11 @@ class ImageGenerationHandler(StateHandlerBase):
 
         generation_id = uuid.uuid4().hex[:8]
         settings = self.state.app_settings.model_copy(deep=True)
-        seed = settings.locked_seed if settings.seed_locked else None
+        seed = (
+            settings.locked_seed
+            if settings.seed_locked
+            else secrets.randbelow(2_147_483_648 - num_images + 1)
+        )
 
         # Profile-driven WanGP settings: model_type + model defaults,
         # merged with the request's explicit num_steps and the resolved
@@ -129,7 +134,7 @@ class ImageGenerationHandler(StateHandlerBase):
                         height=height,
                         num_steps=num_steps,
                         num_images=chunk_size,
-                        seed=None if seed is None else seed + offset,
+                        seed=seed + offset,
                         on_progress=self._generation.update_progress,
                         is_cancelled=self._generation.is_generation_cancelled,
                         model_type=wangp_model_type,
@@ -137,7 +142,11 @@ class ImageGenerationHandler(StateHandlerBase):
                     )
                 )
             self._generation.complete_generation(output_paths)
-            return GenerateImageResponse(status="complete", image_paths=output_paths)
+            return GenerateImageResponse(
+                status="complete",
+                image_paths=output_paths,
+                resolvedSeed=seed,
+            )
         except HTTPError as e:
             # Propagate intentional client-error responses unchanged.
             if generation_started:

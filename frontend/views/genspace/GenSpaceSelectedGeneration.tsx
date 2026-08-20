@@ -6,16 +6,15 @@ import {
   type ReactNode,
 } from "react";
 import {
-  Check,
   ChevronLeft,
   ChevronRight,
   ClipboardPaste,
-  Copy,
   FolderOpen,
   Heart,
   Maximize,
   Pause,
   Play,
+  Repeat2,
   Sparkles,
   Trash2,
   Volume2,
@@ -169,7 +168,7 @@ function GenerationProgressHeader({
 
 function formatPlaybackTime(value: number) {
   const seconds = Math.max(0, Math.floor(Number.isFinite(value) ? value : 0));
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+  return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
 function MediaPlayerControls({
@@ -177,20 +176,24 @@ function MediaPlayerControls({
   duration,
   isPlaying,
   muted,
+  loop,
   audio,
   onPlayPause,
   onSeek,
   onToggleMuted,
+  onToggleLoop,
   onFullscreen,
 }: {
   currentTime: number;
   duration: number;
   isPlaying: boolean;
   muted: boolean;
+  loop: boolean;
   audio: boolean;
   onPlayPause: () => void;
   onSeek: (time: number) => void;
   onToggleMuted: () => void;
+  onToggleLoop: () => void;
   onFullscreen?: () => void;
 }) {
   return (
@@ -245,6 +248,19 @@ function MediaPlayerControls({
                 <Volume2 className="h-4 w-4" />
               )}
             </button>
+            <button
+              type="button"
+              onClick={onToggleLoop}
+              aria-label={loop ? "Disable loop" : "Enable loop"}
+              aria-pressed={loop}
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors ${
+                loop
+                  ? "bg-violet-400/10 text-violet-300 hover:bg-violet-400/20"
+                  : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
+              }`}
+            >
+              <Repeat2 className="h-4 w-4" />
+            </button>
             {onFullscreen ? (
               <button
                 type="button"
@@ -265,21 +281,35 @@ function MediaPlayerControls({
 function PlayableAssetPreview({
   asset,
   isActive,
+  onResolutionChange,
 }: {
   asset: Asset;
   isActive: boolean;
+  onResolutionChange: (resolution: string) => void;
 }) {
   const mediaRef = useRef<HTMLMediaElement | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(asset.duration ?? 0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [muted, setMuted] = useState(false);
+  const [loop, setLoop] = useState(true);
   const audio = asset.type === "audio";
   const progress = duration > 0 ? currentTime / duration : 0;
 
   const syncDuration = (media: HTMLMediaElement) => {
     if (Number.isFinite(media.duration) && media.duration > 0) {
       setDuration(media.duration);
+    }
+  };
+
+  const syncMetadata = (media: HTMLMediaElement) => {
+    syncDuration(media);
+    if (
+      media instanceof HTMLVideoElement &&
+      media.videoWidth > 0 &&
+      media.videoHeight > 0
+    ) {
+      onResolutionChange(`${media.videoWidth} × ${media.videoHeight}`);
     }
   };
 
@@ -370,7 +400,7 @@ function PlayableAssetPreview({
 
   const mediaEvents = {
     onLoadedMetadata: (event: React.SyntheticEvent<HTMLMediaElement>) =>
-      syncDuration(event.currentTarget),
+      syncMetadata(event.currentTarget),
     onDurationChange: (event: React.SyntheticEvent<HTMLMediaElement>) =>
       syncDuration(event.currentTarget),
     onTimeUpdate: (event: React.SyntheticEvent<HTMLMediaElement>) =>
@@ -421,7 +451,10 @@ function PlayableAssetPreview({
             }}
             src={asset.url}
             preload="metadata"
-            className="h-full w-full object-contain"
+            loop={loop}
+            onClick={handlePlayPause}
+            className="h-full w-full cursor-pointer object-contain"
+            aria-label={isPlaying ? "Pause video" : "Play video"}
             {...mediaEvents}
           />
         </div>
@@ -431,10 +464,12 @@ function PlayableAssetPreview({
         duration={duration}
         isPlaying={isPlaying}
         muted={muted}
+        loop={loop}
         audio={audio}
         onPlayPause={handlePlayPause}
         onSeek={handleSeek}
         onToggleMuted={handleToggleMuted}
+        onToggleLoop={() => setLoop((current) => !current)}
         onFullscreen={audio ? undefined : handleFullscreen}
       />
     </div>
@@ -547,15 +582,22 @@ function AssetPreview({
   isActive,
   transform,
   onTransformChange,
+  onResolutionChange,
 }: {
   asset: Asset;
   isActive: boolean;
   transform: ImageTransform;
   onTransformChange: (transform: ImageTransform) => void;
+  onResolutionChange: (resolution: string) => void;
 }) {
   if (asset.type === "video" || asset.type === "audio") {
     return (
-      <PlayableAssetPreview key={asset.url} asset={asset} isActive={isActive} />
+      <PlayableAssetPreview
+        key={asset.url}
+        asset={asset}
+        isActive={isActive}
+        onResolutionChange={onResolutionChange}
+      />
     );
   }
   return (
@@ -564,6 +606,12 @@ function AssetPreview({
         key={asset.url}
         src={asset.url}
         alt={asset.prompt}
+        onLoad={(event) => {
+          const image = event.currentTarget;
+          if (image.naturalWidth > 0 && image.naturalHeight > 0) {
+            onResolutionChange(`${image.naturalWidth} × ${image.naturalHeight}`);
+          }
+        }}
         className="max-h-full max-w-full select-none object-contain"
         draggable={false}
       />
@@ -576,11 +624,13 @@ function ImageComparePreview({
   second,
   transform,
   onTransformChange,
+  onResolutionChange,
 }: {
   first: string;
   second: string;
   transform: ImageTransform;
   onTransformChange: (transform: ImageTransform) => void;
+  onResolutionChange: (resolution: string) => void;
 }) {
   const [reveal, setReveal] = useState(50);
   const dividerDraggingRef = useRef(false);
@@ -603,15 +653,15 @@ function ImageComparePreview({
       transformContent={false}
     >
       <div
-        data-testid="compare-image-a"
+        data-testid="compare-image-b"
         className="absolute inset-0"
         style={{
           transform: `translate(${transform.offset.x}px, ${transform.offset.y}px) scale(${transform.scale})`,
         }}
       >
         <img
-          src={first}
-          alt="Version A"
+          src={second}
+          alt="Version B"
           className="h-full w-full select-none object-contain"
           draggable={false}
         />
@@ -621,15 +671,21 @@ function ImageComparePreview({
         style={{ clipPath: `inset(0 ${100 - reveal}% 0 0)` }}
       >
         <div
-          data-testid="compare-image-b"
+          data-testid="compare-image-a"
           className="absolute inset-0"
           style={{
             transform: `translate(${transform.offset.x}px, ${transform.offset.y}px) scale(${transform.scale})`,
           }}
         >
           <img
-            src={second}
-            alt="Version B"
+            src={first}
+            alt="Version A"
+            onLoad={(event) => {
+              const image = event.currentTarget;
+              if (image.naturalWidth > 0 && image.naturalHeight > 0) {
+                onResolutionChange(`${image.naturalWidth} × ${image.naturalHeight}`);
+              }
+            }}
             className="h-full w-full select-none object-contain"
             draggable={false}
           />
@@ -705,13 +761,11 @@ export function GenSpaceSelectedGeneration({
   generation,
   selectedIndex,
   visibleAssetCount,
-  copiedPrompt,
   canGoPrev,
   canGoNext,
   onClose,
   onPrevious,
   onNext,
-  onCopyPrompt,
   onToggleFavorite,
   onUseImage,
   onUseVideo,
@@ -729,6 +783,7 @@ export function GenSpaceSelectedGeneration({
     scale: 1,
     offset: { x: 0, y: 0 },
   });
+  const [decodedResolution, setDecodedResolution] = useState<string | null>(null);
   const activeTakeIndex = asset?.activeTakeIndex ?? 0;
   useEffect(() => {
     setComparisonTakeIndex(null);
@@ -736,6 +791,9 @@ export function GenSpaceSelectedGeneration({
   useEffect(() => {
     setImageTransform({ scale: 1, offset: { x: 0, y: 0 } });
   }, [asset?.id]);
+  useEffect(() => {
+    setDecodedResolution(null);
+  }, [asset?.url]);
   const handleTakeTabKeyDown = (
     event: React.KeyboardEvent<HTMLButtonElement>,
     takeIndex: number,
@@ -760,6 +818,8 @@ export function GenSpaceSelectedGeneration({
     takeTabRefs.current[nextIndex]?.focus();
   };
   const activeTake = asset?.takes?.[activeTakeIndex];
+  const upscale = asset?.generationParams?.upscale;
+  const title = asset?.prompt || (upscale ? `Upscale ${upscale.scale}x` : "Selected generation");
   const comparedTakes =
     asset?.type === "image" && comparisonTakeIndex !== null
       ? [activeTake, asset.takes?.[comparisonTakeIndex]].filter(
@@ -769,16 +829,22 @@ export function GenSpaceSelectedGeneration({
   const metadata = asset
     ? [
         ["Model", modelName ?? "Unknown"],
-        ["Resolution", asset.resolution || "Original"],
+        [
+          "Resolution",
+          asset.type === "image" || asset.type === "video"
+            ? decodedResolution ?? "Loading…"
+            : asset.resolution || "Original",
+        ],
         ...(asset.duration !== undefined
           ? [["Duration", `${asset.duration}s`]]
           : []),
         [
           "Generation time",
           asset.generationTimeSeconds !== undefined
-            ? `${asset.generationTimeSeconds}s`
+            ? formatPlaybackTime(asset.generationTimeSeconds)
             : "Not recorded",
         ],
+        ["Seed", activeTake?.seed ?? "Not recorded"],
         [
           "Created",
           new Intl.DateTimeFormat(undefined, {
@@ -800,9 +866,9 @@ export function GenSpaceSelectedGeneration({
           <div className="flex min-w-0 mb-4 items-center gap-2">
             <h2
               className="min-w-0 truncate text-sm font-semibold text-white"
-              title={asset?.prompt}
-            >
-              {asset?.prompt || "Selected generation"}
+            title={title}
+          >
+              {title}
             </h2>
             {asset?.generationParams ? (
               <button
@@ -814,21 +880,6 @@ export function GenSpaceSelectedGeneration({
               >
                 <ClipboardPaste className="h-3.5 w-3.5" />
                 <span>Copy settings</span>
-              </button>
-            ) : null}
-            {asset?.prompt ? (
-              <button
-                type="button"
-                onClick={() => onCopyPrompt(asset.prompt)}
-                className="shrink-0 rounded-md p-1.5 text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200"
-                aria-label="Copy prompt"
-                title="Copy prompt"
-              >
-                {copiedPrompt ? (
-                  <Check className="h-4 w-4 text-green-400" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
               </button>
             ) : null}
           </div>
@@ -990,6 +1041,7 @@ export function GenSpaceSelectedGeneration({
                 second={comparedTakes[1].url}
                 transform={imageTransform}
                 onTransformChange={setImageTransform}
+                onResolutionChange={setDecodedResolution}
               />
             ) : (
               <AssetPreview
@@ -997,6 +1049,7 @@ export function GenSpaceSelectedGeneration({
                 isActive={isActive}
                 transform={imageTransform}
                 onTransformChange={setImageTransform}
+                onResolutionChange={setDecodedResolution}
               />
             )}
           </div>

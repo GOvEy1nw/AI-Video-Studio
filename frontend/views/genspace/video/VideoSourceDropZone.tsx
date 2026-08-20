@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Upload } from "lucide-react";
+import { MediaInputSlot } from "../components/MediaInputSlot";
 
 export function VideoSourceDropZone({
   prompt,
@@ -15,33 +15,24 @@ export function VideoSourceDropZone({
   return (
     <div
       data-testid="video-source-dropzone"
-      data-genspace-dropzone
-      data-drag-active={isDragOver || undefined}
-      className="m-4 flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed text-2xs border-zinc-700 p-8 transition-colors"
+      className="m-4"
       onDragOver={(event) => {
         event.preventDefault();
         setIsDragOver(true);
       }}
       onDragLeave={() => setIsDragOver(false)}
-      onDrop={(event) => {
-        setIsDragOver(false);
-        void onDrop(event);
-      }}
+      onDrop={() => setIsDragOver(false)}
     >
-      <div className="rounded-full bg-zinc-800 p-3">
-        <Upload className="h-5 w-5 text-zinc-400" />
-      </div>
-      <div className="text-center">
-        <p className="text-sm text-white">{prompt}</p>
-        <p className="text-xs text-zinc-500">mp4, mov, avi, webm, mkv</p>
-      </div>
-      <button
-        type="button"
-        onClick={() => void onBrowse()}
-        className="rounded-md bg-white px-4 py-1.5 text-xs font-medium text-black transition-colors hover:bg-zinc-200"
-      >
-        Browse
-      </button>
+      <MediaInputSlot
+        kind="video"
+        label="Source"
+        title={prompt}
+        ariaLabel={prompt}
+        dragActive={isDragOver}
+        sizeClassName="w-full aspect-square"
+        onAdd={() => void onBrowse()}
+        onDrop={onDrop}
+      />
     </div>
   );
 }

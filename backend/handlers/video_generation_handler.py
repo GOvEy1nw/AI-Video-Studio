@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import math
 import re
+import secrets
 import uuid
 from pathlib import Path
 from threading import RLock
@@ -177,7 +178,7 @@ class VideoGenerationHandler(StateHandlerBase):
         if settings.seed_locked:
             logger.info("Using locked seed: %s", settings.locked_seed)
             return settings.locked_seed
-        return None
+        return secrets.randbelow(2_147_483_648)
 
     def _generate_via_wangp(self, req: GenerateVideoRequest) -> GenerateVideoResponse:
         is_h3 = req.modelProfileId in _H3_PROFILE_IDS
@@ -658,7 +659,11 @@ class VideoGenerationHandler(StateHandlerBase):
             )
 
             self._generation.complete_generation(output_path)
-            return GenerateVideoResponse(status="complete", video_path=output_path)
+            return GenerateVideoResponse(
+                status="complete",
+                video_path=output_path,
+                resolvedSeed=seed,
+            )
         except HTTPError as e:
             # Validation errors (400) and conflict errors (409) are intentional
             # client responses — propagate them unchanged instead of masking

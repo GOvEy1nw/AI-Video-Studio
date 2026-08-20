@@ -231,9 +231,13 @@ MUSIC_PROFILES: tuple[ModelProfile, ...] = (
         license=_OMNIVOICE_LICENSE,
     ),
     ModelProfile(
-        id="index_tts2", display_name="Index TTS 2", media_type="audio", visible=True,
-        status="experimental", wangp_model_type="index_tts2", wangp_metadata=_TTS_METADATA,
-        wangp_default_settings={"audio_prompt_type": "A"},
+        id="index_tts2", display_name="Index TTS 2.5", media_type="audio", visible=True,
+        status="experimental", wangp_model_type="index_tts25", wangp_metadata=_TTS_METADATA,
+        wangp_default_settings={
+            "audio_prompt_type": "A",
+            "model_mode": "EN",
+            "custom_settings": {"speech_speed": 1.0, "text_normalization": "Yes"},
+        },
         text_to_audio=True, audio_to_audio=True, audio_output=True, required_pack_ids=("index_tts2",),
         speech=SpeechPolicy(status="experimental", handler="speech_generation", required_pack_ids=("index_tts2",), reference_voice=True, tts=True, max_reference_inputs=2, reference_required=True),
         license=_INDEX_TTS2_LICENSE,

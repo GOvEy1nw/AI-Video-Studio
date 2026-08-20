@@ -18,7 +18,7 @@ import { isModelProfileInstalled } from "../../lib/model-profile-availability";
 import { VIDEO_TOOL_OPTIONS } from "./video/video-tools";
 
 export type QuickGenWorkflowId =
-  | `image:${"create" | "edit" | "region" | "upscale"}`
+  | `image:${"create" | "edit" | "retouch" | "reframe" | "region" | "upscale"}`
   | "video:generate"
   | "video:retake"
   | `video:tool:${VideoToolId}`
@@ -35,6 +35,8 @@ export interface QuickGenWorkflow {
 const imageWorkflows: readonly QuickGenWorkflow[] = [
   { id: "image:create", media: "image", label: "Generate", description: "Create an image from text.", icon: Sparkles },
   { id: "image:edit", media: "image", label: "Edit", description: "Edit an existing image.", icon: Pencil },
+  { id: "image:retouch", media: "image", label: "Retouch", description: "Retouch an existing image.", icon: Pencil },
+  { id: "image:reframe", media: "image", label: "Reframe", description: "Reframe an existing image.", icon: Scan },
   { id: "image:region", media: "image", label: "Region", description: "Generate selected image regions.", icon: Scan },
   { id: "image:upscale", media: "image", label: "Upscale", description: "Enhance image resolution and detail.", icon: ZoomIn },
 ];
@@ -81,6 +83,22 @@ export function normalizeQuickGenFavouriteWorkflows(value: readonly string[] | u
     if (getQuickGenWorkflow(id)) unique.add(id as QuickGenWorkflowId);
   }
   return [...unique];
+}
+
+export function reorderQuickGenFavouriteWorkflows(
+  favourites: readonly QuickGenWorkflowId[],
+  workflowId: QuickGenWorkflowId,
+  targetWorkflowId: QuickGenWorkflowId,
+): QuickGenWorkflowId[] {
+  const fromIndex = favourites.indexOf(workflowId);
+  const targetIndex = favourites.indexOf(targetWorkflowId);
+  if (fromIndex < 0 || targetIndex < 0 || fromIndex === targetIndex) {
+    return [...favourites];
+  }
+  const reordered = [...favourites];
+  reordered.splice(fromIndex, 1);
+  reordered.splice(targetIndex, 0, workflowId);
+  return reordered;
 }
 
 export function getCompatibleVideoProfiles(

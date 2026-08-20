@@ -7,7 +7,7 @@ import {
   type ReactNode,
   type SetStateAction,
 } from "react";
-import { Image, Music, Palette, Plus, Video } from "lucide-react";
+import { Palette } from "lucide-react";
 import { detectMediaType } from "../../../lib/media-import";
 import type { ModelProfile } from "../../../types/model-profiles";
 import {
@@ -28,6 +28,7 @@ import type { GenSpaceMediaInput, GenSpaceMediaKind } from "../types";
 import { CroppableMediaInputSlot } from "../components/CroppableMediaInputSlot";
 import { GenPanelSection } from "../components/GenPanelSection";
 import { MediaInputSlot } from "../components/MediaInputSlot";
+import { ReferenceAddButton } from "../components/ReferenceAddButton";
 import { GuideMediaTrimEditor } from "./GuideMediaTrimEditor";
 import { MediaRoleMenu } from "../components/MediaRoleMenu";
 
@@ -41,56 +42,6 @@ function readGalleryAsset(
   } catch {
     return null;
   }
-}
-
-function ReferenceAddButton({
-  disabled = false,
-  dragActive = false,
-  onClick,
-  onDragEnter,
-  onDragLeave,
-  onDragOver,
-  onDrop,
-}: {
-  disabled?: boolean;
-  dragActive?: boolean;
-  onClick: () => void;
-  onDragEnter?: () => void;
-  onDragLeave?: () => void;
-  onDragOver?: (event: React.DragEvent<HTMLButtonElement>) => void;
-  onDrop?: (event: React.DragEvent<HTMLButtonElement>) => void;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label="Add media"
-      disabled={disabled}
-      title="Add media references"
-      data-drag-active={dragActive || undefined}
-      data-genspace-dropzone
-      onClick={onClick}
-      onDragEnter={onDragEnter}
-      onDragLeave={onDragLeave}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
-      className="flex w-auto shrink-0 items-center gap-2 rounded-lg border border-dashed text-2xs border-zinc-700 px-3 py-4 text-zinc-300 hover:border-zinc-500 disabled:cursor-not-allowed disabled:border-zinc-800 disabled:text-zinc-600"
-    >
-      {(["image", "video", "audio"] as const).map((type) => {
-        const Icon =
-          type === "image" ? Image : type === "video" ? Video : Music;
-        return (
-          <span
-            key={type}
-            className="flex h-7 w-7 items-center justify-center rounded-full border border-zinc-700"
-          >
-            <Icon className="h-3.5 w-3.5" />
-          </span>
-        );
-      })}
-      <Plus className="h-3.5 w-3.5" />
-      <span className="text-2xs">Add media</span>
-    </button>
-  );
 }
 
 export function VideoMediaInputs({
@@ -333,7 +284,7 @@ export function VideoMediaInputs({
     ) : null;
 
   return (
-    <GenPanelSection title="References" collapsible={false}>
+    <GenPanelSection title={`References (${inputs.length}/3)`} collapsible={false}>
       {guide && editingGuideId === guide.id ? (
         <GuideMediaTrimEditor
           item={guide}
@@ -722,24 +673,37 @@ function H3MediaInputs({
             );
           })}
         </div>
-        <ReferenceAddButton
-          disabled={
-            !referenceAvailability.image &&
-            !referenceAvailability.video &&
-            !referenceAvailability.audio
-          }
-          onClick={() => referenceInputRef.current?.click()}
-          onDragOver={(event) => {
-            if (
-              referenceAvailability.image ||
-              referenceAvailability.video ||
-              referenceAvailability.audio
-            ) {
-              event.preventDefault();
+        <div className="flex gap-2">
+          <button
+            data-genspace-dropzone
+            type="button"
+            disabled
+            title="Styles are not available for MiniMax H3 yet"
+            aria-label="Styles unavailable for MiniMax H3"
+            className="flex aspect-square w-full flex-col items-center justify-center rounded-lg border border-dashed border-zinc-700 text-2xs text-zinc-400 opacity-40"
+          >
+            <Palette className="mb-0.5 h-4 w-4" />
+            <span className="max-w-10 truncate">Styles</span>
+          </button>
+          <ReferenceAddButton
+            disabled={
+              !referenceAvailability.image &&
+              !referenceAvailability.video &&
+              !referenceAvailability.audio
             }
-          }}
-          onDrop={(event) => void dropReference(event)}
-        />
+            onClick={() => referenceInputRef.current?.click()}
+            onDragOver={(event) => {
+              if (
+                referenceAvailability.image ||
+                referenceAvailability.video ||
+                referenceAvailability.audio
+              ) {
+                event.preventDefault();
+              }
+            }}
+            onDrop={(event) => void dropReference(event)}
+          />
+        </div>
         <div className="flex flex-wrap gap-2">
           {H3_REFERENCE_TYPES.flatMap((entry) =>
             inputs

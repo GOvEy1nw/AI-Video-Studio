@@ -1,4 +1,5 @@
 import { useRef, type DragEvent } from "react";
+import { WandSparkles } from "lucide-react";
 import { SettingsDropdown } from "../../../components/SettingsDropdown";
 import { detectMediaType } from "../../../lib/media-import";
 import { fileUrlToPath } from "../../../lib/url-to-path";
@@ -91,6 +92,38 @@ export function UpscalePanel({
   };
   return (
     <div className="space-y-3 border-b border-zinc-800/60 bg-zinc-950/20 p-4">
+      <SettingsDropdown
+        title="UPSCALE METHOD"
+        value={method ?? ""}
+        onChange={(value) => {
+          const next = value as UpscaleMethodId;
+          onMethodChange(next);
+          const first = methods.find((item) => item.id === next)?.scales[0];
+          if (first !== undefined) onScaleChange(first);
+        }}
+        options={methods.map((item) => ({
+          value: item.id,
+          label: item.label,
+        }))}
+        placement="bottom"
+        variant="model"
+        triggerTitle="Method"
+        trigger={
+          <span className="min-w-0 flex-1">
+            <span className="flex min-h-[20px] min-w-0 items-center gap-3">
+              <span className="flex h-4 w-4 shrink-0 items-center justify-center text-zinc-400">
+                <WandSparkles className="h-4 w-4" />
+              </span>
+              <span className="max-w-full truncate text-xs font-semibold text-zinc-100">
+                {selected?.label ??
+                  (isCatalogLoading ? "Loading…" : "No methods")}
+              </span>
+            </span>
+          </span>
+        }
+        triggerLabel="Upscale method"
+        disabled={disabled || methods.length === 0}
+      />
       <div className="flex w-full items-center gap-3">
         <MediaInputSlot
           item={input ?? undefined}
@@ -120,34 +153,7 @@ export function UpscalePanel({
           event.target.value = "";
         }}
       />
-      <div className="flex items-end gap-4">
-        <div className="text-2xs text-zinc-400">
-          <span className="mb-1 block">Method</span>
-          <SettingsDropdown
-            title="UPSCALE METHOD"
-            value={method ?? ""}
-            onChange={(value) => {
-              const next = value as UpscaleMethodId;
-              onMethodChange(next);
-              const first = methods.find((item) => item.id === next)?.scales[0];
-              if (first !== undefined) onScaleChange(first);
-            }}
-            options={methods.map((item) => ({
-              value: item.id,
-              label: item.label,
-            }))}
-            placement="bottom"
-            trigger={
-              <span className="px-1">
-                {selected?.label ??
-                  (isCatalogLoading ? "Loading…" : "No methods")}
-              </span>
-            }
-            triggerLabel="Upscale method"
-            disabled={disabled || methods.length === 0}
-          />
-        </div>
-        <label className="min-w-40 flex-1 text-2xs text-zinc-400">
+      <label className="block text-2xs text-zinc-400">
           <span className="mb-2 flex items-center justify-between gap-4">
             <span>Scale</span>
             <span className="font-mono text-zinc-200">
@@ -169,8 +175,7 @@ export function UpscalePanel({
             aria-valuetext={scale === null ? "No scale" : `${scale}x`}
             className="w-full cursor-pointer accent-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
           />
-        </label>
-      </div>
+      </label>
       {catalogError ? (
         <div
           role="alert"

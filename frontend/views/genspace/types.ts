@@ -187,7 +187,10 @@ export interface ImageGenPanelController {
   imageTools: GenSpaceImageToolsController;
   upscale: GenSpaceUpscaleController;
   framing: GenSpaceFramingController;
-  workflow?: Pick<GenSpaceSidebarController["workflow"], "favouriteIds" | "toggleFavourite">;
+  workflow?: Pick<
+    GenSpaceSidebarController["workflow"],
+    "favouriteIds" | "toggleFavourite" | "select"
+  >;
 }
 
 export interface VideoGenPanelController {
@@ -269,6 +272,11 @@ export interface GenSpaceSidebarController {
     select: (workflowId: QuickGenWorkflowId) => void;
     favouriteIds: readonly QuickGenWorkflowId[];
     toggleFavourite: (workflowId: QuickGenWorkflowId) => void;
+    reorderFavourite: (
+      workflowId: QuickGenWorkflowId,
+      targetWorkflowId: QuickGenWorkflowId,
+    ) => void;
+    confirmFavouriteOrder: () => Promise<void>;
   };
   image: ImageGenPanelController;
   video: VideoGenPanelController;

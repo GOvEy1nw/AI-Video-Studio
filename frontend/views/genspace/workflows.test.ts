@@ -3,6 +3,7 @@ import type { ModelProfile } from "../../types/model-profiles";
 import {
   isSelectedInstalledVideoProfile,
   normalizeQuickGenFavouriteWorkflows,
+  reorderQuickGenFavouriteWorkflows,
   selectPreferredInstalledProfile,
 } from "./workflows";
 
@@ -13,7 +14,14 @@ describe("Quick Gen workflows", () => {
       "unknown:workflow",
       "video:tool:reframe",
       "image:create",
-    ])).toEqual(["video:tool:reframe", "image:create"]);
+      "image:retouch",
+      "image:reframe",
+    ])).toEqual([
+      "video:tool:reframe",
+      "image:create",
+      "image:retouch",
+      "image:reframe",
+    ]);
 
     expect(selectPreferredInstalledProfile([
       { id: "current", availability: "available" as const },
@@ -31,5 +39,23 @@ describe("Quick Gen workflows", () => {
         videoEdits: { operations: [] },
       } as unknown as ModelProfile,
     ], "video:generate", "stale")).toBe(false);
+  });
+
+  it("moves favourites after a downward target and before an upward target", () => {
+    const favourites = ["image:create", "image:edit", "image:retouch"] as const;
+    expect(
+      reorderQuickGenFavouriteWorkflows(
+        favourites,
+        "image:create",
+        "image:edit",
+      ),
+    ).toEqual(["image:edit", "image:create", "image:retouch"]);
+    expect(
+      reorderQuickGenFavouriteWorkflows(
+        favourites,
+        "image:retouch",
+        "image:edit",
+      ),
+    ).toEqual(["image:create", "image:retouch", "image:edit"]);
   });
 });

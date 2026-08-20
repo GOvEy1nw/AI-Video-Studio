@@ -81,6 +81,7 @@ import {
   getQuickGenWorkflow,
   isSelectedInstalledVideoProfile,
   normalizeQuickGenFavouriteWorkflows,
+  reorderQuickGenFavouriteWorkflows,
   selectPreferredInstalledProfile,
   type QuickGenWorkflowId,
 } from "../workflows";
@@ -131,7 +132,12 @@ export function useGenSpaceController(isActive: boolean) {
     setGenSpaceRetakeSource,
     setPendingRetakeUpdate,
   } = useGenSpaceHandoffs();
-  const { settings: appSettings, updateSettings, isLoaded: appSettingsLoaded } = useAppSettings();
+  const {
+    settings: appSettings,
+    updateSettings,
+    saveSettings,
+    isLoaded: appSettingsLoaded,
+  } = useAppSettings();
   const {
     prompt,
     setPrompt,
@@ -218,15 +224,6 @@ export function useGenSpaceController(isActive: boolean) {
       ),
     [imageProfiles, musicProfiles, sfxProfiles, speechProfiles, videoProfiles],
   );
-  const getAssetModelName = useCallback(
-    (asset: Asset) => {
-      const modelId = getAssetModelId(asset);
-      return modelId
-        ? profileNames.get(modelId) ?? modelId.split("_").join(" ")
-        : undefined;
-    },
-    [profileNames],
-  );
   const {
     generate,
     generateImage,
@@ -252,8 +249,10 @@ export function useGenSpaceController(isActive: boolean) {
     previewUrl,
     videoUrl,
     videoPath,
+    videoSeed,
     imageUrls,
     imagePaths,
+    imageSeed,
     musicResult,
     sfxResult,
     speechResult,
@@ -264,6 +263,20 @@ export function useGenSpaceController(isActive: boolean) {
   const upscale = useGenSpaceUpscaleState();
   const activeUpscaleSelection = upscale.selectionForKind(
     mode === "image" ? "image" : "video",
+  );
+  const getAssetModelName = useCallback(
+    (asset: Asset) => {
+      const modelId = getAssetModelId(asset);
+      const method = asset.generationParams?.mode === "upscale"
+        ? asset.generationParams.upscale?.method
+        : undefined;
+      return modelId
+        ? (method
+          ? upscale.selectionForKind(asset.type === "video" ? "video" : "image").methods.find(({ id }) => id === method)?.label
+          : profileNames.get(modelId)) ?? modelId.split("_").join(" ")
+        : undefined;
+    },
+    [profileNames, upscale],
   );
 
   const {
@@ -302,6 +315,8 @@ export function useGenSpaceController(isActive: boolean) {
     () => normalizeQuickGenFavouriteWorkflows(appSettings.quickGenFavouriteWorkflows),
     [appSettings.quickGenFavouriteWorkflows],
   );
+  const favouriteWorkflowIdsRef = useRef(favouriteWorkflowIds);
+  favouriteWorkflowIdsRef.current = favouriteWorkflowIds;
   useEffect(() => {
     if (!appSettingsLoaded) return;
     if (
@@ -324,9 +339,35 @@ export function useGenSpaceController(isActive: boolean) {
     },
     [updateSettings],
   );
+  const reorderFavouriteWorkflow = useCallback(
+    (workflowId: QuickGenWorkflowId, targetWorkflowId: QuickGenWorkflowId) => {
+      updateSettings((current) => {
+        const favourites = normalizeQuickGenFavouriteWorkflows(
+          current.quickGenFavouriteWorkflows,
+        );
+        const reordered = reorderQuickGenFavouriteWorkflows(
+          favourites,
+          workflowId,
+          targetWorkflowId,
+        );
+        if (reordered.every((id, index) => id === favourites[index])) return current;
+        return { ...current, quickGenFavouriteWorkflows: reordered };
+      });
+    },
+    [updateSettings],
+  );
+  const confirmFavouriteOrder = useCallback(
+    () =>
+      saveSettings({
+        quickGenFavouriteWorkflows: favouriteWorkflowIdsRef.current,
+      }),
+    [saveSettings],
+  );
   const activeWorkflowId: QuickGenWorkflowId =
     mode === "image"
-      ? `image:${imageMode}`
+      ? imageMode === "edit"
+        ? `image:${editToolMode}`
+        : `image:${imageMode}`
       : mode === "video"
         ? videoMode === "reframe"
           ? `video:tool:${selectedTool}`
@@ -337,15 +378,41 @@ export function useGenSpaceController(isActive: boolean) {
       const workflow = getQuickGenWorkflow(workflowId);
       if (!workflow) return;
       if (workflow.media === "image") {
-        const imageWorkflow = workflowId.slice(6) as typeof imageMode;
-        handleModeChange("image");
-        setImageMode(imageWorkflow);
-        if (imageWorkflow === "upscale") return;
+        const imageWorkflow = workflowId.slice(6);
+        const editWorkflow =
+          imageWorkflow === "retouch" || imageWorkflow === "reframe"
+            ? imageWorkflow
+            : "edit";
+        const nextImageMode =
+          imageWorkflow === "retouch" || imageWorkflow === "reframe"
+            ? "edit"
+            : imageWorkflow as typeof imageMode;
+        if (nextImageMode === "upscale") {
+          handleModeChange("image");
+          setImageMode(nextImageMode);
+          return;
+        }
+        const compatibleProfiles = getImageProfilesForMode(
+          imageProfiles,
+          nextImageMode,
+        )
+          .filter(
+            (profile) =>
+              editWorkflow !== "retouch" || profile.capabilities.inpainting,
+          )
+          .filter(
+            (profile) =>
+              editWorkflow !== "reframe" || profile.capabilities.outpainting,
+          );
         const candidate = selectPreferredInstalledProfile(
-          getImageProfilesForMode(imageProfiles, imageWorkflow),
+          compatibleProfiles,
           imageSettings.profileId,
         );
+        if (nextImageMode === "edit" && !candidate) return;
+        handleModeChange("image");
+        setImageMode(nextImageMode);
         if (candidate && candidate.id !== imageSettings.profileId) patchImageSettings({ profileId: candidate.id });
+        if (nextImageMode === "edit") setEditToolMode(editWorkflow);
         return;
       }
       if (workflow.media === "video") {
@@ -772,6 +839,7 @@ export function useGenSpaceController(isActive: boolean) {
   useGenSpaceResultPersistence({
     videoUrl,
     videoPath,
+    videoSeed,
     isGenerating,
     addAsset,
     reset,
@@ -788,6 +856,7 @@ export function useGenSpaceController(isActive: boolean) {
     resetRetake,
     imageUrls,
     imagePaths,
+    imageSeed,
     imageSubmissionRef,
     musicResult,
     musicSubmissionRef,
@@ -796,6 +865,7 @@ export function useGenSpaceController(isActive: boolean) {
     speechResult,
     speechSubmissionRef,
     onAssetAdded: selectAsset,
+    onPersistenceError: setLocalError,
   });
   const isPanelMode = isRetakeMode || isToolsMode;
   const selectedMusicProfile =
@@ -906,6 +976,8 @@ export function useGenSpaceController(isActive: boolean) {
       select: selectWorkflow,
       favouriteIds: favouriteWorkflowIds,
       toggleFavourite: toggleFavouriteWorkflow,
+      reorderFavourite: reorderFavouriteWorkflow,
+      confirmFavouriteOrder,
     },
     image: {
       prompt: promptController,
@@ -958,6 +1030,7 @@ export function useGenSpaceController(isActive: boolean) {
       workflow: {
         favouriteIds: favouriteWorkflowIds,
         toggleFavourite: toggleFavouriteWorkflow,
+        select: selectWorkflow,
       },
     },
     video: {

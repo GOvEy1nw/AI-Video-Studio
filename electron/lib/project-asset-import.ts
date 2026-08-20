@@ -11,6 +11,7 @@ export const PROJECT_ASSET_SUBFOLDERS = {
 } as const
 
 const importOperationsByDirectory = new Map<string, Promise<void>>()
+const TRANSIENT_TRANSFER_ERROR_CODES = new Set(['EACCES', 'EBUSY', 'EPERM'])
 
 export type ProjectAssetCategory = keyof typeof PROJECT_ASSET_SUBFOLDERS
 
@@ -153,25 +154,70 @@ export async function transferFile(
   mode: TransferMode,
   operations: Pick<typeof fsPromises, 'copyFile' | 'rename' | 'unlink'> = fsPromises,
 ): Promise<void> {
+  const retryTransientTransfer = async (operation: () => Promise<void>): Promise<void> => {
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        await operation()
+        return
+      } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code
+        if (attempt >= 2 || !code || !TRANSIENT_TRANSFER_ERROR_CODES.has(code)) throw error
+        await new Promise<void>((resolve) => setTimeout(resolve, 25 * (attempt + 1)))
+      }
+    }
+  }
+
   if (mode === 'copy') {
-    await operations.copyFile(src, dest)
+    await retryTransientTransfer(() => operations.copyFile(src, dest))
     return
   }
 
+  let replacedDestBackup: string | null = null
   if (await fileExists(dest)) {
-    await fsPromises.unlink(dest)
+    const backupName = await findAvailableFileName(
+      path.dirname(dest),
+      `${path.basename(dest)}.aivs-backup`,
+    )
+    replacedDestBackup = path.join(path.dirname(dest), backupName)
+    await retryTransientTransfer(() => operations.rename(dest, replacedDestBackup!))
   }
 
   try {
-    await operations.rename(src, dest)
+    try {
+      await retryTransientTransfer(() => operations.rename(src, dest))
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code
+      if (code !== 'EXDEV') throw error
+      await retryTransientTransfer(() => operations.copyFile(src, dest))
+      await retryTransientTransfer(() => operations.unlink(src))
+    }
   } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code
-    if (code === 'EXDEV') {
-      await operations.copyFile(src, dest)
-      await operations.unlink(src)
-      return
+    if (replacedDestBackup) {
+      if (await fileExists(dest)) {
+        await retryTransientTransfer(() => operations.unlink(dest))
+      }
+      try {
+        await retryTransientTransfer(() => operations.rename(replacedDestBackup!, dest))
+      } catch (restoreError) {
+        try {
+          await retryTransientTransfer(() => operations.copyFile(replacedDestBackup!, dest))
+        } catch (restoreCopyError) {
+          throw new AggregateError(
+            [error, restoreError, restoreCopyError],
+            `Project asset move failed and the previous file could not be restored; backup preserved at ${replacedDestBackup}`,
+          )
+        }
+      }
     }
     throw error
+  }
+
+  if (replacedDestBackup) {
+    try {
+      await retryTransientTransfer(() => operations.unlink(replacedDestBackup!))
+    } catch (error) {
+      console.warn(`Project asset move succeeded but backup cleanup failed: ${replacedDestBackup}`, error)
+    }
   }
 }
 

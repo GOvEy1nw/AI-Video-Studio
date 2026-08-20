@@ -75,7 +75,7 @@ PACKS: dict[str, dict[str, PackValue]] = {
     "minimax_music3": {"name": "MiniMax Music 3", "kind": "model", "model_type": "minimax_music3"},
     "mmaudio": {"name": "MMAudio Sound Effects", "kind": "audio_processor", "processor": "mmaudio"},
     "omnivoice": {"name": "OmniVoice", "kind": "model", "model_type": "omnivoice"},
-    "index_tts2": {"name": "Index TTS 2", "kind": "model", "model_type": "index_tts2"},
+    "index_tts2": {"name": "Index TTS 2.5", "kind": "model", "model_type": "index_tts25"},
     "minimax-h3-fast": {
         "name": "MiniMax H3 Fast",
         "kind": "model",

@@ -4,9 +4,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { useState } from "react";
 import { GenerateButton } from "./GenerateButton";
 import { ImageMediaInputs } from "../image/ImageMediaInputs";
+import { ImageEditMediaInputs } from "../image/ImageEditMediaInputs";
 import { MusicMediaInputs } from "../music/MusicMediaInputs";
 import { VideoMediaInputs } from "../video/VideoMediaInputs";
 import { PromptEditor } from "./PromptEditor";
+import { GenSpaceModeTabs } from "../GenSpaceModeTabs";
+import type { QuickGenWorkflowId } from "../workflows";
 import type { ModelProfile } from "../../../types/model-profiles";
 import type { GenSpaceMediaInput } from "../types";
 
@@ -73,8 +76,7 @@ describe("GenSpace shared controls", () => {
         resolveInputFileUrl={vi.fn(async () => null)}
       />,
     );
-    const slot = screen.getByTitle("Reference image").parentElement;
-    fireEvent.drop(slot!, {
+    fireEvent.drop(screen.getByRole("button", { name: "Add media" }), {
       dataTransfer: {
         getData: () =>
           JSON.stringify({
@@ -92,6 +94,47 @@ describe("GenSpace shared controls", () => {
         type: "image",
       }),
     ]);
+  });
+
+  it("keeps the selected retouch and reframe tool when assigning an edit source", () => {
+    const onImageChange = vi.fn();
+    const onToolModeChange = vi.fn();
+    const onMaskChange = vi.fn();
+    const onOutpaintChange = vi.fn();
+    const props = {
+      image: null,
+      onImageChange,
+      references: [],
+      onReferencesChange: vi.fn(),
+      profile: undefined,
+      onToolModeChange,
+      mask: { schemaVersion: 1 as const, operations: [] },
+      onMaskChange,
+      outpaint: {
+        aspectMode: "16:9" as const,
+        padding: { top: 0, bottom: 0, left: 0, right: 0 },
+      },
+      onOutpaintChange,
+      disabled: false,
+      resolveInputFileUrl: vi.fn(async () => null),
+    };
+    const { rerender } = render(<ImageEditMediaInputs {...props} toolMode="retouch" />);
+    const dropSource = () =>
+      fireEvent.drop(document.querySelector("[data-genspace-dropzone]")!, {
+        dataTransfer: {
+          getData: () => JSON.stringify({ type: "image", url: "file:///C:/source.png" }),
+          files: [],
+        },
+      });
+
+    dropSource();
+    rerender(<ImageEditMediaInputs {...props} toolMode="reframe" />);
+    dropSource();
+
+    expect(onImageChange).toHaveBeenCalledTimes(2);
+    expect(onToolModeChange).not.toHaveBeenCalledWith("edit");
+    expect(onMaskChange).toHaveBeenCalledWith(null);
+    expect(onOutpaintChange).toHaveBeenCalledWith(null);
   });
 
   it("accepts Cover Song and Transfer Timbre gallery drops", () => {
@@ -148,6 +191,7 @@ describe("GenSpace shared controls", () => {
   });
 
   it("shows the usage chip on occupied media and opens its role menu", async () => {
+    const onChange = vi.fn();
     render(
       <ImageMediaInputs
         inputs={[
@@ -158,7 +202,7 @@ describe("GenSpace shared controls", () => {
             role: "reference_subject",
           },
         ]}
-        onChange={vi.fn()}
+        onChange={onChange}
         policy={{
           supportsImageInputs: true,
           tooltipLabel: "Reference image",
@@ -182,6 +226,11 @@ describe("GenSpace shared controls", () => {
     );
     expect(screen.getByText("Image input")).toBeTruthy();
     expect(screen.getAllByText("Subject")).toHaveLength(2);
+    expect(screen.getByText("References (1/2)")).toBeTruthy();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Remove Subject" }),
+    );
+    expect(onChange).toHaveBeenCalledWith([]);
   });
 
   it("shows First Frame, Last Frame, and Add media immediately", () => {
@@ -290,6 +339,13 @@ describe("GenSpace shared controls", () => {
     expect((screen.getByRole("button", { name: "Start image" }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.queryByRole("button", { name: "Control" })).toBeNull();
     expect(screen.getByRole("button", { name: "Remove @image1" })).toBeTruthy();
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Styles unavailable for MiniMax H3",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
 
     rerender(
       <VideoMediaInputs
@@ -488,5 +544,94 @@ describe("GenSpace shared controls", () => {
     );
 
     expect(onInputChange).toHaveBeenCalledWith("cover", null);
+  });
+
+  it("enables favourite reordering only from its context menu", async () => {
+    const selectWorkflow = vi.fn();
+    const toggleFavourite = vi.fn();
+    let resolveConfirm: (() => void) | undefined;
+    const confirmFavouriteOrder = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveConfirm = resolve;
+        }),
+    );
+    function FavouriteTabs() {
+      const [favourites, setFavourites] = useState<QuickGenWorkflowId[]>([
+        "image:create",
+      ]);
+      return (
+        <>
+          <button type="button" onClick={() => setFavourites(["image:create"])}>
+            Restore favourite
+          </button>
+          <GenSpaceModeTabs
+            mode="image"
+            onChange={vi.fn()}
+            favouriteIds={favourites}
+            onSelectWorkflow={selectWorkflow}
+            onToggleFavourite={(workflowId) => {
+              toggleFavourite(workflowId);
+              setFavourites((current) =>
+                current.filter((favouriteId) => favouriteId !== workflowId),
+              );
+            }}
+            onReorderFavourite={vi.fn()}
+            onConfirmReorder={confirmFavouriteOrder}
+          />
+        </>
+      );
+    }
+
+    render(<FavouriteTabs />);
+
+    const favourite = screen.getAllByRole("button", {
+      name: "Open favourite Generate",
+    })[0] as HTMLButtonElement;
+    expect(favourite.draggable).toBe(false);
+
+    favourite.focus();
+    fireEvent.keyDown(favourite, { key: "F10", shiftKey: true });
+    await act(
+      () => new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve())),
+    );
+    const removeAction = screen.getByRole("menuitem", { name: "Remove" });
+    expect(document.activeElement).toBe(removeAction);
+    fireEvent.keyDown(removeAction, { key: "Escape" });
+    await act(
+      () => new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve())),
+    );
+    expect(document.activeElement).toBe(favourite);
+
+    fireEvent.contextMenu(favourite, { clientX: 80, clientY: 80 });
+    await userEvent.click(screen.getByRole("menuitem", { name: "Re-order" }));
+    expect(favourite.draggable).toBe(true);
+    const doneButton = screen.getByRole("button", {
+      name: "Done reordering favourites",
+    }) as HTMLButtonElement;
+    fireEvent.click(doneButton);
+    expect(confirmFavouriteOrder).toHaveBeenCalledOnce();
+    expect(doneButton.disabled).toBe(true);
+    await act(async () => {
+      resolveConfirm?.();
+      await Promise.resolve();
+    });
+    expect(favourite.draggable).toBe(false);
+
+    fireEvent.contextMenu(favourite, { clientX: 80, clientY: 80 });
+    await userEvent.click(screen.getByRole("menuitem", { name: "Re-order" }));
+    expect(favourite.draggable).toBe(true);
+    fireEvent.contextMenu(favourite, { clientX: 80, clientY: 80 });
+    await userEvent.click(screen.getByRole("menuitem", { name: "Remove" }));
+    expect(toggleFavourite).toHaveBeenCalledWith("image:create");
+    expect(
+      screen.queryByRole("button", { name: "Done reordering favourites" }),
+    ).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Restore favourite" }));
+    expect(
+      (screen.getByRole("button", { name: "Open favourite Generate" }) as HTMLButtonElement)
+        .draggable,
+    ).toBe(false);
+    expect(selectWorkflow).not.toHaveBeenCalled();
   });
 });

@@ -44,10 +44,12 @@ export interface GenerationState {
   previewUrl: string | null;
   videoUrl: string | null;
   videoPath: string | null;
+  videoSeed: number | null;
   imageUrl: string | null;
   imagePath: string | null;
   imageUrls: string[];
   imagePaths: string[];
+  imageSeed: number | null;
   musicResult: GenerateMusicResult | null;
   sfxResult: GenerateSfxResult | null;
   speechResult: GenerateSpeechResult | null;
@@ -79,10 +81,12 @@ export function emptyGenerationState(): GenerationState {
     modelDownload: null,
     videoUrl: null,
     videoPath: null,
+    videoSeed: null,
     imageUrl: null,
     imagePath: null,
     imageUrls: [],
     imagePaths: [],
+    imageSeed: null,
     musicResult: null,
     sfxResult: null,
     speechResult: null,

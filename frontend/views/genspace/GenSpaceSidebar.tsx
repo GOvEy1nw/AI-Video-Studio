@@ -21,6 +21,9 @@ export function GenSpaceSidebar({
         onChange={controller.setMode}
         favouriteIds={controller.workflow.favouriteIds}
         onSelectWorkflow={controller.workflow.select}
+        onToggleFavourite={controller.workflow.toggleFavourite}
+        onReorderFavourite={controller.workflow.reorderFavourite}
+        onConfirmReorder={controller.workflow.confirmFavouriteOrder}
       />
       <div
         data-workflow-catalogue-host

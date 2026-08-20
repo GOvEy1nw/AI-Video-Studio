@@ -28,6 +28,7 @@ export function SettingsDropdown({
   content,
   footer,
   triggerLabel,
+  triggerTitle = "Model",
   triggerControls,
 }: {
   trigger: ReactNode;
@@ -43,6 +44,7 @@ export function SettingsDropdown({
   content?: ReactNode;
   footer?: ReactNode;
   triggerLabel?: string;
+  triggerTitle?: string;
   triggerControls?: ReactNode;
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -182,7 +184,9 @@ export function SettingsDropdown({
             disabled={disabled}
             className="flex min-w-0 flex-1 items-center text-left"
           >
-            <span className="mb-0.5 text-2xs w-full text-zinc-400">Model</span>
+            <span className="mb-0.5 text-2xs w-full text-zinc-400">
+              {triggerTitle}
+            </span>
           </button>
           <div className="flex w-full items-center justify-between gap-2.5">
             <button

@@ -157,11 +157,13 @@ class SuggestGapPromptResponse(BaseModel):
 class GenerateVideoResponse(BaseModel):
     status: str
     video_path: str | None = None
+    resolvedSeed: int | None = None
 
 
 class GenerateImageResponse(BaseModel):
     status: str
     image_paths: list[str] | None = None
+    resolvedSeed: int | None = None
 
 
 class MusicOutputResponse(BaseModel):

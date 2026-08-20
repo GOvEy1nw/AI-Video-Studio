@@ -1145,11 +1145,13 @@ class TestGenerate:
 
         assert enable_wangp.video_calls[0].seed == 123
 
-    def test_unlocked_seed_is_delegated_to_wangp(self, client, enable_wangp: FakeWanGPBridge):
+    def test_unlocked_seed_is_resolved_and_returned(self, client, enable_wangp: FakeWanGPBridge):
         r = client.post("/api/generate", json=_T2V_JSON)
         assert r.status_code == 200
 
-        assert enable_wangp.video_calls[0].seed is None
+        seed = r.json()["resolvedSeed"]
+        assert 0 <= seed <= 2_147_483_647
+        assert enable_wangp.video_calls[0].seed == seed
 
     def test_error_sets_generation_error(self, client, enable_wangp: FakeWanGPBridge, test_state):
         enable_wangp.raise_on_video = RuntimeError("GPU OOM")
@@ -1341,7 +1343,9 @@ class TestGenerateImage:
         # Low-VRAM profiles generate variation chunks sequentially.
         assert len(enable_wangp.image_calls) == 12
         assert all(call.num_images == 1 for call in enable_wangp.image_calls)
-        assert all(call.seed is None for call in enable_wangp.image_calls)
+        seed = r.json()["resolvedSeed"]
+        assert 0 <= seed <= 2_147_483_647
+        assert [call.seed for call in enable_wangp.image_calls] == list(range(seed, seed + 12))
         assert len(r.json()["image_paths"]) == 12
 
     def test_locked_seed_offsets_sequential_image_chunks(
@@ -1353,6 +1357,7 @@ class TestGenerateImage:
         r = client.post("/api/generate-image", json={"prompt": "test", "numImages": 3})
 
         assert r.status_code == 200
+        assert r.json()["resolvedSeed"] == 123
         assert [call.seed for call in enable_wangp.image_calls] == [123, 124, 125]
 
     def test_error(self, client, enable_wangp: FakeWanGPBridge):
