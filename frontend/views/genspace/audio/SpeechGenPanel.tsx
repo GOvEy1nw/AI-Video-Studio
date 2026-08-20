@@ -324,7 +324,7 @@ export function SpeechGenPanel({
                       speaker: Number(event.target.value) as 1 | 2,
                     })
                   }
-                  className="h-9 rounded-full border border-zinc-700 bg-zinc-800 px-3 text-xs text-zinc-200"
+                  className="h-9 rounded-full border border-border bg-input px-3 text-xs text-foreground"
                 >
                   <option value={1}>Speaker 1</option>
                   <option value={2}>Speaker 2</option>
@@ -337,7 +337,7 @@ export function SpeechGenPanel({
                   onChange={(event) =>
                     updateSegment(index, { text: event.target.value })
                   }
-                  className="min-h-14 flex-1 resize-y rounded-lg border border-zinc-800 bg-zinc-950/70 px-3 py-2 text-sm leading-5 text-white placeholder:text-zinc-500 focus:outline-hidden"
+                  className="min-h-14 flex-1 resize-y rounded-lg border border-border bg-card px-3 py-2 text-sm leading-5 text-foreground placeholder:text-subtle-foreground focus:outline-hidden"
                   placeholder="What this speaker says"
                 />
                 {controller.settings.segments.length > 2 ? (
@@ -353,18 +353,18 @@ export function SpeechGenPanel({
                         ),
                       })
                     }
-                    className="mt-2 text-zinc-500 hover:text-white disabled:opacity-40"
+                    className="mt-2 text-subtle-foreground hover:text-foreground disabled:opacity-40"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
                 ) : null}
               </div>
             ))}
-            <div className="flex items-center justify-between border-t border-zinc-800/60 pt-2">
+            <div className="flex items-center justify-between border-t border-border pt-2">
               <button
                 type="button"
                 disabled={controller.isRunning}
-                className="inline-flex items-center gap-1 rounded-full bg-zinc-700 px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-600 disabled:opacity-40"
+                className="inline-flex items-center gap-1 rounded-full bg-surface-selected px-3 py-1.5 text-xs text-foreground hover:bg-surface-hover disabled:opacity-40"
                 onClick={() => {
                   const last =
                     controller.settings.segments[
@@ -408,7 +408,7 @@ export function SpeechGenPanel({
         />
       )}
 
-      <div className="flex items-center gap-1.5 border-t border-zinc-800/60 px-4 py-3 text-xs text-zinc-400">
+      <div className="flex items-center gap-1.5 border-t border-border px-4 py-3 text-xs text-muted-foreground">
         <GenerateButton
           onClick={controller.submit}
           disabled={!canSubmit}

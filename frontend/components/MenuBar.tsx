@@ -146,7 +146,7 @@ export function MenuBar({ menus, rightContent }: MenuBarProps) {
   const renderMenuItem = (item: MenuItem, index: number) => {
     if (item.separator) {
       return (
-        <div key={`sep-${index}`} className="h-px bg-zinc-700 my-1 mx-2" />
+        <div key={`sep-${index}`} className="mx-2 my-1 h-px bg-border" />
       );
     }
 
@@ -157,14 +157,14 @@ export function MenuBar({ menus, rightContent }: MenuBarProps) {
         disabled={item.disabled}
         className={`w-full flex items-center justify-between px-3 py-1.5 text-left text-[13px] transition-colors ${
           item.disabled
-            ? "text-zinc-600 cursor-not-allowed"
-            : "text-zinc-200 hover:bg-blue-600 hover:text-white"
+            ? "cursor-not-allowed text-subtle"
+            : "text-foreground hover:bg-blue-600 hover:text-white"
         }`}
       >
         <span>{item.label}</span>
         {item.shortcut && (
           <span
-            className={`ml-8 text-[11px] ${item.disabled ? "text-zinc-700" : "text-zinc-500"}`}
+            className={`ml-8 text-[11px] ${item.disabled ? "text-subtle" : "text-muted"}`}
           >
             {item.shortcut}
           </span>
@@ -176,7 +176,7 @@ export function MenuBar({ menus, rightContent }: MenuBarProps) {
   return (
     <div
       ref={menuBarRef}
-      className="flex items-center bg-zinc-900 border-b border-zinc-800 select-none relative z-60"
+      className="relative z-60 flex select-none items-center border-b border-border bg-card"
     >
       <div className="flex items-center flex-1">
         {menus.map((menu) => {
@@ -207,8 +207,8 @@ export function MenuBar({ menus, rightContent }: MenuBarProps) {
                 }}
                 className={`px-3 py-1.5 text-[13px] font-medium transition-colors ${
                   isActive
-                    ? "bg-zinc-800 text-white"
-                    : "text-zinc-400 hover:text-zinc-200"
+                    ? "bg-surface-selected text-foreground"
+                    : "text-muted hover:text-foreground"
                 }`}
               >
                 {menu.label}
@@ -224,13 +224,13 @@ export function MenuBar({ menus, rightContent }: MenuBarProps) {
                   placement="bottom-start"
                   gap={0}
                   role="menu"
-                  className="min-w-[240px] overflow-y-auto rounded-b-lg border border-zinc-700 bg-zinc-900 py-1 shadow-xl shadow-black/50"
+                  className="min-w-[240px] overflow-y-auto rounded-b-lg border border-border bg-popover py-1 shadow-xl"
                 >
                   {/* Help menu has search */}
                   {isHelpMenu && (
-                    <div className="px-2 py-1.5 border-b border-zinc-700">
-                      <div className="flex items-center gap-2 bg-zinc-800 rounded-sm px-2 py-1">
-                        <Search className="h-3.5 w-3.5 text-zinc-500 shrink-0" />
+                    <div className="border-b border-border px-2 py-1.5">
+                      <div className="flex items-center gap-2 rounded-sm bg-input px-2 py-1">
+                        <Search className="h-3.5 w-3.5 shrink-0 text-muted" />
                         <input
                           ref={searchInputRef}
                           type="text"
@@ -238,7 +238,7 @@ export function MenuBar({ menus, rightContent }: MenuBarProps) {
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
                           onKeyDown={handleSearchKeyDown}
-                          className="flex-1 bg-transparent text-[13px] text-white placeholder-zinc-500 outline-hidden"
+                          className="flex-1 bg-transparent text-[13px] text-foreground placeholder:text-muted outline-hidden"
                           autoFocus
                         />
                       </div>
@@ -246,7 +246,7 @@ export function MenuBar({ menus, rightContent }: MenuBarProps) {
                       {searchQuery && (
                         <div className="mt-1 max-h-48 overflow-y-auto">
                           {searchResults.length === 0 ? (
-                            <div className="text-[12px] text-zinc-500 px-2 py-2 text-center">
+                            <div className="px-2 py-2 text-center text-[12px] text-muted">
                               No results
                             </div>
                           ) : (
@@ -259,17 +259,17 @@ export function MenuBar({ menus, rightContent }: MenuBarProps) {
                                 className={`w-full flex items-center justify-between px-2 py-1.5 text-left text-[12px] rounded transition-colors ${
                                   i === highlightedResult
                                     ? "bg-blue-600 text-white"
-                                    : "text-zinc-300 hover:bg-zinc-800"
+                                    : "text-foreground hover:bg-surface-hover"
                                 }`}
                               >
                                 <div>
                                   <span>{result.item.label}</span>
-                                  <span className="text-2xs text-zinc-500 ml-2">
+                                  <span className="ml-2 text-2xs text-muted">
                                     {result.menuLabel}
                                   </span>
                                 </div>
                                 {result.item.shortcut && (
-                                  <span className="text-2xs text-zinc-500">
+                                  <span className="text-2xs text-muted">
                                     {result.item.shortcut}
                                   </span>
                                 )}

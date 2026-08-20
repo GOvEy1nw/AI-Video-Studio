@@ -145,13 +145,13 @@ function AppContent() {
   const waitingForBackend = pythonReady === null || !firstRunResolved;
 
   const restartingOverlay = isBackendRestarting ? (
-    <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 backdrop-blur-xs">
-      <div className="rounded-lg border border-zinc-700 bg-zinc-900/95 px-6 py-4 text-center shadow-xl">
-        <div className="flex items-center justify-center gap-2 text-zinc-100">
+    <div className="fixed inset-0 z-60 flex items-center justify-center bg-overlay/60 backdrop-blur-xs">
+      <div className="rounded-lg border border-border bg-card/95 px-6 py-4 text-center shadow-xl">
+        <div className="flex items-center justify-center gap-2 text-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           <span className="font-medium">Reconnecting...</span>
         </div>
-        <p className="mt-2 text-sm text-zinc-400">
+        <p className="mt-2 text-sm text-muted-foreground">
           The backend process stopped unexpectedly. Attempting to restart...
         </p>
       </div>
@@ -177,7 +177,7 @@ function AppContent() {
   if (isBackendDead) {
     return (
       <div className="h-screen bg-background flex items-center justify-center p-6">
-        <div className="w-full max-w-5xl rounded-xl border border-zinc-700 bg-zinc-900/80 p-6 shadow-2xl">
+        <div className="w-full max-w-5xl rounded-xl border border-border bg-card/80 p-6 shadow-2xl">
           <div className="text-center">
             <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-foreground mb-2">
@@ -239,7 +239,7 @@ function AppContent() {
         <button
           onClick={handleReconnect}
           disabled={isReconnecting}
-          className="h-8 w-8 flex items-center justify-center rounded-md text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:hover:bg-transparent transition-colors disabled:opacity-50"
+          className="h-8 w-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-surface-hover disabled:hover:bg-transparent transition-colors disabled:opacity-50"
           title="Restart Inference Engine"
         >
           <RefreshCw
@@ -248,14 +248,14 @@ function AppContent() {
         </button>
         <button
           onClick={() => setIsLogViewerOpen(true)}
-          className="h-8 w-8 flex items-center justify-center rounded-md text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+          className="h-8 w-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-colors"
           title="View Backend Logs"
         >
           <FileText className="h-4 w-4" />
         </button>
         <button
           onClick={() => setIsSettingsOpen(true)}
-          className="h-8 w-8 flex items-center justify-center rounded-md text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+          className="h-8 w-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-colors"
           title="Settings"
         >
           <Settings className="h-4 w-4" />

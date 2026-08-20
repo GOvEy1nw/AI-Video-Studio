@@ -386,7 +386,7 @@ export function VideoTrimPanel({
           <span className="text-[10px] font-mono text-violet-400">
             {formatTimecode(selStart)}
           </span>
-          <span className="text-[10px] font-mono text-zinc-200">
+          <span className="text-[10px] font-mono text-foreground">
             Duration: {formatTimecode(selDuration)}
           </span>
           <span className="text-[10px] font-mono text-violet-400">

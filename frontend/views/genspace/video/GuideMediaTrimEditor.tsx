@@ -77,7 +77,7 @@ export function GuideMediaTrimEditor({
   }, [mediaKind]);
 
   return (
-    <div className="mt-2 mb-2 rounded-lg border border-zinc-800 bg-zinc-950/45">
+    <div className="mb-2 mt-2 rounded-lg border border-border bg-surface">
       {mediaKind === "video" && (
         <div className="relative rounded-lg bg-black aspect-video max-h-[32vh] w-full">
           <video
@@ -131,11 +131,11 @@ export function GuideMediaTrimEditor({
           </div>
         </>
       )}
-      <div className="flex items-center justify-center gap-3 border-b border-zinc-800 bg-zinc-900 px-4 py-2">
+      <div className="flex items-center justify-center gap-3 border-b border-border bg-surface-raised px-4 py-2">
         <button
           type="button"
           onClick={togglePlay}
-          className="rounded-sm p-1 text-white transition-colors hover:bg-zinc-800"
+          className="rounded-sm p-1 text-foreground transition-colors hover:bg-surface-hover"
           title={isPlaying ? "Pause" : "Play"}
         >
           {isPlaying ? (
@@ -144,7 +144,7 @@ export function GuideMediaTrimEditor({
             <Play className="h-4 w-4" />
           )}
         </button>
-        <span className="text-xs font-mono text-zinc-400">
+        <span className="text-xs font-mono text-muted-foreground">
           {formatTrimTimecode(currentTime)} /{" "}
           {formatTrimTimecode(videoDuration)}
         </span>
@@ -164,11 +164,11 @@ export function GuideMediaTrimEditor({
           })
         }
       />
-      <div className="mb-1 flex items-center justify-between px-4 py-3 text-2xs text-zinc-500">
+      <div className="mb-1 flex items-center justify-between px-4 py-3 text-2xs text-subtle-foreground">
         <button
           type="button"
           onClick={onConfirm}
-          className="inline-flex items-center gap-1 rounded-sm bg-violet-500 px-2 py-1 text-[10px] font-medium text-white transition-colors hover:bg-violet-600 w-full justify-center"
+          className="inline-flex w-full items-center justify-center gap-1 rounded-sm bg-violet-500 px-2 py-1 text-[10px] font-medium text-primary-foreground transition-colors hover:bg-violet-600"
         >
           <Check className="h-3 w-3" />
           Confirm

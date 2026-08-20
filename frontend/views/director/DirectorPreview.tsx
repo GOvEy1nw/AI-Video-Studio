@@ -90,7 +90,7 @@ export function DirectorPreview(props: Props) {
 
   return (
     <section
-      className="flex h-full min-h-0 flex-col bg-zinc-950"
+      className="flex h-full min-h-0 flex-col bg-card"
       aria-label="Director preview"
     >
       <div
@@ -140,7 +140,7 @@ export function DirectorPreview(props: Props) {
           </div>
         )}
         {props.isGenerating && (
-          <div className="absolute inset-x-0 bottom-0 bg-zinc-950/90 p-2">
+          <div className="absolute inset-x-0 bottom-0 bg-surface-raised/90 p-2">
             {props.modelDownload ? (
               <DownloadProgressView
                 compact
@@ -149,14 +149,14 @@ export function DirectorPreview(props: Props) {
               />
             ) : (
               <>
-                <div className="mb-1 flex justify-between text-[10px] text-zinc-300">
+                <div className="mb-1 flex justify-between text-[10px] text-muted-foreground">
                   <span>{props.statusMessage}</span>
                   {props.phase !== "checking_model_files" &&
                     props.phase !== "loading_model" && <span>{props.progress}%</span>}
                 </div>
                 {props.phase !== "checking_model_files" &&
                   props.phase !== "loading_model" && (
-                    <div className="h-1 rounded-sm bg-zinc-800">
+                    <div className="h-1 rounded-sm bg-surface">
                       <div
                         className="h-full rounded-sm bg-blue-500"
                         style={{ width: `${props.progress}%` }}
@@ -166,7 +166,7 @@ export function DirectorPreview(props: Props) {
                 {(props.phase === "checking_model_files" ||
                   props.phase === "loading_model") && (
                   <div
-                    className="h-1 overflow-hidden rounded-sm bg-zinc-800"
+                    className="h-1 overflow-hidden rounded-sm bg-surface"
                     role="progressbar"
                     aria-label="Preparing model"
                   >

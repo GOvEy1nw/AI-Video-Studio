@@ -49,16 +49,16 @@ export function DownloadProgressView({
 
   return (
     <div className={cn("min-w-0 text-left", compact ? "space-y-1" : "space-y-1.5", className)}>
-      <p className={cn("truncate font-medium text-zinc-100", compact ? "text-[11px]" : "text-sm")}>
+      <p className={cn("truncate font-medium text-foreground", compact ? "text-[11px]" : "text-sm")}>
         {title}
       </p>
       {item && (
-        <p className="truncate text-[11px] text-zinc-300" title={item}>
+        <p className="truncate text-[11px] text-muted-foreground" title={item}>
           {item}
         </p>
       )}
       <div
-        className="h-1.5 overflow-hidden rounded-full bg-zinc-700"
+        className="h-1.5 overflow-hidden rounded-full bg-input"
         role="progressbar"
         aria-label="Model download progress"
         aria-valuemin={0}
@@ -75,7 +75,7 @@ export function DownloadProgressView({
         )}
       </div>
       {(primary || secondary.length > 0) && (
-        <p className="text-[10px] text-zinc-400">
+        <p className="text-[10px] text-muted-foreground">
           {[primary, ...secondary].filter(Boolean).join(" · ")}
         </p>
       )}

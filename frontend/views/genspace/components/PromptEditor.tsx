@@ -163,7 +163,7 @@ export function PromptEditor({
 
   return (
     <GenPanelSection title={title} collapsible={false}>
-      <div className="flex items-start rounded-lg border border-zinc-800 bg-zinc-950/35">
+      <div className="flex items-start rounded-lg border border-border bg-card">
         {leading}
         <div className="relative flex min-w-0 flex-1 flex-col">
           {children ?? (
@@ -195,7 +195,7 @@ export function PromptEditor({
               }
               maxLength={maxLength}
               placeholder={placeholder}
-              className={`${height} w-full resize-none overflow-y-auto bg-transparent px-3 pb-3 pt-3 text-sm leading-5 text-white placeholder:text-zinc-500 focus:outline-hidden`}
+              className={`${height} w-full resize-none overflow-y-auto bg-transparent px-3 pb-3 pt-3 text-sm leading-5 text-foreground placeholder:text-subtle-foreground focus:outline-hidden`}
             />
           )}
           {mention ? (
@@ -204,7 +204,7 @@ export function PromptEditor({
               id={menuId}
               role="listbox"
               aria-label="Media references"
-              className="absolute left-2 top-12 z-30 w-60 rounded-xl border border-zinc-700 bg-zinc-900 p-1 shadow-xl"
+              className="absolute left-2 top-12 z-30 w-60 rounded-xl border border-border bg-popover p-1 shadow-xl"
             >
               {mentionOptions.map((option, index) => {
                 const disabledOption =
@@ -219,7 +219,7 @@ export function PromptEditor({
                     disabled={disabledOption}
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => selectMention(index)}
-                    className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-zinc-100 disabled:cursor-not-allowed disabled:opacity-45 ${index === activeIndex ? "bg-zinc-700" : "hover:bg-zinc-800"}`}
+                    className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-45 ${index === activeIndex ? "bg-surface-selected" : "hover:bg-surface-hover"}`}
                   >
                     {option.kind === "alias" && option.type === "image" ? (
                       <img
@@ -236,7 +236,7 @@ export function PromptEditor({
                         className="h-5 w-5 rounded object-cover"
                       />
                     ) : (
-                      <span className="flex h-5 w-5 items-center justify-center rounded bg-zinc-800 text-violet-300">
+                      <span className="flex h-5 w-5 items-center justify-center rounded bg-input text-violet-300">
                         <MentionIcon type={option.type} />
                       </span>
                     )}
@@ -247,13 +247,13 @@ export function PromptEditor({
             </div>
           ) : null}
           {mediaAliases?.length ? (
-            <div className="flex flex-wrap gap-1 border-t border-zinc-800/70 px-2 py-1.5">
+            <div className="flex flex-wrap gap-1 border-t border-border px-2 py-1.5">
               {mediaAliases.map((alias) => (
                 <button
                   key={alias}
                   type="button"
                   onClick={() => onChange(value ? `${value} ${alias}` : alias)}
-                  className="rounded bg-zinc-800 px-1.5 py-0.5 text-2xs text-zinc-300 hover:bg-zinc-700"
+                  className="rounded bg-input px-1.5 py-0.5 text-2xs text-muted-foreground hover:bg-surface-hover"
                 >
                   {alias}
                 </button>
@@ -263,7 +263,7 @@ export function PromptEditor({
           {actions || bottomRight ? (
             <div
               data-testid="prompt-editor-footer"
-              className="flex items-center justify-between bg-zinc-800/35 gap-2 px-2 py-1.5 rounded-b-lg"
+              className="flex items-center justify-between bg-input gap-2 px-2 py-1.5 rounded-b-lg"
             >
               <div
                 data-testid="prompt-editor-footer-left"

@@ -35,7 +35,7 @@ export function MusicGenPanel({
     <>
       <GenPanelSection
         title=""
-        className="text-xs text-zinc-400 flex gap-2 justify-between items-center"
+        className="text-xs text-muted-foreground flex gap-2 justify-between items-center"
         collapsible={false}
       >
         {selectedProfile ? (
@@ -55,7 +55,7 @@ export function MusicGenPanel({
       </GenPanelSection>
       <GenPanelSection
         title="Lyrics Mode"
-        className="text-xs text-zinc-400 gap-2 justify-between items-center"
+        className="text-xs text-muted-foreground gap-2 justify-between items-center"
         collapsible={false}
       >
         <MusicVocalModeTabs
@@ -143,7 +143,7 @@ export function MusicGenPanel({
         onChange={music.setSettings}
         profile={selectedProfile}
       />
-      <div className="flex flex-wrap items-center gap-1.5 px-4 py-3 text-xs text-zinc-400">
+      <div className="flex flex-wrap items-center gap-1.5 px-4 py-3 text-xs text-muted-foreground">
         <GenerateButton
           onClick={generation.submit}
           disabled={!generation.canSubmit}

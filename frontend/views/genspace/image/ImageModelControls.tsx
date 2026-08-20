@@ -70,7 +70,7 @@ export function ImageModelControls({
 
     // Profiles not loaded yet — show a placeholder.
     return (
-      <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-zinc-800/50 text-zinc-500 text-xs">
+      <div className="flex items-center gap-1.5 rounded-md bg-surface-raised px-2 py-1 text-xs text-subtle-foreground">
         <AlertCircle className="h-3.5 w-3.5" />
         <span>Loading models…</span>
       </div>

@@ -55,7 +55,7 @@ export function EditorPreviewWorkspace({
         <ProgramMonitor {...programMonitorProps} />
       </div>
       {shuttleSpeed !== 0 && (
-        <div className="h-6 bg-zinc-900 border-t border-zinc-800 flex items-center px-4">
+        <div className="h-6 bg-surface border-t border-border flex items-center px-4">
           <div
             className={`px-2 py-0.5 rounded text-xs font-mono font-bold ${
               shuttleSpeed < 0

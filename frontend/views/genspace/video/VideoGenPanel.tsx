@@ -92,7 +92,7 @@ function LegacyPromptMedia({
         data-genspace-dropzone
         data-drag-active={imageDrag || undefined}
         className={`relative mx-2 mt-2 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-dashed text-2xs transition-colors ${
-          imageDrag ? "" : "border-zinc-700 hover:border-zinc-500"
+          imageDrag ? "" : "border-border hover:border-border-strong"
         }`}
         onDragOver={(event) => {
           event.preventDefault();
@@ -115,13 +115,13 @@ function LegacyPromptMedia({
                 event.stopPropagation();
                 media.setInputImage(null);
               }}
-              className="absolute -right-1 -top-1 z-10 rounded-full bg-zinc-800 p-0.5 text-zinc-400 hover:text-white"
+              className="absolute -right-1 -top-1 z-10 rounded-full bg-popover p-0.5 text-muted hover:text-foreground"
             >
               <X className="h-3 w-3" />
             </button>
           </>
         ) : (
-          <Image className="h-4 w-4 text-zinc-500" />
+          <Image className="h-4 w-4 text-subtle-foreground" />
         )}
         <input
           ref={imageRef}
@@ -143,7 +143,7 @@ function LegacyPromptMedia({
             ? ""
             : media.inputAudio
               ? "border-emerald-600"
-              : "border-zinc-700 hover:border-zinc-500"
+              : "border-border hover:border-border-strong"
         }`}
         onDragOver={(event) => {
           event.preventDefault();
@@ -155,7 +155,7 @@ function LegacyPromptMedia({
       >
         <Music
           className={`h-4 w-4 ${
-            media.inputAudio ? "text-emerald-400" : "text-zinc-500"
+            media.inputAudio ? "text-emerald-400" : "text-subtle-foreground"
           }`}
         />
         {media.inputAudio ? (
@@ -165,7 +165,7 @@ function LegacyPromptMedia({
               event.stopPropagation();
               media.setInputAudio(null);
             }}
-            className="absolute -right-1 -top-1 z-10 rounded-full bg-zinc-800 p-0.5 text-zinc-400 hover:text-white"
+            className="absolute -right-1 -top-1 z-10 rounded-full bg-popover p-0.5 text-muted hover:text-foreground"
           >
             <X className="h-3 w-3" />
           </button>
@@ -312,7 +312,7 @@ export function VideoGenPanel({
     <button
       type="button"
       disabled
-      className="flex cursor-not-allowed items-center gap-1.5 rounded-md bg-zinc-800/40 px-2 py-1 text-2xs text-zinc-500"
+      className="flex cursor-not-allowed items-center gap-1.5 rounded-md bg-input px-2 py-1 text-2xs text-subtle-foreground"
     >
       <Clock className="h-3.5 w-3.5" />
       <span>auto</span>
@@ -321,7 +321,7 @@ export function VideoGenPanel({
     <button
       type="button"
       disabled
-      className="flex cursor-not-allowed items-center gap-1.5 rounded-md bg-zinc-800/40 px-2 py-1 text-2xs text-zinc-500"
+      className="flex cursor-not-allowed items-center gap-1.5 rounded-md bg-input px-2 py-1 text-2xs text-subtle-foreground"
     >
       <Clock className="h-3.5 w-3.5" />
       <span>auto</span>
@@ -335,10 +335,10 @@ export function VideoGenPanel({
       align="right"
       triggerLabel="Video duration"
       content={
-        <label className="block w-48 text-2xs text-zinc-400">
+        <label className="block w-48 text-2xs text-muted-foreground">
           <span className="mb-2 flex items-center justify-between gap-4">
             <span>{isContinueVideo ? "Extend by" : "Duration"}</span>
-            <span className="font-mono text-zinc-200">
+            <span className="font-mono text-foreground">
               {isContinueVideo ? "+" : ""}
               {videoSettings.duration}s
             </span>
@@ -403,7 +403,7 @@ export function VideoGenPanel({
     <>
       <GenPanelSection
         title=""
-        className="text-xs text-zinc-400 flex gap-2 justify-between items-center"
+        className="text-xs text-muted-foreground flex gap-2 justify-between items-center"
         collapsible={false}
       >
         <VideoModeTabs
@@ -419,7 +419,7 @@ export function VideoGenPanel({
       {!isUpscale && selectedCompatibleProfile ? (
         <GenPanelSection
           title=""
-          className="text-xs text-zinc-400 flex gap-2 justify-between items-center"
+          className="text-xs text-muted-foreground flex gap-2 justify-between items-center"
           collapsible={false}
         >
           <ModelPicker
@@ -446,7 +446,7 @@ export function VideoGenPanel({
       ) : !isUpscale && profiles.options.length ? (
         <GenPanelSection
           title=""
-          className="text-xs text-zinc-400 flex gap-2 justify-between items-center"
+          className="text-xs text-muted-foreground flex gap-2 justify-between items-center"
           collapsible={false}
         >
           <div
@@ -459,10 +459,10 @@ export function VideoGenPanel({
       ) : !isUpscale ? (
         <GenPanelSection
           title=""
-          className="text-xs text-zinc-400 flex gap-2 justify-between items-center"
+          className="text-xs text-muted-foreground flex gap-2 justify-between items-center"
           collapsible={false}
         >
-          <div className="flex items-center gap-1.5 rounded-md bg-zinc-800/50 px-2 py-1.5 text-zinc-500">
+          <div className="flex items-center gap-1.5 rounded-md bg-input px-2 py-1.5 text-subtle-foreground">
             <span>Loading models…</span>
           </div>
         </GenPanelSection>
@@ -502,7 +502,7 @@ export function VideoGenPanel({
           syncInputFileToGallery={media.syncInputFileToGallery}
         />
       ) : isTools ? (
-        <div className="border-b border-zinc-800/60 bg-zinc-950/20">
+        <div className="border-b border-border bg-background">
           <div className={isReframe ? "max-h-[52vh] overflow-y-auto" : ""}>
             <VideoToolInput
               item={videoTools.toolInput}
@@ -531,7 +531,7 @@ export function VideoGenPanel({
         </div>
       ) : null}
       {isRetake ? (
-        <div className="border-b border-zinc-800/60 bg-zinc-950/20">
+        <div className="border-b border-border bg-background">
           {videoTools.panel()}
         </div>
       ) : null}
@@ -613,9 +613,9 @@ export function VideoGenPanel({
           }
         />
       ) : null}
-      <div className="flex flex-wrap items-center gap-1.5 px-4 py-3 text-xs text-zinc-400">
+      <div className="flex flex-wrap items-center gap-1.5 px-4 py-3 text-xs text-muted-foreground">
         {isRetake ? (
-          <div className="pr-2 text-2xs text-zinc-500">
+          <div className="pr-2 text-2xs text-subtle-foreground">
             Trim in the panel above, then retake
           </div>
         ) : null}

@@ -33,12 +33,12 @@ export function CroppableMediaInputSlot({
               event.stopPropagation();
               setIsOpen((current) => !current);
             }}
-            className={`pointer-events-none absolute left-1 top-1 z-20 flex h-6 w-6 items-center justify-center rounded-md border border-white/10 bg-black/80 shadow-sm transition-colors transition-opacity group-hover/crop:pointer-events-auto group-hover/crop:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100 ${
+            className={`pointer-events-none absolute left-1 top-1 z-20 flex h-6 w-6 items-center justify-center rounded-md border border-border bg-popover/90 shadow-sm transition-colors transition-opacity group-hover/crop:pointer-events-auto group-hover/crop:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100 ${
               isOpen
-                ? "pointer-events-auto bg-violet-600 text-white opacity-100"
+                ? "pointer-events-auto bg-violet-600 text-primary-foreground opacity-100"
                 : item.crop
-                  ? "text-violet-300 opacity-0 hover:bg-violet-600 hover:text-white"
-                  : "text-zinc-300 opacity-0 hover:bg-zinc-700 hover:text-white"
+                  ? "text-violet-300 opacity-0 hover:bg-violet-600 hover:text-primary-foreground"
+                  : "text-muted-foreground opacity-0 hover:bg-surface-hover hover:text-foreground"
             }`}
           >
             <Crop className="h-3.5 w-3.5" />

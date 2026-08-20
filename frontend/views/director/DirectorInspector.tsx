@@ -12,7 +12,7 @@ interface Props {
 export function DirectorInspector({ sequence, segment, onChange }: Props) {
   if (!segment) {
     return (
-      <div className="text-xs text-zinc-500">
+      <div className="text-xs text-muted">
         Select prompt segment to edit.
       </div>
     );
@@ -28,7 +28,7 @@ export function DirectorInspector({ sequence, segment, onChange }: Props) {
     <textarea
       value={segment.prompt}
       onChange={(event) => update({ ...segment, prompt: event.target.value })}
-      className="min-h-20 w-full resize-none rounded-sm border border-zinc-700 bg-zinc-800 p-2 text-xs text-zinc-100 outline-hidden"
+      className="min-h-20 w-full resize-none rounded-sm border border-border bg-input p-2 text-xs text-foreground outline-hidden"
       placeholder="Add your segment text prompt here…"
       aria-label="Local Prompt"
     />

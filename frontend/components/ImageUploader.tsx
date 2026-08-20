@@ -76,14 +76,14 @@ export function ImageUploader({
 
   return (
     <div className="w-full">
-      <label className="block text-[12px] font-semibold text-zinc-500 mb-2 uppercase leading-4">
+      <label className="block text-[12px] font-semibold text-subtle-foreground mb-2 uppercase leading-4">
         Image
       </label>
       <div
         {...getRootProps()}
         className={cn(
-          "relative border border-dashed text-2xs border-zinc-600 rounded-lg cursor-pointer transition-colors",
-          "hover:border-zinc-500",
+        "relative border border-dashed text-2xs border-border-strong rounded-lg cursor-pointer transition-colors",
+        "hover:border-border-strong",
           isDragActive && "border-blue-500 bg-blue-500/5",
           selectedImage ? "p-3" : "p-6",
         )}
@@ -93,7 +93,7 @@ export function ImageUploader({
         {selectedImage ? (
           <div className="flex items-center gap-3">
             {/* Thumbnail */}
-            <div className="w-14 h-14 shrink-0 rounded-md overflow-hidden bg-zinc-800">
+          <div className="w-14 h-14 shrink-0 rounded-md overflow-hidden bg-surface-raised">
               <img
                 src={selectedImage}
                 alt="Selected"
@@ -104,7 +104,7 @@ export function ImageUploader({
             {/* Filename */}
             <div className="flex-1 min-w-0">
               <p
-                className="text-sm text-white truncate"
+              className="text-sm text-foreground truncate"
                 title={getDisplayName(selectedImage)}
               >
                 {getDisplayName(selectedImage)}
@@ -115,34 +115,34 @@ export function ImageUploader({
             <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={clearImage}
-                className="p-2 hover:bg-zinc-700 rounded-lg transition-colors"
+                className="p-2 hover:bg-surface-hover rounded-lg transition-colors"
                 title="Remove image"
               >
-                <Trash2 className="h-5 w-5 text-zinc-400 hover:text-white" />
+                <Trash2 className="h-5 w-5 text-muted-foreground hover:text-foreground" />
               </button>
               <button
                 onClick={replaceImage}
-                className="p-2 hover:bg-zinc-700 rounded-lg transition-colors"
+                className="p-2 hover:bg-surface-hover rounded-lg transition-colors"
                 title="Replace image"
               >
-                <RefreshCw className="h-5 w-5 text-zinc-400 hover:text-white" />
+                <RefreshCw className="h-5 w-5 text-muted-foreground hover:text-foreground" />
               </button>
             </div>
           </div>
         ) : (
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-zinc-700 rounded-lg">
+            <div className="p-3 bg-surface-hover rounded-lg">
               {isDragActive ? (
                 <Upload className="h-6 w-6 text-blue-400" />
               ) : (
-                <ImageIcon className="h-6 w-6 text-zinc-400" />
+              <ImageIcon className="h-6 w-6 text-muted-foreground" />
               )}
             </div>
             <div>
-              <p className="text-sm font-medium text-white">
+            <p className="text-sm font-medium text-foreground">
                 Drag image file here
               </p>
-              <p className="text-sm text-zinc-500">
+            <p className="text-sm text-subtle-foreground">
                 Or{" "}
                 <span className="text-blue-400 underline">upload a file</span>
               </p>
@@ -150,7 +150,7 @@ export function ImageUploader({
           </div>
         )}
       </div>
-      <p className="text-xs text-zinc-500 mt-2">
+        <p className="text-xs text-subtle-foreground mt-2">
         png, jpeg, webp. Max size is 10MB
       </p>
     </div>

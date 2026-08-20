@@ -83,9 +83,9 @@ export function MediaInputSlot({
         data-drag-active={dragActive || undefined}
         className={`relative flex ${sizeClassName ?? "h-24 w-24"} shrink-0 items-center justify-center overflow-hidden rounded-lg disabled:cursor-not-allowed disabled:opacity-50 ${
           item
-            ? "border bg-zinc-800"
-            : "flex-col border border-dashed text-2xs transition-colors hover:border-zinc-500"
-        } border-zinc-700`}
+            ? "border bg-surface-selected"
+            : "flex-col border border-dashed text-2xs transition-colors hover:border-border-strong"
+        } border-border`}
       >
         {item ? (
           <>

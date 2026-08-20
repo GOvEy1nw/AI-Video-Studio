@@ -1271,7 +1271,7 @@ export function useGenSpaceController(isActive: boolean) {
 
   return {
     rootProps: {
-      className: "h-full relative bg-zinc-950",
+      className: "relative h-full bg-app-bg",
     },
     gallery: {
       dropZoneProps: {

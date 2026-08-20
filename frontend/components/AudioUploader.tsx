@@ -74,14 +74,14 @@ export function AudioUploader({
 
   return (
     <div className="w-full">
-      <label className="block text-[12px] font-semibold text-zinc-500 mb-2 uppercase leading-4">
+      <label className="block text-[12px] font-semibold text-subtle-foreground mb-2 uppercase leading-4">
         Audio
       </label>
       <div
         {...getRootProps()}
         className={cn(
-          "relative border border-dashed text-2xs border-zinc-600 rounded-lg cursor-pointer transition-colors",
-          "hover:border-zinc-500",
+        "relative border border-dashed text-2xs border-border-strong rounded-lg cursor-pointer transition-colors",
+        "hover:border-border-strong",
           isDragActive && "border-emerald-500 bg-emerald-500/5",
           selectedAudio ? "p-3" : "p-6",
         )}
@@ -91,14 +91,14 @@ export function AudioUploader({
         {selectedAudio ? (
           <div className="flex items-center gap-3">
             {/* Audio icon (no thumbnail for audio) */}
-            <div className="w-14 h-14 shrink-0 rounded-md overflow-hidden bg-zinc-800 flex items-center justify-center">
+          <div className="w-14 h-14 shrink-0 rounded-md overflow-hidden bg-surface-raised flex items-center justify-center">
               <Music className="h-6 w-6 text-emerald-400" />
             </div>
 
             {/* Filename */}
             <div className="flex-1 min-w-0">
               <p
-                className="text-sm text-white truncate"
+              className="text-sm text-foreground truncate"
                 title={getDisplayName(selectedAudio)}
               >
                 {getDisplayName(selectedAudio)}
@@ -109,34 +109,34 @@ export function AudioUploader({
             <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={clearAudio}
-                className="p-2 hover:bg-zinc-700 rounded-lg transition-colors"
+                className="p-2 hover:bg-surface-hover rounded-lg transition-colors"
                 title="Remove audio"
               >
-                <Trash2 className="h-5 w-5 text-zinc-400 hover:text-white" />
+                <Trash2 className="h-5 w-5 text-muted-foreground hover:text-foreground" />
               </button>
               <button
                 onClick={replaceAudio}
-                className="p-2 hover:bg-zinc-700 rounded-lg transition-colors"
+                className="p-2 hover:bg-surface-hover rounded-lg transition-colors"
                 title="Replace audio"
               >
-                <RefreshCw className="h-5 w-5 text-zinc-400 hover:text-white" />
+                <RefreshCw className="h-5 w-5 text-muted-foreground hover:text-foreground" />
               </button>
             </div>
           </div>
         ) : (
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-zinc-700 rounded-lg">
+            <div className="p-3 bg-surface-hover rounded-lg">
               {isDragActive ? (
                 <Upload className="h-6 w-6 text-emerald-400" />
               ) : (
-                <Music className="h-6 w-6 text-zinc-400" />
+              <Music className="h-6 w-6 text-muted-foreground" />
               )}
             </div>
             <div>
-              <p className="text-sm font-medium text-white">
+            <p className="text-sm font-medium text-foreground">
                 Drag audio file here
               </p>
-              <p className="text-sm text-zinc-500">
+            <p className="text-sm text-subtle-foreground">
                 Or{" "}
                 <span className="text-emerald-400 underline">
                   upload a file
@@ -146,7 +146,7 @@ export function AudioUploader({
           </div>
         )}
       </div>
-      <p className="text-xs text-zinc-500 mt-2">
+        <p className="text-xs text-subtle-foreground mt-2">
         mp3, wav, ogg, aac, flac, m4a. Max size is 50MB
       </p>
     </div>

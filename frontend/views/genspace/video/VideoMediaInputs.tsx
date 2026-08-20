@@ -265,17 +265,17 @@ export function VideoMediaInputs({
   const guideExtra: ReactNode =
     guide?.type === "video" && guide.role !== "continue_video" ? (
       <>
-        <div className="my-1 h-px bg-zinc-700" />
-        <label className="flex cursor-pointer select-none items-center justify-between gap-2 rounded-md px-2 py-2 hover:bg-zinc-700/50">
-          <span className="text-xs text-zinc-300">Use Audio Track</span>
+        <div className="my-1 h-px bg-border" />
+        <label className="flex cursor-pointer select-none items-center justify-between gap-2 rounded-md px-2 py-2 hover:bg-surface-hover">
+          <span className="text-xs text-muted-foreground">Use Audio Track</span>
           <input
             type="checkbox"
             checked={useAudioTrack}
             onChange={(event) => onUseAudioTrackChange(event.target.checked)}
-            className="h-3.5 w-3.5 rounded-sm border-zinc-700 bg-zinc-900 text-violet-500 focus:ring-violet-500"
+            className="h-3.5 w-3.5 rounded-sm border-border bg-input text-violet-500 focus:ring-violet-500"
           />
         </label>
-        <div className="px-2 text-[9px] leading-tight text-zinc-500">
+        <div className="px-2 text-[9px] leading-tight text-subtle-foreground">
           {useAudioTrack
             ? "Generates video with soundtrack from the guide video."
             : "Generates soundtrack matching the video."}
@@ -314,7 +314,7 @@ export function VideoMediaInputs({
               className={`flex aspect-square w-full flex-col items-center justify-center rounded-lg border border-dashed text-2xs transition-colors disabled:opacity-40 ${
                 selectedStyle
                   ? "border-violet-400/50 bg-violet-400/10 text-violet-200"
-                  : "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white"
+                  : "border-border text-muted-foreground hover:border-border-strong hover:text-foreground"
               }`}
             >
               <Palette className="mb-0.5 h-4 w-4" />
@@ -602,7 +602,7 @@ function H3MediaInputs({
 
   return (
     <GenPanelSection collapsible={false}>
-      <div className="mb-2 flex items-center justify-between text-2xs font-medium uppercase tracking-wider text-zinc-500">
+      <div className="mb-2 flex items-center justify-between text-2xs font-medium uppercase tracking-wider text-subtle-foreground">
         <span>References</span>
         <span className="normal-case tracking-normal">
           <span title="Images">▧ {referenceState.imageCount}/9</span>{" "}
@@ -680,7 +680,7 @@ function H3MediaInputs({
             disabled
             title="Styles are not available for MiniMax H3 yet"
             aria-label="Styles unavailable for MiniMax H3"
-            className="flex aspect-square w-full flex-col items-center justify-center rounded-lg border border-dashed border-zinc-700 text-2xs text-zinc-400 opacity-40"
+            className="flex aspect-square w-full flex-col items-center justify-center rounded-lg border border-dashed border-border text-2xs text-muted-foreground opacity-40"
           >
             <Palette className="mb-0.5 h-4 w-4" />
             <span className="max-w-10 truncate">Styles</span>
@@ -772,7 +772,7 @@ function H3MediaInputs({
                     extra={
                       entry.type === "video" &&
                       !referenceState.disabledVideoIds.has(item.id) ? (
-                        <label className="mt-1 flex items-center gap-2 border-t border-zinc-700 px-2 pt-2 text-xs text-zinc-300">
+                        <label className="mt-1 flex items-center gap-2 border-t border-border px-2 pt-2 text-xs text-muted-foreground">
                           <span>Use Audio Track</span>
                           <input
                             type="checkbox"
@@ -810,7 +810,7 @@ function H3MediaInputs({
           })}
         </div>
       </div>
-      <p className="mt-2 text-2xs text-zinc-500">
+      <p className="mt-2 text-2xs text-subtle-foreground">
         Reference videos and audio should be 2–15 seconds each, with no more
         than 15 seconds total. Use Trim before generating.
       </p>

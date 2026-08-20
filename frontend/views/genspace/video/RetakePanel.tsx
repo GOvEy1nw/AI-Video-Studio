@@ -267,14 +267,14 @@ export function RetakePanel({
 
   return (
     <div
-      className={`bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden flex flex-col ${fillHeight ? "h-full min-h-0" : ""}`}
+      className={`flex flex-col overflow-hidden rounded-2xl border border-border bg-card ${fillHeight ? "h-full min-h-0" : ""}`}
     >
-      <div className="flex items-center justify-between px-4 py-2 border-b border-zinc-800 shrink-0">
+      <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-2">
         <div className="flex items-center gap-2">
           <Film className="h-4 w-4 text-blue-400" />
-          <span className="text-sm font-semibold text-white">Retake</span>
+          <span className="text-sm font-semibold text-foreground">Retake</span>
           {videoPath && (
-            <span className="text-xs text-zinc-500 truncate max-w-[240px]">
+            <span className="max-w-[240px] truncate text-xs text-subtle-foreground">
               {videoPath.split(/[/\\]/).pop()}
             </span>
           )}
@@ -283,14 +283,14 @@ export function RetakePanel({
           <div className="flex items-center gap-2">
             <button
               onClick={handleClear}
-              className="p-1.5 rounded-md hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors"
+              className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
               title="Clear video"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </button>
             <button
               onClick={handleBrowse}
-              className="p-1.5 rounded-md hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors"
+              className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
               title="Replace video"
             >
               <RefreshCw className="h-3.5 w-3.5" />
@@ -334,10 +334,10 @@ export function RetakePanel({
           </div>
 
           <div className="shrink-0">
-            <div className="flex items-center justify-center gap-3 px-4 py-2 bg-zinc-900 border-b border-zinc-800">
+            <div className="flex items-center justify-center gap-3 border-b border-border bg-surface-raised px-4 py-2">
               <button
                 onClick={togglePlay}
-                className="p-1 rounded-sm hover:bg-zinc-800 text-white transition-colors"
+                className="rounded-sm p-1 text-foreground transition-colors hover:bg-surface-hover"
               >
                 {isPlaying ? (
                   <Pause className="h-4 w-4" />
@@ -345,7 +345,7 @@ export function RetakePanel({
                   <Play className="h-4 w-4" />
                 )}
               </button>
-              <span className="text-xs font-mono text-zinc-400">
+              <span className="text-xs font-mono text-muted-foreground">
                 {formatTrimTimecode(currentTime)} /{" "}
                 {formatTrimTimecode(videoDuration)}
               </span>

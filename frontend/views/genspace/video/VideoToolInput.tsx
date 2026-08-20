@@ -131,7 +131,7 @@ export function VideoToolInput({
   );
 
   return (
-    <div className="flex flex-col overflow-hidden bg-zinc-900">
+    <div className="flex flex-col overflow-hidden bg-card">
       <ReframePanel
         key={item?.id ?? "empty"}
         initialVideoUrl={item?.url ?? null}

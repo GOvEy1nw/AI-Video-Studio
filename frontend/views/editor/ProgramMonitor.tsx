@@ -234,8 +234,8 @@ export function ProgramMonitor({
     >
       {/* Header (only when split view) */}
       {showSourceMonitor && (
-        <div className="h-7 bg-zinc-900 border-b border-zinc-800 flex items-center px-3 shrink-0">
-          <span className="text-[11px] font-semibold text-zinc-400 tracking-wide">
+        <div className="h-7 bg-surface border-b border-border flex items-center px-3 shrink-0">
+          <span className="text-[11px] font-semibold text-muted-foreground tracking-wide">
             Timeline Viewer
           </span>
         </div>
@@ -280,11 +280,11 @@ export function ProgramMonitor({
         {clips.length === 0 ? (
           <div className="w-full h-full flex items-center justify-center">
             <div className="text-center">
-              <div className="w-48 h-28 border border-dashed text-2xs border-zinc-700 rounded-lg flex flex-col items-center justify-center mb-4 mx-auto">
-                <Layers className="h-8 w-8 text-zinc-600 mb-2" />
-                <p className="text-zinc-500 text-xs">Drop clips here</p>
+              <div className="w-48 h-28 border border-dashed text-2xs border-border rounded-lg flex flex-col items-center justify-center mb-4 mx-auto">
+                <Layers className="h-8 w-8 text-subtle-foreground mb-2" />
+                <p className="text-subtle-foreground text-xs">Drop clips here</p>
               </div>
-              <p className="text-zinc-600 text-xs">
+              <p className="text-subtle-foreground text-xs">
                 Click assets or drag them to the timeline
               </p>
             </div>
@@ -563,13 +563,13 @@ export function ProgramMonitor({
                           </div>
                         ) : !isPlaying ? (
                           <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                            <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center mx-auto mb-3">
-                              <Video className="h-8 w-8 text-zinc-600" />
+                            <div className="w-16 h-16 rounded-full bg-surface-raised flex items-center justify-center mx-auto mb-3">
+                              <Video className="h-8 w-8 text-subtle-foreground" />
                             </div>
-                            <p className="text-zinc-500 text-sm">
+                            <p className="text-subtle-foreground text-sm">
                               No clip at playhead
                             </p>
-                            <p className="text-zinc-600 text-xs mt-1">
+                            <p className="text-subtle-foreground text-xs mt-1">
                               Move playhead over a clip to preview
                             </p>
                           </div>
@@ -880,7 +880,7 @@ export function ProgramMonitor({
 
       {/* Program monitor mini scrub bar with IN/OUT markers */}
       {clips.length > 0 && (
-        <div className="bg-zinc-900 border-t border-zinc-800 shrink-0 relative px-2 py-1">
+        <div className="bg-surface border-t border-border shrink-0 relative px-2 py-1">
           <div
             id="program-scrub-bar"
             className="relative h-5 cursor-pointer group"
@@ -910,10 +910,10 @@ export function ProgramMonitor({
             }}
           >
             {/* Base track */}
-            <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1 bg-zinc-700 rounded-full" />
+            <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1 bg-surface-hover rounded-full" />
             {/* Progress fill */}
             <div
-              className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-zinc-500 rounded-full"
+              className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-muted-foreground rounded-full"
               style={{
                 width:
                   totalDuration > 0
@@ -1007,7 +1007,7 @@ export function ProgramMonitor({
               <span className="text-[9px] font-mono text-blue-400/80">
                 {inPoint !== null ? `IN ${formatTime(inPoint)}` : ""}
               </span>
-              <span className="text-[9px] font-mono text-zinc-500">
+              <span className="text-[9px] font-mono text-subtle-foreground">
                 {inPoint !== null && outPoint !== null
                   ? `Duration: ${formatTime(outPoint - inPoint)}`
                   : ""}
@@ -1021,7 +1021,7 @@ export function ProgramMonitor({
       )}
 
       {/* Status bar: timecode | Fit | transport controls | resolution | duration */}
-      <div className="h-8 bg-zinc-950 border-t border-zinc-800 flex items-center px-3 shrink-0 gap-2">
+      <div className="h-8 bg-surface border-t border-border flex items-center px-3 shrink-0 gap-2">
         {/* Left: current timecode */}
         <span className="text-[12px] font-mono font-medium text-amber-400 tabular-nums tracking-tight select-none shrink-0">
           {formatTime(currentTime)}
@@ -1037,8 +1037,8 @@ export function ProgramMonitor({
             }}
             className={`h-6 px-2 rounded text-[11px] font-medium tabular-nums flex items-center gap-1 transition-colors border ${
               previewZoomOpen
-                ? "bg-zinc-700 text-white border-zinc-600"
-                : "bg-zinc-900 text-zinc-400 hover:text-zinc-200 border-zinc-700 hover:border-zinc-600"
+                ? "bg-surface-hover text-foreground border-border-strong"
+                : "bg-surface text-muted-foreground hover:text-foreground border-border hover:border-border-strong"
             }`}
           >
             {previewZoom === "fit" ? "Fit" : `${previewZoom}%`}
@@ -1049,7 +1049,7 @@ export function ProgramMonitor({
               anchorRef={previewZoomTriggerRef}
               placement="top-start"
               role="menu"
-              className="min-w-[100px] overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-900 py-1 shadow-2xl"
+              className="min-w-[100px] overflow-y-auto rounded-lg border border-border bg-surface py-1 shadow-2xl"
             >
               {[
                 { label: "Fit", value: "fit" as const },
@@ -1072,7 +1072,7 @@ export function ProgramMonitor({
                   className={`w-full text-left px-3 py-1.5 text-[11px] flex items-center gap-2 transition-colors ${
                     previewZoom === opt.value
                       ? "text-blue-300 bg-blue-600/20"
-                      : "text-zinc-300 hover:bg-zinc-800"
+                      : "text-muted-foreground hover:bg-surface-raised"
                   }`}
                 >
                   {previewZoom === opt.value && (
@@ -1097,7 +1097,7 @@ export function ProgramMonitor({
             <Button
               variant="ghost"
               size="icon"
-              className={`h-6 w-6 ${inPoint !== null ? "text-yellow-400" : "text-zinc-500"}`}
+              className={`h-6 w-6 ${inPoint !== null ? "text-yellow-400" : "text-subtle-foreground"}`}
               onClick={() =>
                 setInPoint((prev) =>
                   prev !== null && Math.abs(prev - currentTime) < 0.01
@@ -1122,7 +1122,7 @@ export function ProgramMonitor({
               </svg>
             </Button>
           </Tooltip>
-          <div className="w-px h-3 bg-zinc-700" />
+          <div className="w-px h-3 bg-border" />
           {/* Go to In */}
           <Tooltip
             content={tooltipLabel(
@@ -1134,7 +1134,7 @@ export function ProgramMonitor({
             <Button
               variant="ghost"
               size="icon"
-              className={`h-6 w-6 ${inPoint !== null ? "text-zinc-400" : "text-zinc-500"}`}
+              className={`h-6 w-6 ${inPoint !== null ? "text-muted-foreground" : "text-subtle-foreground"}`}
               onClick={() => {
                 const target =
                   inPoint ??
@@ -1173,7 +1173,7 @@ export function ProgramMonitor({
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 text-zinc-500"
+              className="h-6 w-6 text-subtle-foreground"
               onClick={() => {
                 setShuttleSpeed(0);
                 setIsPlaying(false);
@@ -1205,7 +1205,7 @@ export function ProgramMonitor({
                 setShuttleSpeed(0);
                 setIsPlaying(!isPlaying);
               }}
-              className="h-6 w-6 text-zinc-400"
+              className="h-6 w-6 text-muted-foreground"
             >
               {isPlaying ? (
                 <Pause className="h-3 w-3" />
@@ -1225,7 +1225,7 @@ export function ProgramMonitor({
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 text-zinc-500"
+              className="h-6 w-6 text-subtle-foreground"
               onClick={() => {
                 setShuttleSpeed(0);
                 setIsPlaying(false);
@@ -1246,7 +1246,7 @@ export function ProgramMonitor({
             <Button
               variant="ghost"
               size="icon"
-              className={`h-6 w-6 ${outPoint !== null ? "text-zinc-400" : "text-zinc-500"}`}
+              className={`h-6 w-6 ${outPoint !== null ? "text-muted-foreground" : "text-subtle-foreground"}`}
               onClick={() => {
                 const target =
                   outPoint ??
@@ -1274,7 +1274,7 @@ export function ProgramMonitor({
               </svg>
             </Button>
           </Tooltip>
-          <div className="w-px h-3 bg-zinc-700" />
+          <div className="w-px h-3 bg-border" />
           {/* Set Out */}
           <Tooltip
             content={`${outPoint !== null ? `Out: ${formatTime(outPoint)} — ` : ""}${tooltipLabel("Set Out point", getShortcutLabel(kbLayout, "mark.setOut"))}`}
@@ -1283,7 +1283,7 @@ export function ProgramMonitor({
             <Button
               variant="ghost"
               size="icon"
-              className={`h-6 w-6 ${outPoint !== null ? "text-yellow-400" : "text-zinc-500"}`}
+              className={`h-6 w-6 ${outPoint !== null ? "text-yellow-400" : "text-subtle-foreground"}`}
               onClick={() =>
                 setOutPoint((prev) =>
                   prev !== null && Math.abs(prev - currentTime) < 0.01
@@ -1313,7 +1313,7 @@ export function ProgramMonitor({
             <Button
               variant="ghost"
               size="icon"
-              className={`h-6 w-6 ${playingInOut ? "text-yellow-400 bg-yellow-400/10" : "text-zinc-500"} ${inPoint === null || outPoint === null ? "opacity-30 cursor-not-allowed" : ""}`}
+              className={`h-6 w-6 ${playingInOut ? "text-yellow-400 bg-yellow-400/10" : "text-subtle-foreground"} ${inPoint === null || outPoint === null ? "opacity-30 cursor-not-allowed" : ""}`}
               disabled={inPoint === null || outPoint === null}
               onClick={() => {
                 if (inPoint === null || outPoint === null) return;
@@ -1342,10 +1342,10 @@ export function ProgramMonitor({
             }}
             className={`h-6 px-2 rounded text-[11px] font-medium flex items-center gap-1 transition-colors border ${
               playbackResolution === 1
-                ? "bg-zinc-900 text-green-400 border-zinc-700 hover:border-zinc-600"
+                ? "bg-surface text-green-400 border-border hover:border-border-strong"
                 : playbackResolution === 0.5
-                  ? "bg-zinc-900 text-yellow-400 border-zinc-700 hover:border-zinc-600"
-                  : "bg-zinc-900 text-orange-400 border-zinc-700 hover:border-zinc-600"
+                  ? "bg-surface text-yellow-400 border-border hover:border-border-strong"
+                  : "bg-surface text-orange-400 border-border hover:border-border-strong"
             }`}
             title="Playback resolution"
           >
@@ -1361,7 +1361,7 @@ export function ProgramMonitor({
               anchorRef={playbackResolutionTriggerRef}
               placement="top-end"
               role="menu"
-              className="min-w-[120px] overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-900 py-1 shadow-2xl"
+              className="min-w-[120px] overflow-y-auto rounded-lg border border-border bg-surface py-1 shadow-2xl"
             >
               {(
                 [
@@ -1391,7 +1391,7 @@ export function ProgramMonitor({
                   className={`w-full text-left px-3 py-1.5 text-[11px] flex flex-col gap-0 transition-colors ${
                     playbackResolution === opt.value
                       ? "text-blue-300 bg-blue-600/20"
-                      : "text-zinc-300 hover:bg-zinc-800"
+                      : "text-muted-foreground hover:bg-surface-raised"
                   }`}
                 >
                   <div className="flex items-center gap-2">
@@ -1405,7 +1405,7 @@ export function ProgramMonitor({
                     </span>
                   </div>
                   <span
-                    className={`text-[10px] ${playbackResolution === opt.value ? "text-blue-400/60" : "text-zinc-500"} ml-5`}
+                    className={`text-[10px] ${playbackResolution === opt.value ? "text-blue-400/60" : "text-subtle-foreground"} ml-5`}
                   >
                     {opt.desc}
                   </span>
@@ -1432,7 +1432,7 @@ export function ProgramMonitor({
         >
           <button
             onClick={toggleFullscreen}
-            className="p-1 rounded-sm hover:bg-zinc-800 transition-colors text-zinc-500 hover:text-zinc-300"
+            className="p-1 rounded-sm hover:bg-surface-raised transition-colors text-subtle-foreground hover:text-muted-foreground"
           >
             {isFullscreen ? (
               <Shrink className="h-3.5 w-3.5" />
@@ -1443,7 +1443,7 @@ export function ProgramMonitor({
         </Tooltip>
 
         {/* Right: total duration */}
-        <span className="text-[12px] font-mono font-medium text-zinc-400 tabular-nums tracking-tight select-none shrink-0 text-right">
+        <span className="text-[12px] font-mono font-medium text-muted-foreground tabular-nums tracking-tight select-none shrink-0 text-right">
           {formatTime(totalDuration)}
         </span>
       </div>

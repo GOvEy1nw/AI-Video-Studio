@@ -287,7 +287,7 @@ export function TimelineTrackCanvas(props: TimelineTrackCanvasProps) {
           }
         />
         {/* Spacer matching the add-track button bar height */}
-        <div className="shrink-0 h-7 border-b border-zinc-700/50" />
+      <div className="shrink-0 h-7 border-b border-border/50" />
         <div
           ref={trackContainerRef}
           className="flex-1 overflow-auto select-none"
@@ -479,7 +479,7 @@ export function TimelineTrackCanvas(props: TimelineTrackCanvasProps) {
                 {/* Divider between video and audio sections */}
                 {displayRow === audioDividerDisplayRow && (
                   <div
-                    className="bg-zinc-700/60 cursor-row-resize hover:bg-blue-500/30 transition-colors"
+        className="bg-surface-hover/60 cursor-row-resize hover:bg-blue-500/30 transition-colors"
                     style={{ height: DIVIDER_H }}
                     onMouseDown={(e) => {
                       e.preventDefault();
@@ -511,7 +511,7 @@ export function TimelineTrackCanvas(props: TimelineTrackCanvasProps) {
                 )}
                 <div
                   data-track-bg="true"
-                  className={`border-b border-zinc-800 ${
+        className={`border-b border-border ${
                     track.type === "subtitle"
                       ? "bg-amber-950/15"
                       : track.kind === "audio"
@@ -519,8 +519,8 @@ export function TimelineTrackCanvas(props: TimelineTrackCanvasProps) {
                           ? "bg-emerald-950/20"
                           : "bg-emerald-950/10"
                         : displayRow % 2 === 0
-                          ? "bg-zinc-900/50"
-                          : "bg-zinc-950"
+            ? "bg-surface/50"
+            : "bg-surface"
                   } ${track.locked ? "opacity-50" : ""}`}
                   style={{
                     height:

@@ -288,26 +288,26 @@ export function ImportTimelineModal({
   const allFound = foundCount === totalCount && totalCount > 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs">
-      <div className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl w-[680px] max-h-[85vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/70 backdrop-blur-xs">
+      <div className="bg-card border border-border rounded-xl shadow-2xl w-[680px] max-h-[85vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-blue-600/20 flex items-center justify-center">
               <Upload className="h-4 w-4 text-blue-400" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-white">
+              <h2 className="text-base font-semibold text-foreground">
                 Import Timeline
               </h2>
-              <p className="text-[11px] text-zinc-500">
+              <p className="text-[11px] text-subtle-foreground">
                 Premiere Pro XML, DaVinci Resolve XML, Final Cut Pro XML/FCPXML
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-surface-raised text-subtle-foreground hover:text-foreground transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
@@ -320,15 +320,15 @@ export function ImportTimelineModal({
             <div className="space-y-6">
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="border border-dashed text-2xs border-zinc-700 hover:border-blue-500/50 rounded-xl p-10 text-center cursor-pointer transition-colors group"
+                className="border border-dashed text-2xs border-border hover:border-blue-500/50 rounded-xl p-10 text-center cursor-pointer transition-colors group"
               >
-                <div className="w-14 h-14 rounded-full bg-zinc-800 group-hover:bg-blue-900/30 flex items-center justify-center mx-auto mb-4 transition-colors">
-                  <FileText className="h-7 w-7 text-zinc-500 group-hover:text-blue-400 transition-colors" />
+                <div className="w-14 h-14 rounded-full bg-surface-raised group-hover:bg-blue-900/30 flex items-center justify-center mx-auto mb-4 transition-colors">
+                  <FileText className="h-7 w-7 text-subtle-foreground group-hover:text-blue-400 transition-colors" />
                 </div>
-                <p className="text-sm text-zinc-300 font-medium mb-1">
+                <p className="text-sm text-foreground font-medium mb-1">
                   Click to select timeline file
                 </p>
-                <p className="text-xs text-zinc-600">
+                <p className="text-xs text-subtle-foreground">
                   Supports .xml (FCP 7 XML), .fcpxml
                 </p>
               </div>
@@ -341,11 +341,11 @@ export function ImportTimelineModal({
                 className="hidden"
               />
 
-              <div className="bg-zinc-800/50 rounded-lg p-4 space-y-2">
-                <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+              <div className="bg-surface-raised/50 rounded-lg p-4 space-y-2">
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   How to export from your NLE:
                 </h4>
-                <div className="space-y-1.5 text-[11px] text-zinc-500">
+                <div className="space-y-1.5 text-[11px] text-subtle-foreground">
                   <p>
                     <span className="text-blue-400 font-medium">
                       Premiere Pro:
@@ -364,7 +364,7 @@ export function ImportTimelineModal({
                     </span>{" "}
                     File → Export XML
                   </p>
-                  <p className="text-zinc-600 pt-1 border-t border-zinc-700/50 mt-2">
+                  <p className="text-subtle-foreground pt-1 border-t border-border/50 mt-2">
                     AAF files are binary and cannot be imported directly. Please
                     export as XML instead.
                   </p>
@@ -377,7 +377,7 @@ export function ImportTimelineModal({
           {step === "parsing" && (
             <div className="flex flex-col items-center justify-center py-16">
               <Loader2 className="h-8 w-8 text-blue-400 animate-spin mb-4" />
-              <p className="text-sm text-zinc-400">Parsing timeline...</p>
+              <p className="text-sm text-muted-foreground">Parsing timeline...</p>
             </div>
           )}
 
@@ -402,7 +402,7 @@ export function ImportTimelineModal({
                   setStep("select");
                   setError("");
                 }}
-                className="px-4 py-2 rounded-lg bg-zinc-800 text-zinc-300 text-sm hover:bg-zinc-700 transition-colors"
+                className="px-4 py-2 rounded-lg bg-surface-raised text-foreground text-sm hover:bg-surface-hover transition-colors"
               >
                 Try another file
               </button>
@@ -416,7 +416,7 @@ export function ImportTimelineModal({
               <div>
                 <button
                   onClick={() => setExpandedInfo(!expandedInfo)}
-                  className="flex items-center gap-2 text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2 hover:text-zinc-300"
+                  className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 hover:text-foreground"
                 >
                   {expandedInfo ? (
                     <ChevronDown className="h-3.5 w-3.5" />
@@ -426,16 +426,16 @@ export function ImportTimelineModal({
                   Timeline Info
                 </button>
                 {expandedInfo && (
-                  <div className="bg-zinc-800/50 rounded-lg p-3 grid grid-cols-2 gap-x-6 gap-y-1.5 text-[11px]">
+                  <div className="bg-surface-raised/50 rounded-lg p-3 grid grid-cols-2 gap-x-6 gap-y-1.5 text-[11px]">
                     <div className="flex justify-between">
-                      <span className="text-zinc-500">Name:</span>
-                      <span className="text-white font-medium">
+                      <span className="text-subtle-foreground">Name:</span>
+                      <span className="text-foreground font-medium">
                         {parsedTimeline.name}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-zinc-500">Format:</span>
-                      <span className="text-zinc-300">
+                      <span className="text-subtle-foreground">Format:</span>
+                      <span className="text-foreground">
                         {parsedTimeline.format === "fcp7xml"
                           ? "FCP 7 XML"
                           : parsedTimeline.format === "fcpxml"
@@ -444,40 +444,40 @@ export function ImportTimelineModal({
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-zinc-500">FPS:</span>
-                      <span className="text-zinc-300">
+                      <span className="text-subtle-foreground">FPS:</span>
+                      <span className="text-foreground">
                         {parsedTimeline.fps.toFixed(2)}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-zinc-500">Duration:</span>
-                      <span className="text-zinc-300">
+                      <span className="text-subtle-foreground">Duration:</span>
+                      <span className="text-foreground">
                         {parsedTimeline.duration.toFixed(1)}s
                       </span>
                     </div>
                     {parsedTimeline.width && parsedTimeline.height && (
                       <div className="flex justify-between">
-                        <span className="text-zinc-500">Resolution:</span>
-                        <span className="text-zinc-300">
+                        <span className="text-subtle-foreground">Resolution:</span>
+                        <span className="text-foreground">
                           {parsedTimeline.width}x{parsedTimeline.height}
                         </span>
                       </div>
                     )}
                     <div className="flex justify-between">
-                      <span className="text-zinc-500">Clips:</span>
-                      <span className="text-zinc-300">
+                      <span className="text-subtle-foreground">Clips:</span>
+                      <span className="text-foreground">
                         {parsedTimeline.clips.length}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-zinc-500">Video Tracks:</span>
-                      <span className="text-zinc-300">
+                      <span className="text-subtle-foreground">Video Tracks:</span>
+                      <span className="text-foreground">
                         {parsedTimeline.videoTrackCount}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-zinc-500">Audio Tracks:</span>
-                      <span className="text-zinc-300">
+                      <span className="text-subtle-foreground">Audio Tracks:</span>
+                      <span className="text-foreground">
                         {parsedTimeline.audioTrackCount}
                       </span>
                     </div>
@@ -490,7 +490,7 @@ export function ImportTimelineModal({
                 <div className="flex items-center justify-between mb-2">
                   <button
                     onClick={() => setExpandedMedia(!expandedMedia)}
-                    className="flex items-center gap-2 text-xs font-semibold text-zinc-400 uppercase tracking-wider hover:text-zinc-300"
+                    className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground"
                   >
                     {expandedMedia ? (
                       <ChevronDown className="h-3.5 w-3.5" />
@@ -503,7 +503,7 @@ export function ImportTimelineModal({
                     <button
                       onClick={handleSearchDirectory}
                       disabled={isSearching || allFound}
-                      className="px-2.5 py-1 rounded-md bg-zinc-800 text-zinc-400 text-[10px] hover:bg-zinc-700 hover:text-zinc-300 flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      className="px-2.5 py-1 rounded-md bg-surface-raised text-muted-foreground text-[10px] hover:bg-surface-hover hover:text-foreground flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                       title="Search a folder for missing media"
                     >
                       {isSearching ? (
@@ -516,7 +516,7 @@ export function ImportTimelineModal({
                     <button
                       onClick={handleRecheckAll}
                       disabled={isChecking}
-                      className="px-2.5 py-1 rounded-md bg-zinc-800 text-zinc-400 text-[10px] hover:bg-zinc-700 hover:text-zinc-300 flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      className="px-2.5 py-1 rounded-md bg-surface-raised text-muted-foreground text-[10px] hover:bg-surface-hover hover:text-foreground flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                       title="Recheck all file paths"
                     >
                       {isChecking ? (
@@ -531,7 +531,7 @@ export function ImportTimelineModal({
 
                 {/* Status bar */}
                 <div className="mb-2">
-                  <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-surface-raised rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all duration-300 ${allFound ? "bg-green-500" : foundCount > 0 ? "bg-amber-500" : "bg-red-500"}`}
                       style={{
@@ -542,7 +542,7 @@ export function ImportTimelineModal({
                 </div>
 
                 {expandedMedia && (
-                  <div className="space-y-1 max-h-[300px] overflow-auto rounded-lg border border-zinc-800">
+                  <div className="space-y-1 max-h-[300px] overflow-auto rounded-lg border border-border">
                     {mediaRefs.map((ref, i) => {
                       const TypeIcon =
                         ref.type === "video"
@@ -553,7 +553,7 @@ export function ImportTimelineModal({
                       return (
                         <div
                           key={ref.id}
-                          className={`flex items-center gap-2 px-3 py-2 text-[11px] ${i % 2 === 0 ? "bg-zinc-800/30" : "bg-zinc-900/30"}`}
+                          className={`flex items-center gap-2 px-3 py-2 text-[11px] ${i % 2 === 0 ? "bg-surface-raised/30" : "bg-card/30"}`}
                         >
                           <TypeIcon
                             className={`h-3.5 w-3.5 shrink-0 ${
@@ -573,12 +573,12 @@ export function ImportTimelineModal({
                                 <AlertTriangle className="h-3 w-3 text-red-400 shrink-0" />
                               )}
                               <span
-                                className={`truncate font-medium ${ref.found ? "text-zinc-300" : "text-red-300"}`}
+                                className={`truncate font-medium ${ref.found ? "text-foreground" : "text-red-300"}`}
                               >
                                 {ref.name}
                               </span>
                             </div>
-                            <p className="text-[9px] text-zinc-600 truncate mt-0.5">
+                            <p className="text-[9px] text-subtle-foreground truncate mt-0.5">
                               {ref.relinkedPath ||
                                 ref.resolvedPath ||
                                 ref.pathUrl}
@@ -588,7 +588,7 @@ export function ImportTimelineModal({
                           {!ref.found && (
                             <button
                               onClick={() => handleRelinkFile(ref.id)}
-                              className="shrink-0 px-2 py-1 rounded-sm bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-[10px] flex items-center gap-1 transition-colors"
+                              className="shrink-0 px-2 py-1 rounded-sm bg-surface-hover hover:bg-surface-hover text-foreground text-[10px] flex items-center gap-1 transition-colors"
                               title="Relink this file"
                             >
                               <Link2 className="h-3 w-3" />
@@ -600,7 +600,7 @@ export function ImportTimelineModal({
                     })}
 
                     {mediaRefs.length === 0 && (
-                      <div className="p-4 text-center text-xs text-zinc-600">
+                      <div className="p-4 text-center text-xs text-subtle-foreground">
                         No media files referenced in this timeline.
                       </div>
                     )}
@@ -613,8 +613,8 @@ export function ImportTimelineModal({
 
         {/* Footer */}
         {step === "relink" && (
-          <div className="px-6 py-4 border-t border-zinc-800 flex items-center justify-between bg-zinc-900">
-            <div className="text-[11px] text-zinc-500">
+          <div className="px-6 py-4 border-t border-border flex items-center justify-between bg-card">
+            <div className="text-[11px] text-subtle-foreground">
               {!allFound && totalCount > 0 && (
                 <span className="text-amber-400">
                   {totalCount - foundCount} missing file
@@ -630,13 +630,13 @@ export function ImportTimelineModal({
             <div className="flex items-center gap-2">
               <button
                 onClick={onClose}
-                className="px-4 py-2 rounded-lg bg-zinc-800 text-zinc-300 text-sm hover:bg-zinc-700 transition-colors"
+                className="px-4 py-2 rounded-lg bg-surface-raised text-foreground text-sm hover:bg-surface-hover transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmImport}
-                className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-500 transition-colors font-medium flex items-center gap-2"
+                className="px-4 py-2 rounded-lg bg-blue-600 text-primary-foreground text-sm hover:bg-blue-500 transition-colors font-medium flex items-center gap-2"
               >
                 <Upload className="h-3.5 w-3.5" />
                 Import Timeline

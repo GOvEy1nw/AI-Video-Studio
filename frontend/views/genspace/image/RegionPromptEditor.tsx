@@ -124,17 +124,17 @@ function PromptPresetField({
 }) {
   return (
     <label className="block py-1.5">
-      <span className="mb-1 block text-2xs font-semibold uppercase tracking-wide text-zinc-500">
+      <span className="mb-1 block text-2xs font-semibold uppercase tracking-wide text-subtle-foreground">
         {label}
       </span>
-      <div className="flex items-center gap-1.5 rounded-md border border-zinc-700 bg-zinc-900 p-1">
+      <div className="flex items-center gap-1.5 rounded-md border border-border bg-surface-raised p-1">
         <input
           value={value}
           onChange={(event) => onChange(event.target.value)}
           disabled={disabled}
           aria-label={label}
           placeholder={`Describe ${label.toLocaleLowerCase()}...`}
-          className="min-w-0 flex-1 bg-transparent px-1.5 py-0.5 text-xs text-white placeholder:text-zinc-600 focus:outline-hidden disabled:opacity-50"
+          className="min-w-0 flex-1 bg-transparent px-1.5 py-0.5 text-xs text-foreground placeholder:text-subtle-foreground focus:outline-hidden disabled:opacity-50"
         />
         <PresetPromptPicker
           label={label}
@@ -167,7 +167,7 @@ function ColorSwatches({
 
   return (
     <div>
-      <div className="mb-1 flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
+      <div className="mb-1 flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wide text-subtle-foreground">
         <span>{label}</span>
         <span aria-label={`${label} count`}>
           {filledColors.length}/{max}
@@ -210,7 +210,7 @@ function ColorSwatches({
                   className="sr-only"
                 />
                 <span
-                  className="flex h-7 w-7 items-center justify-center rounded-full border border-zinc-600 text-zinc-500 transition-transform hover:scale-105"
+                  className="flex h-7 w-7 items-center justify-center rounded-full border border-border-strong text-subtle-foreground transition-transform hover:scale-105"
                   style={
                     color
                       ? { backgroundColor: color }
@@ -236,7 +236,7 @@ function ColorSwatches({
                   }
                   disabled={disabled}
                   aria-label={`Clear ${accessibleLabel} color ${index + 1}`}
-                  className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full border border-zinc-600 bg-zinc-950 text-zinc-400 hover:text-white disabled:opacity-40"
+                  className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full border border-border-strong bg-surface text-muted-foreground hover:text-foreground disabled:opacity-40"
                 >
                   <X className="h-2.5 w-2.5" />
                 </button>
@@ -500,7 +500,7 @@ export function RegionPromptEditor({
       <GenPanelSection title="Global Prompt" collapsed>
         <div className="space-y-3">
           <label className="block">
-            <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
+            <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-subtle-foreground">
               High-level description
             </span>
             <textarea
@@ -511,11 +511,11 @@ export function RegionPromptEditor({
               disabled={disabled}
               aria-label="High-level description"
               placeholder="Describe the whole image in one or two sentences..."
-              className="h-20 w-full resize-y rounded-lg border border-zinc-800 bg-zinc-950/50 px-3 py-2 text-sm leading-5 text-white placeholder:text-zinc-600 focus:border-sky-500 focus:outline-hidden disabled:opacity-50"
+              className="h-20 w-full resize-y rounded-lg border border-border bg-surface/50 px-3 py-2 text-sm leading-5 text-foreground placeholder:text-subtle-foreground focus:border-sky-500 focus:outline-hidden disabled:opacity-50"
             />
           </label>
           <label className="block">
-            <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
+            <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-subtle-foreground">
               Background
             </span>
             <textarea
@@ -526,19 +526,19 @@ export function RegionPromptEditor({
               disabled={disabled}
               aria-label="Background description"
               placeholder="Describe environment and background..."
-              className="h-16 w-full resize-y rounded-lg border border-zinc-800 bg-zinc-950/50 px-3 py-2 text-xs leading-5 text-white placeholder:text-zinc-600 focus:border-sky-500 focus:outline-hidden disabled:opacity-50"
+              className="h-16 w-full resize-y rounded-lg border border-border bg-surface/50 px-3 py-2 text-xs leading-5 text-foreground placeholder:text-subtle-foreground focus:border-sky-500 focus:outline-hidden disabled:opacity-50"
             />
           </label>
         </div>
       </GenPanelSection>
       <GenPanelSection title="" collapsible={false}>
         <div className="space-y-3">
-          <div className="flex flex-row w-fit mx-auto justify-center mt-2 items-center overflow-hidden rounded-lg gap-2 bg-zinc-800/35 p-2">
+          <div className="flex flex-row w-fit mx-auto justify-center mt-2 items-center overflow-hidden rounded-lg gap-2 bg-surface-raised/35 p-2">
             <button
               type="button"
               onClick={addBox}
               disabled={disabled}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-200 transition-colors hover:border-zinc-500 hover:bg-blue-500 hover:text-white disabled:opacity-40"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-surface-raised px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-border-strong hover:bg-blue-500 hover:text-foreground disabled:opacity-40"
             >
               <Plus className="h-3.5 w-3.5" />
               Add box
@@ -548,7 +548,7 @@ export function RegionPromptEditor({
               onClick={deleteSelected}
               disabled={disabled || !selected}
               aria-label="Delete selected region"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:border-red-500/60 hover:bg-red-500 hover:text-white disabled:opacity-40"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-surface-raised px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-red-500/60 hover:bg-red-500 hover:text-foreground disabled:opacity-40"
             >
               <Trash2 className="h-3.5 w-3.5" />
               Delete
@@ -671,7 +671,7 @@ export function RegionPromptEditor({
                 >
                   {selectedDisplayIndex + 1}
                 </span>
-                <div className="flex min-w-40 flex-1 rounded-md bg-zinc-950 p-0.5">
+                <div className="flex min-w-40 flex-1 rounded-md bg-surface p-0.5">
                   {(["obj", "text"] as const).map((type) => {
                     const active = selected.type === type;
                     return (
@@ -688,7 +688,7 @@ export function RegionPromptEditor({
                         }
                         disabled={disabled}
                         aria-pressed={active}
-                        className="flex-1 rounded px-2 py-1.5 text-[10px] font-medium text-zinc-500 transition-colors hover:text-zinc-300"
+                        className="flex-1 rounded px-2 py-1.5 text-[10px] font-medium text-subtle-foreground transition-colors hover:text-muted-foreground"
                         style={
                           active
                             ? {
@@ -708,7 +708,7 @@ export function RegionPromptEditor({
               {selected.type === "text" ? (
                 <div className="space-y-3">
                   <label className="block">
-                    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
+                    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-subtle-foreground">
                       Text Copy
                     </span>
                     <input
@@ -722,11 +722,11 @@ export function RegionPromptEditor({
                       disabled={disabled}
                       aria-label="Text Copy"
                       placeholder="Text Copy Goes Here..."
-                      className="w-full rounded-lg border border-zinc-800 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:border-sky-500 focus:outline-hidden"
+                      className="w-full rounded-lg border border-border bg-surface/40 px-3 py-2 text-sm text-foreground placeholder:text-subtle-foreground focus:border-sky-500 focus:outline-hidden"
                     />
                   </label>
                   <div>
-                    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
+                    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-subtle-foreground">
                       Font
                     </span>
                     <div className="grid grid-cols-2 gap-2">
@@ -741,7 +741,7 @@ export function RegionPromptEditor({
                         }
                         disabled={disabled}
                         aria-label="Region font preset"
-                        className="min-w-0 rounded-lg border border-zinc-800 bg-black/40 px-2 py-2 text-xs text-white focus:border-sky-500 focus:outline-hidden disabled:opacity-50"
+                        className="min-w-0 rounded-lg border border-border bg-surface/40 px-2 py-2 text-xs text-foreground focus:border-sky-500 focus:outline-hidden disabled:opacity-50"
                       >
                         <option value="">Select font</option>
                         {FONT_OPTIONS.map((font) => (
@@ -763,14 +763,14 @@ export function RegionPromptEditor({
                         disabled={disabled || selectedFontOption !== "custom"}
                         aria-label="Custom region font"
                         placeholder="Custom font..."
-                        className="min-w-0 rounded-lg border border-zinc-800 bg-black/40 px-3 py-2 text-xs text-white placeholder:text-zinc-600 focus:border-sky-500 focus:outline-hidden disabled:opacity-40"
+                        className="min-w-0 rounded-lg border border-border bg-surface/40 px-3 py-2 text-xs text-foreground placeholder:text-subtle-foreground focus:border-sky-500 focus:outline-hidden disabled:opacity-40"
                       />
                     </div>
                   </div>
                 </div>
               ) : (
                 <label className="block">
-                  <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
+                  <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-subtle-foreground">
                     Region description
                   </span>
                   <textarea
@@ -784,7 +784,7 @@ export function RegionPromptEditor({
                     disabled={disabled}
                     aria-label="Region description"
                     placeholder="Describe subject, appearance, and action..."
-                    className="h-20 w-full resize-y rounded-lg border border-zinc-800 bg-black/40 px-3 py-2 text-sm leading-5 text-white placeholder:text-zinc-600 focus:border-sky-500 focus:outline-hidden"
+                    className="h-20 w-full resize-y rounded-lg border border-border bg-surface/40 px-3 py-2 text-sm leading-5 text-foreground placeholder:text-subtle-foreground focus:border-sky-500 focus:outline-hidden"
                   />
                 </label>
               )}
@@ -805,7 +805,7 @@ export function RegionPromptEditor({
               </div>
             </div>
           ) : (
-            <p className="rounded-lg border border-dashed text-2xs border-zinc-800 px-3 py-4 text-center text-zinc-600">
+            <p className="rounded-lg border border-dashed text-2xs border-border px-3 py-4 text-center text-subtle-foreground">
               Add or select a box to describe a region.
             </p>
           )}
@@ -814,7 +814,7 @@ export function RegionPromptEditor({
       <GenPanelSection title="Style" collapsed={true} borderBottom={false}>
         <div className="space-y-3">
           <div>
-            <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
+            <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-subtle-foreground">
               Medium
             </span>
             <div className="grid grid-cols-2 gap-2">
@@ -828,7 +828,7 @@ export function RegionPromptEditor({
                 }
                 disabled={disabled}
                 aria-label="Region medium preset"
-                className="min-w-0 rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-xs text-white focus:border-sky-500 focus:outline-hidden disabled:opacity-50"
+                className="min-w-0 rounded-md border border-border bg-surface-raised px-2 py-1.5 text-xs text-foreground focus:border-sky-500 focus:outline-hidden disabled:opacity-50"
               >
                 {MEDIUM_OPTIONS.map((medium) => (
                   <option key={medium.value} value={medium.value}>
@@ -851,7 +851,7 @@ export function RegionPromptEditor({
                 disabled={disabled || mediumOption !== "custom"}
                 aria-label="Custom region medium"
                 placeholder="Custom medium..."
-                className="min-w-0 rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-xs text-white placeholder:text-zinc-600 focus:border-sky-500 focus:outline-hidden disabled:opacity-40"
+                className="min-w-0 rounded-md border border-border bg-surface-raised px-2 py-1.5 text-xs text-foreground placeholder:text-subtle-foreground focus:border-sky-500 focus:outline-hidden disabled:opacity-40"
               />
             </div>
           </div>
@@ -859,7 +859,7 @@ export function RegionPromptEditor({
             <div className="grid grid-cols-2 items-center justify-start gap-2">
               {isPhotographMedium(value.style.medium) ? (
                 <div>
-                  <span className="mb-1 block text-2xs font-semibold uppercase tracking-wide text-zinc-500">
+                  <span className="mb-1 block text-2xs font-semibold uppercase tracking-wide text-subtle-foreground">
                     Photo
                   </span>
                   <FramingControl

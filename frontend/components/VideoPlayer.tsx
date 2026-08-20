@@ -265,11 +265,11 @@ export function VideoPlayer({ videoUrl, videoPath, videoResolution, isGenerating
 
   return (
     <div className="w-full h-full flex flex-col">
-      <label className="block text-[12px] font-semibold text-zinc-500 mb-2 uppercase leading-4">
+      <label className="block text-[12px] font-semibold text-subtle-foreground mb-2 uppercase leading-4">
         Result
       </label>
       
-      <div className="flex-1 bg-zinc-900 rounded-lg border border-zinc-800 overflow-hidden flex items-center justify-center relative min-h-[400px]">
+      <div className="flex-1 bg-card rounded-lg border border-border overflow-hidden flex items-center justify-center relative min-h-[400px]">
         {isGenerating ? (
           <div className="flex flex-col items-center justify-center p-8 text-center">
             <RefreshCw className="h-12 w-12 text-primary animate-spin mb-4" />
@@ -442,11 +442,11 @@ export function VideoPlayer({ videoUrl, videoPath, videoResolution, isGenerating
             </div>
             
             {/* Video controls bar */}
-            <div className="bg-zinc-900 border-t border-zinc-800 px-4 py-3">
+      <div className="bg-card border-t border-border px-4 py-3">
               {/* Progress bar / Playhead */}
               <div 
                 ref={progressRef}
-                className="w-full h-1.5 bg-zinc-700 rounded-full cursor-pointer mb-3 group relative"
+          className="w-full h-1.5 bg-surface-hover rounded-full cursor-pointer mb-3 group relative"
                 onClick={handleProgressClick}
                 onMouseDown={handleMouseDown}
               >
@@ -468,7 +468,7 @@ export function VideoPlayer({ videoUrl, videoPath, videoResolution, isGenerating
                     size="icon"
                     variant="ghost"
                     onClick={togglePlayPause}
-                    className="h-8 w-8 text-white hover:bg-zinc-800"
+            className="h-8 w-8 text-foreground hover:bg-surface-raised"
                   >
                     {isPlaying ? (
                       <Pause className="h-4 w-4" />
@@ -478,7 +478,7 @@ export function VideoPlayer({ videoUrl, videoPath, videoResolution, isGenerating
                   </Button>
                   
                   {/* Time display */}
-                  <span className="text-xs text-zinc-400 font-mono min-w-[80px]">
+          <span className="text-xs text-muted-foreground font-mono min-w-[80px]">
                     {formatTime(currentTime)} / {formatTime(duration)}
                   </span>
                 </div>
@@ -489,7 +489,7 @@ export function VideoPlayer({ videoUrl, videoPath, videoResolution, isGenerating
                     size="icon"
                     variant="ghost"
                     onClick={toggleMute}
-                    className={`h-8 w-8 hover:bg-zinc-800 ${isMuted ? 'text-zinc-500' : 'text-zinc-400 hover:text-white'}`}
+            className={`h-8 w-8 hover:bg-surface-raised ${isMuted ? 'text-subtle-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                     title={isMuted ? 'Unmute' : 'Mute'}
                   >
                     {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
@@ -500,7 +500,7 @@ export function VideoPlayer({ videoUrl, videoPath, videoResolution, isGenerating
                     size="icon"
                     variant="ghost"
                     onClick={toggleLoop}
-                    className={`h-8 w-8 hover:bg-zinc-800 ${isLooping ? 'text-blue-400' : 'text-zinc-500'}`}
+            className={`h-8 w-8 hover:bg-surface-raised ${isLooping ? 'text-blue-400' : 'text-subtle-foreground'}`}
                     title={isLooping ? 'Loop: On' : 'Loop: Off'}
                   >
                     <RotateCcw className="h-4 w-4" />
@@ -511,7 +511,7 @@ export function VideoPlayer({ videoUrl, videoPath, videoResolution, isGenerating
                     size="icon"
                     variant="ghost"
                     onClick={handleDownload}
-                    className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-surface-raised"
                     title="Download video"
                   >
                     <Download className="h-4 w-4" />
@@ -522,9 +522,9 @@ export function VideoPlayer({ videoUrl, videoPath, videoResolution, isGenerating
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center text-zinc-500">
-            <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center mb-4">
-              <Play className="h-8 w-8 text-zinc-400" />
+        <div className="flex flex-col items-center justify-center text-subtle-foreground">
+          <div className="w-16 h-16 rounded-full bg-surface-raised flex items-center justify-center mb-4">
+            <Play className="h-8 w-8 text-muted-foreground" />
             </div>
             <p className="text-sm">Generated video will appear here</p>
           </div>

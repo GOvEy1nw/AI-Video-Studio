@@ -194,7 +194,7 @@ export function LeftPanel(props: LeftPanelProps) {
 
   return (
     <div
-      className="shrink-0 border-r border-zinc-800 flex flex-col bg-background"
+      className="shrink-0 border-r border-border flex flex-col bg-background"
       style={{ width: leftPanelWidth }}
     >
       {/* Assets Section */}
@@ -304,14 +304,14 @@ export function LeftPanel(props: LeftPanelProps) {
               }
               emptyContent={
                 <div className="py-8 text-center">
-                  <p className="text-sm text-zinc-500">No assets yet</p>
-                  <p className="mt-1 text-xs text-zinc-600">
+                  <p className="text-sm text-subtle-foreground">No assets yet</p>
+                  <p className="mt-1 text-xs text-subtle-foreground">
                     Generate in Gen Space or import
                   </p>
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="mt-3 rounded-lg bg-zinc-800 px-3 py-1.5 text-xs text-zinc-300 transition-colors hover:bg-zinc-700"
+                    className="mt-3 rounded-lg bg-surface-raised px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-surface-hover"
                   >
                     Import Media
                   </button>
@@ -331,8 +331,8 @@ export function LeftPanel(props: LeftPanelProps) {
           <div className="flex min-h-0 flex-1 flex-col p-4">
             <div className="mb-2 flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-semibold text-white">Takes</h3>
-                <p className="text-2xs text-zinc-500">
+                <h3 className="text-sm font-semibold text-foreground">Takes</h3>
+                <p className="text-2xs text-subtle-foreground">
                   {takesAsset.takes.length} takes
                 </p>
               </div>
@@ -345,7 +345,7 @@ export function LeftPanel(props: LeftPanelProps) {
                         ? handleCancelRegeneration()
                         : handleRegenerate(takesAsset.id)
                     }
-                    className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
+                    className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-surface-raised hover:text-foreground"
                     aria-label={
                       isRegenerating && regeneratingAssetId === takesAsset.id
                         ? "Cancel regeneration"
@@ -362,7 +362,7 @@ export function LeftPanel(props: LeftPanelProps) {
                 <button
                   type="button"
                   onClick={() => setTakesViewAssetId(null)}
-                  className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
+                  className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-surface-raised hover:text-foreground"
                   aria-label="Back to assets"
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -384,7 +384,7 @@ export function LeftPanel(props: LeftPanelProps) {
                     className={`relative cursor-pointer overflow-hidden rounded-lg border-2 transition-all ${
                       active
                         ? "border-blue-500 ring-2 ring-blue-500/40"
-                        : "border-zinc-800 hover:border-zinc-600"
+                        : "border-border hover:border-border-strong"
                     }`}
                     onClick={() => {
                       if (!currentProjectId) return;
@@ -438,8 +438,8 @@ export function LeftPanel(props: LeftPanelProps) {
                     <span
                       className={`absolute bottom-1 left-1 rounded px-1.5 py-0.5 text-[10px] font-medium ${
                         active
-                          ? "bg-blue-500 text-white"
-                          : "bg-black/70 text-zinc-300"
+                          ? "bg-blue-500 text-foreground"
+                          : "bg-black/70 text-white/70"
                       }`}
                     >
                       Take {index + 1}
@@ -451,7 +451,7 @@ export function LeftPanel(props: LeftPanelProps) {
             </div>
           </div>
         ) : (
-          <div className="flex h-full flex-col items-center justify-center text-zinc-500">
+          <div className="flex h-full flex-col items-center justify-center text-subtle-foreground">
             <p className="text-sm">No alternate takes</p>
             <button
               type="button"
@@ -482,13 +482,13 @@ export function LeftPanel(props: LeftPanelProps) {
         }
       >
         <div className="p-3 pb-2 flex items-center justify-between shrink-0">
-          <h3 className="text-sm font-semibold text-white">Timelines</h3>
+          <h3 className="text-sm font-semibold text-foreground">Timelines</h3>
           <div className="relative">
             <Tooltip content="Add timeline" side="right">
               <button
                 ref={timelineAddTriggerRef}
                 onClick={() => setTimelineAddMenuOpen((prev) => !prev)}
-                className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors"
+                className="p-1.5 rounded-lg hover:bg-surface-raised text-muted-foreground hover:text-foreground transition-colors"
               >
                 <Plus className="h-4 w-4" />
               </button>
@@ -498,14 +498,14 @@ export function LeftPanel(props: LeftPanelProps) {
                 anchorRef={timelineAddTriggerRef}
                 placement="bottom-end"
                 role="menu"
-                className="w-48 overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-800 py-1 shadow-xl"
+                className="w-48 overflow-y-auto rounded-lg border border-border bg-surface-raised py-1 shadow-xl"
               >
                 <button
                   onClick={() => {
                     handleAddTimeline();
                     setTimelineAddMenuOpen(false);
                   }}
-                  className="w-full text-left px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-700 flex items-center gap-2"
+                  className="w-full text-left px-3 py-2 text-xs text-muted-foreground hover:bg-surface-hover flex items-center gap-2"
                 >
                   <Plus className="h-3.5 w-3.5" />
                   New Timeline
@@ -515,7 +515,7 @@ export function LeftPanel(props: LeftPanelProps) {
                     setShowImportTimelineModal(true);
                     setTimelineAddMenuOpen(false);
                   }}
-                  className="w-full text-left px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-700 flex items-center gap-2"
+                  className="w-full text-left px-3 py-2 text-xs text-muted-foreground hover:bg-surface-hover flex items-center gap-2"
                 >
                   <FileUp className="h-3.5 w-3.5" />
                   Import from XML
@@ -545,7 +545,7 @@ export function LeftPanel(props: LeftPanelProps) {
                 className={`group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
                   isActive
                     ? "bg-blue-600/20 border border-blue-500/40"
-                    : "hover:bg-zinc-800 border border-transparent"
+                    : "hover:bg-surface-raised border border-transparent"
                 }`}
                 draggable={!isActive}
                 onDragStart={(e) => {
@@ -564,7 +564,7 @@ export function LeftPanel(props: LeftPanelProps) {
                 onContextMenu={(e) => handleTimelineTabContextMenu(e, tl.id)}
               >
                 <Film
-                  className={`h-4 w-4 shrink-0 ${isActive ? "text-blue-400" : "text-zinc-500"}`}
+                  className={`h-4 w-4 shrink-0 ${isActive ? "text-blue-400" : "text-subtle-foreground"}`}
                 />
                 <div className="flex-1 min-w-0">
                   {renamingTimelineId === tl.id && renameSource === "panel" ? (
@@ -580,19 +580,19 @@ export function LeftPanel(props: LeftPanelProps) {
                           setRenameValue("");
                         }
                       }}
-                      className="bg-zinc-900 border border-blue-500 rounded-sm px-1 py-0.5 outline-hidden text-white text-xs w-full"
+                      className="bg-surface border border-blue-500 rounded-sm px-1 py-0.5 outline-hidden text-foreground text-xs w-full"
                       autoFocus
                       onClick={(e) => e.stopPropagation()}
                       onDoubleClick={(e) => e.stopPropagation()}
                     />
                   ) : (
                     <p
-                      className={`text-xs font-medium truncate ${isActive ? "text-white" : "text-zinc-300"}`}
+                      className={`text-xs font-medium truncate ${isActive ? "text-foreground" : "text-muted-foreground"}`}
                     >
                       {tl.name}
                     </p>
                   )}
-                  <div className="flex items-center gap-2 text-2xs text-zinc-500">
+                  <div className="flex items-center gap-2 text-2xs text-subtle-foreground">
                     <span>
                       {clipCount} clip{clipCount !== 1 ? "s" : ""}
                     </span>
@@ -610,7 +610,7 @@ export function LeftPanel(props: LeftPanelProps) {
                   </span>
                 ) : openTimelineIds.has(tl.id) ? (
                   <span
-                    className="w-1.5 h-1.5 rounded-full bg-zinc-500 shrink-0"
+                    className="w-1.5 h-1.5 rounded-full bg-muted-foreground shrink-0"
                     title="Open in tabs"
                   />
                 ) : null}
@@ -622,7 +622,7 @@ export function LeftPanel(props: LeftPanelProps) {
                         e.stopPropagation();
                         handleDeleteTimeline(tl.id);
                       }}
-                      className="p-1 rounded-sm hover:bg-red-500/20 text-zinc-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all shrink-0"
+                      className="p-1 rounded-sm hover:bg-red-500/20 text-subtle-foreground hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all shrink-0"
                     >
                       <Trash2 className="h-3 w-3" />
                     </button>

@@ -80,7 +80,7 @@ function ActionButton({
           ? "border-red-500/20 text-red-400 hover:bg-red-500/10"
           : active
             ? "border-red-500/20 bg-red-500/10 text-red-400"
-            : "border-zinc-800 text-zinc-300 hover:border-zinc-700 hover:bg-zinc-900 hover:text-white"
+            : "border-border text-muted-foreground hover:border-border-strong hover:bg-surface-hover hover:text-foreground"
       }`}
       aria-label={label}
       title={label}
@@ -124,15 +124,15 @@ function GenerationProgressHeader({
 
   return (
     <div className="min-w-0 flex-1">
-      <p className="truncate text-sm font-semibold text-white">
+      <p className="truncate text-sm font-semibold text-foreground">
         {getGenerationStatusMessage(generation)}
       </p>
       <div className="mt-2 flex min-w-0 items-center gap-3 text-xs">
-        <p className="min-w-0 flex-1 truncate text-zinc-400">
-          <span className="text-zinc-200">{generation.modelName}</span>
+        <p className="min-w-0 flex-1 truncate text-muted-foreground">
+          <span className="text-foreground">{generation.modelName}</span>
           {details ? <span>: {details}</span> : null}
         </p>
-        <span className="shrink-0 font-mono text-zinc-300">
+        <span className="shrink-0 font-mono text-muted-foreground">
           {Math.round(progress)}%
         </span>
       </div>
@@ -144,7 +144,7 @@ function GenerationProgressHeader({
           aria-valuemax={100}
           aria-valuenow={progress}
           data-testid="generation-progress-bar"
-          className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-zinc-800"
+          className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-surface-raised"
         >
           <div
             className="h-full bg-violet-500 transition-all"
@@ -155,7 +155,7 @@ function GenerationProgressHeader({
           type="button"
           onClick={generation.cancel}
           disabled={generation.isCancelling}
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-zinc-700 text-zinc-300 transition-colors hover:border-zinc-600 hover:bg-zinc-800 hover:text-white disabled:cursor-wait disabled:opacity-60"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:border-border-strong hover:bg-surface-hover hover:text-foreground disabled:cursor-wait disabled:opacity-60"
           aria-label="Cancel generation"
           title="Cancel generation"
         >
@@ -199,7 +199,7 @@ function MediaPlayerControls({
   return (
     <div
       data-testid="media-player-controls"
-      className="w-full shrink-0 border-t border-zinc-800 bg-zinc-900/95 px-5 py-3 backdrop-blur"
+      className="w-full shrink-0 border-t border-border bg-surface-raised/95 px-5 py-3 backdrop-blur"
     >
       <div
         className={`flex w-full items-center gap-3 ${audio ? "justify-center" : ""}`}
@@ -222,7 +222,7 @@ function MediaPlayerControls({
         </button>
         {!audio ? (
           <>
-            <span className="w-20 shrink-0 text-center font-mono text-[11px] text-zinc-400">
+            <span className="w-20 shrink-0 text-center font-mono text-[11px] text-muted-foreground">
               {formatPlaybackTime(currentTime)} / {formatPlaybackTime(duration)}
             </span>
             <input
@@ -239,7 +239,7 @@ function MediaPlayerControls({
             <button
               type="button"
               onClick={onToggleMuted}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
               aria-label={muted ? "Unmute" : "Mute"}
             >
               {muted ? (
@@ -256,7 +256,7 @@ function MediaPlayerControls({
               className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors ${
                 loop
                   ? "bg-violet-400/10 text-violet-300 hover:bg-violet-400/20"
-                  : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                  : "text-muted-foreground hover:bg-surface-hover hover:text-foreground"
               }`}
             >
               <Repeat2 className="h-4 w-4" />
@@ -265,7 +265,7 @@ function MediaPlayerControls({
               <button
                 type="button"
                 onClick={onFullscreen}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
                 aria-label="Full screen"
               >
                 <Maximize className="h-4 w-4" />
@@ -568,7 +568,7 @@ function ImageViewport({
         type="button"
         onClick={() => onTransformChange({ scale: 1, offset: { x: 0, y: 0 } })}
         disabled={!zoomed}
-        className="absolute bottom-4 right-4 rounded-md border border-zinc-700 bg-zinc-900/90 px-3 py-1.5 text-xs text-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
+        className="absolute bottom-4 right-4 rounded-md border border-border bg-popover/90 px-3 py-1.5 text-xs text-foreground disabled:cursor-not-allowed disabled:opacity-40"
         aria-label="Reset zoom"
       >
         Reset Zoom
@@ -858,14 +858,14 @@ export function GenSpaceSelectedGeneration({
   return (
     <section
       data-testid="selected-generation-panel"
-      className="absolute inset-y-0 flex min-w-0 flex-col overflow-hidden bg-zinc-900 rounded-2xl m-2"
+      className="absolute inset-y-0 m-2 flex min-w-0 flex-col overflow-hidden rounded-2xl bg-card"
       style={style}
     >
-      <header className="flex h-30 shrink-0 items-center justify-between gap-4 bg-zinc-900 px-5">
+      <header className="flex h-30 shrink-0 items-center justify-between gap-4 bg-card px-5">
         <div className={`min-w-0 flex-1 ${showingGeneration ? "hidden" : ""}`}>
           <div className="flex min-w-0 mb-4 items-center gap-2">
             <h2
-              className="min-w-0 truncate text-sm font-semibold text-white"
+              className="min-w-0 truncate text-sm font-semibold text-foreground"
             title={title}
           >
               {title}
@@ -874,7 +874,7 @@ export function GenSpaceSelectedGeneration({
               <button
                 type="button"
                 onClick={() => onCopySettings(asset)}
-                className="flex h-7 shrink-0 items-center gap-1.5 rounded-md border border-zinc-800 px-2 text-[10px] font-medium text-zinc-300 transition-colors hover:border-zinc-700 hover:bg-zinc-900 hover:text-white"
+                className="flex h-7 shrink-0 items-center gap-1.5 rounded-md border border-border px-2 text-[10px] font-medium text-muted-foreground transition-colors hover:border-border-strong hover:bg-surface-hover hover:text-foreground"
                 aria-label="Copy settings"
                 title="Copy settings"
               >
@@ -886,16 +886,16 @@ export function GenSpaceSelectedGeneration({
           <div className="flex flex-wrap gap-x-6 gap-y-3">
             {metadata.map(([label, value]) => (
               <div key={label}>
-                <p className="text-[9px] font-semibold uppercase tracking-wider text-zinc-600">
+                <p className="text-[9px] font-semibold uppercase tracking-wider text-subtle-foreground">
                   {label}
                 </p>
-                <p className="mt-0.5 text-xs text-zinc-300">{value}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{value}</p>
               </div>
             ))}
           </div>
         </div>
         {asset ? (
-          <p className="mt-0.5 text-[10px] text-zinc-500">
+          <p className="mt-0.5 text-[10px] text-subtle-foreground">
             {selectedIndex + 1} of {visibleAssetCount}
           </p>
         ) : null}
@@ -905,7 +905,7 @@ export function GenSpaceSelectedGeneration({
               type="button"
               onClick={onPrevious}
               disabled={!canGoPrev}
-              className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-900 hover:text-white disabled:text-zinc-700"
+              className="rounded-md p-1.5 text-muted-foreground hover:bg-surface-hover hover:text-foreground disabled:text-subtle-foreground"
               aria-label="Previous asset"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -914,7 +914,7 @@ export function GenSpaceSelectedGeneration({
               type="button"
               onClick={onNext}
               disabled={!canGoNext}
-              className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-900 hover:text-white disabled:text-zinc-700"
+              className="rounded-md p-1.5 text-muted-foreground hover:bg-surface-hover hover:text-foreground disabled:text-subtle-foreground"
               aria-label="Next asset"
             >
               <ChevronRight className="h-4 w-4" />
@@ -922,7 +922,7 @@ export function GenSpaceSelectedGeneration({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-900 hover:text-white"
+              className="rounded-md p-1.5 text-muted-foreground hover:bg-surface-hover hover:text-foreground"
               aria-label="Clear selected asset"
             >
               <X className="h-4 w-4" />
@@ -951,7 +951,7 @@ export function GenSpaceSelectedGeneration({
             <div
               role="tablist"
               aria-label="Asset versions"
-              className="flex shrink-0 justify-center gap-2 border-b border-zinc-800 bg-black/40 px-5 py-3"
+              className="flex shrink-0 justify-center gap-2 border-b border-border bg-surface px-5 py-3"
             >
               {asset.takes.map((take, index) => {
                 const active = activeTakeIndex === index;
@@ -1002,10 +1002,10 @@ export function GenSpaceSelectedGeneration({
                     ref={(node) => {
                       takeTabRefs.current[index] = node;
                     }}
-                    className={`relative h-14 w-14 overflow-hidden rounded-lg border-2 bg-zinc-900 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 ${
+                    className={`relative h-14 w-14 overflow-hidden rounded-lg border-2 bg-surface-raised outline-none transition-colors focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 focus-visible:ring-offset-app-bg ${
                       active
                         ? "border-blue-500 ring-2 ring-blue-500/30"
-                        : "border-zinc-800 hover:border-zinc-600"
+                        : "border-border hover:border-border-strong"
                     }`}
                   >
                     {asset.type === "video" ? (
@@ -1053,7 +1053,7 @@ export function GenSpaceSelectedGeneration({
               />
             )}
           </div>
-          <div className="shrink-0 bg-zinc-900 px-5 py-4">
+          <div className="shrink-0 bg-surface-raised px-5 py-4">
             <div className="flex flex-wrap gap-2">
               <ActionButton
                 label={asset.favorite ? "Favorited" : "Favorite"}
@@ -1102,13 +1102,13 @@ export function GenSpaceSelectedGeneration({
         </>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-8 text-center">
-          <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-2xl border border-dashed border-zinc-800">
-            <Sparkles className="h-8 w-8 text-zinc-700" />
+          <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-2xl border border-dashed border-border">
+            <Sparkles className="h-8 w-8 text-subtle-foreground" />
           </div>
-          <h3 className="text-sm font-medium text-zinc-300">
+          <h3 className="text-sm font-medium text-muted-foreground">
             Select a generation
           </h3>
-          <p className="mt-2 max-w-sm text-xs leading-5 text-zinc-600">
+          <p className="mt-2 max-w-sm text-xs leading-5 text-subtle-foreground">
             Choose an asset or the active generation card to inspect its
             preview, metadata, prompt, and actions.
           </p>

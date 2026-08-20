@@ -157,7 +157,7 @@ export function VideoThumbnailCard({ url, thumbnailUrl, enabled = true }: { url:
   return (
     <div
       ref={containerRef}
-      className="w-full aspect-video relative overflow-hidden bg-zinc-900"
+      className="w-full aspect-video relative overflow-hidden bg-surface"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onMouseMove={enabled && isHovering ? handleMouseMove : undefined}
@@ -187,8 +187,8 @@ export function VideoThumbnailCard({ url, thumbnailUrl, enabled = true }: { url:
           />
         </>
       ) : (
-        <div className={`w-full h-full bg-zinc-800 absolute inset-0 flex items-center justify-center ${isHovering && videoReady ? 'opacity-0' : 'opacity-100'} transition-opacity duration-100`}>
-          <Video className="h-5 w-5 text-zinc-600" />
+        <div className={`w-full h-full bg-surface-raised absolute inset-0 flex items-center justify-center ${isHovering && videoReady ? 'opacity-0' : 'opacity-100'} transition-opacity duration-100`}>
+          <Video className="h-5 w-5 text-subtle-foreground" />
         </div>
       )}
 

@@ -91,7 +91,7 @@ export function UpscalePanel({
     if (file) await addFile(file);
   };
   return (
-    <div className="space-y-3 border-b border-zinc-800/60 bg-zinc-950/20 p-4">
+    <div className="space-y-3 border-b border-border bg-background p-4">
       <SettingsDropdown
         title="UPSCALE METHOD"
         value={method ?? ""}
@@ -111,10 +111,10 @@ export function UpscalePanel({
         trigger={
           <span className="min-w-0 flex-1">
             <span className="flex min-h-[20px] min-w-0 items-center gap-3">
-              <span className="flex h-4 w-4 shrink-0 items-center justify-center text-zinc-400">
+              <span className="flex h-4 w-4 shrink-0 items-center justify-center text-muted">
                 <WandSparkles className="h-4 w-4" />
               </span>
-              <span className="max-w-full truncate text-xs font-semibold text-zinc-100">
+              <span className="max-w-full truncate text-xs font-semibold text-foreground">
                 {selected?.label ??
                   (isCatalogLoading ? "Loading…" : "No methods")}
               </span>
@@ -153,10 +153,10 @@ export function UpscalePanel({
           event.target.value = "";
         }}
       />
-      <label className="block text-2xs text-zinc-400">
+      <label className="block text-2xs text-muted">
           <span className="mb-2 flex items-center justify-between gap-4">
             <span>Scale</span>
-            <span className="font-mono text-zinc-200">
+            <span className="font-mono text-foreground">
               {scale === null ? "—" : `${scale}×`}
             </span>
           </span>
@@ -186,7 +186,7 @@ export function UpscalePanel({
             type="button"
             onClick={onRetryCatalog}
             disabled={disabled}
-            className="rounded bg-zinc-800 px-2 py-1 text-zinc-100 hover:bg-zinc-700 disabled:opacity-50"
+            className="rounded bg-surface-selected px-2 py-1 text-foreground hover:bg-surface-hover disabled:opacity-50"
           >
             Retry
           </button>

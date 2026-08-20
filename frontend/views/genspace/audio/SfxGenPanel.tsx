@@ -23,10 +23,10 @@ export function SfxGenPanel({
       align="right"
       triggerLabel="Sound effect duration"
       content={
-        <label className="block w-48 text-2xs text-zinc-400">
+        <label className="block w-48 text-2xs text-muted-foreground">
           <span className="mb-2 flex items-center justify-between gap-4">
             <span>Duration</span>
-            <span className="font-mono text-zinc-200">
+            <span className="font-mono text-foreground">
               {controller.settings.durationSeconds}s
             </span>
           </span>
@@ -95,7 +95,7 @@ export function SfxGenPanel({
         }
         bottomRight={durationControl}
       />
-      <div className="flex flex-wrap items-center gap-1.5 px-4 py-3 text-xs text-zinc-400">
+      <div className="flex flex-wrap items-center gap-1.5 px-4 py-3 text-xs text-muted-foreground">
         <GenerateButton
           onClick={controller.submit}
           disabled={!selectedProfile || !controller.prompt.value.trim()}

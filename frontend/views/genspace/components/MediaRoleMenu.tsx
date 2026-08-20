@@ -34,9 +34,9 @@ export function MediaRoleMenu({
         gap={8}
         data-media-menu
         role="menu"
-        className="w-fit text-nowrap rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl"
+        className="w-fit text-nowrap rounded-md border border-border bg-popover p-2 shadow-xl"
       >
-        <div className="mb-2 text-2xs uppercase tracking-wider text-zinc-500">
+        <div className="mb-2 text-2xs uppercase tracking-wider text-muted">
           {title}
         </div>
         <div className="max-h-60 space-y-1 overflow-y-auto">
@@ -49,8 +49,8 @@ export function MediaRoleMenu({
               title={option.description}
               className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left transition-colors ${
                 selectedRole === option.role
-                  ? "bg-white/20 text-white"
-                  : "text-zinc-400 hover:bg-zinc-700"
+                  ? "bg-surface-selected text-foreground"
+                  : "text-muted hover:bg-surface-hover"
               }`}
             >
               {option.icon}
@@ -61,12 +61,12 @@ export function MediaRoleMenu({
           ))}
           {onTrim ? (
             <>
-              {options.length ? <div className="my-1 h-px bg-zinc-700" /> : null}
+              {options.length ? <div className="my-1 h-px bg-border" /> : null}
               <button
                 type="button"
                 role="menuitem"
                 onClick={onTrim}
-                className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-zinc-300 transition-colors hover:bg-zinc-700"
+                className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-foreground transition-colors hover:bg-surface-hover"
               >
                 <Scissors className="h-3.5 w-3.5" />
                 <span className="text-xs">Trim</span>

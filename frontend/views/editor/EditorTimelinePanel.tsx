@@ -80,7 +80,7 @@ export function EditorTimelinePanel({
     <>
       <EditorTimelineTabs {...tabsProps} />
       <div
-        className="bg-zinc-950 border-t border-zinc-800 flex overflow-hidden shrink-0"
+        className="bg-surface border-t border-border flex overflow-hidden shrink-0"
         style={{ height: layout.timelineHeight }}
       >
         <EditorTimelineToolRail {...toolRailProps} />
@@ -90,7 +90,7 @@ export function EditorTimelinePanel({
         >
           <div className="flex shrink-0">
             <div
-              className="w-32 h-6 shrink-0 border-b border-r border-zinc-800 bg-zinc-900 flex items-center justify-center cursor-text"
+              className="w-32 h-6 shrink-0 border-b border-r border-border bg-surface flex items-center justify-center cursor-text"
               onClick={() => {
                 if (!ruler.editingTimecode) {
                   ruler.onSetTimecodeInput(ruler.formatTime(ruler.currentTime));
@@ -103,7 +103,7 @@ export function EditorTimelinePanel({
                 <input
                   ref={ruler.timecodeInputRef}
                   autoFocus
-                  className="w-full h-full bg-zinc-950 text-amber-400 text-[11px] font-mono font-medium text-center outline-hidden border-none tabular-nums tracking-tight px-1"
+                  className="w-full h-full bg-surface text-amber-400 text-[11px] font-mono font-medium text-center outline-hidden border-none tabular-nums tracking-tight px-1"
                   value={ruler.timecodeInput}
                   onChange={(event) => ruler.onSetTimecodeInput(event.target.value)}
                   onKeyDown={(event) => {
@@ -216,28 +216,28 @@ function TimelineBottomControls({
   onFitToView,
 }: TimelineBottomControlsProps) {
   return (
-    <div className="h-9 bg-zinc-900 border-t border-zinc-800 flex items-center px-3 gap-2 shrink-0">
+    <div className="h-9 bg-surface border-t border-border flex items-center px-3 gap-2 shrink-0">
       {selectedClip && (
         <>
-          <div className="w-px h-4 bg-zinc-700" />
-          <div className="flex items-center gap-1.5 text-[10px] text-zinc-400">
+          <div className="w-px h-4 bg-border" />
+          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
             <Gauge className="h-3 w-3" />
             <select value={selectedClip.speed} onChange={(event) => {
               const newSpeed = parseFloat(event.target.value);
               let newDuration = selectedClip.duration * (selectedClip.speed / newSpeed);
               newDuration = Math.min(newDuration, getMaxClipDuration({ ...selectedClip, speed: newSpeed }));
               onUpdateClip(selectedClip.id, { speed: newSpeed, duration: Math.max(0.5, newDuration) });
-            }} className="bg-zinc-800 border border-zinc-700 rounded-sm px-1.5 py-0.5 text-[10px] text-white">
+            }} className="bg-surface-raised border border-border rounded-sm px-1.5 py-0.5 text-[10px] text-foreground">
               <option value={0.25}>0.25x</option><option value={0.5}>0.5x</option><option value={0.75}>0.75x</option><option value={1}>1x</option><option value={1.25}>1.25x</option><option value={1.5}>1.5x</option><option value={2}>2x</option><option value={4}>4x</option>
             </select>
           </div>
         </>
       )}
-      <div className="w-px h-4 bg-zinc-700" />
-      <Button variant="outline" size="sm" className="h-6 border-zinc-700 text-zinc-400 text-[10px] px-2" onClick={onShowExportModal}><Upload className="h-3 w-3 mr-1" />Export</Button>
+      <div className="w-px h-4 bg-border" />
+      <Button variant="outline" size="sm" className="h-6 border-border text-muted-foreground text-[10px] px-2" onClick={onShowExportModal}><Upload className="h-3 w-3 mr-1" />Export</Button>
       {tracks.some((track) => track.type === "subtitle") && (
         <>
-          <div className="w-px h-4 bg-zinc-700" />
+          <div className="w-px h-4 bg-border" />
           <div className="flex items-center gap-1">
             <button onClick={() => subtitleFileInputRef.current?.click()} className="h-6 px-2 rounded-sm bg-amber-900/30 border border-amber-700/30 text-amber-400 hover:bg-amber-900/50 text-[10px] flex items-center gap-1 transition-colors" title="Import SRT subtitles"><FileUp className="h-3 w-3" />Import SRT</button>
             <button onClick={onExportSrt} disabled={subtitles.length === 0} className="h-6 px-2 rounded-sm bg-amber-900/30 border border-amber-700/30 text-amber-400 hover:bg-amber-900/50 text-[10px] flex items-center gap-1 transition-colors disabled:opacity-40 disabled:cursor-not-allowed" title="Export SRT subtitles"><FileDown className="h-3 w-3" />Export SRT</button>

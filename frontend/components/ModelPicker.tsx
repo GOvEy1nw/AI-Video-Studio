@@ -152,7 +152,7 @@ export function ModelPicker({
                   className={`rounded-lg px-2 py-1 text-xs font-semibold leading-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400 ${
                     selected
                       ? "bg-emerald-500 text-white"
-                      : "bg-zinc-600 text-zinc-100 hover:bg-zinc-500"
+      : "bg-surface-hover text-foreground hover:bg-surface-selected"
                   }`}
                 >
                   {variant.label}

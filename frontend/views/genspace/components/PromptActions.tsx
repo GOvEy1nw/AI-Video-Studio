@@ -39,7 +39,7 @@ export function PromptActions({
           className={`flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] font-medium transition-colors disabled:opacity-40 disabled:hover:bg-transparent ${
             enhanceEnabled
               ? "bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25"
-              : "text-zinc-400 hover:bg-zinc-800 hover:text-white disabled:hover:text-zinc-400"
+              : "text-muted hover:bg-surface-hover hover:text-foreground disabled:hover:text-muted"
           }`}
           title={enhanceTitle}
         >

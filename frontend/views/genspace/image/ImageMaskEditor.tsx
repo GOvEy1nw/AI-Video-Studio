@@ -121,10 +121,10 @@ export function ImageMaskEditor({
         data-testid="image-edit-header"
         className="flex h-8 min-w-0 items-center gap-1 mb-2"
       >
-        <span className="mr-auto shrink-0 text-2xs font-medium uppercase tracking-wider text-zinc-500">
+        <span className="mr-auto shrink-0 text-2xs font-medium uppercase tracking-wider text-subtle-foreground">
           Retouch
         </span>
-        <div className="flex items-center gap-2 bg-zinc-800/35 p-1 rounded-lg">
+        <div className="flex items-center gap-2 rounded-lg bg-surface-raised p-1">
           {(
             [
               ["brush", "Brush", Paintbrush],
@@ -146,13 +146,13 @@ export function ImageMaskEditor({
               className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md border ${
                 tool === id
                   ? "border-blue-500 bg-blue-500 text-blue-200"
-                  : "border-zinc-950 bg-zinc-950 text-zinc-400 hover:text-white"
+                  : "border-border bg-surface text-muted-foreground hover:text-foreground"
               }`}
             >
               <Icon className="h-3.5 w-3.5" />
             </button>
           ))}
-          <label className="flex min-w-0 items-center gap-1 text-2xs font-medium uppercase tracking-wider text-zinc-500">
+          <label className="flex min-w-0 items-center gap-1 text-2xs font-medium uppercase tracking-wider text-subtle-foreground">
             <span className="shrink-0">Brush Size</span>
             <input
               aria-label="Brush size"
@@ -176,7 +176,7 @@ export function ImageMaskEditor({
               type="button"
               disabled={disabled || operations.length === 0}
               onClick={() => commitOperations(operations.slice(0, -1))}
-              className="flex h-6 w-6 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-800 hover:text-white disabled:opacity-30"
+              className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-surface-hover hover:text-foreground disabled:opacity-30"
               aria-label="Undo last mask operation"
             >
               <Redo2 className="h-3.5 w-3.5 -scale-x-100" />
@@ -185,7 +185,7 @@ export function ImageMaskEditor({
               type="button"
               disabled={disabled || operations.length === 0}
               onClick={() => commitOperations([])}
-              className="flex h-6 w-6 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-800 hover:text-red-300 disabled:opacity-30"
+              className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-surface-hover hover:text-red-300 disabled:opacity-30"
               aria-label="Clear mask"
             >
               <Trash2 className="h-3.5 w-3.5" />

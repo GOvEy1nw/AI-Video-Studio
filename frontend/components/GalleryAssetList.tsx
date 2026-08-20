@@ -126,7 +126,7 @@ export function GalleryAssetList({
 
   return (
     <div className="flex flex-col">
-      <div className="sticky top-0 z-10 flex items-center gap-1 border-b border-zinc-800 bg-zinc-900/95 px-2 py-1">
+      <div className="sticky top-0 z-10 flex items-center gap-1 border-b border-border bg-card/95 px-2 py-1">
         <div className="w-2 shrink-0" />
         <div className="w-8 shrink-0" />
         {columns.map(({ column, label, className }) => (
@@ -135,7 +135,7 @@ export function GalleryAssetList({
             type="button"
             onClick={() => toggleSort(column)}
             className={`${className} flex cursor-pointer select-none items-center gap-0.5 text-[9px] font-semibold uppercase tracking-wider transition-colors ${
-              sortColumn === column ? 'text-blue-400' : 'text-zinc-500 hover:text-zinc-300'
+              sortColumn === column ? 'text-blue-400' : 'text-subtle-foreground hover:text-foreground'
             }`}
           >
             <span className="truncate">{label}</span>
@@ -183,7 +183,7 @@ export function GalleryAssetList({
             className={`group flex cursor-pointer items-center gap-1 px-2 py-1 outline-none transition-all focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-400/70 ${
               selectedAssetIds.has(asset.id)
                 ? 'bg-blue-600/20 ring-1 ring-blue-500/50'
-                : 'hover:bg-zinc-800/60'
+                : 'hover:bg-surface-raised/60'
             }`}
             style={{ position: 'absolute', top: `${(range.start + index) * LIST_ROW_HEIGHT}px`, left: 0, right: 0, height: `${LIST_ROW_HEIGHT - 2}px` }}
           >
@@ -192,7 +192,7 @@ export function GalleryAssetList({
             ) : (
               <div className="w-2 shrink-0" />
             )}
-            <div className="h-6 w-8 shrink-0 overflow-hidden rounded-sm bg-zinc-800">
+            <div className="h-6 w-8 shrink-0 overflow-hidden rounded-sm bg-surface-raised">
               {asset.type === 'video' ? (
                 <VideoListThumbnail url={asset.url} fallback={thumbnailUrl} enabled={previewEnabled} />
               ) : asset.type === 'audio' ? (
@@ -202,21 +202,21 @@ export function GalleryAssetList({
               ) : asset.url ? (
                 <img src={asset.url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
               ) : (
-                <div className="flex h-full w-full items-center justify-center"><Image className="h-2.5 w-2.5 text-zinc-500" /></div>
+                <div className="flex h-full w-full items-center justify-center"><Image className="h-2.5 w-2.5 text-subtle-foreground" /></div>
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[10px] leading-tight text-zinc-200">{assetName(asset)}</p>
+            <p className="truncate text-[10px] leading-tight text-foreground">{assetName(asset)}</p>
               {asset.takes && asset.takes.length > 1 && (
                 <span className="text-[8px] text-blue-400">{asset.takes.length} takes</span>
               )}
             </div>
-            <span className="w-14 shrink-0 text-center text-[9px] font-medium uppercase text-zinc-500">{asset.type}</span>
-            <span className="w-16 shrink-0 text-right text-[9px] tabular-nums text-zinc-500">{asset.duration != null ? `${asset.duration.toFixed(1)}s` : '—'}</span>
-            <span className="w-14 shrink-0 text-right text-[9px] text-zinc-500">{asset.resolution || '—'}</span>
-            <span className="w-16 shrink-0 text-right text-[9px] text-zinc-500">{new Date(asset.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+            <span className="w-14 shrink-0 text-center text-[9px] font-medium uppercase text-subtle-foreground">{asset.type}</span>
+            <span className="w-16 shrink-0 text-right text-[9px] tabular-nums text-subtle-foreground">{asset.duration != null ? `${asset.duration.toFixed(1)}s` : '—'}</span>
+            <span className="w-14 shrink-0 text-right text-[9px] text-subtle-foreground">{asset.resolution || '—'}</span>
+            <span className="w-16 shrink-0 text-right text-[9px] text-subtle-foreground">{new Date(asset.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
             <div className="flex w-10 shrink-0 items-center justify-center">
-              {color ? <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color.color }} title={color.label} /> : <span className="text-[9px] text-zinc-600">—</span>}
+              {color ? <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color.color }} title={color.label} /> : <span className="text-[9px] text-subtle-foreground">—</span>}
             </div>
             <div className={`${actionsWidthClass} flex shrink-0 items-center justify-end`}>{renderActions?.(asset)}</div>
           </div>

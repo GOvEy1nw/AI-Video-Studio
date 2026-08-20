@@ -86,8 +86,8 @@ export function UseVideoDropdown({
         }}
         className={
           isContext
-            ? "flex w-full items-center gap-3 px-3 py-1.5 text-left text-xs text-zinc-300 hover:bg-zinc-700"
-            : "flex h-9 items-center gap-2 rounded-lg border border-zinc-800 px-3 text-xs font-medium text-zinc-300 transition-colors hover:border-zinc-700 hover:bg-zinc-900 hover:text-white"
+            ? "flex w-full items-center gap-3 px-3 py-1.5 text-left text-xs text-foreground hover:bg-surface-hover"
+            : "flex h-9 items-center gap-2 rounded-lg border border-border px-3 text-xs font-medium text-foreground transition-colors hover:border-border-strong hover:bg-card hover:text-foreground"
         }
       >
         <Video className="h-4 w-4 shrink-0" />
@@ -106,7 +106,7 @@ export function UseVideoDropdown({
           gap={isContext ? 4 : 8}
           role="menu"
           onMouseDown={(event) => event.stopPropagation()}
-          className="max-h-60 w-44 overflow-y-auto rounded-md border border-zinc-700 bg-zinc-800 p-1.5 shadow-xl"
+          className="max-h-60 w-44 overflow-y-auto rounded-md border border-border bg-popover p-1.5 shadow-xl"
         >
           {options.map((option) => (
             <button
@@ -118,7 +118,7 @@ export function UseVideoDropdown({
                 onSelect(option.target);
                 setOpen(false);
               }}
-              className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-xs text-zinc-300 transition-colors hover:bg-zinc-700 hover:text-white"
+              className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-xs text-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
             >
               {option.icon}
               <span>{option.label}</span>

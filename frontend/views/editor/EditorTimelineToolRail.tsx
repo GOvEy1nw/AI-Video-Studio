@@ -51,7 +51,7 @@ export function EditorTimelineToolRail({
     ) || TRIM_TOOLS[0];
 
   return (
-    <div className="w-10 shrink-0 bg-zinc-900 border-r border-zinc-800 flex flex-col items-center py-1 gap-0.5 overflow-hidden">
+    <div className="flex w-10 shrink-0 flex-col items-center gap-0.5 overflow-hidden border-r border-border bg-card py-1">
       {PRIMARY_TOOLS.map((tool) => (
         <Tooltip
           key={tool.id}
@@ -65,15 +65,15 @@ export function EditorTimelineToolRail({
             onClick={() => setActiveTool(tool.id)}
             className={`p-1.5 rounded-lg transition-colors relative group shrink-0 ${
               activeTool === tool.id
-                ? "bg-blue-600 text-white"
-                : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                ? "bg-blue-600 text-primary-foreground"
+                : "text-muted-foreground hover:bg-surface-hover hover:text-foreground"
             }`}
           >
             <tool.icon className="h-4 w-4" />
-            <div className="absolute left-full ml-2 px-2 py-1 bg-zinc-800 rounded-sm text-xs text-white whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-50">
+            <div className="pointer-events-none absolute left-full z-50 ml-2 whitespace-nowrap rounded-sm bg-popover px-2 py-1 text-xs text-foreground opacity-0 group-hover:opacity-100">
               {tool.label}
               {getShortcutLabel(keyboardLayout, tool.actionId) && (
-                <span className="text-zinc-400">
+                <span className="text-muted-foreground">
                   {` (${getShortcutLabel(keyboardLayout, tool.actionId)})`}
                 </span>
               )}
@@ -138,16 +138,16 @@ export function EditorTimelineToolRail({
             data-trim-group-btn=""
             className={`p-1.5 rounded-lg transition-colors relative group ${
               isTrimActive
-                ? "bg-blue-600 text-white"
-                : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                ? "bg-blue-600 text-primary-foreground"
+                : "text-muted-foreground hover:bg-surface-hover hover:text-foreground"
             }`}
           >
             <currentTrimTool.icon className="h-4 w-4" />
             <div className="absolute bottom-0 right-0 w-0 h-0 border-l-4 border-l-transparent border-b-4 border-b-current opacity-60" />
-            <div className="absolute left-full ml-2 px-2 py-1 bg-zinc-800 rounded-sm text-xs text-white whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-50">
+            <div className="pointer-events-none absolute left-full z-50 ml-2 whitespace-nowrap rounded-sm bg-popover px-2 py-1 text-xs text-foreground opacity-0 group-hover:opacity-100">
               {currentTrimTool.label}
               {getShortcutLabel(keyboardLayout, currentTrimTool.actionId) && (
-                <span className="text-zinc-400">
+                <span className="text-muted-foreground">
                   {` (${getShortcutLabel(keyboardLayout, currentTrimTool.actionId)})`}
                 </span>
               )}
@@ -175,7 +175,7 @@ export function EditorTimelineToolRail({
                   }}
                   gap={0}
                   role="menu"
-                  className="min-w-[160px] overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-800 py-1 shadow-xl"
+                  className="min-w-[160px] overflow-y-auto rounded-lg border border-border bg-popover py-1 shadow-xl"
                 >
                   {TRIM_TOOLS.map((tool) => (
                     <button
@@ -187,13 +187,13 @@ export function EditorTimelineToolRail({
                       }}
                       className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 transition-colors ${
                         activeTool === tool.id
-                          ? "bg-blue-600/30 text-white"
-                          : "text-zinc-300 hover:bg-zinc-700"
+                          ? "bg-blue-600/30 text-foreground"
+                          : "text-foreground hover:bg-surface-hover"
                       }`}
                     >
                       <tool.icon className="h-3.5 w-3.5" />
                       <span className="flex-1">{tool.label}</span>
-                      <span className="text-zinc-500 text-[10px]">
+                      <span className="text-[10px] text-muted-foreground">
                         {getShortcutLabel(keyboardLayout, tool.actionId)}
                       </span>
                     </button>
@@ -204,27 +204,27 @@ export function EditorTimelineToolRail({
           })()}
       </div>
 
-      <div className="w-6 h-px bg-zinc-700 my-1 shrink-0" />
+      <div className="my-1 h-px w-6 shrink-0 bg-border" />
       <Tooltip content={snapEnabled ? "Snapping On" : "Snapping Off"} side="right">
         <button
           onClick={() => setSnapEnabled(!snapEnabled)}
           className={`p-1.5 rounded-lg transition-colors shrink-0 ${
             snapEnabled
-              ? "bg-blue-600 text-white"
-              : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
+              ? "bg-blue-600 text-primary-foreground"
+                : "text-muted-foreground hover:bg-surface-hover hover:text-foreground"
           }`}
         >
           <Magnet className="h-4 w-4" />
         </button>
       </Tooltip>
-      <div className="w-6 h-px bg-zinc-700 my-1 shrink-0" />
+      <div className="my-1 h-px w-6 shrink-0 bg-border" />
       <Tooltip content="Add Text Overlay" side="right">
         <button
           onClick={onAddTextClip}
           className="p-1.5 rounded-lg transition-colors shrink-0 text-cyan-400 hover:bg-cyan-900/30 hover:text-cyan-300 group relative"
         >
           <Type className="h-4 w-4" />
-          <div className="absolute left-full ml-2 px-2 py-1 bg-zinc-800 rounded-sm text-xs text-white whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-50">
+          <div className="absolute left-full ml-2 px-2 py-1 bg-surface-raised rounded-sm text-xs text-foreground whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-50">
             Add Text Overlay
           </div>
         </button>
@@ -238,12 +238,12 @@ export function EditorTimelineToolRail({
           onClick={() => setShowPropertiesPanel((visible) => !visible)}
           className={`p-1.5 rounded-lg transition-colors shrink-0 group relative ${
             showPropertiesPanel
-              ? "bg-blue-600 text-white"
-              : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
+              ? "bg-blue-600 text-primary-foreground"
+              : "text-muted-foreground hover:bg-surface-raised hover:text-foreground"
           }`}
         >
           <PanelRight className="h-4 w-4" />
-          <div className="absolute left-full ml-2 px-2 py-1 bg-zinc-800 rounded-sm text-xs text-white whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-50">
+          <div className="absolute left-full ml-2 px-2 py-1 bg-surface-raised rounded-sm text-xs text-foreground whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-50">
             {showPropertiesPanel ? "Hide Properties" : "Show Properties"}
           </div>
         </button>

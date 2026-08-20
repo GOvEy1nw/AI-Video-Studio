@@ -22,8 +22,8 @@ interface GalleryFiltersProps {
 
 const filterChipClass = (active: boolean) =>
   active
-    ? "border border-zinc-500/40 bg-zinc-400/30 text-zinc-300"
-    : "border border-transparent bg-zinc-800 text-zinc-500 hover:text-zinc-300";
+    ? "border border-border-strong bg-surface-selected text-foreground"
+    : "border border-transparent bg-surface-raised text-subtle-foreground hover:text-foreground";
 
 const GALLERY_FILTER_ICONS: Record<
   GalleryMediaType | GalleryAssetSource,

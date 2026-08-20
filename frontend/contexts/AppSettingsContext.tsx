@@ -1,5 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { backendFetch } from '../lib/backend'
+import {
+  applyUiTheme,
+  DEFAULT_UI_THEME,
+  isUiTheme,
+  readCachedUiTheme,
+  type UiTheme,
+  writeCachedUiTheme,
+} from '../lib/theme'
 import { useBackendLifecycle } from './BackendLifecycleContext'
 
 export interface InferenceSettings {
@@ -31,6 +39,7 @@ export interface PreviewSettings {
 }
 
 export interface AppSettings {
+  uiTheme: UiTheme
   useTorchCompile: boolean
   attentionMode: 'auto' | 'sdpa' | 'flash' | 'xformers' | 'sage' | 'sage2' | 'sage3'
   performanceProfile: 1 | 2 | 3 | 4 | 4.5 | 5
@@ -67,6 +76,7 @@ const DEFAULT_PREVIEW_SETTINGS: PreviewSettings = {
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
+  uiTheme: DEFAULT_UI_THEME,
   useTorchCompile: false,
   attentionMode: 'auto',
   performanceProfile: 4,
@@ -89,12 +99,14 @@ interface AppSettingsContextValue {
   updateSettings: (patch: Partial<AppSettings> | ((prev: AppSettings) => AppSettings)) => void
   saveSettings: (patch: Partial<AppSettings>) => Promise<void>
   refreshSettings: () => Promise<void>
+  setUiTheme: (theme: UiTheme) => void
 }
 
 const AppSettingsContext = createContext<AppSettingsContextValue | null>(null)
 
 function normalizeAppSettings(data: Partial<AppSettings>): AppSettings {
   return {
+    uiTheme: isUiTheme(data.uiTheme) ? data.uiTheme : DEFAULT_UI_THEME,
     useTorchCompile: data.useTorchCompile ?? DEFAULT_APP_SETTINGS.useTorchCompile,
     attentionMode: data.attentionMode ?? DEFAULT_APP_SETTINGS.attentionMode,
     performanceProfile: data.performanceProfile ?? DEFAULT_APP_SETTINGS.performanceProfile,
@@ -119,7 +131,10 @@ function normalizeAppSettings(data: Partial<AppSettings>): AppSettings {
 }
 
 export function AppSettingsProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<AppSettings>(DEFAULT_APP_SETTINGS)
+  const [settings, setSettings] = useState<AppSettings>(() => ({
+    ...DEFAULT_APP_SETTINGS,
+    uiTheme: readCachedUiTheme(),
+  }))
   const [isLoaded, setIsLoaded] = useState(false)
   const { processStatus } = useBackendLifecycle()
   const settingsLifecycleVersionRef = useRef(0)
@@ -167,6 +182,11 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
   }, [isLoaded, loadSettings, processStatus])
 
   useEffect(() => {
+    applyUiTheme(settings.uiTheme)
+    writeCachedUiTheme(settings.uiTheme)
+  }, [settings.uiTheme])
+
+  useEffect(() => {
     if (!isLoaded || processStatus !== 'alive') return
     const syncTimer = setTimeout(async () => {
       try {
@@ -202,6 +222,12 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
     setSettings(await loadSettings())
   }, [loadSettings])
 
+  const setUiTheme = useCallback((theme: UiTheme) => {
+    applyUiTheme(theme)
+    writeCachedUiTheme(theme)
+    setSettings((previous) => ({ ...previous, uiTheme: theme }))
+  }, [])
+
   const contextValue = useMemo<AppSettingsContextValue>(
     () => ({
       settings,
@@ -209,8 +235,9 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
       updateSettings,
       saveSettings,
       refreshSettings,
+      setUiTheme,
     }),
-    [isLoaded, refreshSettings, saveSettings, settings, updateSettings],
+    [isLoaded, refreshSettings, saveSettings, setUiTheme, settings, updateSettings],
   )
 
   return <AppSettingsContext.Provider value={contextValue}>{children}</AppSettingsContext.Provider>

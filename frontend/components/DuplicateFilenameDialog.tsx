@@ -11,19 +11,19 @@ export function DuplicateFilenameDialog({
   onChoose,
 }: DuplicateFilenameDialogProps) {
   return (
-    <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/70 backdrop-blur-xs">
+    <div className="fixed inset-0 z-60 flex items-center justify-center bg-overlay/70 backdrop-blur-xs">
       <div
-        className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl w-[min(440px,calc(100%-2rem))] overflow-hidden"
+        className="w-[min(440px,calc(100%-2rem))] overflow-hidden rounded-xl border border-border bg-card shadow-2xl"
         role="dialog"
         aria-modal="true"
         aria-labelledby="duplicate-filename-title"
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
+        <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <div className="flex items-center gap-3 min-w-0">
             <FileWarning className="h-5 w-5 text-amber-400 shrink-0" />
             <h2
               id="duplicate-filename-title"
-              className="text-base font-semibold text-zinc-100 truncate"
+              className="truncate text-base font-semibold text-foreground"
             >
               File already exists
             </h2>
@@ -31,7 +31,7 @@ export function DuplicateFilenameDialog({
           <button
             type="button"
             onClick={() => onChoose('cancel')}
-            className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300 transition-colors"
+            className="rounded-lg p-1.5 text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
             aria-label="Cancel import"
           >
             <X className="h-4 w-4" />
@@ -39,24 +39,24 @@ export function DuplicateFilenameDialog({
         </div>
 
         <div className="px-6 py-5 space-y-3">
-          <p className="text-sm text-zinc-300 leading-relaxed">
-            <span className="font-medium text-zinc-100">{fileName}</span> is
+          <p className="text-sm leading-relaxed text-muted">
+            <span className="font-medium text-foreground">{fileName}</span> is
             already in this project. What would you like to do?
           </p>
         </div>
 
-        <div className="px-6 py-4 border-t border-zinc-800 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+        <div className="flex flex-col-reverse gap-2 border-t border-border px-6 py-4 sm:flex-row sm:justify-end">
           <button
             type="button"
             onClick={() => onChoose('cancel')}
-            className="px-4 py-2 text-sm font-medium rounded-lg text-zinc-300 hover:bg-zinc-800 transition-colors"
+            className="rounded-lg px-4 py-2 text-sm font-medium text-muted transition-colors hover:bg-surface-hover"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={() => onChoose('suffix')}
-            className="px-4 py-2 text-sm font-medium rounded-lg bg-zinc-800 text-zinc-100 hover:bg-zinc-700 transition-colors"
+            className="rounded-lg bg-surface-selected px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover"
           >
             Add as new copy
           </button>

@@ -63,7 +63,7 @@ export function StylesLibraryModal({
   if (!open) return null;
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/70 p-4 backdrop-blur-xs"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -74,20 +74,20 @@ export function StylesLibraryModal({
         aria-modal="true"
         aria-labelledby="styles-library-title"
         tabIndex={-1}
-        className="flex max-h-[min(760px,calc(100vh-2rem))] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-zinc-700 bg-zinc-900 shadow-2xl outline-none"
+        className="flex max-h-[min(760px,calc(100vh-2rem))] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xl outline-none"
       >
-        <div className="flex items-center justify-between border-b border-zinc-800 px-5 py-4">
+        <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div>
-            <h2 id="styles-library-title" className="text-base font-semibold text-zinc-100">Styles</h2>
-            <p className="mt-0.5 text-xs text-zinc-400">Choose one visual style for this generation.</p>
+            <h2 id="styles-library-title" className="text-base font-semibold text-foreground">Styles</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">Choose one visual style for this generation.</p>
           </div>
           <div className="flex items-center gap-2">
             {selectedStyleId ? (
-              <button type="button" onClick={onClear} className="rounded-md px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-800 hover:text-white">
+              <button type="button" onClick={onClear} className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-surface-hover hover:text-foreground">
                 Clear style
               </button>
             ) : null}
-            <button ref={closeButtonRef} type="button" aria-label="Close styles" onClick={onClose} className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-white">
+            <button ref={closeButtonRef} type="button" aria-label="Close styles" onClick={onClose} className="rounded-md p-1.5 text-muted-foreground hover:bg-surface-hover hover:text-foreground">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -105,10 +105,10 @@ export function StylesLibraryModal({
                     onSelect(style.id);
                     onClose();
                   }}
-                  className={`overflow-hidden rounded-lg border text-left transition-colors ${selected ? "border-violet-400 ring-2 ring-violet-400/40" : "border-zinc-800 hover:border-zinc-600"}`}
+                  className={`overflow-hidden rounded-lg border text-left transition-colors ${selected ? "border-violet-400 ring-2 ring-violet-400/40" : "border-border hover:border-border-strong"}`}
                 >
                   <img src={style.thumbnailUrl} alt="" className="aspect-square w-full object-cover" />
-                  <span className="block truncate px-2 py-2 text-xs font-medium text-zinc-100">{style.displayName}</span>
+                  <span className="block truncate px-2 py-2 text-xs font-medium text-foreground">{style.displayName}</span>
                 </button>
               );
             })}

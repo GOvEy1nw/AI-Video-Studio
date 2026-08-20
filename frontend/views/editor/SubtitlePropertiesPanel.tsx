@@ -35,7 +35,7 @@ export function SubtitlePropertiesPanel({
         <div className="absolute inset-y-0 -left-1 -right-1" />
       </div>
       <div
-        className="shrink-0 border-l border-zinc-800 bg-zinc-900 p-4 overflow-auto"
+        className="shrink-0 border-l border-border bg-surface p-4 overflow-auto"
         style={{ width: rightPanelWidth }}
       >
         <div className="flex items-center justify-between mb-4">
@@ -45,7 +45,7 @@ export function SubtitlePropertiesPanel({
           </h3>
           <button
             onClick={() => deleteSubtitle(selectedSub.id)}
-            className="p-1 rounded-sm hover:bg-red-900/30 text-zinc-500 hover:text-red-400"
+            className="p-1 rounded-sm hover:bg-red-900/30 text-subtle-foreground hover:text-red-400"
             title="Delete subtitle"
           >
             <Trash2 className="h-3.5 w-3.5" />
@@ -55,7 +55,7 @@ export function SubtitlePropertiesPanel({
         <div className="space-y-4">
           {/* Subtitle text */}
           <div>
-            <label className="text-2xs text-zinc-500 uppercase tracking-wider font-semibold mb-1.5 block">
+            <label className="text-2xs text-subtle-foreground uppercase tracking-wider font-semibold mb-1.5 block">
               Text
             </label>
             <textarea
@@ -64,7 +64,7 @@ export function SubtitlePropertiesPanel({
                 updateSubtitle(selectedSub.id, { text: e.target.value })
               }
               onKeyDown={(e) => e.stopPropagation()}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-2.5 text-sm text-white resize-none focus:outline-hidden focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30"
+              className="w-full bg-surface-raised border border-border rounded-lg p-2.5 text-sm text-foreground resize-none focus:outline-hidden focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30"
               rows={3}
               placeholder="Enter subtitle text..."
             />
@@ -72,12 +72,12 @@ export function SubtitlePropertiesPanel({
 
           {/* Timing */}
           <div>
-            <label className="text-2xs text-zinc-500 uppercase tracking-wider font-semibold mb-1.5 block">
+            <label className="text-2xs text-subtle-foreground uppercase tracking-wider font-semibold mb-1.5 block">
               Timing
             </label>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <span className="text-[9px] text-zinc-500 block mb-1">
+                <span className="text-[9px] text-subtle-foreground block mb-1">
                   Start
                 </span>
                 <input
@@ -92,11 +92,11 @@ export function SubtitlePropertiesPanel({
                     }
                   }}
                   onKeyDown={(e) => e.stopPropagation()}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-sm px-2 py-1 text-xs text-white font-mono focus:outline-hidden focus:border-amber-500/50"
+                  className="w-full bg-surface-raised border border-border rounded-sm px-2 py-1 text-xs text-foreground font-mono focus:outline-hidden focus:border-amber-500/50"
                 />
               </div>
               <div>
-                <span className="text-[9px] text-zinc-500 block mb-1">End</span>
+                <span className="text-[9px] text-subtle-foreground block mb-1">End</span>
                 <input
                   type="number"
                   step={0.1}
@@ -109,11 +109,11 @@ export function SubtitlePropertiesPanel({
                     }
                   }}
                   onKeyDown={(e) => e.stopPropagation()}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-sm px-2 py-1 text-xs text-white font-mono focus:outline-hidden focus:border-amber-500/50"
+                  className="w-full bg-surface-raised border border-border rounded-sm px-2 py-1 text-xs text-foreground font-mono focus:outline-hidden focus:border-amber-500/50"
                 />
               </div>
             </div>
-            <span className="text-[9px] text-zinc-600 mt-1 block">
+            <span className="text-[9px] text-subtle-foreground mt-1 block">
               Duration:{" "}
               {(selectedSub.endTime - selectedSub.startTime).toFixed(2)}s
             </span>
@@ -121,13 +121,13 @@ export function SubtitlePropertiesPanel({
 
           {/* Style */}
           <div>
-            <label className="text-2xs text-zinc-500 uppercase tracking-wider font-semibold mb-1.5 block">
+            <label className="text-2xs text-subtle-foreground uppercase tracking-wider font-semibold mb-1.5 block">
               Style
             </label>
             <div className="space-y-2">
               {/* Font size */}
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-zinc-400">Font Size</span>
+                <span className="text-[10px] text-muted-foreground">Font Size</span>
                 <input
                   type="number"
                   min={12}
@@ -142,7 +142,7 @@ export function SubtitlePropertiesPanel({
                     })
                   }
                   onKeyDown={(e) => e.stopPropagation()}
-                  className="w-16 bg-zinc-800 border border-zinc-700 rounded-sm px-2 py-0.5 text-[10px] text-white text-center focus:outline-hidden focus:border-amber-500/50"
+                  className="w-16 bg-surface-raised border border-border rounded-sm px-2 py-0.5 text-[10px] text-foreground text-center focus:outline-hidden focus:border-amber-500/50"
                 />
               </div>
 
@@ -158,7 +158,7 @@ export function SubtitlePropertiesPanel({
                       },
                     })
                   }
-                  className={`px-2.5 py-1 rounded-sm text-[10px] font-bold ${subStyle.fontWeight === "bold" ? "bg-amber-600/30 text-amber-300 border border-amber-500/40" : "bg-zinc-800 text-zinc-400 border border-zinc-700"}`}
+                  className={`px-2.5 py-1 rounded-sm text-[10px] font-bold ${subStyle.fontWeight === "bold" ? "bg-amber-600/30 text-amber-300 border border-amber-500/40" : "bg-surface-raised text-muted-foreground border border-border"}`}
                 >
                   B
                 </button>
@@ -168,7 +168,7 @@ export function SubtitlePropertiesPanel({
                       style: { ...selectedSub.style, italic: !subStyle.italic },
                     })
                   }
-                  className={`px-2.5 py-1 rounded-sm text-[10px] italic ${subStyle.italic ? "bg-amber-600/30 text-amber-300 border border-amber-500/40" : "bg-zinc-800 text-zinc-400 border border-zinc-700"}`}
+                  className={`px-2.5 py-1 rounded-sm text-[10px] italic ${subStyle.italic ? "bg-amber-600/30 text-amber-300 border border-amber-500/40" : "bg-surface-raised text-muted-foreground border border-border"}`}
                 >
                   I
                 </button>
@@ -176,7 +176,7 @@ export function SubtitlePropertiesPanel({
 
               {/* Text color */}
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-zinc-400">Text Color</span>
+                <span className="text-[10px] text-muted-foreground">Text Color</span>
                 <input
                   type="color"
                   value={subStyle.color}
@@ -185,13 +185,13 @@ export function SubtitlePropertiesPanel({
                       style: { ...selectedSub.style, color: e.target.value },
                     })
                   }
-                  className="w-7 h-6 rounded-sm cursor-pointer border border-zinc-700"
+                  className="w-7 h-6 rounded-sm cursor-pointer border border-border"
                 />
               </div>
 
               {/* Background toggle + color */}
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-zinc-400">Background</span>
+                <span className="text-[10px] text-muted-foreground">Background</span>
                 <div className="flex items-center gap-1.5">
                   <button
                     onClick={() =>
@@ -208,7 +208,7 @@ export function SubtitlePropertiesPanel({
                     className={`px-2 py-0.5 rounded text-[9px] border ${
                       subStyle.backgroundColor !== "transparent"
                         ? "bg-amber-600/20 text-amber-300 border-amber-500/40"
-                        : "bg-zinc-800 text-zinc-500 border-zinc-700"
+                        : "bg-surface-raised text-subtle-foreground border-border"
                     }`}
                   >
                     {subStyle.backgroundColor !== "transparent" ? "On" : "Off"}
@@ -225,7 +225,7 @@ export function SubtitlePropertiesPanel({
                           },
                         })
                       }
-                      className="w-7 h-6 rounded-sm cursor-pointer border border-zinc-700"
+                      className="w-7 h-6 rounded-sm cursor-pointer border border-border"
                     />
                   )}
                 </div>
@@ -233,7 +233,7 @@ export function SubtitlePropertiesPanel({
 
               {/* Position */}
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-zinc-400">Position</span>
+                <span className="text-[10px] text-muted-foreground">Position</span>
                 <select
                   value={subStyle.position}
                   onChange={(e) =>
@@ -244,7 +244,7 @@ export function SubtitlePropertiesPanel({
                       },
                     })
                   }
-                  className="bg-zinc-800 border border-zinc-700 rounded-sm px-2 py-0.5 text-[10px] text-white focus:outline-hidden focus:border-amber-500/50"
+                  className="bg-surface-raised border border-border rounded-sm px-2 py-0.5 text-[10px] text-foreground focus:outline-hidden focus:border-amber-500/50"
                 >
                   <option value="bottom">Bottom</option>
                   <option value="center">Center</option>

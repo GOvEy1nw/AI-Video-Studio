@@ -132,7 +132,7 @@ export function GenSpaceModeTabs({
 
   return (
     <nav
-      className="flex w-14 shrink-0 flex-col m-2 items-center rounded-2xl bg-zinc-900 py-2"
+      className="flex w-14 shrink-0 flex-col m-2 items-center rounded-2xl bg-card py-2"
       aria-label="Quick Gen media and favourites"
     >
       <div
@@ -160,8 +160,8 @@ export function GenSpaceModeTabs({
             style={getGenSpaceModeAccentStyle(value)}
             className={`genspace-mode-tab flex h-10 w-10 items-center justify-center rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${
               mode === value
-                ? "text-white shadow-xs"
-                : "text-zinc-500 hover:bg-zinc-800/60 hover:text-zinc-200"
+                ? "text-foreground shadow-xs"
+                : "text-subtle-foreground hover:bg-surface-hover hover:text-foreground"
             }`}
           >
             <Icon className="h-4 w-4" />
@@ -169,7 +169,7 @@ export function GenSpaceModeTabs({
         ))}
       </div>
       {favouriteIds.length ? (
-        <div className="mt-4 flex w-full flex-col items-center gap-2 border-t border-zinc-800 pt-2">
+        <div className="mt-4 flex w-full flex-col items-center gap-2 border-t border-border pt-2">
           {favouriteIds.map((workflowId) => {
             const workflow = getQuickGenWorkflow(workflowId);
             if (!workflow) return null;
@@ -272,7 +272,7 @@ export function GenSpaceModeTabs({
           role="menu"
           onMouseDown={(event) => event.stopPropagation()}
           onKeyDown={handleMenuKeyDown}
-          className="min-w-32 rounded-md border border-zinc-700 bg-zinc-900 p-1 shadow-xl"
+          className="min-w-32 rounded-md border border-border bg-popover p-1 shadow-xl"
         >
           <button
             type="button"
@@ -282,7 +282,7 @@ export function GenSpaceModeTabs({
               onToggleFavourite(contextMenu.workflowId);
               closeContextMenu(true);
             }}
-            className="flex w-full rounded px-2 py-1.5 text-left text-sm text-zinc-200 hover:bg-zinc-800 focus-visible:outline-none focus-visible:bg-zinc-800"
+            className="flex w-full rounded px-2 py-1.5 text-left text-sm text-foreground hover:bg-surface-hover focus-visible:outline-none focus-visible:bg-surface-hover"
           >
             Remove
           </button>
@@ -293,7 +293,7 @@ export function GenSpaceModeTabs({
               setIsReordering(true);
               closeContextMenu(true);
             }}
-            className="flex w-full rounded px-2 py-1.5 text-left text-sm text-zinc-200 hover:bg-zinc-800 focus-visible:outline-none focus-visible:bg-zinc-800"
+            className="flex w-full rounded px-2 py-1.5 text-left text-sm text-foreground hover:bg-surface-hover focus-visible:outline-none focus-visible:bg-surface-hover"
           >
             Re-order
           </button>

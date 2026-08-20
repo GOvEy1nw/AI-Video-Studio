@@ -131,7 +131,7 @@ export function PresetPromptPicker({
         aria-label={`Add ${label} presets`}
         aria-expanded={open}
         aria-controls={open ? popupId : undefined}
-        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-zinc-700 bg-zinc-950 text-zinc-400 transition-colors hover:border-violet-500 hover:text-violet-300 disabled:opacity-40"
+        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border bg-card text-muted transition-colors hover:border-violet-500 hover:text-violet-300 disabled:opacity-40"
       >
         <Plus className="h-3.5 w-3.5" />
       </button>
@@ -142,14 +142,14 @@ export function PresetPromptPicker({
               id={popupId}
               role="dialog"
               aria-label={`${label} presets`}
-              className="fixed z-[80] max-h-[60vh] overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-900 p-3 shadow-2xl"
+              className="fixed z-[80] max-h-[60vh] overflow-y-auto rounded-lg border border-border bg-popover p-3 shadow-2xl"
               style={position}
             >
               <div className="space-y-3">
                 {groups.map((group) => (
                   <div key={group.label}>
                     {groups.length > 1 ? (
-                      <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
+                      <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wide text-muted">
                         {group.label}
                       </span>
                     ) : null}
@@ -169,7 +169,7 @@ export function PresetPromptPicker({
                             className={`rounded-full border px-2 py-0.5 text-[11px] transition-colors ${
                               active
                                 ? "border-violet-500 bg-violet-500/20 text-violet-200"
-                                : "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white"
+                                : "border-border text-muted hover:border-border-strong hover:text-foreground"
                             }`}
                           >
                             {option}

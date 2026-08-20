@@ -192,7 +192,7 @@ export function MusicMediaInputs({
         ? fileInput("reference-timbre", timbreRef)
         : null}
       {policy.supportsCover && coverInput ? (
-        <label className="mt-3 block text-2xs text-zinc-500">
+        <label className="mt-3 block text-2xs text-subtle-foreground">
           <span className="flex justify-between">
             <span>Source Audio Strength</span>
             <span>{coverStrength}</span>

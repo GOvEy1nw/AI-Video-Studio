@@ -31,7 +31,7 @@ export function ImageGenPanel({
       <>
         <GenPanelSection
           title=""
-          className="text-xs text-zinc-400 flex gap-2 justify-between items-center"
+          className="text-xs text-muted-foreground flex gap-2 justify-between items-center"
           collapsible={false}
         >
           <ImageModeTabs
@@ -60,7 +60,7 @@ export function ImageGenPanel({
           resolveInputFileUrl={media.resolveInputFileUrl}
           syncInputFileToGallery={media.syncInputFileToGallery}
         />
-        <div className="flex flex-wrap items-center gap-1.5 px-4 py-3 text-xs text-zinc-400">
+        <div className="flex flex-wrap items-center gap-1.5 px-4 py-3 text-xs text-muted-foreground">
           <GenerateButton
             onClick={generation.submit}
             disabled={!generation.canSubmit}
@@ -150,7 +150,7 @@ export function ImageGenPanel({
     <>
       <GenPanelSection
         title=""
-        className="text-xs text-zinc-400 flex gap-2 justify-between items-center"
+        className="text-xs text-muted-foreground flex gap-2 justify-between items-center"
         collapsible={false}
       >
         <ImageModeTabs
@@ -165,7 +165,7 @@ export function ImageGenPanel({
       </GenPanelSection>
       <GenPanelSection
         title=""
-        className="text-xs text-zinc-400 flex gap-2 justify-between items-center"
+        className="text-xs text-muted-foreground flex gap-2 justify-between items-center"
         collapsible={false}
       >
         <ImageModelControls
@@ -236,7 +236,7 @@ export function ImageGenPanel({
           actions={promptActions}
         />
       )}
-      <div className="flex flex-wrap items-center gap-1.5 px-4 py-3 text-xs text-zinc-400">
+      <div className="flex flex-wrap items-center gap-1.5 px-4 py-3 text-xs text-muted-foreground">
         <GenerateButton
           onClick={generation.submit}
           disabled={!generation.canSubmit}

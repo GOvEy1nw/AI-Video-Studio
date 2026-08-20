@@ -86,7 +86,7 @@ export function ModeSelector({
       role="dialog"
       aria-modal="true"
       aria-label={`${label} catalogue`}
-      className="absolute inset-0 z-40 overflow-y-auto bg-zinc-900 p-4 shadow-2xl"
+      className="absolute inset-0 z-40 overflow-y-auto bg-card p-4 shadow-2xl"
     >
       <div className="mb-4 flex items-center gap-2">
         <button
@@ -96,13 +96,13 @@ export function ModeSelector({
             setIsOpen(false);
             requestAnimationFrame(() => triggerRef.current?.focus());
           }}
-          className="rounded-md p-1.5 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white focus-visible:outline-2 focus-visible:outline-violet-400"
+          className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground focus-visible:outline-2 focus-visible:outline-violet-400"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
         <div>
-          <div className="text-sm font-semibold text-white">{label}</div>
-          <div className="text-xs text-zinc-500">Choose a workflow</div>
+          <div className="text-sm font-semibold text-foreground">{label}</div>
+          <div className="text-xs text-subtle-foreground">Choose a workflow</div>
         </div>
       </div>
       <div className="space-y-1">
@@ -113,7 +113,7 @@ export function ModeSelector({
             <div
               key={option.value}
               data-genspace-tool-selector
-              className="group flex items-center gap-2 rounded-lg pr-1 hover:bg-zinc-900"
+              className="group flex items-center gap-2 rounded-lg pr-1 hover:bg-surface-hover"
             >
               <button
                 type="button"
@@ -138,7 +138,7 @@ export function ModeSelector({
                   <Icon className="h-5 w-5" />
                 </span>
                 <span className="min-w-0">
-                  <span className="block truncate text-sm font-medium text-zinc-100">
+                  <span className="block truncate text-sm font-medium text-foreground">
                     {option.label}
                   </span>
                   <span className="block truncate text-xs">
@@ -157,8 +157,8 @@ export function ModeSelector({
                   onClick={() => onToggleFavourite(option.value)}
                   className={`rounded-md p-2 transition-colors focus-visible:outline-2 focus-visible:outline-violet-400 ${
                     isFavourite
-                      ? "text-zinc-100"
-                      : "text-zinc-700 hover:text-zinc-300"
+                      ? "text-foreground"
+                      : "text-subtle-foreground hover:text-foreground"
                   }`}
                 >
                   {isFavourite ? (
@@ -188,8 +188,8 @@ export function ModeSelector({
         className="flex w-full min-w-[180px] items-center gap-3 rounded-xl border p-2.5 text-left"
       >
         <span className="min-w-0 flex-1">
-          <span className="mb-0.5 block text-2xs text-zinc-400">{label}</span>
-          <span className="flex items-center gap-2 truncate text-sm font-semibold text-white">
+          <span className="mb-0.5 block text-2xs text-muted-foreground">{label}</span>
+          <span className="flex items-center gap-2 truncate text-sm font-semibold text-foreground">
             <SelectedIcon className="h-4 w-4 shrink-0 text-[var(--genspace-mode-accent-hover)]" />
             {selected.label}
             {selected.disabled ? (
@@ -199,7 +199,7 @@ export function ModeSelector({
             ) : null}
           </span>
         </span>
-        <span className="rounded-lg bg-[var(--genspace-mode-accent)] px-2 py-2 text-2xs text-white">
+        <span className="rounded-lg bg-[var(--genspace-mode-accent)] px-2 py-2 text-2xs text-primary-foreground">
           Browse
         </span>
       </button>

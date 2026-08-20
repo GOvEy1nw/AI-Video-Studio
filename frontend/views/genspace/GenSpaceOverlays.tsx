@@ -106,20 +106,20 @@ export function GenSpaceOverlays({
           onClick={onCloseTakes}
         >
           <div
-            className="flex max-h-[80vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-zinc-700 bg-zinc-900 shadow-2xl"
+            className="flex max-h-[80vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-border bg-popover shadow-2xl"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
+            <div className="flex items-center justify-between border-b border-border px-4 py-3">
               <div>
-                <h2 className="text-sm font-semibold text-white">All Takes</h2>
-                <p className="text-xs text-zinc-500">
+                <h2 className="text-sm font-semibold text-foreground">All Takes</h2>
+                <p className="text-xs text-subtle-foreground">
                   {takesAsset.takes.length} takes
                 </p>
               </div>
               <button
                 type="button"
                 onClick={onCloseTakes}
-                className="rounded-sm p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                className="rounded-sm p-1.5 text-muted-foreground hover:bg-surface-hover hover:text-foreground"
                 aria-label="Close takes"
               >
                 <X className="h-4 w-4" />
@@ -133,10 +133,10 @@ export function GenSpaceOverlays({
                     key={`${take.createdAt}-${index}`}
                     type="button"
                     onClick={() => onSelectTake(takesAsset.id, index)}
-                    className={`relative overflow-hidden rounded-lg border-2 bg-zinc-950 transition-colors ${
+                    className={`relative overflow-hidden rounded-lg border-2 bg-surface transition-colors ${
                       active
                         ? "border-blue-500 ring-2 ring-blue-500/30"
-                        : "border-zinc-800 hover:border-zinc-600"
+                        : "border-border hover:border-border-strong"
                     }`}
                   >
                     {takesAsset.type === "video" ? (

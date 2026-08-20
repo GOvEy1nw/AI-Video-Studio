@@ -2,9 +2,11 @@ import {
   ExternalLink,
   Folder,
   Info,
+  Moon,
   Package,
   Settings,
   SlidersHorizontal,
+  Sun,
   X,
 } from "lucide-react";
 
@@ -58,7 +60,7 @@ export function SettingsModal({
   onClose,
   initialTab,
 }: SettingsModalProps) {
-  const { settings, updateSettings, saveSettings } = useAppSettings();
+  const { settings, setUiTheme, updateSettings, saveSettings } = useAppSettings();
   const { refreshAfterModelPackMutation } = useModelProfiles();
   const [activeTab, setActiveTab] = useState<TabId>("general");
   const [appVersion, setAppVersion] = useState("");
@@ -254,20 +256,20 @@ export function SettingsModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-xs"
+        className="absolute inset-0 bg-overlay/60 backdrop-blur-xs"
         onClick={onClose}
       />
 
       {/* Modal */}
-      <div className="relative flex h-[min(820px,88vh)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-900 shadow-2xl">
+      <div className="relative flex h-[min(820px,88vh)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-zinc-800 px-7 py-5">
-          <h2 className="text-xl font-semibold text-white">Settings</h2>
+        <div className="flex items-center justify-between border-b border-border px-7 py-5">
+          <h2 className="text-xl font-semibold text-foreground">Settings</h2>
           <Button
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800"
+            className="h-8 w-8 text-muted-foreground hover:bg-surface-hover hover:text-foreground"
           >
             <X className="h-4 w-4" />
           </Button>
@@ -275,7 +277,7 @@ export function SettingsModal({
 
         <div className="flex min-h-0 flex-1">
           {/* Tabs */}
-          <nav className="w-56 shrink-0 border-r border-zinc-800 bg-zinc-950/25 p-4 sm:w-64">
+          <nav className="w-56 shrink-0 border-r border-border bg-background p-4 sm:w-64">
             <div className="space-y-1">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
@@ -285,11 +287,11 @@ export function SettingsModal({
                     onClick={() => setActiveTab(tab.id)}
                     className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left text-sm font-medium transition-colors ${
                       activeTab === tab.id
-                        ? "bg-zinc-800 text-white"
-                        : "text-zinc-400 hover:bg-zinc-800/60 hover:text-white"
+                        ? "bg-surface-selected text-foreground"
+                        : "text-muted-foreground hover:bg-surface-hover hover:text-foreground"
                     }`}
                   >
-                    <Icon className={`h-4 w-4 ${activeTab === tab.id ? "text-blue-400" : "text-zinc-500"}`} />
+                    <Icon className={`h-4 w-4 ${activeTab === tab.id ? "text-blue-400" : "text-subtle-foreground"}`} />
                     {tab.label}
                   </button>
                 );
@@ -301,15 +303,49 @@ export function SettingsModal({
           <div className="min-w-0 flex-1 space-y-7 overflow-y-auto px-7 py-6 sm:px-10 sm:py-8">
           {activeTab === "general" && (
             <>
+              <fieldset className="space-y-3 border-b border-border pb-6">
+                <legend className="text-sm font-semibold text-foreground">Appearance</legend>
+                <p className="text-xs leading-relaxed text-subtle-foreground">Choose how AiVS looks on this device.</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { value: "dark" as const, label: "Dark", icon: Moon },
+                    { value: "light" as const, label: "Light", icon: Sun },
+                  ].map(({ value, label, icon: Icon }) => {
+                    const selected = settings.uiTheme === value;
+                    return (
+                      <label
+                        key={value}
+                        className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 text-sm font-medium transition-colors focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-card ${
+                          selected
+                            ? "border-primary bg-primary/10 text-foreground"
+                            : "border-border bg-input text-muted-foreground hover:bg-surface-hover hover:text-foreground"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="ui-theme"
+                          value={value}
+                          checked={selected}
+                          onChange={() => setUiTheme(value)}
+                          className="h-4 w-4 accent-primary"
+                        />
+                        <Icon className="h-4 w-4" aria-hidden="true" />
+                        <span>{label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </fieldset>
+
               {/* Project Assets Path */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <Folder className="h-4 w-4 text-blue-400" />
-                  <h3 className="text-sm font-semibold text-white">
+                  <h3 className="text-sm font-semibold text-foreground">
                     Project Assets Path
                   </h3>
                 </div>
-                <p className="text-xs text-zinc-500 leading-relaxed">
+                <p className="text-xs leading-relaxed text-muted">
                   Where generated video and image assets are saved. Each project
                   gets a subfolder.
                 </p>
@@ -319,14 +355,14 @@ export function SettingsModal({
                   </p>
                 )}
                 <div className="flex gap-2">
-                  <div className="flex-1 px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-300 text-sm truncate select-text">
+                  <div className="flex-1 px-3 py-2 rounded-lg bg-surface-raised border border-border text-foreground text-sm truncate select-text">
                     {projectAssetsPath || (
-                      <span className="text-zinc-600">Not set</span>
+                      <span className="text-subtle-foreground">Not set</span>
                     )}
                   </div>
                   <Button
                     variant="outline"
-                    className="border-zinc-700 shrink-0"
+                    className="border-border shrink-0"
                     onClick={async () => {
                       const result = await window.electronAPI.chooseProjectAssetsPath();
                       if (result.path) {
@@ -363,10 +399,10 @@ export function SettingsModal({
                 },
               ].map(({ key, label, location, setLocation }) => (
                 <div key={key} className="space-y-2">
-                  <label className="text-sm font-medium text-white">{label}</label>
+                  <label className="text-sm font-medium text-foreground">{label}</label>
                   <div className="flex gap-2">
                     <div
-                      className="min-w-0 flex-1 truncate rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-300 select-text"
+                      className="min-w-0 flex-1 truncate rounded-lg border border-border bg-surface-raised px-3 py-2 text-sm text-foreground select-text"
                       title={location?.path}
                     >
                       {location?.path ?? "Loading…"}
@@ -392,7 +428,7 @@ export function SettingsModal({
                     <Button
                       type="button"
                       variant="outline"
-                      className="shrink-0 border-zinc-700"
+                      className="shrink-0 border-border"
                       disabled={advancedSaving || !location}
                       onClick={async () => {
                         const directory = await window.electronAPI.showOpenDirectoryDialog({
@@ -413,11 +449,11 @@ export function SettingsModal({
                 </div>
               ))}
 
-              <div className="space-y-2 border-t border-zinc-800 pt-4">
+              <div className="space-y-2 border-t border-border pt-4">
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full border-zinc-700"
+                  className="w-full border-border"
                   disabled={openingWanGP}
                   onClick={() => void handleOpenWanGP()}
                 >
@@ -431,11 +467,11 @@ export function SettingsModal({
                 )}
               </div>
               {/* Torch Compile */}
-              <div className="space-y-3 pt-4 border-t border-zinc-800">
+              <div className="space-y-3 pt-4 border-t border-border">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <label className="text-sm font-medium text-white">
+                      <label className="text-sm font-medium text-foreground">
                         Torch Compile
                       </label>
                     </div>
@@ -453,12 +489,12 @@ export function SettingsModal({
                     className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors ${
                       advancedSettings.useTorchCompile
                         ? "bg-blue-600"
-                        : "bg-zinc-700"
+                        : "bg-surface-hover"
                     }`}
                     aria-pressed={advancedSettings.useTorchCompile}
                   >
                     <span
-                      className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                className={`inline-block h-5 w-5 rounded-full bg-foreground shadow transition-transform ${
                         advancedSettings.useTorchCompile
                           ? "translate-x-5"
                           : "translate-x-0"
@@ -470,7 +506,7 @@ export function SettingsModal({
 
               <div className="flex gap-2">
                 <label className="block space-y-1.5">
-                  <span className="text-sm font-medium text-white">
+                  <span className="text-sm font-medium text-foreground">
                     Attention Mode
                   </span>
                   <select
@@ -484,7 +520,7 @@ export function SettingsModal({
                       }));
                       setAdvancedReloaded(false);
                     }}
-                    className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white"
+                    className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground"
                   >
                     <option value="auto">Auto (Recommended)</option>
                     <option value="sdpa">PyTorch (Compatible)</option>
@@ -497,7 +533,7 @@ export function SettingsModal({
                 </label>
 
                 <label className="block space-y-1.5">
-                  <span className="text-sm font-medium text-white">
+                  <span className="text-sm font-medium text-foreground">
                     Performance Profile
                   </span>
                   <select
@@ -512,7 +548,7 @@ export function SettingsModal({
                       }));
                       setAdvancedReloaded(false);
                     }}
-                    className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white"
+                    className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground"
                   >
                     <option value="1">1 — Fastest (High RAM + VRAM)</option>
                     <option value="2">2 — Fast (High RAM)</option>
@@ -524,7 +560,7 @@ export function SettingsModal({
                 </label>
 
                 <label className="block space-y-1.5">
-                  <span className="text-sm font-medium text-white">
+                  <span className="text-sm font-medium text-foreground">
                     Reduce VRAM
                   </span>
                   <select
@@ -538,7 +574,7 @@ export function SettingsModal({
                       }));
                       setAdvancedReloaded(false);
                     }}
-                    className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white"
+                    className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground"
                   >
                     <option value="disabled">Disabled</option>
                     <option value="1">Level 1 (16GB+)</option>
@@ -548,16 +584,16 @@ export function SettingsModal({
                 </label>
               </div>
 
-              <div className="space-y-3 border-t border-zinc-800 pt-4">
+              <div className="space-y-3 border-t border-border pt-4">
                 <div>
-                  <h3 className="text-sm font-semibold text-white">Generation Previews</h3>
-                  <p className="mt-1 text-xs leading-relaxed text-zinc-500">
+                  <h3 className="text-sm font-semibold text-foreground">Generation Previews</h3>
+                  <p className="mt-1 text-xs leading-relaxed text-muted">
                     Animated TAE is used where WanGP supports it; other models fall back to Fast RGB. Lower sizes and frame rates reduce preview overhead.
                   </p>
                 </div>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                   <label className="space-y-1.5">
-                    <span className="text-xs text-zinc-500">Mode</span>
+                    <span className="text-xs text-muted">Mode</span>
                     <select
                       value={advancedSettings.previewSettings.mode}
                       disabled={advancedSaving}
@@ -565,7 +601,7 @@ export function SettingsModal({
                         setAdvancedSettings((current) => ({ ...current, previewSettings: { ...current.previewSettings, mode: event.target.value as typeof current.previewSettings.mode } }));
                         setAdvancedReloaded(false);
                       }}
-                      className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white"
+                      className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground"
                     >
                       <option value="tae">TAE (when supported)</option>
                       <option value="rgb">Fast RGB</option>
@@ -573,7 +609,7 @@ export function SettingsModal({
                     </select>
                   </label>
                   <label className="space-y-1.5">
-                    <span className="text-xs text-zinc-500">Update Rate</span>
+                    <span className="text-xs text-muted">Update Rate</span>
                     <select
                       value={advancedSettings.previewSettings.updateRate}
                       disabled={advancedSaving}
@@ -581,7 +617,7 @@ export function SettingsModal({
                         setAdvancedSettings((current) => ({ ...current, previewSettings: { ...current.previewSettings, updateRate: event.target.value as typeof current.previewSettings.updateRate } }));
                         setAdvancedReloaded(false);
                       }}
-                      className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white"
+                      className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground"
                     >
                       <option value="adaptive">Adaptive</option>
                       <option value="every_step">Every step</option>
@@ -590,7 +626,7 @@ export function SettingsModal({
                     </select>
                   </label>
                   <label className="space-y-1.5">
-                    <span className="text-xs text-zinc-500">Decode Device</span>
+                    <span className="text-xs text-muted">Decode Device</span>
                     <select
                       value={advancedSettings.previewSettings.device}
                       disabled={advancedSaving}
@@ -598,7 +634,7 @@ export function SettingsModal({
                         setAdvancedSettings((current) => ({ ...current, previewSettings: { ...current.previewSettings, device: event.target.value as typeof current.previewSettings.device } }));
                         setAdvancedReloaded(false);
                       }}
-                      className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white"
+                      className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground"
                     >
                       <option value="auto">Auto</option>
                       <option value="cuda">GPU</option>
@@ -606,7 +642,7 @@ export function SettingsModal({
                     </select>
                   </label>
                   <label className="space-y-1.5">
-                    <span className="text-xs text-zinc-500">Maximum Edge</span>
+                    <span className="text-xs text-muted">Maximum Edge</span>
                     <select
                       value={advancedSettings.previewSettings.maxEdge}
                       disabled={advancedSaving}
@@ -614,7 +650,7 @@ export function SettingsModal({
                         setAdvancedSettings((current) => ({ ...current, previewSettings: { ...current.previewSettings, maxEdge: Number(event.target.value) } }));
                         setAdvancedReloaded(false);
                       }}
-                      className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white"
+                      className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground"
                     >
                       {[128, 256, 384, 512, 768, 1024].map((size) => (
                         <option key={size} value={size}>
@@ -624,7 +660,7 @@ export function SettingsModal({
                     </select>
                   </label>
                   <label className="space-y-1.5">
-                    <span className="text-xs text-zinc-500">Playback FPS</span>
+                    <span className="text-xs text-muted">Playback FPS</span>
                     <select
                       value={advancedSettings.previewSettings.previewFps}
                       disabled={advancedSaving}
@@ -632,7 +668,7 @@ export function SettingsModal({
                         setAdvancedSettings((current) => ({ ...current, previewSettings: { ...current.previewSettings, previewFps: Number(event.target.value) as typeof current.previewSettings.previewFps } }));
                         setAdvancedReloaded(false);
                       }}
-                      className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white"
+                      className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground"
                     >
                       {[2, 4, 8, 16].map((fps) => (
                         <option key={fps} value={fps}>
@@ -642,7 +678,7 @@ export function SettingsModal({
                     </select>
                   </label>
                   <label className="space-y-1.5">
-                    <span className="text-xs text-zinc-500">WebP Quality</span>
+                    <span className="text-xs text-muted">WebP Quality</span>
                     <input
                       type="number"
                       min={1}
@@ -653,14 +689,14 @@ export function SettingsModal({
                         setAdvancedSettings((current) => ({ ...current, previewSettings: { ...current.previewSettings, webpQuality: Math.max(1, Math.min(100, Number(event.target.value))) } }));
                         setAdvancedReloaded(false);
                       }}
-                      className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white"
+                      className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground"
                     />
                   </label>
                 </div>
               </div>
 
-              <div className="space-y-3 pt-4 border-t border-zinc-800">
-                <p className="text-xs leading-relaxed text-zinc-500">
+              <div className="space-y-3 border-t border-border pt-4">
+                <p className="text-xs leading-relaxed text-muted">
                   Changes stay pending until saved. Reloading inference engine
                   interrupts any active generation.
                 </p>
@@ -691,12 +727,12 @@ export function SettingsModal({
           {activeTab === "general" && (
             <div className="space-y-5">
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-white">
+                <h3 className="text-sm font-semibold text-foreground">
                   Video Quality
                 </h3>
                 <div className="grid grid-cols-2 gap-3">
                   <label className="space-y-1">
-                    <span className="text-xs text-zinc-500">Container</span>
+                    <span className="text-xs text-muted">Container</span>
                     <select
                       value={settings.outputSettings.videoContainer}
                       onChange={(event) => {
@@ -717,7 +753,7 @@ export function SettingsModal({
                           },
                         }));
                       }}
-                      className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white"
+                      className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground"
                     >
                       <option value="mp4">MP4</option>
                       <option value="mov">MOV</option>
@@ -725,7 +761,7 @@ export function SettingsModal({
                     </select>
                   </label>
                   <label className="space-y-1">
-                    <span className="text-xs text-zinc-500">Codec</span>
+                    <span className="text-xs text-muted">Codec</span>
                     <select
                       value={settings.outputSettings.videoCodec}
                       onChange={(event) =>
@@ -738,7 +774,7 @@ export function SettingsModal({
                           },
                         }))
                       }
-                      className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white"
+                      className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground"
                     >
                       <option value="libx264_8">x264 Medium</option>
                       <option value="libx264_10">x264 High</option>
@@ -757,7 +793,7 @@ export function SettingsModal({
                   </label>
                 </div>
                 <label className="space-y-1 block">
-                  <span className="text-xs text-zinc-500">Audio Format</span>
+                  <span className="text-xs text-muted">Audio Format</span>
                   <select
                     value={settings.outputSettings.audioCodec}
                     onChange={(event) =>
@@ -770,7 +806,7 @@ export function SettingsModal({
                         },
                       }))
                     }
-                    className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white"
+                    className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground"
                   >
                     <option value="aac_128">AAC 128 kbps</option>
                     <option value="aac_192">AAC 192 kbps</option>
@@ -778,13 +814,13 @@ export function SettingsModal({
                     <option value="aac_320">AAC 320 kbps</option>
                   </select>
                 </label>
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-subtle-foreground">
                   HDR output support depends on selected WanGP codec and model.
                 </p>
               </div>
 
-              <div className="space-y-3 border-t border-zinc-800 pt-4">
-                <h3 className="text-sm font-semibold text-white">
+              <div className="space-y-3 border-t border-border pt-4">
+                <h3 className="text-sm font-semibold text-foreground">
                   Image Quality
                 </h3>
                 <select
@@ -799,7 +835,7 @@ export function SettingsModal({
                       },
                     }))
                   }
-                  className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white"
+                  className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground"
                 >
                   <option value="jpeg">JPEG q95</option>
                   <option value="webp">WebP q95</option>
@@ -808,8 +844,8 @@ export function SettingsModal({
                 </select>
               </div>
 
-              <div className="space-y-3 border-t border-zinc-800 pt-4">
-                <h3 className="text-sm font-semibold text-white">
+              <div className="space-y-3 border-t border-border pt-4">
+                <h3 className="text-sm font-semibold text-foreground">
                   Metadata Output
                 </h3>
                 <div className="grid grid-cols-2 gap-2">
@@ -831,15 +867,15 @@ export function SettingsModal({
                       }
                       className={`rounded-lg border px-3 py-2 text-sm ${
                         settings.outputSettings.metadataMode === option.value
-                          ? "border-blue-500 bg-blue-500/10 text-white"
-                          : "border-zinc-700 bg-zinc-800 text-zinc-400"
+                          ? "border-blue-500 bg-blue-500/10 text-primary-foreground"
+                          : "border-border bg-surface-raised text-muted-foreground"
                       }`}
                     >
                       {option.label}
                     </button>
                   ))}
                 </div>
-                <label className="flex items-center gap-2 text-sm text-zinc-300">
+                <label className="flex items-center gap-2 text-sm text-foreground">
                   <input
                     type="checkbox"
                     checked={
@@ -867,38 +903,38 @@ export function SettingsModal({
               {showModelLicense ? (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-white">
+                    <h3 className="text-sm font-semibold text-foreground">
                       Model License
                     </h3>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => setShowModelLicense(false)}
-                      className="h-7 px-2 text-xs text-zinc-400 hover:text-white hover:bg-zinc-800"
+                      className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-surface-raised"
                     >
                       Back
                     </Button>
                   </div>
-                  <pre className="text-xs text-zinc-300 whitespace-pre-wrap font-mono bg-zinc-800/50 rounded-lg p-4 max-h-[50vh] overflow-y-auto border border-zinc-700/50">
+                  <pre className="text-xs text-foreground whitespace-pre-wrap font-mono bg-surface-raised/50 rounded-lg p-4 max-h-[50vh] overflow-y-auto border border-border/50">
                     {modelLicenseText}
                   </pre>
                 </div>
               ) : showNotices ? (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-white">
+                    <h3 className="text-sm font-semibold text-foreground">
                       Third-Party Notices
                     </h3>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => setShowNotices(false)}
-                      className="h-7 px-2 text-xs text-zinc-400 hover:text-white hover:bg-zinc-800"
+                      className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-surface-raised"
                     >
                       Back
                     </Button>
                   </div>
-                  <pre className="text-xs text-zinc-300 whitespace-pre-wrap font-mono bg-zinc-800/50 rounded-lg p-4 max-h-[50vh] overflow-y-auto border border-zinc-700/50">
+                  <pre className="text-xs text-foreground whitespace-pre-wrap font-mono bg-surface-raised/50 rounded-lg p-4 max-h-[50vh] overflow-y-auto border border-border/50">
                     {noticesText}
                   </pre>
                 </div>
@@ -906,30 +942,30 @@ export function SettingsModal({
                 <div className="space-y-6">
                   {/* App Identity */}
                   <div className="text-center space-y-2 flex flex-col">
-                    <AivsLogo className="h-12 w-auto text-white mx-auto mb-2" />
-                    <p className="text-xs text-zinc-500 mb-3">
+                    <AivsLogo className="h-12 w-auto text-foreground mx-auto mb-2" />
+                    <p className="text-xs text-subtle-foreground mb-3">
                       Local-Only AI Video Studio
                     </p>
-                    <p className="text-sm text-zinc-400">
+                    <p className="text-sm text-muted-foreground">
                       Version {appVersion || "..."}
                     </p>
                   </div>
 
                   {/* License */}
-                  <div className="bg-zinc-800/50 rounded-lg p-4 space-y-2">
+                  <div className="bg-surface-raised/50 rounded-lg p-4 space-y-2">
                     <div className="flex items-center gap-2">
                       <Info className="h-4 w-4 text-blue-400" />
-                      <span className="text-sm font-medium text-white">
+                      <span className="text-sm font-medium text-foreground">
                         License
                       </span>
                     </div>
-                    <p className="text-xs text-zinc-400">
+                    <p className="text-xs text-muted-foreground">
                       Licensed under the Apache License, Version 2.0
                     </p>
                   </div>
 
                   {/* Model License */}
-                  <div className="bg-zinc-800/50 rounded-lg p-4 space-y-3">
+                  <div className="bg-surface-raised/50 rounded-lg p-4 space-y-3">
                     <div className="flex items-center gap-2">
                       <svg
                         className="h-4 w-4 text-blue-400"
@@ -940,11 +976,11 @@ export function SettingsModal({
                       >
                         <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
                       </svg>
-                      <span className="text-sm font-medium text-white">
+                      <span className="text-sm font-medium text-foreground">
                         Model Licenses
                       </span>
                     </div>
-                    <p className="text-xs text-zinc-400">
+                    <p className="text-xs text-muted-foreground">
                       AI models are subject to their respective license
                       agreements.
                     </p>
@@ -952,7 +988,7 @@ export function SettingsModal({
                       size="sm"
                       onClick={handleLoadModelLicense}
                       disabled={modelLicenseLoading}
-                      className="w-full bg-zinc-700 hover:bg-zinc-600 text-white text-xs"
+                      className="w-full bg-surface-hover hover:bg-surface-hover text-foreground text-xs"
                     >
                       {modelLicenseLoading
                         ? "Loading..."
@@ -961,7 +997,7 @@ export function SettingsModal({
                   </div>
 
                   {/* Third-Party Notices */}
-                  <div className="bg-zinc-800/50 rounded-lg p-4 space-y-3">
+                  <div className="bg-surface-raised/50 rounded-lg p-4 space-y-3">
                     <div className="flex items-center gap-2">
                       <svg
                         className="h-4 w-4 text-blue-400"
@@ -975,11 +1011,11 @@ export function SettingsModal({
                         <line x1="16" y1="13" x2="8" y2="13" />
                         <line x1="16" y1="17" x2="8" y2="17" />
                       </svg>
-                      <span className="text-sm font-medium text-white">
+                      <span className="text-sm font-medium text-foreground">
                         Third-Party Notices
                       </span>
                     </div>
-                    <p className="text-xs text-zinc-400">
+                    <p className="text-xs text-muted-foreground">
                       This application uses open-source software and AI models
                       subject to their own license terms.
                     </p>
@@ -987,7 +1023,7 @@ export function SettingsModal({
                       size="sm"
                       onClick={handleLoadNotices}
                       disabled={noticesLoading}
-                      className="w-full bg-zinc-700 hover:bg-zinc-600 text-white text-xs"
+                      className="w-full bg-surface-hover hover:bg-surface-hover text-foreground text-xs"
                     >
                       {noticesLoading
                         ? "Loading..."
@@ -996,7 +1032,7 @@ export function SettingsModal({
                   </div>
 
                   {/* Built on WanGP */}
-                  <div className="bg-zinc-800/50 rounded-lg p-4 space-y-2">
+                  <div className="bg-surface-raised/50 rounded-lg p-4 space-y-2">
                     <div className="flex items-center gap-2">
                       <svg
                         className="h-4 w-4 text-green-400"
@@ -1007,7 +1043,7 @@ export function SettingsModal({
                       >
                         <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
                       </svg>
-                      <span className="text-sm font-medium text-white">
+                      <span className="text-sm font-medium text-foreground">
                         Powered by WanGP
                       </span>
                     </div>
@@ -1020,10 +1056,10 @@ export function SettingsModal({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end border-t border-zinc-800 px-7 py-4">
+        <div className="flex justify-end border-t border-border px-7 py-4">
           <Button
             onClick={onClose}
-            className="bg-zinc-700 hover:bg-zinc-600 text-white"
+            className="bg-surface-hover hover:bg-surface-hover text-foreground"
           >
             Done
           </Button>

@@ -22,7 +22,7 @@ export function MusicAdvancedSettings({
     <GenPanelSection title="Advanced Settings" collapsible={false}>
       <div className="space-y-3">
         <div className="space-y-3">
-          <label className="block text-2xs text-zinc-500">
+          <label className="block text-2xs text-subtle-foreground">
             <span className="flex justify-between">
               <span>Variations</span>
               <span>{settings.variations}</span>
@@ -68,7 +68,7 @@ function RangeControl({
   onChange: (value: number) => void;
 }) {
   return (
-    <label className="block text-2xs text-zinc-500">
+    <label className="block text-2xs text-subtle-foreground">
       <span className="flex justify-between">
         <span>{label}</span>
         <span>{value}</span>

@@ -245,12 +245,12 @@ export function ReframeEditor({
         className="flex h-8 min-w-0 items-center gap-1.5 mb-2"
       >
         {headerLabel ? (
-          <span className="mr-auto text-2xs font-medium uppercase tracking-wider text-zinc-500">
+          <span className="mr-auto text-2xs font-medium uppercase tracking-wider text-subtle-foreground">
             {headerLabel}
           </span>
         ) : null}
         {controls || framingEnabled ? (
-          <div className="flex shrink-0 items-center rounded-lg p-1 gap-1 bg-zinc-800/35">
+          <div className="flex shrink-0 items-center gap-1 rounded-lg bg-surface-raised p-1">
             {controls}
             {framingEnabled ? (
               <>
@@ -260,12 +260,12 @@ export function ReframeEditor({
                   onClick={handleReset}
                   title="Reset frame and zoom"
                   aria-label="Reset frame and zoom"
-                  className="rounded p-1 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded p-1 text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <RefreshCw className="h-3 w-3" />
                 </button>
                 <label className="flex min-w-0 items-center gap-1 rounded-md px-1.5 py-1">
-                  <span className="text-2xs leading-none font-medium text-zinc-400">
+                  <span className="text-2xs leading-none font-medium text-muted-foreground">
                     Zoom
                   </span>
                   <input

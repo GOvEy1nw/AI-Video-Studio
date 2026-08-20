@@ -63,10 +63,10 @@ export function TakeContextMenu({
       anchorPoint={takeContextMenu}
       gap={0}
       role="menu"
-      className="min-w-[190px] overflow-y-auto rounded-xl border border-zinc-700 bg-zinc-800 py-1.5 text-xs shadow-2xl"
+      className="min-w-[190px] overflow-y-auto rounded-xl border border-border bg-surface-raised py-1.5 text-xs shadow-2xl"
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="px-3 py-1 text-2xs text-zinc-500 font-medium">
+      <div className="px-3 py-1 text-2xs text-subtle-foreground font-medium">
         Take {takeIndex + 1} of {tcAsset.takes!.length}
       </div>
 
@@ -79,9 +79,9 @@ export function TakeContextMenu({
             }
             setTakeContextMenu(null);
           }}
-          className="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-700 flex items-center gap-3"
+          className="w-full text-left px-3 py-1.5 text-muted-foreground hover:bg-surface-hover flex items-center gap-3"
         >
-          <Eye className="h-3.5 w-3.5 text-zinc-500" />
+          <Eye className="h-3.5 w-3.5 text-subtle-foreground" />
           <span>Set as Active Take</span>
         </button>
       )}
@@ -91,13 +91,13 @@ export function TakeContextMenu({
           addClipToTimeline({ ...tcAsset, url: take.url, path: take.path }, 0);
           setTakeContextMenu(null);
         }}
-        className="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-700 flex items-center gap-3"
+        className="w-full text-left px-3 py-1.5 text-muted-foreground hover:bg-surface-hover flex items-center gap-3"
       >
-        <Plus className="h-3.5 w-3.5 text-zinc-500" />
+        <Plus className="h-3.5 w-3.5 text-subtle-foreground" />
         <span>Add to Timeline</span>
       </button>
 
-      <div className="h-px bg-zinc-700 my-1" />
+      <div className="h-px bg-border my-1" />
 
       <button
         onClick={() => {
@@ -125,7 +125,7 @@ export function TakeContextMenu({
           }
           setTakeContextMenu(null);
         }}
-        className="w-full text-left px-3 py-1.5 text-blue-300 hover:bg-zinc-700 flex items-center gap-3"
+        className="w-full text-left px-3 py-1.5 text-blue-300 hover:bg-surface-hover flex items-center gap-3"
       >
         <Copy className="h-3.5 w-3.5" />
         <span>Create New Asset from Take</span>
@@ -133,7 +133,7 @@ export function TakeContextMenu({
 
       {tcAsset.takes!.length > 1 && (
         <>
-          <div className="h-px bg-zinc-700 my-1" />
+          <div className="h-px bg-border my-1" />
           <button
             onClick={() => {
               if (confirm(`Delete take ${takeIndex + 1}?`)) {

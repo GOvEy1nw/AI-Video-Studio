@@ -13,15 +13,15 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     return (
       <div className="w-full">
         {label && (
-          <label className="block text-[12px] font-semibold text-zinc-500 mb-2 uppercase leading-4">
+          <label className="block text-[12px] font-semibold text-subtle-foreground mb-2 uppercase leading-4">
             {label}
           </label>
         )}
         <textarea
           className={cn(
-            'flex min-h-[120px] w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-3 text-sm text-white',
-            'placeholder:text-zinc-500',
-            'focus:outline-hidden focus:ring-1 focus:ring-zinc-500 focus:border-zinc-500',
+            'flex min-h-[120px] w-full rounded-lg border border-border bg-input px-3 py-3 text-sm text-foreground',
+            'placeholder:text-subtle-foreground',
+            'focus:outline-hidden focus:ring-1 focus:ring-ring focus:border-border-strong',
             'disabled:cursor-not-allowed disabled:opacity-50',
             'resize-y',
             className
@@ -31,10 +31,10 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         />
         <div className="flex justify-between mt-2">
           {helperText && (
-            <span className="text-xs text-zinc-500">{helperText}</span>
+            <span className="text-xs text-subtle-foreground">{helperText}</span>
           )}
           {maxChars !== undefined && (
-            <span className="text-xs text-zinc-500 ml-auto">
+            <span className="text-xs text-subtle-foreground ml-auto">
               {charCount ?? 0}/{maxChars}
             </span>
           )}

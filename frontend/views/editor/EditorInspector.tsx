@@ -32,7 +32,7 @@ export function EditorInspector({
         <div className="absolute inset-y-0 -left-1 -right-1" />
         <Tooltip content="Collapse Properties Panel" side="left">
           <button
-            className="absolute top-1/2 -translate-y-1/2 -left-3 w-6 h-8 bg-zinc-800 border border-zinc-700 rounded-l-md flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors opacity-0 group-hover:opacity-100 z-20 cursor-pointer"
+            className="absolute top-1/2 -left-3 z-20 flex h-8 w-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded-l-md border border-border bg-card text-muted opacity-0 transition-colors hover:bg-surface-hover hover:text-foreground group-hover:opacity-100"
             onClick={(event) => {
               event.stopPropagation();
               onHide();
@@ -48,7 +48,7 @@ export function EditorInspector({
         <ClipPropertiesPanel {...clipPanelProps} />
       ) : !subtitlePanelProps ? (
         <div
-          className="bg-zinc-950 border-l border-zinc-800 flex flex-col items-center justify-center text-zinc-600 text-[12px]"
+          className="flex flex-col items-center justify-center border-l border-border bg-background text-[12px] text-subtle"
           style={{ width: rightPanelWidth }}
         >
           <span>No clip selected</span>

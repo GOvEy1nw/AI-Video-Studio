@@ -29,7 +29,7 @@ export function SeedSettings({
   return (
     <div className="space-y-3">
       <label className="flex items-center justify-between gap-3">
-        <span className="text-xs font-medium text-zinc-300">Lock seed</span>
+        <span className="text-xs font-medium text-muted">Lock seed</span>
         <button
           type="button"
           role="switch"
@@ -37,11 +37,11 @@ export function SeedSettings({
           disabled={disabled}
           onClick={() => onChange({ seedLocked: !seedLocked, lockedSeed })}
           className={`relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-40 ${
-            seedLocked ? "bg-blue-500" : "bg-zinc-600"
+            seedLocked ? "bg-blue-500" : "bg-muted"
           }`}
         >
           <span
-            className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
+            className={`absolute top-0.5 h-4 w-4 rounded-full bg-card transition-transform ${
               seedLocked ? "left-[18px]" : "left-0.5"
             }`}
           />
@@ -49,7 +49,7 @@ export function SeedSettings({
       </label>
 
       <label className="block space-y-1.5">
-        <span className="text-xs font-medium text-zinc-300">Seed value</span>
+        <span className="text-xs font-medium text-muted">Seed value</span>
         <input
           type="number"
           min={0}
@@ -58,11 +58,11 @@ export function SeedSettings({
           value={lockedSeed}
           disabled={disabled}
           onChange={(event) => handleSeedInput(event.target.value)}
-          className="w-full rounded-md border border-zinc-600 bg-zinc-900 px-2.5 py-1.5 text-sm text-white focus:border-blue-500 focus:outline-hidden disabled:opacity-40"
+          className="w-full rounded-md border border-border bg-input px-2.5 py-1.5 text-sm text-foreground focus:border-blue-500 focus:outline-hidden disabled:opacity-40"
         />
       </label>
 
-      <p className="text-[10px] leading-relaxed text-zinc-500">
+      <p className="text-[10px] leading-relaxed text-subtle">
         {seedLocked
           ? "Generations in this project use the locked seed."
           : "Each generation uses a random seed."}
@@ -104,11 +104,11 @@ export function SeedControl({
         onClick={() => setOpen((value) => !value)}
         disabled={disabled}
         aria-pressed={seedLocked}
-        className={`flex items-center gap-1 rounded-md px-1.5 py-1 text-xs font-medium tracking-wider text-zinc-200 leading-none bg-zinc-900 items-center px-3 py-1.5 whitespace-nowrap transition-colors disabled:opacity-40 ${
+        className={`flex items-center gap-1 rounded-md bg-input px-1.5 py-1 text-xs font-medium tracking-wider text-foreground leading-none items-center px-3 py-1.5 whitespace-nowrap transition-colors disabled:opacity-40 ${
           seedLocked
             ? "bg-blue-500/20 text-blue-300 hover:bg-blue-500/30"
-            : "text-zinc-400 hover:text-white hover:bg-blue-500"
-        } disabled:hover:bg-transparent disabled:hover:text-zinc-400`}
+            : "text-muted hover:bg-blue-500 hover:text-white"
+        } disabled:hover:bg-transparent disabled:hover:text-muted`}
         aria-expanded={open}
         aria-haspopup="true"
         title={seedLocked ? `Locked seed: ${lockedSeed}` : "Random seed"}
@@ -126,7 +126,7 @@ export function SeedControl({
           anchorRef={rootRef}
           placement={menuAlign === "left" ? "top-start" : "top-end"}
           gap={8}
-          className="min-w-[220px] overflow-y-auto rounded-md border border-zinc-700 bg-zinc-800 p-3 shadow-xl"
+          className="min-w-[220px] overflow-y-auto rounded-md border border-border bg-popover p-3 shadow-xl"
         >
           <SeedSettings
             seedLocked={seedLocked}

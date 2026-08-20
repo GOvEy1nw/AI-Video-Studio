@@ -118,7 +118,7 @@ export function AssetContextMenu({
       anchorPoint={assetContextMenu}
       gap={0}
       role="menu"
-      className="min-w-[180px] overflow-y-auto rounded-xl border border-zinc-700 bg-zinc-800 py-1.5 text-xs shadow-2xl"
+      className="min-w-[180px] overflow-y-auto rounded-xl border border-border bg-surface-raised py-1.5 text-xs shadow-2xl"
       onClick={(e) => e.stopPropagation()}
     >
       {isMulti && (
@@ -133,9 +133,9 @@ export function AssetContextMenu({
             addClipToTimeline(asset, 0);
             setAssetContextMenu(null);
           }}
-          className="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-700 flex items-center gap-3"
+          className="w-full text-left px-3 py-1.5 text-muted-foreground hover:bg-surface-hover flex items-center gap-3"
         >
-          <Plus className="h-3.5 w-3.5 text-zinc-500" />
+          <Plus className="h-3.5 w-3.5 text-subtle-foreground" />
           <span>Add to Timeline</span>
         </button>
       )}
@@ -146,9 +146,9 @@ export function AssetContextMenu({
             window.electronAPI?.showItemInFolder(asset.path!);
             setAssetContextMenu(null);
           }}
-          className="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-700 flex items-center gap-3"
+          className="w-full text-left px-3 py-1.5 text-muted-foreground hover:bg-surface-hover flex items-center gap-3"
         >
-          <FolderOpen className="h-3.5 w-3.5 text-zinc-500" />
+          <FolderOpen className="h-3.5 w-3.5 text-subtle-foreground" />
           <span>Show in Explorer</span>
         </button>
       )}
@@ -159,10 +159,10 @@ export function AssetContextMenu({
             onToggleFavorite(asset);
             setAssetContextMenu(null);
           }}
-          className="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-700 flex items-center gap-3"
+          className="w-full text-left px-3 py-1.5 text-muted-foreground hover:bg-surface-hover flex items-center gap-3"
         >
           <Heart
-            className={`h-3.5 w-3.5 ${asset.favorite ? "fill-current text-red-400" : "text-zinc-500"}`}
+            className={`h-3.5 w-3.5 ${asset.favorite ? "fill-current text-red-400" : "text-subtle-foreground"}`}
           />
           <span>{asset.favorite ? "Remove favorite" : "Add to favorites"}</span>
         </button>
@@ -194,9 +194,9 @@ export function AssetContextMenu({
             onCopySettings(asset);
             setAssetContextMenu(null);
           }}
-          className="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-700 flex items-center gap-3"
+          className="w-full text-left px-3 py-1.5 text-muted-foreground hover:bg-surface-hover flex items-center gap-3"
         >
-          <ClipboardPaste className="h-3.5 w-3.5 text-zinc-500" />
+          <ClipboardPaste className="h-3.5 w-3.5 text-subtle-foreground" />
           <span>Copy settings</span>
         </button>
       )}
@@ -210,7 +210,7 @@ export function AssetContextMenu({
                 handleCancelRegeneration?.();
                 setAssetContextMenu(null);
               }}
-              className="w-full text-left px-3 py-1.5 text-red-400 hover:bg-zinc-700 flex items-center gap-3"
+              className="w-full text-left px-3 py-1.5 text-red-400 hover:bg-surface-hover flex items-center gap-3"
             >
               <X className="h-3.5 w-3.5" />
               <span>Cancel Regeneration</span>
@@ -222,9 +222,9 @@ export function AssetContextMenu({
                 setAssetContextMenu(null);
               }}
               disabled={isRegenerating}
-              className="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-700 flex items-center gap-3 disabled:opacity-50"
+              className="w-full text-left px-3 py-1.5 text-muted-foreground hover:bg-surface-hover flex items-center gap-3 disabled:opacity-50"
             >
-              <RefreshCw className="h-3.5 w-3.5 text-zinc-500" />
+              <RefreshCw className="h-3.5 w-3.5 text-subtle-foreground" />
               <span>Regenerate</span>
             </button>
           )}
@@ -233,16 +233,16 @@ export function AssetContextMenu({
       {/* Takes management - for ANY asset with multiple takes */}
       {!isMulti && asset.takes && asset.takes.length > 1 && (
         <>
-          <div className="h-px bg-zinc-700 my-1" />
+          <div className="h-px bg-border my-1" />
           <button
             onClick={() => {
               setTakesViewAssetId(asset.id);
               setSelectedAssetIds(new Set());
               setAssetContextMenu(null);
             }}
-            className="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-700 flex items-center gap-3"
+            className="w-full text-left px-3 py-1.5 text-muted-foreground hover:bg-surface-hover flex items-center gap-3"
           >
-            <Layers className="h-3.5 w-3.5 text-zinc-500" />
+            <Layers className="h-3.5 w-3.5 text-subtle-foreground" />
             <span>View All Takes</span>
           </button>
           <button
@@ -280,9 +280,9 @@ export function AssetContextMenu({
               });
               setAssetContextMenu(null);
             }}
-            className="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-700 flex items-center gap-3"
+            className="w-full text-left px-3 py-1.5 text-muted-foreground hover:bg-surface-hover flex items-center gap-3"
           >
-            <GitMerge className="h-3.5 w-3.5 text-zinc-500 rotate-180" />
+            <GitMerge className="h-3.5 w-3.5 text-subtle-foreground rotate-180" />
             <span>Ungroup Takes</span>
           </button>
           <button
@@ -319,9 +319,9 @@ export function AssetContextMenu({
         </>
       )}
 
-      <div className="h-px bg-zinc-700 my-1" />
+      <div className="h-px bg-border my-1" />
 
-      <div className="px-3 py-1 text-2xs text-zinc-500 font-semibold uppercase tracking-wider">
+      <div className="px-3 py-1 text-2xs text-subtle-foreground font-semibold uppercase tracking-wider">
         Move to Bin
       </div>
 
@@ -336,9 +336,9 @@ export function AssetContextMenu({
           setAssetContextMenu(null);
           setSelectedAssetIds(new Set());
         }}
-        className="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-700 flex items-center gap-3"
+        className="w-full text-left px-3 py-1.5 text-muted-foreground hover:bg-surface-hover flex items-center gap-3"
       >
-        <X className="h-3.5 w-3.5 text-zinc-500" />
+        <X className="h-3.5 w-3.5 text-subtle-foreground" />
         <span>Remove from Bin</span>
       </button>
 
@@ -355,10 +355,10 @@ export function AssetContextMenu({
             setAssetContextMenu(null);
             setSelectedAssetIds(new Set());
           }}
-          className="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-700 flex items-center gap-3"
+          className="w-full text-left px-3 py-1.5 text-muted-foreground hover:bg-surface-hover flex items-center gap-3"
         >
           <Folder
-            className="h-3.5 w-3.5 text-zinc-500"
+            className="h-3.5 w-3.5 text-subtle-foreground"
             style={{ color: getColorLabel(binColors[bin])?.color }}
           />
           <span>{bin}</span>
@@ -377,15 +377,15 @@ export function AssetContextMenu({
           setAssetContextMenu(null);
           setSelectedAssetIds(new Set());
         }}
-        className="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-700 flex items-center gap-3"
+        className="w-full text-left px-3 py-1.5 text-muted-foreground hover:bg-surface-hover flex items-center gap-3"
       >
-        <FolderPlus className="h-3.5 w-3.5 text-zinc-500" />
+        <FolderPlus className="h-3.5 w-3.5 text-subtle-foreground" />
         <span>New Bin...</span>
       </button>
 
       {isMulti && (
         <>
-          <div className="h-px bg-zinc-700 my-1" />
+          <div className="h-px bg-border my-1" />
           <button
             onClick={() => {
               if (!currentProjectId || !canStackSelected) return;
@@ -469,7 +469,7 @@ export function AssetContextMenu({
                 ? "Stack selected assets"
                 : "Only assets of the same type can be stacked"
             }
-            className="flex w-full items-center gap-3 px-3 py-1.5 text-left text-blue-300 hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex w-full items-center gap-3 px-3 py-1.5 text-left text-blue-300 hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-40"
           >
             <GitMerge className="h-3.5 w-3.5" />
             <span>Stack Selected</span>
@@ -479,15 +479,15 @@ export function AssetContextMenu({
               setSelectedAssetIds(new Set());
               setAssetContextMenu(null);
             }}
-            className="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-700 flex items-center gap-3"
+            className="w-full text-left px-3 py-1.5 text-muted-foreground hover:bg-surface-hover flex items-center gap-3"
           >
-            <X className="h-3.5 w-3.5 text-zinc-500" />
+            <X className="h-3.5 w-3.5 text-subtle-foreground" />
             <span>Clear Selection</span>
           </button>
         </>
       )}
 
-      <div className="h-px bg-zinc-700 my-1" />
+      <div className="h-px bg-border my-1" />
 
       <button
         onClick={() => {
@@ -495,7 +495,7 @@ export function AssetContextMenu({
           setAssetContextMenu(null);
           setSelectedAssetIds(new Set());
         }}
-        className="w-full text-left px-3 py-1.5 text-red-400 hover:bg-zinc-700 flex items-center gap-3"
+        className="w-full text-left px-3 py-1.5 text-red-400 hover:bg-surface-hover flex items-center gap-3"
       >
         <Trash2 className="h-3.5 w-3.5" />
         <span>

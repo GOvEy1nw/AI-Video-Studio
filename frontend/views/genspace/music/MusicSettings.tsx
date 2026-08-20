@@ -86,7 +86,7 @@ export function MusicVocalModeTabs({
               ?.focus();
           }}
           data-music-vocal-mode={value}
-          className="flex-1 rounded-md border border-zinc-700 px-3 py-2 text-sm font-medium text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white focus-visible:outline-2 focus-visible:outline-emerald-400"
+          className="flex-1 rounded-md border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:border-border-strong hover:text-foreground focus-visible:outline-2 focus-visible:outline-emerald-400"
         >
           {label}
         </button>
@@ -148,7 +148,7 @@ export function MusicSettings({
 
   return (
     <GenPanelSection title="Lyrics" collapsible={false}>
-      <div className="flex items-start rounded-lg border border-zinc-800 bg-zinc-950/35">
+      <div className="flex items-start rounded-lg border border-border bg-card">
         <div className="flex min-w-0 flex-1 flex-col">
           <textarea
             aria-label="Lyrics"
@@ -163,9 +163,9 @@ export function MusicSettings({
             rows={7}
             maxLength={4096}
             placeholder="Write lyrics or an idea, then Compose Lyrics…"
-            className="h-32 w-full resize-none overflow-y-auto bg-transparent px-3 py-3 text-sm leading-5 text-white placeholder:text-zinc-500 focus:outline-hidden disabled:opacity-40"
+            className="h-32 w-full resize-none overflow-y-auto bg-transparent px-3 py-3 text-sm leading-5 text-foreground placeholder:text-subtle-foreground focus:outline-hidden disabled:opacity-40"
           />
-          <div className="flex items-center justify-end gap-2 rounded-b-lg bg-zinc-800/35 px-2 py-1.5">
+          <div className="flex items-center justify-end gap-2 rounded-b-lg bg-input px-2 py-1.5">
             <SeedControl
               seedLocked={settings.lyricsSeedLocked}
               lockedSeed={settings.lyricsSeed}
@@ -185,7 +185,7 @@ export function MusicSettings({
                 isComposing ||
                 policy?.supportsComposeLyrics === false
               }
-              className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] font-medium text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-zinc-400"
+              className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
             >
               <Sparkles className="h-3.5 w-3.5" />{" "}
               {isComposing ? "Composing…" : "Compose Lyrics"}
@@ -201,8 +201,8 @@ export function MusicSettings({
               disabled={disabled || !policy?.supportsComposeThinking}
               className={`flex items-center gap-1.5 rounded-md px-1.5 py-1 text-2xs font-medium transition-colors ${
                 settings.composeWithThinking
-                  ? "bg-emerald-600 text-white hover:bg-emerald-500 hover:text-emerald-300"
-                  : "bg-zinc-800/35 text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-300"
+                  ? "bg-emerald-600 text-primary-foreground hover:bg-emerald-500 hover:text-emerald-300"
+                  : "bg-surface-raised text-muted-foreground hover:bg-surface-hover hover:text-foreground"
               }`}
             >
               Think

@@ -46,14 +46,14 @@ function FramingSelect({
 }) {
   return (
     <label className="min-w-0">
-      <span className="mb-1 block text-2xs font-semibold uppercase tracking-[0.14em] text-zinc-500">
+      <span className="mb-1 block text-2xs font-semibold uppercase tracking-[0.14em] text-muted">
         {label}
       </span>
       <select
         aria-label={label}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-9 w-full cursor-pointer rounded-lg border border-zinc-800 bg-black/45 px-2.5 text-[11px] text-zinc-200 focus:border-violet-500 focus:outline-hidden [&>option]:bg-zinc-900"
+        className="h-9 w-full cursor-pointer rounded-lg border border-border bg-input px-2.5 text-[11px] text-foreground focus:border-violet-500 focus:outline-hidden [&>option]:bg-popover"
       >
         {options.map((option) => (
           <option key={option} value={option}>
@@ -85,9 +85,9 @@ function FramingSlider({
         : value;
 
   return (
-    <label className="min-w-0 rounded-lg border border-zinc-800 bg-black/30 px-2.5 py-2">
+    <label className="min-w-0 rounded-lg border border-border bg-input px-2.5 py-2">
       <span className="flex items-center justify-between gap-2">
-        <span className="truncate text-2xs font-semibold uppercase tracking-[0.12em] text-zinc-500">
+        <span className="truncate text-2xs font-semibold uppercase tracking-[0.12em] text-muted">
           {label}
         </span>
         <span className="shrink-0 text-[10px] font-medium text-violet-300">
@@ -110,7 +110,7 @@ function FramingSlider({
           <span
             key={option}
             className={`h-1 w-1 rounded-full ${
-              index === selectedIndex ? "bg-violet-400" : "bg-zinc-700"
+              index === selectedIndex ? "bg-violet-400" : "bg-muted"
             }`}
           />
         ))}
@@ -247,7 +247,7 @@ export function FramingControl({
         } ${
           value
             ? "bg-violet-500/15 text-violet-300 hover:bg-violet-500/25"
-            : "bg-zinc-900/90 text-zinc-400 hover:text-white"
+            : "bg-popover text-muted hover:text-foreground"
         }`}
       >
         <Camera className="h-3.5 w-3.5" />
@@ -268,13 +268,13 @@ export function FramingControl({
                 top: popoverPosition?.top ?? 0,
                 visibility: popoverPosition ? "visible" : "hidden",
               }}
-              className="fixed z-[70] flex max-h-[calc(100vh-1rem)] w-[min(420px,calc(100vw-1rem))] flex-col overflow-hidden rounded-xl border border-zinc-700 bg-zinc-900 shadow-[0_24px_70px_rgba(0,0,0,0.55)]"
+              className="fixed z-[70] flex max-h-[calc(100vh-1rem)] w-[min(420px,calc(100vw-1rem))] flex-col overflow-hidden rounded-xl border border-border bg-popover shadow-[0_24px_70px_rgba(0,0,0,0.55)]"
             >
-              <div className="flex items-center justify-between border-b border-zinc-800 px-3.5 py-3">
+              <div className="flex items-center justify-between border-b border-border px-3.5 py-3">
                 <div>
                   <h2
                     id="framing-settings-title"
-                    className="text-sm font-semibold text-white"
+                    className="text-sm font-semibold text-foreground"
                   >
                     Camera Settings
                   </h2>
@@ -283,7 +283,7 @@ export function FramingControl({
                   type="button"
                   onClick={() => setIsOpen(false)}
                   aria-label="Close camera settings"
-                  className="rounded-md p-1.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-white"
+                  className="rounded-md p-1.5 text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -291,7 +291,7 @@ export function FramingControl({
 
               <div className="overflow-y-auto overscroll-contain px-3.5 py-3">
                 <div className="mt-3">
-                  <div className="mb-1.5 text-2xs font-semibold uppercase tracking-[0.16em] text-zinc-500">
+                  <div className="mb-1.5 text-2xs font-semibold uppercase tracking-[0.16em] text-subtle-foreground">
                     Presets
                   </div>
                   <div className="flex flex-wrap gap-1.5">
@@ -307,7 +307,7 @@ export function FramingControl({
                           className={`rounded-full border px-2.5 py-1.5 text-[10px] font-medium transition-colors ${
                             selected
                               ? "border-violet-500 bg-violet-500/15 text-violet-200"
-                              : "border-zinc-700 bg-zinc-900/60 text-zinc-300 hover:border-zinc-600 hover:bg-zinc-900"
+                              : "border-border bg-surface-raised text-muted-foreground hover:border-border-strong hover:bg-surface"
                           }`}
                         >
                           {preset.name}
@@ -349,7 +349,7 @@ export function FramingControl({
                 </div>
               </div>
 
-              <div className="flex items-center justify-between gap-2 border-t border-zinc-800 px-3.5 py-2.5">
+              <div className="flex items-center justify-between gap-2 border-t border-border px-3.5 py-2.5">
                 <button
                   type="button"
                   onClick={() => {
@@ -357,7 +357,7 @@ export function FramingControl({
                     setIsOpen(false);
                   }}
                   disabled={!value}
-                  className="rounded-md px-2.5 py-1.5 text-[10px] font-medium text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent"
+                  className="rounded-md px-2.5 py-1.5 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground disabled:opacity-30 disabled:hover:bg-transparent"
                 >
                   Clear camera settings
                 </button>
@@ -365,7 +365,7 @@ export function FramingControl({
                   <button
                     type="button"
                     onClick={() => setIsOpen(false)}
-                    className="rounded-md px-3 py-1.5 text-[10px] font-medium text-zinc-300 transition-colors hover:bg-zinc-800"
+                    className="rounded-md px-3 py-1.5 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-surface-hover"
                   >
                     Cancel
                   </button>
@@ -375,7 +375,7 @@ export function FramingControl({
                       onChange({ ...draft });
                       setIsOpen(false);
                     }}
-                    className="rounded-md bg-violet-600 px-3 py-1.5 text-[10px] font-semibold text-white transition-colors hover:bg-violet-500"
+                    className="rounded-md bg-violet-600 px-3 py-1.5 text-[10px] font-semibold text-primary-foreground transition-colors hover:bg-violet-500"
                   >
                     Apply camera settings
                   </button>

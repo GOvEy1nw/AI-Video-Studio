@@ -123,16 +123,16 @@ export function SettingsDropdown({
           option.disabled
             ? "cursor-not-allowed"
             : value === option.value
-              ? "bg-white/20 hover:bg-white/25"
-              : "hover:bg-zinc-700 hover:text-white"
+              ? "bg-surface-selected hover:bg-surface-hover"
+              : "hover:bg-surface-hover hover:text-foreground"
         }`}
       >
         <span
           className={`flex items-center gap-2.5 text-2xs ${
             option.disabled
-              ? "text-zinc-600"
+              ? "text-subtle-foreground"
               : value === option.value
-                ? "text-white"
+                ? "text-foreground"
                 : ""
           }`}
         >
@@ -150,7 +150,7 @@ export function SettingsDropdown({
         </span>
       </button>
       {option.disabled && option.tooltip && (
-        <div className="pointer-events-none absolute left-full top-1/2 z-10000 ml-2 -translate-y-1/2 whitespace-nowrap rounded-sm bg-zinc-700 px-2 py-1 text-xs text-zinc-300 opacity-0 transition-opacity group-hover/option:opacity-100">
+        <div className="pointer-events-none absolute left-full top-1/2 z-10000 ml-2 -translate-y-1/2 whitespace-nowrap rounded-sm bg-popover px-2 py-1 text-xs text-muted-foreground opacity-0 transition-opacity group-hover/option:opacity-100">
           {option.tooltip}
         </div>
       )}
@@ -168,12 +168,12 @@ export function SettingsDropdown({
       {variant === "model" ? (
         <div
           ref={modelTriggerRef}
-          className={`flex flex-col w-full min-w-[165px] p-2.5 justify-between rounded-xl border bg-zinc-800/70 transition-colors ${
+          className={`flex flex-col w-full min-w-[165px] p-2.5 justify-between rounded-xl border bg-input transition-colors ${
             disabled
-              ? "cursor-not-allowed border-zinc-700 opacity-50"
+              ? "cursor-not-allowed border-border opacity-50"
               : isOpen
-                ? "border-zinc-600 bg-zinc-700"
-                : "border-zinc-700 hover:bg-zinc-800"
+                ? "border-border-strong bg-surface-selected"
+                : "border-border hover:bg-surface-hover"
           }`}
         >
           <button
@@ -184,7 +184,7 @@ export function SettingsDropdown({
             disabled={disabled}
             className="flex min-w-0 flex-1 items-center text-left"
           >
-            <span className="mb-0.5 text-2xs w-full text-zinc-400">
+            <span className="mb-0.5 text-2xs w-full text-muted-foreground">
               {triggerTitle}
             </span>
           </button>
@@ -206,7 +206,7 @@ export function SettingsDropdown({
               aria-expanded={isOpen}
               onClick={() => setIsOpen(!isOpen)}
               disabled={disabled}
-              className="flex shrink-0 items-center justify-center text-zinc-500 transition-colors hover:text-zinc-300 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-zinc-400"
+              className="flex shrink-0 items-center justify-center text-subtle-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring"
             >
               <ChevronDown
                 className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`}
@@ -223,15 +223,15 @@ export function SettingsDropdown({
           disabled={disabled}
           className={`${
             variant === "mode"
-              ? "flex items-center overflow-hidden rounded-xl border border-zinc-700 bg-zinc-800/70 text-xs font-medium text-zinc-200 transition-colors hover:border-zinc-600 hover:bg-zinc-800"
-              : "flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md bg-zinc-900 px-1 py-1 text-2xs font-medium leading-none tracking-wider text-zinc-200 transition-colors"
+              ? "flex items-center overflow-hidden rounded-xl border border-border bg-input text-xs font-medium text-foreground transition-colors hover:border-border-strong hover:bg-surface-hover"
+              : "flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md bg-card px-1 py-1 text-2xs font-medium leading-none tracking-wider text-foreground transition-colors"
           } ${
             disabled
               ? "cursor-not-allowed opacity-50"
               : variant === "mode"
                 ? ""
                 : "hover:bg-blue-500"
-          } ${isOpen && !disabled ? "border-zinc-600 bg-zinc-700 hover:bg-zinc-700" : ""}`}
+          } ${isOpen && !disabled ? "border-border-strong bg-surface-selected hover:bg-surface-selected" : ""}`}
         >
           {trigger}
         </button>
@@ -244,10 +244,10 @@ export function SettingsDropdown({
           matchAnchorWidth={variant === "model"}
           placement={preferredPlacement}
           gap={8}
-          className="w-fit text-nowrap rounded-md border border-zinc-700 bg-zinc-800 p-2 shadow-xl"
+          className="w-fit text-nowrap rounded-md border border-border bg-popover p-2 text-foreground shadow-xl"
         >
           {title && (
-            <div className="mb-2 text-2xs uppercase tracking-wider text-zinc-500">
+            <div className="mb-2 text-2xs uppercase tracking-wider text-subtle-foreground">
               {title}
             </div>
           )}
@@ -264,10 +264,10 @@ export function SettingsDropdown({
                     group.options.some((option) => option.variantLabel) ? (
                       <div
                         key={key}
-                        className={`flex w-full px-2 py-2 gap-2 text-2xs items-center justify-between rounded-md text-left transition-colors hover:bg-zinc-700 hover:text-white ${
+                        className={`flex w-full px-2 py-2 gap-2 text-2xs items-center justify-between rounded-md text-left transition-colors hover:bg-surface-hover hover:text-foreground ${
                           value === group.options[0]?.value ||
                           value === group.options[1]?.value
-                            ? "bg-zinc-700 text-white"
+                            ? "bg-surface-selected text-foreground"
                             : ""
                         }`}
                       >
@@ -293,7 +293,7 @@ export function SettingsDropdown({
                               className={`rounded-lg px-2 py-1 text-xs font-semibold leading-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400 ${
                                 value === option.value
                                   ? "bg-emerald-500 text-white"
-                                  : "bg-zinc-600 text-zinc-100 hover:bg-zinc-500"
+                                  : "bg-surface-selected text-foreground hover:bg-surface-hover"
                               }`}
                             >
                               {option.variantLabel}
@@ -309,7 +309,7 @@ export function SettingsDropdown({
             </div>
           )}
           {footer && (
-            <div className="mt-2 border-t border-zinc-700 pt-2">{footer}</div>
+            <div className="mt-2 border-t border-border pt-2">{footer}</div>
           )}
         </FloatingMenu>
       )}

@@ -201,7 +201,7 @@ export function DirectorEditor({ isActive }: { isActive: boolean }) {
   };
 
   return (
-    <div className="flex h-full min-h-0 bg-zinc-950">
+    <div className="flex h-full min-h-0 bg-background">
       <div
         className="min-w-0 shrink-0"
         style={{ width: layout.leftWidth }}

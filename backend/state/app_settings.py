@@ -107,6 +107,7 @@ class PreviewSettings(SettingsBaseModel):
 
 
 class AppSettings(SettingsBaseModel):
+    ui_theme: Literal["dark", "light"] = "dark"
     use_torch_compile: bool = False
     attention_mode: Literal["auto", "sdpa", "flash", "xformers", "sage", "sage2", "sage3"] = "auto"
     performance_profile: float = 4.0
@@ -195,6 +196,7 @@ UpdateSettingsRequest = AppSettingsPatch
 
 
 class SettingsResponse(SettingsBaseModel):
+    ui_theme: Literal["dark", "light"] = "dark"
     use_torch_compile: bool = False
     attention_mode: Literal["auto", "sdpa", "flash", "xformers", "sage", "sage2", "sage3"] = "auto"
     performance_profile: float = 4.0

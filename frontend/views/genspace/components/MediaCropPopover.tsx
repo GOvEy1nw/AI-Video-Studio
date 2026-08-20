@@ -286,14 +286,14 @@ export function MediaCropPopover({
         top: position?.top ?? 0,
         visibility: position ? "visible" : "hidden",
       }}
-      className="fixed z-[70] flex max-h-[calc(100vh-1rem)] w-[min(520px,calc(100vw-1rem))] flex-col overflow-hidden rounded-xl border border-zinc-700 bg-zinc-900 shadow-[0_24px_70px_rgba(0,0,0,0.55)]"
+      className="fixed z-[70] flex max-h-[calc(100vh-1rem)] w-[min(520px,calc(100vw-1rem))] flex-col overflow-hidden rounded-xl border border-border bg-popover shadow-[0_24px_70px_rgba(0,0,0,0.55)]"
     >
-      <div className="flex items-start justify-between border-b border-zinc-800 px-3.5 py-3">
+      <div className="flex items-start justify-between border-b border-border px-3.5 py-3">
         <div>
-          <h2 id="media-crop-title" className="text-sm font-semibold text-white">
+          <h2 id="media-crop-title" className="text-sm font-semibold text-foreground">
             Crop media
           </h2>
-          <p className="mt-0.5 text-[10px] text-zinc-500">
+          <p className="mt-0.5 text-[10px] text-muted">
             Drag or resize crop box. Original media remains unchanged.
           </p>
         </div>
@@ -301,7 +301,7 @@ export function MediaCropPopover({
           type="button"
           onClick={onClose}
           aria-label="Close crop media"
-          className="rounded-md p-1.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-white"
+          className="rounded-md p-1.5 text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
         >
           <X className="h-3.5 w-3.5" />
         </button>
@@ -309,7 +309,7 @@ export function MediaCropPopover({
 
       <div className="overflow-y-auto overscroll-contain px-3.5 py-3">
         <div
-          className="flex min-h-72 items-center justify-center overflow-hidden rounded-xl border border-zinc-800 p-3"
+          className="flex min-h-72 items-center justify-center overflow-hidden rounded-xl border border-border p-3"
           style={CHECKERBOARD_STYLE}
         >
           <div
@@ -393,8 +393,8 @@ export function MediaCropPopover({
               onClick={() => chooseAspectRatio(option.value)}
               className={`rounded-full border px-2.5 py-1.5 text-[10px] font-semibold transition-colors ${
                 draft.aspectRatio === option.value
-                  ? "border-zinc-500 bg-zinc-800 text-white"
-                  : "border-zinc-800 bg-zinc-950/60 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                  ? "border-border-strong bg-surface-selected text-foreground"
+                  : "border-border bg-surface text-muted-foreground hover:border-border-strong hover:text-foreground"
               }`}
             >
               {option.label}
@@ -409,14 +409,14 @@ export function MediaCropPopover({
                   : fitMediaCropToAspect(draft.aspectRatio, sourceAspect),
               )
             }
-            className="ml-auto rounded-md px-2 py-1.5 text-[10px] font-medium text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-white"
+            className="ml-auto rounded-md px-2 py-1.5 text-[10px] font-medium text-subtle-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
           >
             Reset box
           </button>
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-2 border-t border-zinc-800 px-3.5 py-2.5">
+      <div className="flex items-center justify-between gap-2 border-t border-border px-3.5 py-2.5">
         <button
           type="button"
           disabled={!value}
@@ -424,7 +424,7 @@ export function MediaCropPopover({
             onChange(null);
             onClose();
           }}
-          className="rounded-md px-2.5 py-1.5 text-[10px] font-medium text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent"
+          className="rounded-md px-2.5 py-1.5 text-[10px] font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground disabled:opacity-30 disabled:hover:bg-transparent"
         >
           Clear crop
         </button>
@@ -432,7 +432,7 @@ export function MediaCropPopover({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md px-3 py-1.5 text-[10px] font-medium text-zinc-300 transition-colors hover:bg-zinc-800"
+            className="rounded-md px-3 py-1.5 text-[10px] font-medium text-foreground transition-colors hover:bg-surface-hover"
           >
             Cancel
           </button>
@@ -442,7 +442,7 @@ export function MediaCropPopover({
               onChange(isFullMediaCrop(draft) ? null : { ...draft });
               onClose();
             }}
-            className="rounded-md bg-violet-600 px-3 py-1.5 text-[10px] font-semibold text-white transition-colors hover:bg-violet-500"
+            className="rounded-md bg-violet-600 px-3 py-1.5 text-[10px] font-semibold text-primary-foreground transition-colors hover:bg-violet-500"
           >
             Apply crop
           </button>

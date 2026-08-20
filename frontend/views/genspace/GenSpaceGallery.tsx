@@ -73,7 +73,7 @@ function GenSpaceGalleryView({
     <div
       {...dropZoneProps}
       data-testid="genspace-gallery-dropzone"
-      className="absolute inset-y-0 right-0 bg-zinc-900 rounded-2xl m-2 ml-0"
+      className="absolute inset-y-0 right-0 m-2 ml-0 rounded-2xl bg-card"
       style={style}
     >
       {onResize && (
@@ -84,7 +84,7 @@ function GenSpaceGalleryView({
         />
       )}
       {toast ? (
-        <div className="absolute left-1/2 top-6 z-30 -translate-x-1/2 rounded-lg border border-zinc-700 bg-zinc-900/95 px-4 py-2 text-sm text-zinc-200 shadow-xl">
+        <div className="absolute left-1/2 top-6 z-30 -translate-x-1/2 rounded-lg border border-border bg-popover/95 px-4 py-2 text-sm text-foreground shadow-xl">
           {toast}
         </div>
       ) : null}
@@ -97,11 +97,11 @@ function GenSpaceGalleryView({
       ) : null}
       {showFavorites && visibleAssets.length === 0 && assets.length > 0 ? (
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-          <Heart className="mb-4 h-12 w-12 text-zinc-700" />
-          <h3 className="mb-2 text-lg font-semibold text-white">
+          <Heart className="mb-4 h-12 w-12 text-subtle-foreground" />
+          <h3 className="mb-2 text-lg font-semibold text-foreground">
             No favorites yet
           </h3>
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-subtle-foreground">
             Click the heart icon on any asset to add it to your favorites.
           </p>
         </div>
@@ -112,11 +112,11 @@ function GenSpaceGalleryView({
       assets.length > 0 &&
       !generation.isRunning ? (
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-          <Folder className="mb-4 h-12 w-12 text-zinc-700" />
-          <h3 className="mb-2 text-lg font-semibold text-white">
+          <Folder className="mb-4 h-12 w-12 text-subtle-foreground" />
+          <h3 className="mb-2 text-lg font-semibold text-foreground">
             No assets in &ldquo;{selectedBin}&rdquo;
           </h3>
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-subtle-foreground">
             Right-click an asset and choose Move to Bin to add it here.
           </p>
         </div>
@@ -128,11 +128,11 @@ function GenSpaceGalleryView({
       assets.length > 0 &&
       !generation.isRunning ? (
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-          <ListFilter className="mb-4 h-12 w-12 text-zinc-700" />
-          <h3 className="mb-2 text-lg font-semibold text-white">
+          <ListFilter className="mb-4 h-12 w-12 text-subtle-foreground" />
+          <h3 className="mb-2 text-lg font-semibold text-foreground">
             No matching assets
           </h3>
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-subtle-foreground">
             Try adjusting the type or source filters.
           </p>
         </div>
@@ -161,8 +161,8 @@ function GenSpaceGalleryView({
         emptyContent={
           assets.length === 0 ? (
             <div className="py-8 text-center">
-              <p className="text-sm text-zinc-500">No assets yet</p>
-              <p className="mt-1 text-xs text-zinc-600">
+              <p className="text-sm text-subtle-foreground">No assets yet</p>
+              <p className="mt-1 text-xs text-subtle-foreground">
                 Generate in Gen Space or import
               </p>
             </div>
@@ -181,7 +181,7 @@ function GenSpaceGalleryView({
               className={
                 asset.favorite
                   ? "p-1 text-red-400"
-                  : "p-1 text-zinc-600 hover:text-zinc-300"
+                  : "p-1 text-subtle-foreground hover:text-foreground"
               }
               aria-label="Toggle favorite"
             >
@@ -196,7 +196,7 @@ function GenSpaceGalleryView({
                   event.stopPropagation();
                   library.onCopySettings?.(asset);
                 }}
-                className="p-1 text-zinc-600 hover:text-zinc-300"
+                className="p-1 text-subtle-foreground hover:text-foreground"
                 aria-label="Copy settings"
               >
                 <ClipboardPaste className="h-3 w-3" />
@@ -208,7 +208,7 @@ function GenSpaceGalleryView({
                 event.stopPropagation();
                 library.onDeleteAsset?.(asset);
               }}
-              className="p-1 text-zinc-600 hover:text-red-400"
+              className="p-1 text-subtle-foreground hover:text-red-400"
               aria-label="Delete asset"
             >
               <Trash2 className="h-3 w-3" />
@@ -231,15 +231,15 @@ function GenSpaceGalleryView({
                     generation.onSelect();
                   }
                 }}
-                className={`relative aspect-square cursor-pointer overflow-hidden rounded-xl border-2 bg-zinc-800 transition-colors ${
+                className={`relative aspect-square cursor-pointer overflow-hidden rounded-xl border-2 bg-surface-raised transition-colors ${
                   generation.isSelected
                     ? "ring-2"
-                    : "border-transparent hover:border-zinc-700"
+                    : "border-transparent hover:border-border-strong"
                 }`}
                 style={{
                   ...getGenSpaceModeAccentStyle(generation.mode),
                   backgroundColor:
-                    "color-mix(in srgb, var(--genspace-mode-accent) 22%, var(--color-zinc-800))",
+                    "color-mix(in srgb, var(--genspace-mode-accent) 22%, var(--color-surface-raised))",
                   ...(generation.isSelected
                     ? {
                         borderColor: "var(--genspace-mode-accent)",
@@ -278,10 +278,10 @@ function GenSpaceGalleryView({
               </div>
             ) : null}
             {isImporting ? (
-              <div className="relative aspect-square overflow-hidden rounded-xl bg-zinc-800">
+              <div className="relative aspect-square overflow-hidden rounded-xl bg-surface-raised">
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <LoaderCircle className="mb-2 h-8 w-8 animate-spin text-violet-400" />
-                  <p className="text-sm text-zinc-400">Importing...</p>
+                  <p className="text-sm text-muted-foreground">Importing...</p>
                 </div>
               </div>
             ) : null}

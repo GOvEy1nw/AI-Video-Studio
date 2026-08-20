@@ -125,11 +125,11 @@ export function PythonSetup({ onReady }: PythonSetupProps) {
   const finishSetup = async () => onReady();
 
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="min-h-screen bg-background text-foreground">
       <div className="mx-auto flex min-h-screen max-w-4xl flex-col items-center justify-center px-6 py-12">
-        <AivsLogo className="h-16 w-auto text-white" />
+        <AivsLogo className="h-16 w-auto text-foreground" />
         {!runtimeReady ? (
-          <section className="mt-12 w-full max-w-xl rounded-xl border border-zinc-800 bg-zinc-950 p-6">
+          <section className="mt-12 w-full max-w-xl rounded-xl border border-border bg-card p-6">
             {error ? (
               <div className="text-center">
                 <AlertCircle className="mx-auto h-8 w-8 text-red-400" />
@@ -152,37 +152,37 @@ export function PythonSetup({ onReady }: PythonSetupProps) {
                     {progress?.percent ?? 0}%
                   </span>
                 </div>
-                <div className="mt-4 h-2 overflow-hidden rounded-full bg-zinc-800">
+                <div className="mt-4 h-2 overflow-hidden rounded-full bg-input">
                   <div
                     className="h-full rounded-full bg-linear-to-r from-violet-400 to-blue-500 transition-[width]"
                     style={{ width: `${progress?.percent ?? 0}%` }}
                   />
                 </div>
-                <p className="mt-3 text-xs text-zinc-400">{detail}</p>
+                <p className="mt-3 text-xs text-muted-foreground">{detail}</p>
               </>
             )}
           </section>
         ) : (
-          <section className="mt-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 p-6">
+          <section className="mt-10 w-full rounded-xl border border-border bg-card p-6">
             <div className="mx-auto max-w-2xl">
               <div className="text-center">
                 <Folder className="mx-auto h-8 w-8 text-violet-300" />
                 <h1 className="mt-3 text-xl font-semibold">Choose storage folders</h1>
-                <p className="mt-2 text-sm text-zinc-400">
+                <p className="mt-2 text-sm text-muted-foreground">
                   Choose where projects, checkpoints, and LoRAs are stored. You can
                   change these later in Settings.
                 </p>
               </div>
-              <div className="mt-6 space-y-4 rounded-lg border border-zinc-800 bg-zinc-900/60 p-4">
+              <div className="mt-6 space-y-4 rounded-lg border border-border bg-input p-4">
                 <div className="space-y-1.5">
-                  <span className="text-xs font-medium text-zinc-300">Projects</span>
+                  <span className="text-xs font-medium text-muted-foreground">Projects</span>
                   <div className="flex gap-2">
-                    <div className="min-w-0 flex-1 truncate rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-300 select-text">
+                    <div className="min-w-0 flex-1 truncate rounded-lg border border-border bg-card px-3 py-2 text-sm text-muted-foreground select-text">
                       {projectAssetsPath || "Loading default location…"}
                     </div>
                     <button
                       type="button"
-                      className="shrink-0 rounded-lg border border-zinc-600 px-3 text-xs text-zinc-200 hover:bg-zinc-800"
+                      className="shrink-0 rounded-lg border border-border-strong px-3 text-xs text-foreground hover:bg-surface-hover"
                       onClick={() => void chooseProjectAssetsPath()}
                     >
                       Browse
@@ -194,10 +194,10 @@ export function PythonSetup({ onReady }: PythonSetupProps) {
                   { kind: "loras" as const, label: "LoRAs", location: lorasLocation },
                 ].map(({ kind, label, location }) => (
                   <div key={kind} className="space-y-1.5">
-                    <span className="text-xs font-medium text-zinc-300">{label}</span>
+                    <span className="text-xs font-medium text-muted-foreground">{label}</span>
                     <div className="flex gap-2">
                       <div
-                        className="min-w-0 flex-1 truncate rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-300 select-text"
+                        className="min-w-0 flex-1 truncate rounded-lg border border-border bg-card px-3 py-2 text-sm text-muted-foreground select-text"
                         title={location?.path}
                       >
                         {location?.path ?? "Loading…"}
@@ -205,7 +205,7 @@ export function PythonSetup({ onReady }: PythonSetupProps) {
                       {location?.custom && (
                         <button
                           type="button"
-                          className="shrink-0 rounded-lg px-3 text-xs text-zinc-300 hover:bg-zinc-800"
+                          className="shrink-0 rounded-lg px-3 text-xs text-muted-foreground hover:bg-surface-hover"
                           onClick={() => void useDefaultModelFolder(kind)}
                         >
                           Use default
@@ -213,7 +213,7 @@ export function PythonSetup({ onReady }: PythonSetupProps) {
                       )}
                       <button
                         type="button"
-                        className="shrink-0 rounded-lg border border-zinc-600 px-3 text-xs text-zinc-200 hover:bg-zinc-800"
+                        className="shrink-0 rounded-lg border border-border-strong px-3 text-xs text-foreground hover:bg-surface-hover"
                         onClick={() => void chooseModelFolder(kind)}
                       >
                         Browse

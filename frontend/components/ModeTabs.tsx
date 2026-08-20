@@ -22,7 +22,7 @@ export function ModeTabs({ mode, onModeChange, disabled }: ModeTabsProps) {
   const activeTab: TabMode = mode === 'text-to-image' ? 'text-to-image' : mode === 'retake' ? 'retake' : 'video'
 
   return (
-    <div className="flex gap-1 p-1 bg-zinc-900 border border-zinc-800 rounded-xl">
+    <div className="flex gap-1 rounded-xl border border-border bg-card p-1">
       {tabs.map((tab) => {
         const Icon = tab.icon
         const isActive = activeTab === tab.id
@@ -34,8 +34,8 @@ export function ModeTabs({ mode, onModeChange, disabled }: ModeTabsProps) {
             className={cn(
               'flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all',
               isActive
-                ? 'bg-white text-zinc-900 shadow-xs'
-                : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50',
+                ? 'bg-foreground text-background shadow-xs'
+                : 'text-muted hover:bg-surface-hover hover:text-foreground',
               disabled && 'opacity-50 cursor-not-allowed'
             )}
           >

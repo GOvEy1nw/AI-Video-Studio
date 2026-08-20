@@ -30,9 +30,9 @@ export const TimelineRuler = forwardRef<HTMLDivElement, TimelineRulerProps>(func
     const isMajor = remainder < 0.001 || Math.abs(remainder - majorInterval) < 0.001
     ticks.push(
       <div key={unit} className="absolute inset-y-0" style={{ left: unit * pixelsPerUnit }}>
-        <div className={cn('h-full border-l', isMajor ? 'border-zinc-700' : 'border-zinc-800')} />
+        <div className={cn('h-full border-l', isMajor ? 'border-border' : 'border-border')} />
         {isMajor && (
-          <span className="absolute bottom-0.5 left-1 whitespace-nowrap text-[10px] leading-none text-zinc-500">
+          <span className="absolute bottom-0.5 left-1 whitespace-nowrap text-[10px] leading-none text-subtle-foreground">
             {formatLabel(unit)}
           </span>
         )}
@@ -43,7 +43,7 @@ export const TimelineRuler = forwardRef<HTMLDivElement, TimelineRulerProps>(func
   return (
     <div
       ref={ref}
-      className={cn('relative h-6 select-none border-b border-zinc-800 bg-zinc-900', className)}
+      className={cn('relative h-6 select-none border-b border-border bg-surface', className)}
       style={{ minWidth: durationUnits * pixelsPerUnit, ...style }}
       {...props}
     >
@@ -97,8 +97,8 @@ export const TimelineViewport = forwardRef<HTMLDivElement, TimelineViewportProps
     <div
       ref={ref}
       className={cn(
-        'min-w-0 overflow-hidden rounded-sm border bg-zinc-950 transition-colors',
-        focused ? 'border-blue-500 ring-1 ring-blue-500/30' : 'border-zinc-800',
+        'min-w-0 overflow-hidden rounded-sm border bg-surface transition-colors',
+        focused ? 'border-blue-500 ring-1 ring-blue-500/30' : 'border-border',
         className,
       )}
       {...props}
@@ -121,16 +121,16 @@ export function TimelineZoomControls({ value, min, max, step, onChange, onFit, c
   const clamp = (next: number) => Math.max(min, Math.min(max, next))
   return (
     <div className={cn('flex items-center gap-2', className)}>
-      <button type="button" title="Zoom out" aria-label="Zoom out" onClick={() => onChange(clamp(value - step))} className="rounded-sm p-0.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300">
+      <button type="button" title="Zoom out" aria-label="Zoom out" onClick={() => onChange(clamp(value - step))} className="rounded-sm p-0.5 text-subtle-foreground transition-colors hover:bg-surface-raised hover:text-muted-foreground">
         <ZoomOut className="h-3.5 w-3.5" />
       </button>
       <input type="range" min={Math.round(min * 100)} max={Math.round(max * 100)} step={Math.max(1, Math.round(step * 100 / 5))} value={percent} onChange={(event) => onChange(clamp(Number(event.target.value) / 100))} className="h-1 w-24 cursor-pointer accent-blue-500" title={`Zoom: ${percent}%`} />
-      <button type="button" title="Zoom in" aria-label="Zoom in" onClick={() => onChange(clamp(value + step))} className="rounded-sm p-0.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300">
+      <button type="button" title="Zoom in" aria-label="Zoom in" onClick={() => onChange(clamp(value + step))} className="rounded-sm p-0.5 text-subtle-foreground transition-colors hover:bg-surface-raised hover:text-muted-foreground">
         <ZoomIn className="h-3.5 w-3.5" />
       </button>
-      <span className="w-8 text-right text-[10px] tabular-nums text-zinc-500">{percent}%</span>
+      <span className="w-8 text-right text-[10px] tabular-nums text-subtle-foreground">{percent}%</span>
       {onFit && (
-        <button type="button" title="Fit to view" aria-label="Fit to view" onClick={onFit} className="ml-0.5 rounded-sm p-0.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300">
+        <button type="button" title="Fit to view" aria-label="Fit to view" onClick={onFit} className="ml-0.5 rounded-sm p-0.5 text-subtle-foreground transition-colors hover:bg-surface-raised hover:text-muted-foreground">
           <Maximize2 className="h-3.5 w-3.5" />
         </button>
       )}

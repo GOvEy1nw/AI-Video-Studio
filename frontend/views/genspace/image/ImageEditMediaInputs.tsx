@@ -179,7 +179,7 @@ export function ImageEditMediaInputs({
                   data-testid="image-edit-header"
                   className="flex h-8 items-center mb-2"
                 >
-                  <span className="text-2xs font-medium uppercase tracking-wider text-zinc-500">
+                  <span className="text-2xs font-medium uppercase tracking-wider text-subtle-foreground">
                     Edit image
                   </span>
                 </div>
@@ -222,14 +222,14 @@ export function ImageEditMediaInputs({
               data-testid="image-edit-header"
               className="flex h-8 items-center mb-2"
             >
-              <span className="text-2xs font-medium uppercase tracking-wider text-zinc-500">
+              <span className="text-2xs font-medium uppercase tracking-wider text-subtle-foreground">
                 Edit image
               </span>
             </div>
             <div
               data-genspace-dropzone
               data-drag-active={dragActive || undefined}
-              className="flex items-center justify-center w-full overflow-hidden rounded-lg border border-dashed text-2xs border-zinc-700 bg-zinc-900/50 min-h-20"
+              className="flex min-h-20 w-full items-center justify-center overflow-hidden rounded-lg border border-dashed border-border bg-surface-raised text-2xs"
               onDragEnter={() => setDragActive(true)}
               onDragLeave={() => setDragActive(false)}
               onDragOver={(event) => {
@@ -246,7 +246,7 @@ export function ImageEditMediaInputs({
                 aria-label="Add Edit Image"
                 className="flex h-full w-full items-center justify-center disabled:cursor-not-allowed"
               >
-                <span className="flex flex-col items-center gap-2 text-xs text-zinc-500">
+                <span className="flex flex-col items-center gap-2 text-xs text-subtle-foreground">
                   <Image className="h-6 w-6" />
                   Drop or choose Edit Image
                 </span>

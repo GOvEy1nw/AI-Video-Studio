@@ -31,7 +31,7 @@ export function ReferenceAddButton({
       onDragLeave={onDragLeave}
       onDragOver={onDragOver}
       onDrop={onDrop}
-      className="flex w-auto shrink-0 items-center gap-2 rounded-lg border border-dashed text-2xs border-zinc-700 px-3 py-4 text-zinc-300 hover:border-zinc-500 disabled:cursor-not-allowed disabled:border-zinc-800 disabled:text-zinc-600"
+      className="flex w-auto shrink-0 items-center gap-2 rounded-lg border border-dashed border-border px-3 py-4 text-2xs text-muted hover:border-border-strong disabled:cursor-not-allowed disabled:border-border disabled:text-subtle"
     >
       {(["image", "video", "audio"] as const).map((type) => {
         const Icon =
@@ -39,7 +39,7 @@ export function ReferenceAddButton({
         return (
           <span
             key={type}
-            className="flex h-7 w-7 items-center justify-center rounded-full border border-zinc-700"
+            className="flex h-7 w-7 items-center justify-center rounded-full border border-border"
           >
             <Icon className="h-3.5 w-3.5" />
           </span>

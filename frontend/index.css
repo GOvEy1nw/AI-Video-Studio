@@ -4,20 +4,56 @@
 @source "./";
 
 /* Product-editable runtime tokens. Values are RGB channels: R G B. */
-:root {
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
   /* Accent color (used for buttons, progress, highlights) */
   --accent: 43 97 255; /* #2B61FF */
   --accent-dark: 26 80 224; /* #1A50E0 — darker shade for hover states */
+  --accent-foreground: 255 255 255;
 
   /* Surface colors */
   --bg: 9 9 11; /* zinc-950 — main app background */
   --surface: 24 24 27; /* zinc-900 — panels, cards */
   --surface-raised: 39 39 42; /* zinc-800 — inputs, hover states */
+  --surface-hover: 63 63 70; /* zinc-700 — hover states */
+  --surface-selected: 63 63 70; /* zinc-700 — selected states */
   --border-color: 63 63 70; /* zinc-700 — dividers, borders */
+  --border-strong: 82 82 91; /* zinc-600 — input boundaries */
 
   /* Text */
   --text: 255 255 255;
   --text-muted: 161 161 170; /* zinc-400 */
+  --text-subtle: 113 113 122; /* zinc-500 */
+  --text-inverse: 255 255 255;
+  --focus-ring: 115 148 251; /* blue-400 */
+  --overlay: 0 0 0;
+  --scrollbar-track: 26 26 26;
+  --scrollbar-thumb: 68 68 68;
+  --scrollbar-thumb-hover: 85 85 85;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --accent: 43 97 255;
+  --accent-dark: 26 80 224;
+  --accent-foreground: 255 255 255;
+  --bg: 248 250 252;
+  --surface: 255 255 255;
+  --surface-raised: 241 245 249;
+  --surface-hover: 226 232 240;
+  --surface-selected: 226 232 240;
+  --border-color: 203 213 225;
+  --border-strong: 128 143 163;
+  --text: 15 23 42;
+  --text-muted: 71 85 105;
+  --text-subtle: 100 116 139;
+  --text-inverse: 255 255 255;
+  --focus-ring: 26 80 224;
+  --overlay: 15 23 42;
+  --scrollbar-track: 248 250 252;
+  --scrollbar-thumb: 148 163 184;
+  --scrollbar-thumb-hover: 100 116 139;
 }
 
 /*
@@ -62,18 +98,26 @@
   --color-surface: rgb(var(--surface));
   --color-surface-raised: rgb(var(--surface-raised));
 
-  --color-background: #1a1a1a;
+  --color-background: rgb(var(--bg));
   --color-foreground: rgb(var(--text));
-  --color-card: #242424;
+  --color-card: rgb(var(--surface));
   --color-card-foreground: rgb(var(--text));
-  --color-border: #333333;
-  --color-input: #2a2a2a;
+  --color-popover: rgb(var(--surface-raised));
+  --color-popover-foreground: rgb(var(--text));
+  --color-border: rgb(var(--border-color));
+  --color-border-strong: rgb(var(--border-strong));
+  --color-input: rgb(var(--surface-raised));
   --color-primary: rgb(var(--accent));
-  --color-primary-foreground: rgb(var(--text));
-  --color-secondary: #3f3f46;
+  --color-primary-foreground: rgb(var(--accent-foreground));
+  --color-secondary: rgb(var(--surface-raised));
   --color-secondary-foreground: rgb(var(--text));
-  --color-muted: #27272a;
+  --color-muted: rgb(var(--surface-raised));
   --color-muted-foreground: rgb(var(--text-muted));
+  --color-surface-hover: rgb(var(--surface-hover));
+  --color-surface-selected: rgb(var(--surface-selected));
+  --color-subtle-foreground: rgb(var(--text-subtle));
+  --color-ring: rgb(var(--focus-ring));
+  --color-overlay: rgb(var(--overlay));
 }
 
 /*
@@ -90,7 +134,7 @@
   ::before,
   ::backdrop,
   ::file-selector-button {
-    border-color: var(--color-gray-200, currentcolor);
+    border-color: rgb(var(--border-color));
   }
 
   button:not(:disabled),
@@ -100,7 +144,7 @@
 
   input::placeholder,
   textarea::placeholder {
-    color: var(--color-gray-400);
+    color: rgb(var(--text-subtle));
     opacity: 1;
   }
 }
@@ -135,6 +179,8 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow: hidden;
+  background: rgb(var(--bg));
+  color: rgb(var(--text));
 }
 
 /* Custom scrollbar */
@@ -144,16 +190,16 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #1a1a1a;
+  background: rgb(var(--scrollbar-track));
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #444;
+  background: rgb(var(--scrollbar-thumb));
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: rgb(var(--scrollbar-thumb-hover));
 }
 
 .gallery-scrollbar {
@@ -161,7 +207,7 @@ body {
 }
 
 .gallery-scrollbar:hover {
-  scrollbar-color: #444 #1a1a1a;
+  scrollbar-color: rgb(var(--scrollbar-thumb)) rgb(var(--scrollbar-track));
 }
 
 .gallery-scrollbar::-webkit-scrollbar-track {
@@ -173,11 +219,11 @@ body {
 }
 
 .gallery-scrollbar:hover::-webkit-scrollbar-track {
-  background: #1a1a1a;
+  background: rgb(var(--scrollbar-track));
 }
 
 .gallery-scrollbar:hover::-webkit-scrollbar-thumb {
-  background: #444;
+  background: rgb(var(--scrollbar-thumb));
 }
 
 /* Drag and drop styling */
@@ -201,7 +247,7 @@ body {
       [data-genspace-theme-ignore] *
     ) {
     background-color: var(--genspace-mode-accent);
-    color: white;
+    color: rgb(var(--accent-foreground));
   }
 
   button.genspace-mode-tab:not(
@@ -214,11 +260,11 @@ body {
     ) {
     &[aria-selected="true"] {
       background-color: var(--genspace-mode-accent);
-      color: white;
+      color: rgb(var(--accent-foreground));
     }
     &:hover {
       background-color: var(--genspace-mode-accent-hover);
-      color: white;
+      color: rgb(var(--accent-foreground));
     }
   }
 
@@ -239,11 +285,11 @@ body {
       [data-genspace-theme-ignore] *
     ) {
     background-color: var(--genspace-mode-accent);
-    color: white;
+    color: rgb(var(--accent-foreground));
 
     &:hover {
       background-color: var(--genspace-mode-accent-hover);
-      color: white;
+      color: rgb(var(--accent-foreground));
     }
   }
 
@@ -253,7 +299,7 @@ body {
   ) {
     &:focus {
       border-color: var(--genspace-mode-accent);
-      color: white;
+      color: rgb(var(--text));
     }
   }
 
@@ -262,7 +308,7 @@ body {
     [data-genspace-theme-ignore] *
   ) {
     accent-color: var(--genspace-mode-accent);
-    color: white;
+    color: rgb(var(--text));
   }
 
   [data-genspace-dropzone]:not(
@@ -270,7 +316,7 @@ body {
     [data-genspace-theme-ignore] *
   ) {
     /* Base state */
-    color: var(--color-zinc-400);
+    color: rgb(var(--text-muted));
 
     /* Hover and drag-active states */
     &:is(:hover, [data-drag-active="true"]) {
@@ -280,7 +326,7 @@ body {
         var(--genspace-mode-accent) 20%,
         transparent
       );
-      color: white;
+      color: rgb(var(--text));
     }
   }
 
@@ -292,14 +338,14 @@ body {
     border-color: color-mix(
       in srgb,
       var(--genspace-mode-accent) 25%,
-      var(--color-zinc-700)
+      rgb(var(--border-color))
     );
     background-color: color-mix(
       in srgb,
       var(--genspace-mode-accent) 10%,
       transparent
     );
-    color: var(--color-zinc-400);
+    color: rgb(var(--text-muted));
     /* Hover and drag-active states */
     &:hover {
       border-color: var(--genspace-mode-accent);
@@ -308,7 +354,7 @@ body {
         var(--genspace-mode-accent) 30%,
         transparent
       );
-      color: white;
+      color: rgb(var(--text));
     }
   }
 
@@ -317,7 +363,7 @@ body {
     [data-genspace-theme-ignore] *
   ) {
     /* Base state */
-    color: var(--color-zinc-400);
+    color: rgb(var(--text-muted));
     /* Hover and drag-active states */
     &:hover {
       border-color: var(--genspace-mode-accent);
@@ -326,7 +372,7 @@ body {
         var(--genspace-mode-accent) 20%,
         transparent
       );
-      color: white;
+      color: rgb(var(--text));
     }
   }
 }

@@ -637,7 +637,7 @@ export function DirectorTimeline({
       aria-label="Director Timeline"
     >
       <div className="flex">
-        <div className="flex h-6 w-40 shrink-0 items-center justify-center border-b border-r border-zinc-800 bg-zinc-900 font-mono text-2xs text-zinc-500">
+        <div className="flex h-6 w-40 shrink-0 items-center justify-center border-b border-r border-border bg-surface-raised font-mono text-2xs text-subtle-foreground">
           24 FPS
         </div>
         <div ref={rulerScrollRef} className="min-w-0 flex-1 overflow-hidden">
@@ -662,16 +662,16 @@ export function DirectorTimeline({
       </div>
 
       <div className="flex min-h-0 flex-1">
-        <div className="w-40 shrink-0 border-r border-zinc-800 bg-zinc-900">
+        <div className="w-40 shrink-0 border-r border-border bg-surface-raised">
           <div
-            className="flex items-center justify-end border-b border-zinc-800 px-2 text-[10px] font-medium uppercase tracking-wide text-zinc-400"
+            className="flex items-center justify-end border-b border-border px-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
             style={{ height: GENERATED_HEIGHT }}
           >
             <button
               type="button"
               onClick={onGenerate}
               disabled={generateDisabled}
-              className="rounded-sm border border-zinc-700 bg-zinc-800 px-2.5 py-1 text-[10px] font-medium text-zinc-200 hover:bg-zinc-700 disabled:opacity-40"
+              className="rounded-sm border border-border bg-input px-2.5 py-1 text-[10px] font-medium text-foreground hover:bg-surface-hover disabled:opacity-40"
             >
               {generateLabel}
             </button>
@@ -694,7 +694,7 @@ export function DirectorTimeline({
                   updatedAt: Date.now(),
                 })
               }
-              className="rounded-sm p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
+              className="rounded-sm p-1 text-subtle-foreground hover:bg-surface-hover hover:text-foreground"
               aria-label={
                 sequence.latestGenerationVisible === false
                   ? "Show Generated track"
@@ -714,19 +714,19 @@ export function DirectorTimeline({
             </button>
           </div>
           <div
-            className="flex items-center justify-end gap-1 border-b border-zinc-800 px-4 text-[10px] font-medium uppercase tracking-wide text-zinc-400"
+            className="flex items-center justify-end gap-1 border-b border-border px-4 text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
             style={{ height: PROMPT_HEIGHT }}
           >
             Prompt
           </div>
           <div
-            className="flex items-center justify-end gap-1 border-b border-zinc-800 px-4 text-[10px] font-medium uppercase tracking-wide text-zinc-600"
+            className="flex items-center justify-end gap-1 border-b border-border px-4 text-[10px] font-medium uppercase tracking-wide text-subtle-foreground"
             style={{ height: LOCKED_HEIGHT }}
           >
             <Lock className="h-3 w-3" /> Guide Audio
           </div>
           <div
-            className="flex items-center justify-end gap-1 border-b border-zinc-800 px-4 text-[10px] font-medium uppercase tracking-wide text-zinc-600"
+            className="flex items-center justify-end gap-1 border-b border-border px-4 text-[10px] font-medium uppercase tracking-wide text-subtle-foreground"
             style={{ height: LOCKED_HEIGHT }}
           >
             <Lock className="h-3 w-3" /> Control Media
@@ -748,22 +748,22 @@ export function DirectorTimeline({
             onMouseDown={startPlayheadDrag}
           >
             <div
-              className="absolute inset-x-0 top-0 border-b border-zinc-800 bg-zinc-900/50"
+              className="absolute inset-x-0 top-0 border-b border-border bg-surface-raised/50"
               style={{ height: GENERATED_HEIGHT }}
             />
             <div
-              className="absolute inset-x-0 border-b border-zinc-800 bg-zinc-950"
+              className="absolute inset-x-0 border-b border-border bg-surface"
               style={{ top: GENERATED_HEIGHT, height: PROMPT_HEIGHT }}
             />
             <div
-              className="absolute inset-x-0 border-b border-zinc-800 bg-emerald-950/20"
+              className="absolute inset-x-0 border-b border-border bg-emerald-950/20"
               style={{
                 top: GENERATED_HEIGHT + PROMPT_HEIGHT,
                 height: LOCKED_HEIGHT,
               }}
             />
             <div
-              className="absolute inset-x-0 border-b border-zinc-800 bg-zinc-900/50"
+              className="absolute inset-x-0 border-b border-border bg-surface-raised/50"
               style={{
                 top: GENERATED_HEIGHT + PROMPT_HEIGHT + LOCKED_HEIGHT,
                 height: LOCKED_HEIGHT,
@@ -791,7 +791,7 @@ export function DirectorTimeline({
                     y: Math.min(event.clientY, window.innerHeight - 60),
                   });
                 }}
-                className={`absolute top-1 h-[50px] bg-zinc-800/80 ${generatedSelected ? "border-blue-500 ring-2 ring-blue-500/40 shadow-lg shadow-blue-500/20" : "border-zinc-600 hover:border-zinc-400"} ${sequence.latestGenerationVisible === false ? "opacity-45" : ""}`}
+                className={`absolute top-1 h-[50px] bg-surface-raised/80 ${generatedSelected ? "border-blue-500 ring-2 ring-blue-500/40 shadow-lg shadow-blue-500/20" : "border-border-strong hover:border-border-strong"} ${sequence.latestGenerationVisible === false ? "opacity-45" : ""}`}
                 style={{
                   left: 0,
                   width: Math.max(
@@ -818,11 +818,11 @@ export function DirectorTimeline({
                     className="absolute inset-0 h-full w-full object-contain opacity-35"
                   />
                 ) : null}
-                <div className="relative flex h-full items-center gap-2 px-3 text-[10px] font-medium text-zinc-100">
+                <div className="relative flex h-full items-center gap-2 px-3 text-[10px] font-medium text-foreground">
                   <Film className="h-3 w-3" />
                   {generatedTake ? (
                     <div
-                      className="flex items-center gap-0.5 rounded-sm bg-black/70 px-1 py-0.5"
+                      className="flex items-center gap-0.5 rounded-sm bg-surface px-1 py-0.5"
                       aria-label={`Generated take ${generatedTake.index + 1} of ${generatedTake.count}`}
                     >
                       <button
@@ -837,11 +837,11 @@ export function DirectorTimeline({
                             updatedAt: Date.now(),
                           });
                         }}
-                        className="rounded-sm p-0.5 text-zinc-300 hover:bg-zinc-700 disabled:text-zinc-600"
+                        className="rounded-sm p-0.5 text-muted-foreground hover:bg-surface-hover disabled:text-subtle-foreground"
                       >
                         <ChevronLeft className="h-3 w-3" />
                       </button>
-                      <Layers className="h-3 w-3 text-zinc-300" />
+                      <Layers className="h-3 w-3 text-muted-foreground" />
                       <span className="min-w-[26px] text-center tabular-nums">
                         {generatedTake.index + 1}/{generatedTake.count}
                       </span>
@@ -859,7 +859,7 @@ export function DirectorTimeline({
                             updatedAt: Date.now(),
                           });
                         }}
-                        className="rounded-sm p-0.5 text-zinc-300 hover:bg-zinc-700 disabled:text-zinc-600"
+                        className="rounded-sm p-0.5 text-muted-foreground hover:bg-surface-hover disabled:text-subtle-foreground"
                       >
                         <ChevronRight className="h-3 w-3" />
                       </button>
@@ -911,12 +911,12 @@ export function DirectorTimeline({
                   />
                 ) : null}
                 <div className="relative flex h-full items-center gap-2 px-3">
-                  <Lock className="h-3 w-3 shrink-0 text-zinc-300" />
+                  <Lock className="h-3 w-3 shrink-0 text-muted-foreground" />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-[10px] font-medium text-violet-100">
                       Continue Video
                     </div>
-                    <div className="flex justify-end text-[10px] tabular-nums text-zinc-300">
+                    <div className="flex justify-end text-[10px] tabular-nums text-muted-foreground">
                       {ltxFrameCountToTimelineFrames(
                         sequence.continueVideo.timelineDurationFrames,
                       )}
@@ -964,7 +964,7 @@ export function DirectorTimeline({
                   onClick={() =>
                     addSegment(gap.startFrame, gap.endFrameExclusive, trailing)
                   }
-                  className="absolute z-10 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full border border-zinc-600 bg-zinc-800 text-zinc-300 shadow-sm hover:border-blue-400 hover:bg-blue-500/20 hover:text-blue-200"
+                  className="absolute z-10 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full border border-border-strong bg-surface-raised text-muted-foreground shadow-sm hover:border-blue-400 hover:bg-blue-500/20 hover:text-blue-200"
                   style={{ left, top: GENERATED_HEIGHT + 17 }}
                 >
                   <Plus className="h-3.5 w-3.5" />
@@ -1021,9 +1021,9 @@ export function DirectorTimeline({
                   onMouseDown={(event) =>
                     startSegmentEdgeDrag(event, segment.id, "in")
                   }
-                  className="absolute inset-y-0 left-0 z-20 flex w-2.5 cursor-ew-resize items-center justify-center bg-zinc-400/15 hover:bg-blue-400/50"
+                  className="absolute inset-y-0 left-0 z-20 flex w-2.5 cursor-ew-resize items-center justify-center bg-surface-selected hover:bg-blue-400/50"
                 >
-                  <span className="block h-6 w-0.5 rounded-sm bg-zinc-300" />
+                  <span className="block h-6 w-0.5 rounded-sm bg-muted-foreground" />
                 </button>
                 <button
                   type="button"
@@ -1032,16 +1032,16 @@ export function DirectorTimeline({
                   onMouseDown={(event) =>
                     startSegmentEdgeDrag(event, segment.id, "out")
                   }
-                  className="absolute inset-y-0 right-0 z-20 flex w-2.5 cursor-ew-resize items-center justify-center bg-zinc-400/15 hover:bg-blue-400/50"
+                  className="absolute inset-y-0 right-0 z-20 flex w-2.5 cursor-ew-resize items-center justify-center bg-surface-selected hover:bg-blue-400/50"
                 >
-                  <span className="block h-6 w-0.5 rounded-sm bg-zinc-300" />
+                  <span className="block h-6 w-0.5 rounded-sm bg-muted-foreground" />
                 </button>
               </div>
             ))}
 
             {sequence.guideAudio && (
               <TimelineSegmentFrame
-                className="absolute h-8 border-zinc-700 bg-zinc-800/60 px-2 text-2xs text-zinc-500"
+                className="absolute h-8 border-border bg-surface-raised/60 px-2 text-2xs text-subtle-foreground"
                 style={{
                   left: 0,
                   top: GENERATED_HEIGHT + PROMPT_HEIGHT + 5,
@@ -1067,7 +1067,7 @@ export function DirectorTimeline({
             )}
             {sequence.guidance && (
               <TimelineSegmentFrame
-                className="absolute h-8 border-zinc-700 bg-zinc-800/60 px-2 text-2xs text-zinc-500"
+                className="absolute h-8 border-border bg-surface-raised/60 px-2 text-2xs text-subtle-foreground"
                 style={{
                   left: 0,
                   top: GENERATED_HEIGHT + PROMPT_HEIGHT + LOCKED_HEIGHT + 5,
@@ -1089,7 +1089,7 @@ export function DirectorTimeline({
             )}
             {!sequence.guideAudio && (
               <div
-                className="absolute text-[10px] text-zinc-700"
+                className="absolute text-[10px] text-subtle-foreground"
                 style={{ left: 8, top: GENERATED_HEIGHT + PROMPT_HEIGHT + 14 }}
               >
                 Locked for Director V1 prompt-track release
@@ -1097,7 +1097,7 @@ export function DirectorTimeline({
             )}
             {!sequence.guidance && (
               <div
-                className="absolute text-[10px] text-zinc-700"
+                className="absolute text-[10px] text-subtle-foreground"
                 style={{
                   left: 8,
                   top: GENERATED_HEIGHT + PROMPT_HEIGHT + LOCKED_HEIGHT + 14,
@@ -1109,7 +1109,7 @@ export function DirectorTimeline({
           </div>
         </div>
       </div>
-      <div className="flex h-9 shrink-0 items-center gap-2 border-t border-zinc-800 bg-zinc-900 px-2">
+      <div className="flex h-9 shrink-0 items-center gap-2 border-t border-border bg-surface-raised px-2">
         <TimelineZoomControls
           value={zoom}
           min={0.5}
@@ -1130,7 +1130,7 @@ export function DirectorTimeline({
               ? "Generated segment actions"
               : "Prompt segment actions"
           }
-          className="w-36 overflow-y-auto rounded-sm border border-zinc-700 bg-zinc-900 py-1 text-xs shadow-2xl"
+          className="w-36 overflow-y-auto rounded-sm border border-border bg-popover py-1 text-xs shadow-2xl"
           onMouseDown={(event) => event.stopPropagation()}
         >
           {contextMenu.kind === "prompt" && (
@@ -1138,7 +1138,7 @@ export function DirectorTimeline({
               type="button"
               role="menuitem"
               onClick={() => splitSegment(contextMenu.segmentId)}
-              className="block w-full px-3 py-1.5 text-left text-zinc-200 hover:bg-zinc-800"
+              className="block w-full px-3 py-1.5 text-left text-foreground hover:bg-surface-hover"
             >
               Split
             </button>
@@ -1155,7 +1155,7 @@ export function DirectorTimeline({
                 ? deleteGenerated()
                 : deleteSegment(contextMenu.segmentId)
             }
-            className="block w-full px-3 py-1.5 text-left text-red-300 hover:bg-red-950/60 disabled:text-zinc-600"
+            className="block w-full px-3 py-1.5 text-left text-red-300 hover:bg-red-950/60 disabled:text-subtle-foreground"
           >
             Delete
           </button>

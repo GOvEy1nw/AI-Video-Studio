@@ -277,7 +277,7 @@ export function ReframePanel({
 
   return (
     <div
-      className={`bg-zinc-900 overflow-hidden flex flex-col ${fillHeight ? "h-full min-h-0" : ""}`}
+      className={`flex flex-col overflow-hidden bg-card ${fillHeight ? "h-full min-h-0" : ""}`}
     >
       {!videoUrl ? (
         <VideoSourceDropZone
@@ -309,7 +309,7 @@ export function ReframePanel({
             canvasTestId={
               sourceOnly ? "video-source-canvas" : "video-reframe-canvas"
             }
-            canvasClassName={`w-full rounded-lg ${sourceOnly ? "border-2 border-zinc-500" : "aspect-video max-h-[32vh]"}`}
+            canvasClassName={`w-full rounded-lg ${sourceOnly ? "border-2 border-border-strong" : "aspect-video max-h-[32vh]"}`}
             canvasStyle={fillHeight ? undefined : { aspectRatio: "16/9" }}
             frameInset={0}
             resetKey={resetKey}
@@ -341,10 +341,10 @@ export function ReframePanel({
             </div>
           </ReframeEditor>
           <div className="flex justify-between mt-2 gap-2">
-            <div className="flex w-fit h-fit justify-center rounded-lg bg-zinc-800/35 p-1">
+            <div className="flex h-fit w-fit justify-center rounded-lg bg-surface-raised p-1">
               <button
                 onClick={togglePlay}
-                className="p-1 rounded-sm hover:bg-zinc-800 text-white transition-colors"
+                className="rounded-sm p-1 text-foreground transition-colors hover:bg-surface-hover"
               >
                 {isPlaying ? (
                   <Pause className="h-3.5 w-3.5" />

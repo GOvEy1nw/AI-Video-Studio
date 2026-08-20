@@ -37,7 +37,7 @@ export function DirectorPromptSegment({
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") onSelect();
       }}
-      className={`relative h-full min-w-0 cursor-grab text-left active:cursor-grabbing ${selected ? "border-blue-400 bg-blue-500/20 shadow-lg shadow-blue-500/20" : "border-zinc-600 bg-zinc-800 hover:border-zinc-500"}`}
+      className={`relative h-full min-w-0 cursor-grab text-left active:cursor-grabbing ${selected ? "border-blue-400 bg-blue-500/20 shadow-lg shadow-blue-500/20" : "border-border-strong bg-surface-raised hover:border-border-strong"}`}
       aria-label={`Prompt segment frames ${segment.startFrame} to ${segment.endFrameExclusive - 1}`}
     >
       {asset && point === "centre" && (
@@ -63,15 +63,15 @@ export function DirectorPromptSegment({
         )}
         <div className="min-w-0 flex-1">
           <div
-            className={`truncate text-[10px] font-medium ${segment.prompt.trim() ? "text-zinc-200" : "text-zinc-500"}`}
+            className={`truncate text-[10px] font-medium ${segment.prompt.trim() ? "text-foreground" : "text-subtle-foreground"}`}
           >
             {segment.prompt.trim() || "Add your text prompt here…"}
           </div>
-          <div className="flex items-center justify-between gap-2 text-[10px] text-zinc-300">
+          <div className="flex items-center justify-between gap-2 text-[10px] text-muted-foreground">
             {keyframeLabel && (
               <span className="truncate">Key Frame ({keyframeLabel})</span>
             )}
-            <span className="ml-auto shrink-0 tabular-nums text-zinc-400">
+            <span className="ml-auto shrink-0 tabular-nums text-muted-foreground">
               {frameCount}f
             </span>
           </div>

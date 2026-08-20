@@ -403,19 +403,19 @@ export function ExportModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/60 backdrop-blur-xs p-4"
       onClick={onClose}
     >
       <div
-        className="bg-zinc-900 rounded-2xl border border-zinc-700/50 shadow-2xl w-full max-w-lg relative overflow-hidden max-h-[calc(100vh-2rem)] flex flex-col"
+        className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-lg relative overflow-hidden max-h-[calc(100vh-2rem)] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
-          <h2 className="text-lg font-bold text-white">Export</h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+          <h2 className="text-lg font-bold text-foreground">Export</h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors"
+            className="p-1.5 rounded-lg text-subtle-foreground hover:text-foreground hover:bg-surface-raised transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -427,31 +427,31 @@ export function ExportModal({
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <Loader2 className="h-5 w-5 text-blue-400 animate-spin" />
-                <span className="text-sm text-zinc-300">
+                <span className="text-sm text-foreground">
                   {exportType === "package"
                     ? "Generating FCPXML..."
                     : "Rendering video..."}
                 </span>
               </div>
-              <div className="w-full bg-zinc-800 rounded-full h-2 overflow-hidden">
+              <div className="w-full bg-surface-raised rounded-full h-2 overflow-hidden">
                 <div
                   className="h-full bg-blue-500 rounded-full transition-all duration-300"
                   style={{ width: `${exportProgress}%` }}
                 />
               </div>
               <div className="flex items-center justify-between">
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-subtle-foreground">
                   {exportProgress}% complete
                 </p>
                 {exportFrameInfo && (
-                  <p className="text-xs text-zinc-500">{exportFrameInfo}</p>
+                  <p className="text-xs text-subtle-foreground">{exportFrameInfo}</p>
                 )}
               </div>
               {exportType === "video" && (
                 <Button
                   variant="outline"
                   size="sm"
-                  className="border-zinc-700 text-zinc-400"
+                  className="border-border text-muted-foreground"
                   onClick={handleCancel}
                 >
                   Cancel
@@ -468,14 +468,14 @@ export function ExportModal({
                   <Check className="h-5 w-5 text-green-400" />
                 </div>
                 <div>
-                  <p className="text-sm text-white font-medium">
+                  <p className="text-sm text-foreground font-medium">
                     Export complete
                   </p>
-                  <p className="text-xs text-zinc-500 truncate max-w-[340px]">
+                  <p className="text-xs text-subtle-foreground truncate max-w-[340px]">
                     {exportPath}
                   </p>
                   {exportFrameInfo && (
-                    <p className="text-xs text-zinc-500">{exportFrameInfo}</p>
+                    <p className="text-xs text-subtle-foreground">{exportFrameInfo}</p>
                   )}
                 </div>
               </div>
@@ -483,7 +483,7 @@ export function ExportModal({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="border-zinc-700 text-zinc-300"
+                  className="border-border text-foreground"
                   onClick={() => {
                     if (exportPath) {
                       window.electronAPI?.openParentFolderOfFile(exportPath);
@@ -496,7 +496,7 @@ export function ExportModal({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="border-zinc-700 text-zinc-300"
+                  className="border-border text-foreground"
                   onClick={() => {
                     setExportStatus("idle");
                     setExportType(null);
@@ -516,7 +516,7 @@ export function ExportModal({
                   <AlertCircle className="h-5 w-5 text-red-400" />
                 </div>
                 <div>
-                  <p className="text-sm text-white font-medium">
+                  <p className="text-sm text-foreground font-medium">
                     Export failed
                   </p>
                   <p className="text-xs text-red-400 max-w-[340px] wrap-break-word">
@@ -527,7 +527,7 @@ export function ExportModal({
               <Button
                 variant="outline"
                 size="sm"
-                className="border-zinc-700 text-zinc-300"
+                  className="border-border text-foreground"
                 onClick={() => {
                   setExportStatus("idle");
                   setExportType(null);
@@ -544,22 +544,22 @@ export function ExportModal({
               {/* Package export (compact) */}
               <button
                 onClick={handleExportPackage}
-                className="w-full flex items-center gap-3 p-3 rounded-xl border border-zinc-700/50 bg-zinc-800/50 hover:bg-zinc-800 hover:border-zinc-600 transition-all group"
+                className="w-full flex items-center gap-3 p-3 rounded-xl border border-border/50 bg-surface-raised/50 hover:bg-surface-raised hover:border-border-strong transition-all group"
               >
-                <div className="w-10 h-10 rounded-lg bg-zinc-700/50 flex items-center justify-center shrink-0">
-                  <Package className="h-5 w-5 text-zinc-300" />
+                <div className="w-10 h-10 rounded-lg bg-surface-hover/50 flex items-center justify-center shrink-0">
+                  <Package className="h-5 w-5 text-foreground" />
                 </div>
                 <div className="flex-1 text-left">
-                  <p className="text-sm font-semibold text-white">
+                  <p className="text-sm font-semibold text-foreground">
                     Package (FCPXML)
                   </p>
-                  <p className="text-2xs text-zinc-500">
+                  <p className="text-2xs text-subtle-foreground">
                     For Premiere Pro &amp; DaVinci Resolve
                   </p>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <div
-                    className="w-6 h-6 rounded-sm bg-zinc-700 flex items-center justify-center"
+                    className="w-6 h-6 rounded-sm bg-surface-hover flex items-center justify-center"
                     title="DaVinci Resolve"
                   >
                     <span className="text-[8px] font-bold text-orange-400">
@@ -567,29 +567,29 @@ export function ExportModal({
                     </span>
                   </div>
                   <div
-                    className="w-6 h-6 rounded-sm bg-zinc-700 flex items-center justify-center"
+                    className="w-6 h-6 rounded-sm bg-surface-hover flex items-center justify-center"
                     title="Premiere Pro"
                   >
                     <span className="text-[8px] font-bold text-blue-400">
                       Pr
                     </span>
                   </div>
-                  <Download className="h-4 w-4 text-zinc-500 group-hover:text-zinc-300 transition-colors ml-1" />
+                  <Download className="h-4 w-4 text-subtle-foreground group-hover:text-foreground transition-colors ml-1" />
                 </div>
               </button>
 
               {/* Divider */}
               <div className="flex items-center gap-3">
-                <div className="flex-1 h-px bg-zinc-800" />
-                <span className="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold">
+                <div className="flex-1 h-px bg-surface-raised" />
+                <span className="text-[10px] text-subtle-foreground uppercase tracking-wider font-semibold">
                   Video Export
                 </span>
-                <div className="flex-1 h-px bg-zinc-800" />
+                <div className="flex-1 h-px bg-surface-raised" />
               </div>
 
               {/* Format selector */}
               <div>
-                <label className="text-2xs text-zinc-500 uppercase tracking-wider font-semibold mb-2 block">
+                <label className="text-2xs text-subtle-foreground uppercase tracking-wider font-semibold mb-2 block">
                   Format
                 </label>
                 <div className="grid grid-cols-3 gap-2">
@@ -599,14 +599,14 @@ export function ExportModal({
                       onClick={() => handleCodecChange(codec)}
                       className={`p-2.5 rounded-lg border text-center transition-all ${
                         settings.codec === codec
-                          ? "border-blue-500 bg-blue-500/10 text-white"
-                          : "border-zinc-700 bg-zinc-800/50 text-zinc-400 hover:border-zinc-600 hover:text-zinc-300"
+                          ? "border-blue-500 bg-blue-500/10 text-primary-foreground"
+                          : "border-border bg-surface-raised/50 text-muted-foreground hover:border-border-strong hover:text-foreground"
                       }`}
                     >
                       <p className="text-xs font-semibold">
                         {CODEC_INFO[codec].label.split(" / ")[0]}
                       </p>
-                      <p className="text-[9px] text-zinc-500 mt-0.5">
+                      <p className="text-[9px] text-subtle-foreground mt-0.5">
                         .{CODEC_INFO[codec].ext}
                       </p>
                     </button>
@@ -617,7 +617,7 @@ export function ExportModal({
               {/* Resolution & Frame rate row */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-2xs text-zinc-500 uppercase tracking-wider font-semibold mb-1.5 block">
+                  <label className="text-2xs text-subtle-foreground uppercase tracking-wider font-semibold mb-1.5 block">
                     Resolution
                   </label>
                   <div className="relative">
@@ -631,7 +631,7 @@ export function ExportModal({
                           height: h,
                         }));
                       }}
-                      className="w-full appearance-none bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:border-blue-500 pr-8 cursor-pointer"
+                      className="w-full appearance-none bg-surface-raised border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-hidden focus:border-blue-500 pr-8 cursor-pointer"
                     >
                       {RESOLUTIONS.map((r) => (
                         <option
@@ -642,11 +642,11 @@ export function ExportModal({
                         </option>
                       ))}
                     </select>
-                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500 pointer-events-none" />
+                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-subtle-foreground pointer-events-none" />
                   </div>
                 </div>
                 <div>
-                  <label className="text-2xs text-zinc-500 uppercase tracking-wider font-semibold mb-1.5 block">
+                  <label className="text-2xs text-subtle-foreground uppercase tracking-wider font-semibold mb-1.5 block">
                     Frame Rate
                   </label>
                   <div className="relative">
@@ -658,7 +658,7 @@ export function ExportModal({
                           fps: parseInt(e.target.value),
                         }))
                       }
-                      className="w-full appearance-none bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:border-blue-500 pr-8 cursor-pointer"
+                      className="w-full appearance-none bg-surface-raised border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-hidden focus:border-blue-500 pr-8 cursor-pointer"
                     >
                       {FRAME_RATES.map((fps) => (
                         <option key={fps} value={fps}>
@@ -666,14 +666,14 @@ export function ExportModal({
                         </option>
                       ))}
                     </select>
-                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500 pointer-events-none" />
+                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-subtle-foreground pointer-events-none" />
                   </div>
                 </div>
               </div>
 
               {/* Quality */}
               <div>
-                <label className="text-2xs text-zinc-500 uppercase tracking-wider font-semibold mb-1.5 block">
+                <label className="text-2xs text-subtle-foreground uppercase tracking-wider font-semibold mb-1.5 block">
                   Quality
                 </label>
                 {settings.codec === "h264" && (
@@ -693,13 +693,13 @@ export function ExportModal({
                       className="flex-1 h-1.5 accent-blue-500 cursor-pointer"
                       // Note: lower CRF = higher quality (inverted display)
                     />
-                    <span className="text-xs text-zinc-400 w-16 text-right">
+                    <span className="text-xs text-muted-foreground w-16 text-right">
                       {settings.quality <= 18
                         ? "High"
                         : settings.quality <= 23
                           ? "Medium"
                           : "Low"}
-                      <span className="text-zinc-600 ml-1">
+                      <span className="text-subtle-foreground ml-1">
                         ({settings.quality})
                       </span>
                     </span>
@@ -716,7 +716,7 @@ export function ExportModal({
                         className={`py-1.5 px-2 rounded-md text-xs font-medium transition-all ${
                           settings.quality === p.value
                             ? "bg-blue-500/20 border border-blue-500 text-blue-300"
-                            : "bg-zinc-800 border border-zinc-700 text-zinc-400 hover:border-zinc-600"
+                            : "bg-surface-raised border border-border text-muted-foreground hover:border-border-strong"
                         }`}
                       >
                         {p.label}
@@ -740,7 +740,7 @@ export function ExportModal({
                       }
                       className="flex-1 h-1.5 accent-blue-500 cursor-pointer"
                     />
-                    <span className="text-xs text-zinc-400 w-20 text-right">
+                    <span className="text-xs text-muted-foreground w-20 text-right">
                       {settings.quality} Mbps
                     </span>
                   </div>
@@ -751,20 +751,20 @@ export function ExportModal({
               {hasSubtitles && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-3">
-                    <div className="flex-1 h-px bg-zinc-800" />
-                    <span className="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold">
+                    <div className="flex-1 h-px bg-surface-raised" />
+                    <span className="text-[10px] text-subtle-foreground uppercase tracking-wider font-semibold">
                       Options
                     </span>
-                    <div className="flex-1 h-px bg-zinc-800" />
+                    <div className="flex-1 h-px bg-surface-raised" />
                   </div>
                   <label className="flex items-center gap-2.5 cursor-pointer group">
                     <input
                       type="checkbox"
                       checked={burnSubtitles}
                       onChange={(e) => setBurnSubtitles(e.target.checked)}
-                      className="w-4 h-4 rounded-sm border-zinc-600 bg-zinc-800 accent-blue-500 cursor-pointer"
+                      className="w-4 h-4 rounded-sm border-border-strong bg-surface-raised accent-blue-500 cursor-pointer"
                     />
-                    <span className="text-xs text-zinc-300 group-hover:text-white transition-colors">
+                    <span className="text-xs text-foreground group-hover:text-foreground transition-colors">
                       Burn-in subtitles
                     </span>
                   </label>
@@ -775,14 +775,14 @@ export function ExportModal({
               <button
                 onClick={handleExportVideo}
                 disabled={clips.length === 0}
-                className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
+                className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-primary-foreground font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
               >
                 <Film className="h-4 w-4" />
                 Export Video
               </button>
 
               {clips.length === 0 && (
-                <p className="text-xs text-zinc-500 text-center">
+                <p className="text-xs text-subtle-foreground text-center">
                   Add clips to the timeline to export.
                 </p>
               )}

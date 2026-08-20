@@ -84,21 +84,21 @@ export function LaunchGate({
       : 'Finish'
 
   return (
-    <div className="h-screen flex flex-col bg-black text-white" style={{ fontFamily: 'Arial, Helvetica, sans-serif' }}>
-      <header className="border-b border-zinc-900 px-8 py-5">
+    <div className="h-screen flex flex-col bg-background text-foreground" style={{ fontFamily: 'Arial, Helvetica, sans-serif' }}>
+      <header className="border-b border-border px-8 py-5">
         <div className="text-sm font-semibold tracking-wide">AI Video Studio</div>
       </header>
       <main className="flex flex-1 items-center justify-center overflow-auto p-8">
-        <section className="w-full max-w-2xl rounded-xl border border-zinc-800 bg-zinc-950 p-8">
+        <section className="w-full max-w-2xl rounded-xl border border-border bg-card p-8">
           <h1 className="mb-3 text-2xl font-bold">{title}</h1>
           {currentStep === 'license' && (
             <>
-              <p className="mb-4 text-sm text-zinc-400">Accept the WanGP model license before continuing.</p>
+              <p className="mb-4 text-sm text-muted-foreground">Accept the WanGP model license before continuing.</p>
               {licenseError && <p className="mb-4 text-sm text-red-400">{licenseError}</p>}
-              <pre className="mb-4 max-h-80 overflow-auto whitespace-pre-wrap rounded-lg bg-zinc-900 p-4 text-xs text-zinc-300">
+              <pre className="mb-4 max-h-80 overflow-auto whitespace-pre-wrap rounded-lg bg-input p-4 text-xs text-muted-foreground">
                 {licenseText ?? 'Loading license…'}
               </pre>
-              <label className="flex cursor-pointer items-center gap-3 text-sm text-zinc-200">
+              <label className="flex cursor-pointer items-center gap-3 text-sm text-foreground">
                 <input
                   type="checkbox"
                   checked={licenseAccepted}
@@ -109,17 +109,17 @@ export function LaunchGate({
             </>
           )}
           {currentStep === 'models' && (
-            <p className="text-sm leading-6 text-zinc-400">
+            <p className="text-sm leading-6 text-muted-foreground">
               Bundled WanGP manages compatible model files and downloads required files automatically when you generate for the first time.
             </p>
           )}
           {currentStep === 'complete' && (
-            <p className="text-sm leading-6 text-zinc-400">WanGP is ready. Start generating.</p>
+            <p className="text-sm leading-6 text-muted-foreground">WanGP is ready. Start generating.</p>
           )}
           {actionError && <p className="mt-4 text-sm text-red-400">{actionError}</p>}
         </section>
       </main>
-      <footer className="flex justify-end border-t border-zinc-900 px-8 py-5">
+      <footer className="flex justify-end border-t border-border px-8 py-5">
         <button
           type="button"
           onClick={() => void handleNext()}

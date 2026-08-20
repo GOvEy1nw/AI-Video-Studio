@@ -140,8 +140,8 @@ function AudioVariationRow({
       aria-pressed={active}
       title={`Variation ${index + 1}`}
       onClick={onSelect}
-      className={`relative min-h-0 flex-1 overflow-hidden border-b border-zinc-800 text-left last:border-b-0 ${
-        active ? "bg-emerald-950/50" : "bg-zinc-950 hover:bg-emerald-950/40"
+      className={`relative min-h-0 flex-1 overflow-hidden border-b border-border text-left last:border-b-0 ${
+        active ? "bg-emerald-950/50" : "bg-background hover:bg-emerald-950/40"
       }`}
     >
       <ClipWaveform
@@ -216,10 +216,10 @@ export function GalleryAssetCard({
       aria-checked={multiSelectMode ? selected : undefined}
       aria-label={`${asset.type} asset`}
       tabIndex={0}
-      className={`asset-library-card relative cursor-pointer overflow-visible rounded-xl border-2 bg-zinc-900 outline-none transition-all focus-visible:ring-2 focus-visible:ring-blue-400/70 ${
+      className={`asset-library-card relative cursor-pointer overflow-visible rounded-xl border-2 bg-card outline-none transition-all focus-visible:ring-2 focus-visible:ring-ring/70 ${
         selected
           ? "border-blue-500 ring-2 ring-blue-500/40 shadow-lg shadow-blue-500/20"
-          : "border-transparent hover:border-zinc-700"
+          : "border-transparent hover:border-border"
       }`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -249,7 +249,7 @@ export function GalleryAssetCard({
       draggable={!multiSelectMode && asset.type !== "adjustment"}
       onDragStart={(event) => onDragStart(event, asset)}
     >
-      <div className="relative aspect-square overflow-hidden rounded-[10px] bg-zinc-900">
+      <div className="relative aspect-square overflow-hidden rounded-[10px] bg-card">
         {asset.type === "video" ? (
           generatedThumbnail ? (
             <img
@@ -274,11 +274,11 @@ export function GalleryAssetCard({
             ))}
           </div>
         ) : asset.type === "audio" ? (
-          <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-zinc-950 transition-colors hover:bg-emerald-950/40">
+          <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-background transition-colors hover:bg-emerald-950/40">
             <ClipWaveform url={asset.url} enabled={previewEnabled} />
           </div>
         ) : asset.type === "adjustment" ? (
-          <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 border border-dashed text-2xs border-blue-500/30 bg-linear-to-br from-blue-900/40 to-zinc-900">
+          <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 border border-dashed text-2xs border-blue-500/30 bg-linear-to-br from-blue-900/40 to-card">
             <Layers className="h-8 w-8 text-blue-400" />
             <span className="text-[10px] font-medium text-blue-300/70">
               Adjustment Layer
@@ -699,7 +699,7 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
       <div className="flex shrink-0 flex-col gap-2 pb-2 pr-2">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-1">
-            <span className="text-sm font-semibold text-white">Assets</span>
+            <span className="text-sm font-semibold text-foreground">Assets</span>
             {props.headerAction}
           </div>
           <div className="flex items-center gap-1">
@@ -722,7 +722,7 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
             className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-colors ${
               props.showFavorites
                 ? "border-red-500/30 bg-red-500/20 text-red-400"
-                : "border-transparent text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                : "border-transparent text-muted-foreground hover:bg-surface-hover hover:text-foreground"
             }`}
             aria-label="Show favorites"
             aria-pressed={props.showFavorites}
@@ -883,7 +883,7 @@ export function AssetLibraryImportButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
+      className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
       aria-label="Import media"
       title="Import media"
     >

@@ -80,8 +80,8 @@ export function GalleryBinBar({
   const binChipClass = (active: boolean) =>
     `flex h-8 shrink-0 items-center gap-1 rounded-md border px-2.5 text-xs font-medium transition-colors ${
       active
-        ? "border border-zinc-500/40 bg-zinc-400/30 text-zinc-300"
-        : "border-transparent text-zinc-400 hover:bg-zinc-800 hover:text-white"
+        ? "border border-border-strong bg-surface-selected text-foreground"
+        : "border-transparent text-muted-foreground hover:bg-surface-raised hover:text-foreground"
     }`;
 
   return (
@@ -128,7 +128,7 @@ export function GalleryBinBar({
               style={{ color: getColorLabel(binColors[bin])?.color }}
             />
             <span className="truncate">{bin}</span>
-            <span className="text-2xs text-zinc-500">{countInBin(bin)}</span>
+            <span className="text-2xs text-subtle-foreground">{countInBin(bin)}</span>
           </button>
         ))}
 
@@ -156,13 +156,13 @@ export function GalleryBinBar({
               }
             }}
             placeholder="Bin name..."
-            className="h-8 w-28 shrink-0 rounded-md border border-zinc-600 bg-zinc-800 px-2 text-xs text-white placeholder-zinc-600 focus:border-blue-500 focus:outline-hidden"
+            className="h-8 w-28 shrink-0 rounded-md border border-border-strong bg-input px-2 text-xs text-foreground placeholder:text-subtle-foreground focus:border-blue-500 focus:outline-hidden"
           />
         ) : (
           <button
             type="button"
             onClick={() => onCreatingBinChange(true)}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-transparent text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-transparent text-muted-foreground transition-colors hover:bg-surface-raised hover:text-foreground"
             aria-label="Create bin"
             title="Create bin"
           >
@@ -177,7 +177,7 @@ export function GalleryBinBar({
           anchorPoint={binContextMenu}
           gap={0}
           role="menu"
-          className="min-w-[160px] overflow-y-auto rounded-xl border border-zinc-700 bg-zinc-800 py-1.5 text-xs shadow-2xl"
+          className="min-w-[160px] overflow-y-auto rounded-xl border border-border bg-popover py-1.5 text-xs shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
           <button
@@ -189,13 +189,13 @@ export function GalleryBinBar({
               }
               onBinContextMenuChange(null);
             }}
-            className="flex w-full items-center gap-3 px-3 py-1.5 text-zinc-300 hover:bg-zinc-700"
+            className="flex w-full items-center gap-3 px-3 py-1.5 text-foreground hover:bg-surface-hover"
           >
-            <Pencil className="h-3.5 w-3.5 text-zinc-500" />
+            <Pencil className="h-3.5 w-3.5 text-subtle-foreground" />
             <span>Rename Bin</span>
           </button>
-          <div className="my-1 h-px bg-zinc-700" />
-          <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+          <div className="my-1 h-px bg-border" />
+          <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-subtle-foreground">
             Label
           </div>
           <div className="flex flex-wrap items-center gap-1 px-3 py-1.5">
@@ -207,13 +207,13 @@ export function GalleryBinBar({
               }}
               className={`flex h-4 w-4 items-center justify-center rounded-full border-2 transition-all ${
                 !binColors[binContextMenu.bin]
-                  ? "scale-110 border-white"
-                  : "border-zinc-600 hover:border-zinc-400"
+                  ? "scale-110 border-foreground"
+                  : "border-border-strong hover:border-border-strong"
               }`}
               title="No label"
               aria-label="No label"
             >
-              <X className="h-2 w-2 text-zinc-400" />
+              <X className="h-2 w-2 text-muted-foreground" />
             </button>
             {COLOR_LABELS.map((colorLabel) => (
               <button
@@ -225,7 +225,7 @@ export function GalleryBinBar({
                 }}
                 className={`h-4 w-4 rounded-full transition-all ${
                   binColors[binContextMenu.bin] === colorLabel.id
-                    ? "scale-110 ring-2 ring-white ring-offset-1 ring-offset-zinc-800"
+                    ? "scale-110 ring-2 ring-foreground ring-offset-1 ring-offset-popover"
                     : "hover:scale-125"
                 }`}
                 style={{ backgroundColor: colorLabel.color }}
@@ -234,14 +234,14 @@ export function GalleryBinBar({
               />
             ))}
           </div>
-          <div className="my-1 h-px bg-zinc-700" />
+          <div className="my-1 h-px bg-border" />
           <button
             type="button"
             onClick={() => {
               onDeleteBin(binContextMenu.bin);
               onBinContextMenuChange(null);
             }}
-            className="flex w-full items-center gap-3 px-3 py-1.5 text-red-400 hover:bg-zinc-700"
+            className="flex w-full items-center gap-3 px-3 py-1.5 text-red-400 hover:bg-surface-hover"
           >
             <Trash2 className="h-3.5 w-3.5" />
             <span>Delete Bin</span>

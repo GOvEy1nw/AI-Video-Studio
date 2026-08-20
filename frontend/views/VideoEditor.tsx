@@ -2317,8 +2317,8 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
                     onClick={() => setShowLayoutMenu((v) => !v)}
                     className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[12px] transition-colors ${
                       showLayoutMenu
-                        ? "bg-zinc-800 text-white"
-                        : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+        ? "bg-surface-raised text-foreground"
+        : "text-muted-foreground hover:text-foreground hover:bg-surface-raised/50"
                     }`}
                   >
                     <LayoutGrid className="h-3.5 w-3.5" />
@@ -2330,17 +2330,17 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
                       anchorRef={layoutMenuRef}
                       placement="bottom-end"
                       role="menu"
-                      className="w-56 overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-900 py-1 shadow-xl shadow-black/50"
+      className="w-56 overflow-y-auto rounded-lg border border-border bg-surface py-1 shadow-xl"
                     >
                       {savingPresetName !== null ? (
                         <div className="px-2 py-1.5">
-                          <div className="text-[11px] text-zinc-400 mb-1.5 px-1">
+                          <div className="text-[11px] text-muted-foreground mb-1.5 px-1">
                             Name this layout:
                           </div>
                           <input
                             ref={presetNameInputRef}
                             autoFocus
-                            className="w-full bg-zinc-800 border border-zinc-600 rounded-sm px-2 py-1 text-[13px] text-white outline-hidden focus:border-blue-500"
+                            className="w-full bg-surface-raised border border-border-strong rounded-sm px-2 py-1 text-[13px] text-foreground outline-hidden focus:border-blue-500"
                             value={savingPresetName}
                             onChange={(e) =>
                               setSavingPresetName(e.target.value)
@@ -2368,13 +2368,13 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
                                 }
                               }}
                               disabled={!savingPresetName.trim()}
-                              className="flex-1 px-2 py-1 rounded-sm bg-blue-600 text-white text-[11px] font-medium hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                              className="flex-1 px-2 py-1 rounded-sm bg-blue-600 text-primary-foreground text-[11px] font-medium hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                             >
                               Save
                             </button>
                             <button
                               onClick={() => setSavingPresetName(null)}
-                              className="px-2 py-1 rounded-sm bg-zinc-800 text-zinc-400 text-[11px] hover:bg-zinc-700 transition-colors"
+                              className="px-2 py-1 rounded-sm bg-surface-raised text-muted-foreground text-[11px] hover:bg-surface-hover transition-colors"
                             >
                               Cancel
                             </button>
@@ -2389,7 +2389,7 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
                                 presetNameInputRef.current?.focus(),
                               );
                             }}
-                            className="w-full flex items-center gap-2.5 px-3 py-1.5 text-[13px] text-zinc-200 hover:bg-blue-600 hover:text-white transition-colors"
+                            className="w-full flex items-center gap-2.5 px-3 py-1.5 text-[13px] text-foreground hover:bg-blue-600 hover:text-primary-foreground transition-colors"
                           >
                             <Save className="h-3.5 w-3.5" />
                             Save Current Layout...
@@ -2399,15 +2399,15 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
                               handleResetLayout();
                               setShowLayoutMenu(false);
                             }}
-                            className="w-full flex items-center gap-2.5 px-3 py-1.5 text-[13px] text-zinc-200 hover:bg-blue-600 hover:text-white transition-colors"
+                            className="w-full flex items-center gap-2.5 px-3 py-1.5 text-[13px] text-foreground hover:bg-blue-600 hover:text-primary-foreground transition-colors"
                           >
                             <RotateCcw className="h-3.5 w-3.5" />
                             Reset to Default
                           </button>
                           {layoutPresets.length > 0 && (
                             <>
-                              <div className="h-px bg-zinc-700 my-1 mx-2" />
-                              <div className="px-3 py-1 text-2xs text-zinc-500 uppercase tracking-wider">
+                              <div className="h-px bg-border my-1 mx-2" />
+                              <div className="px-3 py-1 text-2xs text-subtle-foreground uppercase tracking-wider">
                                 Saved Layouts
                               </div>
                               {layoutPresets.map((preset) => (
@@ -2420,9 +2420,9 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
                                       handleApplyLayoutPreset(preset);
                                       setShowLayoutMenu(false);
                                     }}
-                                    className="flex-1 flex items-center gap-2.5 px-3 py-1.5 text-[13px] text-zinc-200 group-hover:text-white transition-colors text-left"
+                                    className="flex-1 flex items-center gap-2.5 px-3 py-1.5 text-[13px] text-foreground group-hover:text-foreground transition-colors text-left"
                                   >
-                                    <LayoutGrid className="h-3.5 w-3.5 text-zinc-500 group-hover:text-white" />
+                                    <LayoutGrid className="h-3.5 w-3.5 text-subtle-foreground group-hover:text-foreground" />
                                     {preset.name}
                                   </button>
                                   <Tooltip content="Delete preset" side="top">
@@ -2431,7 +2431,7 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
                                         e.stopPropagation();
                                         handleDeleteLayoutPreset(preset.id);
                                       }}
-                                      className="px-2 py-1.5 text-zinc-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                                      className="px-2 py-1.5 text-subtle-foreground hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
                                     >
                                       <Trash2 className="h-3 w-3" />
                                     </button>
@@ -2830,7 +2830,7 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
             anchorPoint={binContextMenu}
             gap={0}
             role="menu"
-            className="min-w-[160px] overflow-y-auto rounded-xl border border-zinc-700 bg-zinc-800 py-1.5 text-xs shadow-2xl"
+            className="min-w-[160px] overflow-y-auto rounded-xl border border-border bg-surface-raised py-1.5 text-xs shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -2852,9 +2852,9 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
                 }
                 setBinContextMenu(null);
               }}
-              className="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-700 flex items-center gap-3"
+              className="w-full text-left px-3 py-1.5 text-muted-foreground hover:bg-surface-hover flex items-center gap-3"
             >
-              <Pencil className="h-3.5 w-3.5 text-zinc-500" />
+              <Pencil className="h-3.5 w-3.5 text-subtle-foreground" />
               <span>Rename Bin</span>
             </button>
             <button
@@ -2866,7 +2866,7 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
                 }
                 setBinContextMenu(null);
               }}
-              className="w-full text-left px-3 py-1.5 text-red-400 hover:bg-zinc-700 flex items-center gap-3"
+              className="w-full text-left px-3 py-1.5 text-red-400 hover:bg-surface-hover flex items-center gap-3"
             >
               <Trash2 className="h-3.5 w-3.5" />
               <span>Delete Bin</span>

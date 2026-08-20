@@ -18,13 +18,13 @@ export function GalleryViewControls({
   const buttonClass = (active: boolean) =>
     `rounded p-1.5 transition-colors ${
       active
-        ? "bg-zinc-700 text-white"
-        : "text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
+        ? "bg-surface-selected text-foreground"
+        : "text-subtle-foreground hover:bg-surface-hover hover:text-foreground"
     }`;
 
   return (
     <div className="flex items-center gap-1.5">
-      <div className="flex rounded-lg bg-zinc-900 p-0.5">
+      <div className="flex rounded-lg bg-card p-0.5">
         <button
           type="button"
           onClick={() => onViewModeChange("grid")}

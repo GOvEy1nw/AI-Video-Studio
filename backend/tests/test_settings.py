@@ -17,6 +17,7 @@ class TestGetSettings:
         r = client.get("/api/settings")
         assert r.status_code == 200
         data = r.json()
+        assert data["uiTheme"] == "dark"
         assert data["useTorchCompile"] is False
         assert data["attentionMode"] == "auto"
         assert data["performanceProfile"] == 4
@@ -55,6 +56,20 @@ class TestGetSettings:
         assert r.json()["useTorchCompile"] is True
 
 class TestPostSettings:
+    def test_update_ui_theme(self, client, test_state):
+        response = client.post("/api/settings", json={"uiTheme": "light"})
+
+        assert response.status_code == 200
+        assert test_state.state.app_settings.ui_theme == "light"
+        saved = json.loads(test_state.config.settings_file.read_text(encoding="utf-8"))
+        assert saved["ui_theme"] == "light"
+
+    def test_invalid_ui_theme_is_rejected_without_mutation(self, client, test_state):
+        response = client.post("/api/settings", json={"uiTheme": "system"})
+
+        assert response.status_code == 422
+        assert test_state.state.app_settings.ui_theme == "dark"
+
     def test_update_single_field(self, client, test_state):
         r = client.post("/api/settings", json={"useTorchCompile": True})
         assert r.status_code == 200
@@ -247,6 +262,24 @@ class TestSettingsPersistence:
             "preview_fps": 16,
             "webp_quality": 72,
         }
+
+    def test_existing_settings_without_ui_theme_use_dark_default(self, test_state, default_app_settings):
+        test_state.config.settings_file.write_text(
+            json.dumps({"use_torch_compile": True}), encoding="utf-8"
+        )
+
+        loaded = self._new_state(test_state, default_app_settings)
+
+        assert loaded.state.app_settings.ui_theme == "dark"
+
+    def test_persisted_light_theme_reloads(self, test_state, default_app_settings):
+        test_state.config.settings_file.write_text(
+            json.dumps({"ui_theme": "light"}), encoding="utf-8"
+        )
+
+        loaded = self._new_state(test_state, default_app_settings)
+
+        assert loaded.state.app_settings.ui_theme == "light"
 
     def test_legacy_prompt_enhancer_key_migrates(self, test_state, default_app_settings):
         test_state.config.settings_file.write_text(

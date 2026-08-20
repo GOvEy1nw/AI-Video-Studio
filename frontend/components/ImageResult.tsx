@@ -32,11 +32,11 @@ export function ImageResult({
 
   return (
     <div className="w-full h-full flex flex-col">
-      <label className="block text-[12px] font-semibold text-zinc-500 mb-2 uppercase leading-4">
+      <label className="block text-[12px] font-semibold text-subtle-foreground mb-2 uppercase leading-4">
         Result
       </label>
       
-      <div className="flex-1 bg-zinc-900 rounded-lg border border-zinc-800 overflow-hidden flex items-center justify-center relative min-h-[400px]">
+      <div className="flex-1 bg-card rounded-lg border border-border overflow-hidden flex items-center justify-center relative min-h-[400px]">
         {isGenerating ? (
           <div className="flex flex-col items-center justify-center p-8 text-center">
             <RefreshCw className="h-12 w-12 text-primary animate-spin mb-4" />
@@ -133,9 +133,9 @@ export function ImageResult({
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center text-zinc-500">
-            <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center mb-4">
-              <ImageIcon className="h-8 w-8 text-zinc-400" />
+        <div className="flex flex-col items-center justify-center text-subtle-foreground">
+          <div className="w-16 h-16 rounded-full bg-surface-raised flex items-center justify-center mb-4">
+            <ImageIcon className="h-8 w-8 text-muted-foreground" />
             </div>
             <p className="text-sm">Generated image will appear here</p>
           </div>

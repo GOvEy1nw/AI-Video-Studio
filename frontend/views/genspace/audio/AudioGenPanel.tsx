@@ -52,7 +52,7 @@ export function AudioGenPanel({
     <>
       <GenPanelSection
         title=""
-        className="text-xs text-zinc-400 flex gap-2 justify-between items-center"
+        className="text-xs text-muted-foreground flex gap-2 justify-between items-center"
         collapsible={false}
       >
         <AudioModeSelector
@@ -67,7 +67,7 @@ export function AudioGenPanel({
         (submode === "sfx" ? selectedSfxProfile : selectedSpeechProfile) ? (
           <GenPanelSection
             title=""
-            className="text-xs text-zinc-400 flex gap-2 justify-between items-center"
+            className="text-xs text-muted-foreground flex gap-2 justify-between items-center"
             collapsible={false}
           >
             <ModelPicker
@@ -97,7 +97,7 @@ export function AudioGenPanel({
         ) : (
           <GenPanelSection
             title=""
-            className="text-xs text-zinc-400 flex gap-2 justify-between items-center"
+            className="text-xs text-muted-foreground flex gap-2 justify-between items-center"
             collapsible={false}
           >
             <ModelDownloadButton />
@@ -115,7 +115,7 @@ export function AudioGenPanel({
         />
       ) : (
         <section className="px-4 py-6" aria-live="polite">
-          <p className="text-sm text-zinc-300">{UNAVAILABLE_COPY[submode]}</p>
+          <p className="text-sm text-muted-foreground">{UNAVAILABLE_COPY[submode]}</p>
         </section>
       )}
     </>

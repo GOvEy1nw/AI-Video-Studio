@@ -40,7 +40,7 @@ function WorkspaceFallback() {
   return (
     <div
       role="status"
-      className="flex h-full items-center justify-center gap-2 bg-zinc-950 text-sm text-zinc-400"
+      className="flex h-full items-center justify-center gap-2 bg-background text-sm text-muted-foreground"
     >
       <Loader2
         aria-hidden="true"
@@ -64,9 +64,9 @@ export function Project() {
 
   if (!currentProjectMeta) {
     return (
-      <div className="h-screen bg-zinc-950 flex items-center justify-center">
+      <div className="h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <p className="text-zinc-400 mb-4">Project not found</p>
+          <p className="text-muted-foreground mb-4">Project not found</p>
           <Button onClick={goHome}>Go Home</Button>
         </div>
       </div>
@@ -92,28 +92,28 @@ export function Project() {
   ];
 
   return (
-    <div className="h-screen bg-zinc-950 flex flex-col">
+    <div className="h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="flex items-center px-4 py-3 bg-zinc-900">
+      <header className="flex items-center px-4 py-3 bg-card">
         <div className="flex-1 flex items-center gap-4">
           {/* Back button and logo */}
           <button
             onClick={goHome}
-            className="p-2 rounded-lg hover:bg-zinc-800 transition-colors"
+            className="p-2 rounded-lg hover:bg-surface-hover transition-colors"
           >
-            <ArrowLeft className="h-5 w-5 text-zinc-400" />
+            <ArrowLeft className="h-5 w-5 text-muted-foreground" />
           </button>
 
-          <AivsLogo className="h-6 w-auto text-white" />
+          <AivsLogo className="h-6 w-auto text-foreground" />
 
           {/* Project name */}
-          <span className="text-white font-medium">
+          <span className="text-foreground font-medium">
             {currentProjectMeta.name}
           </span>
         </div>
 
         {/* Center - Tabs */}
-        <div className="flex items-center gap-1 bg-zinc-900 rounded-lg p-1">
+        <div className="flex items-center gap-1 bg-card rounded-lg p-1">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -125,8 +125,8 @@ export function Project() {
               }}
               className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 currentTab === tab.id
-                  ? "bg-zinc-800 text-white"
-                  : "text-zinc-400 hover:text-white"
+                  ? "bg-surface-selected text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {tab.icon}
@@ -144,7 +144,7 @@ export function Project() {
         {visitedTabs.has("gen-space") ? (
           <div
             hidden={currentTab !== "gen-space"}
-            className="absolute inset-0 z-10 bg-zinc-950"
+            className="absolute inset-0 z-10 bg-background"
           >
             <GenSpace isActive={currentTab === "gen-space"} />
           </div>
@@ -152,7 +152,7 @@ export function Project() {
         {visitedTabs.has("director") ? (
           <div
             hidden={currentTab !== "director"}
-            className="absolute inset-0 z-10 bg-zinc-950"
+            className="absolute inset-0 z-10 bg-background"
           >
             <Suspense fallback={<WorkspaceFallback />}>
               <LazyDirectorEditor isActive={currentTab === "director"} />
@@ -162,7 +162,7 @@ export function Project() {
         {visitedTabs.has("video-editor") ? (
           <div
             hidden={currentTab !== "video-editor"}
-            className="absolute inset-0 z-10 bg-zinc-950"
+            className="absolute inset-0 z-10 bg-background"
           >
             <Suspense fallback={<WorkspaceFallback />}>
               <LazyVideoEditor isActive={currentTab === "video-editor"} />

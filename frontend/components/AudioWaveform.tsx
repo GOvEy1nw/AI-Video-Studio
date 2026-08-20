@@ -141,7 +141,7 @@ export function AudioWaveform({ audioClips, currentTime, enabled = true }: Audio
         })}
         <div className="absolute top-3 left-3 flex items-center gap-2 px-2 py-1 rounded-sm bg-black/60"><Music className="h-3 w-3 text-emerald-400" /><span className="text-[10px] text-emerald-400 font-medium">Audio</span></div>
       </div>
-      {audioClips.length > 0 && <div className="shrink-0 px-3 py-1.5 bg-zinc-950 border-t border-zinc-800">{audioClips.map((audioClip, index) => <p key={`${audioClip.url}-${index}`} className="text-2xs text-zinc-500 truncate">{audioClip.name}</p>)}</div>}
+      {audioClips.length > 0 && <div className="shrink-0 px-3 py-1.5 bg-background border-t border-border">{audioClips.map((audioClip, index) => <p key={`${audioClip.url}-${index}`} className="text-2xs text-subtle-foreground truncate">{audioClip.name}</p>)}</div>}
     </div>
   );
 }

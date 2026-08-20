@@ -269,10 +269,10 @@ export function ModelPackManager({
       <div className="space-y-1">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <h3 className="text-lg font-semibold text-white">Model Manager</h3>
+            <h3 className="text-lg font-semibold text-foreground">Model Manager</h3>
             <Button
               variant="outline"
-              className="h-8 border-zinc-600 px-2.5 text-xs"
+              className="h-8 border-border-strong px-2.5 text-xs"
               disabled={busy}
               onClick={() => {
                 setError(null);
@@ -298,17 +298,17 @@ export function ModelPackManager({
             </Button>
           </div>
           {selected.length > 0 && (
-            <span className="text-sm text-zinc-400">
+            <span className="text-sm text-muted-foreground">
               {selected.length} selected
             </span>
           )}
         </div>
-        <p className="text-xs leading-relaxed text-zinc-400">
+        <p className="text-xs leading-relaxed text-muted-foreground">
           Shared files are skipped automatically, so estimated sizes can be
           smaller when another pack is already installed.
         </p>
         <div
-          className="flex flex-wrap gap-x-4 gap-y-1 pt-2 text-xs text-zinc-300"
+          className="flex flex-wrap gap-x-4 gap-y-1 pt-2 text-xs text-muted-foreground"
           aria-label="Model status key"
         >
           {[
@@ -327,7 +327,7 @@ export function ModelPackManager({
             </span>
           ))}
         </div>
-        <div className="mt-3 space-y-2 border-t border-zinc-800 pt-3" aria-label="Model filters">
+        <div className="mt-3 space-y-2 border-t border-border pt-3" aria-label="Model filters">
           <div className="flex flex-wrap gap-1.5">
             {(["all", "image", "video", "audio"] as const).map((filter) => (
               <button
@@ -338,7 +338,7 @@ export function ModelPackManager({
                 className={`rounded-full border px-2.5 py-1 text-2xs capitalize transition-colors ${
                   mediaFilter === filter
                     ? "border-blue-400 bg-blue-500/20 text-blue-100"
-                    : "border-zinc-700 text-zinc-400 hover:border-zinc-500"
+                    : "border-border text-muted-foreground hover:border-border-strong"
                 }`}
               >
                 {filter === "all" ? "All models" : `${filter} models`}
@@ -361,7 +361,7 @@ export function ModelPackManager({
                 className={`rounded-full border px-2.5 py-1 text-2xs capitalize transition-colors ${
                   featureFilters.includes(feature)
                     ? "border-violet-400 bg-violet-500/20 text-violet-100"
-                    : "border-zinc-700 text-zinc-400 hover:border-zinc-500"
+                    : "border-border text-muted-foreground hover:border-border-strong"
                 }`}
               >
                 {feature}
@@ -391,7 +391,7 @@ export function ModelPackManager({
                   ? "border-red-500 bg-red-500/15"
                   : groupInstalled
                     ? "border-emerald-500 bg-emerald-500/15"
-                    : "border-zinc-700 bg-zinc-800/50";
+                    : "border-border bg-input";
             const percent = activeEntry?.state.percent ?? null;
 
             return (
@@ -414,7 +414,7 @@ export function ModelPackManager({
                   />
                 )}
                 <div className="relative z-10 flex items-start justify-between gap-3">
-                  <h4 className="truncate text-sm font-medium text-white">
+                  <h4 className="truncate text-sm font-medium text-foreground">
                     {group.name}
                   </h4>
                   {activeEntry && (
@@ -433,7 +433,7 @@ export function ModelPackManager({
                           ? "border-emerald-300 bg-emerald-400 text-zinc-950"
                           : state.failed
                             ? "border-red-300 bg-red-500 text-white"
-                            : "border-zinc-600 bg-zinc-900/80 text-zinc-300 hover:border-zinc-400";
+                            : "border-border-strong bg-card text-muted-foreground hover:border-border";
                     const variantName = pack.variantName ?? pack.name;
 
                     return (
@@ -480,7 +480,7 @@ export function ModelPackManager({
                 ? "border-emerald-500 bg-emerald-500/15"
                 : state.failed
                   ? "border-red-500 bg-red-500/15 hover:bg-red-500/20"
-                  : "border-zinc-700 bg-zinc-800/50 hover:border-zinc-500";
+                  : "border-border bg-input hover:border-border-strong";
           return (
             <div
               key={pack.id}
@@ -513,10 +513,10 @@ export function ModelPackManager({
                 className="relative z-10 flex min-h-20 w-full min-w-0 items-center justify-between gap-4 px-4 py-3 text-left disabled:cursor-default"
               >
                 <span className="min-w-0">
-                  <span className="block truncate text-sm font-medium text-white">
+                  <span className="block truncate text-sm font-medium text-foreground">
                     {pack.name}
                   </span>
-                  <span className="mt-1 block text-xs text-zinc-400">
+                  <span className="mt-1 block text-xs text-muted-foreground">
                     {pack.estimatedSize}
                   </span>
                   {state.active && state.activeText && (
@@ -540,7 +540,7 @@ export function ModelPackManager({
                           ? "border-emerald-400 text-emerald-400"
                           : state.failed
                             ? "border-red-400 text-red-400"
-                            : "border-zinc-500 text-zinc-500"
+                            : "border-border-strong text-subtle-foreground"
                   } ${state.active ? "animate-pulse" : ""}`}
                   aria-hidden="true"
                 >
@@ -564,11 +564,11 @@ export function ModelPackManager({
         })}
       </div>
       {packGroups.length === 0 && (
-        <p className="text-sm text-zinc-400">No models match these filters.</p>
+        <p className="text-sm text-muted-foreground">No models match these filters.</p>
       )}
 
       {progress?.status === "cancelled" && (
-        <p className="mt-3 text-xs text-zinc-400">
+        <p className="mt-3 text-xs text-muted-foreground">
           {progress.message ?? "Download cancelled."}
         </p>
       )}
@@ -578,7 +578,7 @@ export function ModelPackManager({
         {operationActive || downloading ? (
           <Button
             variant="outline"
-            className="border-zinc-600"
+            className="border-border-strong"
             onClick={() => void window.electronAPI.cancelModelPackDownload()}
           >
             <Square className="mr-2 h-3.5 w-3.5" /> Cancel download
@@ -588,7 +588,7 @@ export function ModelPackManager({
             {firstRun && (
               <Button
                 variant="ghost"
-                className="text-zinc-300"
+                className="text-muted-foreground"
                 onClick={onContinue}
               >
                 Skip for now

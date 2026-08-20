@@ -41,19 +41,19 @@ export function I2vGenerationModal({
   const i2vImageUrl = resolveClipSrc(i2vClip);
 
   return (
-    <div className="fixed inset-0 z-100 flex flex-col items-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
-      <div className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl w-[520px] max-h-[calc(100vh-2rem)] flex flex-col overflow-hidden my-auto shrink-0">
+    <div className="fixed inset-0 z-100 flex flex-col items-center bg-overlay/60 backdrop-blur-xs p-4 overflow-y-auto">
+      <div className="bg-surface border border-border rounded-xl shadow-2xl w-[520px] max-h-[calc(100vh-2rem)] flex flex-col overflow-hidden my-auto shrink-0">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-800">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-border">
           <div className="flex items-center gap-3">
             <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-blue-600/20">
               <Film className="h-3.5 w-3.5 text-blue-400" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-white">
+              <h2 className="text-sm font-semibold text-foreground">
                 Image to Video
               </h2>
-              <p className="text-2xs text-zinc-500">
+              <p className="text-2xs text-subtle-foreground">
                 Generate video from image clip ({i2vClip.duration.toFixed(1)}s)
               </p>
             </div>
@@ -63,7 +63,7 @@ export function I2vGenerationModal({
               setI2vClipId(null);
               regenReset();
             }}
-            className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300"
+            className="p-1.5 rounded-lg hover:bg-surface-raised text-subtle-foreground hover:text-muted-foreground"
           >
             <X className="h-4 w-4" />
           </button>
@@ -73,10 +73,10 @@ export function I2vGenerationModal({
         <div className="flex-1 overflow-auto p-5 space-y-4">
           {/* Source image preview */}
           <div>
-            <label className="text-2xs text-zinc-500 uppercase tracking-wider font-semibold mb-1.5 block">
+            <label className="text-2xs text-subtle-foreground uppercase tracking-wider font-semibold mb-1.5 block">
               Source Image
             </label>
-            <div className="rounded-lg overflow-hidden border border-zinc-700 bg-zinc-800">
+            <div className="rounded-lg overflow-hidden border border-border bg-surface-raised">
               <img
                 src={i2vImageUrl}
                 alt="Source"
@@ -87,7 +87,7 @@ export function I2vGenerationModal({
 
           {/* Prompt */}
           <div>
-            <label className="text-2xs text-zinc-500 uppercase tracking-wider font-semibold mb-1.5 block">
+            <label className="text-2xs text-subtle-foreground uppercase tracking-wider font-semibold mb-1.5 block">
               Prompt
             </label>
             <textarea
@@ -95,17 +95,17 @@ export function I2vGenerationModal({
               onChange={(e) => setI2vPrompt(e.target.value)}
               onKeyDown={(e) => e.stopPropagation()}
               placeholder="Describe the motion and action for the video..."
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-3 text-sm text-white resize-none focus:outline-hidden focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30 placeholder-zinc-600"
+              className="w-full bg-surface-raised border border-border rounded-lg p-3 text-sm text-foreground resize-none focus:outline-hidden focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30 placeholder-zinc-600"
               rows={3}
             />
           </div>
 
           {/* Settings */}
           <div>
-            <label className="text-2xs text-zinc-500 uppercase tracking-wider font-semibold mb-1.5 block">
+            <label className="text-2xs text-subtle-foreground uppercase tracking-wider font-semibold mb-1.5 block">
               Settings
             </label>
-            <div className="bg-zinc-800/50 rounded-lg p-3 border border-zinc-700/50">
+            <div className="bg-surface-raised/50 rounded-lg p-3 border border-border/50">
               <SettingsPanel
                 settings={i2vSettings}
                 onSettingsChange={setI2vSettings}
@@ -117,14 +117,14 @@ export function I2vGenerationModal({
 
           {/* Progress */}
           {isRegenerating && i2vClipId && (
-            <div className="bg-zinc-800 rounded-lg p-3 border border-zinc-700">
+            <div className="bg-surface-raised rounded-lg p-3 border border-border">
               <div className="flex items-center gap-2 mb-2">
                 <Loader2 className="h-3.5 w-3.5 text-blue-400 animate-spin" />
-                <span className="text-xs text-zinc-300">
+                <span className="text-xs text-muted-foreground">
                   {regenStatusMessage || "Generating video..."}
                 </span>
               </div>
-              <div className="h-1.5 bg-zinc-700 rounded-full overflow-hidden">
+              <div className="h-1.5 bg-surface-hover rounded-full overflow-hidden">
                 <div
                   className="h-full bg-blue-500 rounded-full transition-all duration-300"
                   style={{ width: `${regenProgress}%` }}
@@ -135,8 +135,8 @@ export function I2vGenerationModal({
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-zinc-800 flex items-center justify-between">
-          <span className="text-[10px] text-zinc-600">
+        <div className="px-5 py-3 border-t border-border flex items-center justify-between">
+          <span className="text-[10px] text-subtle-foreground">
             Clip duration: {i2vClip.duration.toFixed(1)}s
           </span>
           <div className="flex items-center gap-2">
@@ -145,14 +145,14 @@ export function I2vGenerationModal({
                 setI2vClipId(null);
                 regenReset();
               }}
-              className="px-3 py-1.5 rounded-lg bg-zinc-800 text-zinc-300 text-xs hover:bg-zinc-700 transition-colors"
+              className="px-3 py-1.5 rounded-lg bg-surface-raised text-muted-foreground text-xs hover:bg-surface-hover transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleI2vGenerate}
               disabled={isRegenerating || !i2vPrompt.trim()}
-              className="px-4 py-1.5 rounded-lg bg-blue-600 text-white text-xs hover:bg-blue-500 transition-colors font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+              className="px-4 py-1.5 rounded-lg bg-blue-600 text-primary-foreground text-xs hover:bg-blue-500 transition-colors font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
             >
               {isRegenerating ? (
                 <>

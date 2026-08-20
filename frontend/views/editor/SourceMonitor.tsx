@@ -74,15 +74,15 @@ export function SourceMonitor({
 
   return (
     <div
-      className={`flex flex-col ${activePanel === 'source' ? 'ring-2 ring-blue-500 ring-inset' : 'border-r border-zinc-800'}`}
+      className={`flex flex-col ${activePanel === 'source' ? 'ring-2 ring-blue-500 ring-inset' : 'border-r border-border'}`}
       style={{ width: `${sourceSplitPercent}%` }}
       onMouseDown={() => setActivePanel('source')}
     >
       {/* Header */}
-      <div className="h-7 bg-zinc-900 border-b border-zinc-800 flex items-center justify-between px-3 shrink-0">
-        <span className="text-[11px] font-semibold text-zinc-400 tracking-wide">Clip Viewer</span>
+      <div className="h-7 bg-surface border-b border-border flex items-center justify-between px-3 shrink-0">
+        <span className="text-[11px] font-semibold text-muted-foreground tracking-wide">Clip Viewer</span>
         <Tooltip content="Close clip viewer" side="left">
-          <button onClick={() => { setShowSourceMonitor(false); setSourceIsPlaying(false) }} className="text-zinc-500 hover:text-white">
+          <button onClick={() => { setShowSourceMonitor(false); setSourceIsPlaying(false) }} className="text-subtle-foreground hover:text-foreground">
             <X className="h-3.5 w-3.5" />
           </button>
         </Tooltip>
@@ -122,7 +122,7 @@ export function SourceMonitor({
       {/* Scrub bar with In/Out markers */}
       {/* Premiere-style scrub bar with In/Out range */}
       {sourceAsset && (sourceAsset.type === 'video' || sourceAsset.type === 'audio') && (
-        <div className="bg-zinc-900 border-t border-zinc-800 shrink-0 relative px-2 py-1">
+        <div className="bg-surface border-t border-border shrink-0 relative px-2 py-1">
           {/* Scrub track */}
           <div
             id="source-scrub-bar"
@@ -145,7 +145,7 @@ export function SourceMonitor({
             }}
           >
             {/* Base track line */}
-            <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1 bg-zinc-700 rounded-full" />
+            <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1 bg-surface-hover rounded-full" />
 
             {/* Dimmed regions outside In/Out (darker overlay) */}
             {sourceIn !== null && (
@@ -218,7 +218,7 @@ export function SourceMonitor({
               <span className="text-[9px] font-mono text-blue-400/80">
                 {sourceIn !== null ? `IN ${formatTime(sourceIn)}` : ''}
               </span>
-              <span className="text-[9px] font-mono text-zinc-500">
+              <span className="text-[9px] font-mono text-subtle-foreground">
                 {sourceIn !== null && sourceOut !== null
                   ? `Duration: ${formatTime(sourceOut - sourceIn)}`
                   : ''
@@ -232,7 +232,7 @@ export function SourceMonitor({
         </div>
       )}
       {/* Status bar: timecode | transport controls | duration */}
-      <div className="h-8 bg-zinc-950 border-t border-zinc-800 flex items-center px-3 shrink-0 gap-2">
+      <div className="h-8 bg-surface border-t border-border flex items-center px-3 shrink-0 gap-2">
         {/* Left: current timecode */}
         <span className="text-[12px] font-mono font-medium text-amber-400 tabular-nums tracking-tight select-none min-w-[90px]">
           {formatTime(sourceTime)}
@@ -244,7 +244,7 @@ export function SourceMonitor({
           <Tooltip content={sourceIn !== null ? `In: ${formatTime(sourceIn)}` : 'Set In (I)'} side="top">
             <button
               onClick={() => setSourceIn(prev => prev !== null && Math.abs(prev - sourceTime) < 0.01 ? null : sourceTime)}
-              className={`h-6 w-6 flex items-center justify-center rounded-sm transition-colors ${sourceIn !== null ? 'text-yellow-400' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}
+              className={`h-6 w-6 flex items-center justify-center rounded-sm transition-colors ${sourceIn !== null ? 'text-yellow-400' : 'text-subtle-foreground hover:text-foreground hover:bg-surface-raised'}`}
             >
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="7,4 4,4 4,20 7,20" />
@@ -253,11 +253,11 @@ export function SourceMonitor({
               </svg>
             </button>
           </Tooltip>
-          <div className="w-px h-3 bg-zinc-700" />
+          <div className="w-px h-3 bg-border" />
           <Tooltip content="Go to start" side="top">
             <button
               onClick={() => { const t = sourceIn ?? 0; setSourceTime(t); if (sourceVideoRef.current) sourceVideoRef.current.currentTime = t }}
-              className="h-6 w-6 flex items-center justify-center rounded-sm text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors"
+              className="h-6 w-6 flex items-center justify-center rounded-sm text-subtle-foreground hover:text-foreground hover:bg-surface-raised transition-colors"
             >
               <SkipBack className="h-3 w-3" />
             </button>
@@ -270,7 +270,7 @@ export function SourceMonitor({
                 setSourceTime(t)
                 if (sourceVideoRef.current) sourceVideoRef.current.currentTime = t
               }}
-              className="h-6 w-6 flex items-center justify-center rounded-sm text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors"
+              className="h-6 w-6 flex items-center justify-center rounded-sm text-subtle-foreground hover:text-foreground hover:bg-surface-raised transition-colors"
             >
               <ChevronLeft className="h-3.5 w-3.5" />
             </button>
@@ -286,7 +286,7 @@ export function SourceMonitor({
                   setSourceReversePlaying(true)
                 }
               }}
-              className={`h-6 w-6 flex items-center justify-center rounded-sm transition-colors ${sourceReversePlaying ? 'text-blue-400' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}
+              className={`h-6 w-6 flex items-center justify-center rounded-sm transition-colors ${sourceReversePlaying ? 'text-blue-400' : 'text-subtle-foreground hover:text-foreground hover:bg-surface-raised'}`}
             >
               <Play className="h-3 w-3 mr-0.5 rotate-180" />
             </button>
@@ -294,7 +294,7 @@ export function SourceMonitor({
           <Tooltip content="Stop" side="top">
             <button
               onClick={() => { setSourceReversePlaying(false); sourceVideoRef.current?.pause(); setSourceIsPlaying(false) }}
-              className="h-6 w-6 flex items-center justify-center rounded-sm text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors"
+              className="h-6 w-6 flex items-center justify-center rounded-sm text-subtle-foreground hover:text-foreground hover:bg-surface-raised transition-colors"
             >
               <Square className="h-2.5 w-2.5" />
             </button>
@@ -314,7 +314,7 @@ export function SourceMonitor({
                   setSourceIsPlaying(true)
                 }
               }}
-              className="h-6 w-6 flex items-center justify-center rounded-sm text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+              className="h-6 w-6 flex items-center justify-center rounded-sm text-muted-foreground hover:text-foreground hover:bg-surface-raised transition-colors"
             >
               {sourceIsPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3 ml-0.5" />}
             </button>
@@ -327,7 +327,7 @@ export function SourceMonitor({
                 setSourceTime(t)
                 if (sourceVideoRef.current) sourceVideoRef.current.currentTime = t
               }}
-              className="h-6 w-6 flex items-center justify-center rounded-sm text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors"
+              className="h-6 w-6 flex items-center justify-center rounded-sm text-subtle-foreground hover:text-foreground hover:bg-surface-raised transition-colors"
             >
               <ChevronRight className="h-3.5 w-3.5" />
             </button>
@@ -335,17 +335,17 @@ export function SourceMonitor({
           <Tooltip content="Go to end" side="top">
             <button
               onClick={() => { const t = sourceOut ?? (sourceAsset?.duration || 5); setSourceTime(t); if (sourceVideoRef.current) sourceVideoRef.current.currentTime = t }}
-              className="h-6 w-6 flex items-center justify-center rounded-sm text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors"
+              className="h-6 w-6 flex items-center justify-center rounded-sm text-subtle-foreground hover:text-foreground hover:bg-surface-raised transition-colors"
             >
               <SkipForward className="h-3 w-3" />
             </button>
           </Tooltip>
-          <div className="w-px h-3 bg-zinc-700" />
+          <div className="w-px h-3 bg-border" />
           {/* Mark Out */}
           <Tooltip content={sourceOut !== null ? `Out: ${formatTime(sourceOut)}` : 'Set Out (O)'} side="top">
             <button
               onClick={() => setSourceOut(prev => prev !== null && Math.abs(prev - sourceTime) < 0.01 ? null : sourceTime)}
-              className={`h-6 w-6 flex items-center justify-center rounded-sm transition-colors ${sourceOut !== null ? 'text-yellow-400' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}
+              className={`h-6 w-6 flex items-center justify-center rounded-sm transition-colors ${sourceOut !== null ? 'text-yellow-400' : 'text-subtle-foreground hover:text-foreground hover:bg-surface-raised'}`}
             >
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="17,4 20,4 20,20 17,20" />
@@ -354,13 +354,13 @@ export function SourceMonitor({
               </svg>
             </button>
           </Tooltip>
-          <div className="w-px h-3 bg-zinc-700 mx-0.5" />
+          <div className="w-px h-3 bg-border mx-0.5" />
           {/* Insert */}
           <Tooltip content="Insert Edit (,)" side="top">
             <button
               onClick={onInsertEdit}
               disabled={!sourceAsset}
-              className="h-6 px-1 flex items-center rounded-sm text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="h-6 px-1 flex items-center rounded-sm text-muted-foreground hover:text-foreground hover:bg-surface-raised disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
             </button>
@@ -370,7 +370,7 @@ export function SourceMonitor({
             <button
               onClick={onOverwriteEdit}
               disabled={!sourceAsset}
-              className="h-6 px-1 flex items-center rounded-sm text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="h-6 px-1 flex items-center rounded-sm text-muted-foreground hover:text-foreground hover:bg-surface-raised disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M9 12h6" /></svg>
             </button>
@@ -378,7 +378,7 @@ export function SourceMonitor({
         </div>
 
         {/* Right: total duration */}
-        <span className="text-[12px] font-mono font-medium text-zinc-400 tabular-nums tracking-tight select-none min-w-[90px] text-right">
+        <span className="text-[12px] font-mono font-medium text-muted-foreground tabular-nums tracking-tight select-none min-w-[90px] text-right">
           {formatTime(sourceAsset?.duration || 0)}
         </span>
       </div>

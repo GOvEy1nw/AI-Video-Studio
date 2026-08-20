@@ -82,7 +82,7 @@ export function EditorTimelineTabs({
   onExportTimelineXml,
 }: EditorTimelineTabsProps) {
   return (
-    <div className="h-8 bg-zinc-900 flex items-center px-1 gap-0.5 overflow-x-auto shrink-0">
+    <div className="h-8 bg-surface flex items-center px-1 gap-0.5 overflow-x-auto shrink-0">
       {timelines
         .filter((timeline) => openTimelineIds.has(timeline.id))
         .map((timeline) => (
@@ -90,8 +90,8 @@ export function EditorTimelineTabs({
             key={timeline.id}
             className={`group flex items-center gap-1 pl-3 pr-1 h-6 rounded-t text-xs font-medium cursor-pointer transition-colors shrink-0 ${
               timeline.id === activeTimeline?.id
-                ? "bg-zinc-950 text-white border-t border-l border-r border-zinc-700"
-                : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50"
+                ? "bg-surface text-foreground border-t border-l border-r border-border"
+                : "text-subtle-foreground hover:text-muted-foreground hover:bg-surface-raised/50"
             }`}
             onClick={() => onSwitchTimeline(timeline.id)}
             onDoubleClick={() => onStartRename(timeline.id, timeline.name)}
@@ -111,7 +111,7 @@ export function EditorTimelineTabs({
                     setRenameValue("");
                   }
                 }}
-                className="bg-transparent border-b border-blue-500 outline-hidden text-white text-xs w-20"
+                className="bg-transparent border-b border-blue-500 outline-hidden text-foreground text-xs w-20"
                 autoFocus
                 onClick={(event) => event.stopPropagation()}
               />
@@ -122,8 +122,8 @@ export function EditorTimelineTabs({
               <button
                 className={`ml-0.5 p-0.5 rounded transition-colors shrink-0 ${
                   timeline.id === activeTimeline?.id
-                    ? "text-zinc-500 hover:text-white hover:bg-zinc-700"
-                    : "text-zinc-600 opacity-0 group-hover:opacity-100 hover:text-zinc-300 hover:bg-zinc-700"
+                    ? "text-subtle-foreground hover:text-foreground hover:bg-surface-hover"
+                    : "text-subtle-foreground opacity-0 group-hover:opacity-100 hover:text-muted-foreground hover:bg-surface-hover"
                 }`}
                 onClick={(event) => {
                   event.stopPropagation();
@@ -139,7 +139,7 @@ export function EditorTimelineTabs({
       <Tooltip content="New timeline" side="bottom">
         <button
           onClick={onAddTimeline}
-          className="flex items-center justify-center w-6 h-6 rounded-sm text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors shrink-0"
+          className="flex items-center justify-center w-6 h-6 rounded-sm text-subtle-foreground hover:text-foreground hover:bg-surface-raised transition-colors shrink-0"
         >
           <Plus className="h-3.5 w-3.5" />
         </button>
@@ -151,7 +151,7 @@ export function EditorTimelineTabs({
           anchorPoint={timelineContextMenu}
           gap={0}
           role="menu"
-          className="min-w-[140px] rounded-lg border border-zinc-700 bg-zinc-800 py-1 shadow-xl"
+          className="min-w-[140px] rounded-lg border border-border bg-surface-raised py-1 shadow-xl"
           onClick={(event) => event.stopPropagation()}
         >
           <button
@@ -161,41 +161,41 @@ export function EditorTimelineTabs({
               );
               if (timeline) onStartRename(timeline.id, timeline.name, "panel");
             }}
-            className="w-full text-left px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-700 flex items-center gap-2"
+            className="w-full text-left px-3 py-1.5 text-xs text-muted-foreground hover:bg-surface-hover flex items-center gap-2"
           >
             <Pencil className="h-3 w-3" />
             Rename
           </button>
           <button
             onClick={() => onDuplicateTimeline(timelineContextMenu.timelineId)}
-            className="w-full text-left px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-700 flex items-center gap-2"
+            className="w-full text-left px-3 py-1.5 text-xs text-muted-foreground hover:bg-surface-hover flex items-center gap-2"
           >
             <Copy className="h-3 w-3" />
             Duplicate
           </button>
-          <div className="h-px bg-zinc-700 my-0.5" />
+          <div className="h-px bg-border my-0.5" />
           <button
             disabled
             title="Coming Soon!"
-            className="w-full text-left px-3 py-1.5 text-xs text-zinc-500 flex items-center gap-2 opacity-50 cursor-not-allowed"
+            className="w-full text-left px-3 py-1.5 text-xs text-subtle-foreground flex items-center gap-2 opacity-50 cursor-not-allowed"
           >
             <ZoomIn className="h-3 w-3" />
             Upscale Timeline
           </button>
-          <div className="h-px bg-zinc-700 my-0.5" />
+          <div className="h-px bg-border my-0.5" />
           <button
             onClick={() => {
               setShowImportTimelineModal(true);
               setTimelineContextMenu(null);
             }}
-            className="w-full text-left px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-700 flex items-center gap-2"
+            className="w-full text-left px-3 py-1.5 text-xs text-muted-foreground hover:bg-surface-hover flex items-center gap-2"
           >
             <FileUp className="h-3 w-3" />
             Import XML Timeline
           </button>
           <FloatingSubmenu
             className="relative"
-            menuClassName="min-w-[160px] rounded-lg border border-zinc-700 bg-zinc-800 py-1 shadow-xl"
+            menuClassName="min-w-[160px] rounded-lg border border-border bg-surface-raised py-1 shadow-xl"
             menuContent={
               <>
                 <button
@@ -203,7 +203,7 @@ export function EditorTimelineTabs({
                     setShowExportModal(true);
                     setTimelineContextMenu(null);
                   }}
-                  className="w-full text-left px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-700 flex items-center gap-2"
+                  className="w-full text-left px-3 py-1.5 text-xs text-muted-foreground hover:bg-surface-hover flex items-center gap-2"
                 >
                   <Upload className="h-3 w-3" />
                   Export Timeline...
@@ -214,7 +214,7 @@ export function EditorTimelineTabs({
                     setTimelineContextMenu(null);
                   }}
                   disabled={clips.length === 0}
-                  className="w-full text-left px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-700 flex items-center gap-2 disabled:opacity-40"
+                  className="w-full text-left px-3 py-1.5 text-xs text-muted-foreground hover:bg-surface-hover flex items-center gap-2 disabled:opacity-40"
                 >
                   <FileDown className="h-3 w-3" />
                   Export as FCP 7 XML
@@ -222,19 +222,19 @@ export function EditorTimelineTabs({
               </>
             }
           >
-            <button className="w-full text-left px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-700 flex items-center gap-2">
+            <button className="w-full text-left px-3 py-1.5 text-xs text-muted-foreground hover:bg-surface-hover flex items-center gap-2">
               <Upload className="h-3 w-3" />
               Export
-              <ChevronRight className="h-3 w-3 ml-auto text-zinc-500" />
+              <ChevronRight className="h-3 w-3 ml-auto text-subtle-foreground" />
             </button>
           </FloatingSubmenu>
-          <div className="h-px bg-zinc-700 my-0.5" />
+          <div className="h-px bg-border my-0.5" />
           <button
             onClick={() => {
               onCloseTimelineTab(timelineContextMenu.timelineId);
               setTimelineContextMenu(null);
             }}
-            className="w-full text-left px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-700 flex items-center gap-2"
+            className="w-full text-left px-3 py-1.5 text-xs text-muted-foreground hover:bg-surface-hover flex items-center gap-2"
           >
             <X className="h-3 w-3" />
             Close Tab
@@ -242,7 +242,7 @@ export function EditorTimelineTabs({
           {timelines.length > 1 && (
             <button
               onClick={() => onDeleteTimeline(timelineContextMenu.timelineId)}
-              className="w-full text-left px-3 py-1.5 text-xs text-red-400 hover:bg-zinc-700 flex items-center gap-2"
+              className="w-full text-left px-3 py-1.5 text-xs text-red-400 hover:bg-surface-hover flex items-center gap-2"
             >
               <Trash2 className="h-3 w-3" />
               Delete

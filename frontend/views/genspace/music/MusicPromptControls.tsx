@@ -70,10 +70,10 @@ export function MusicPromptControls({
         disabled={disabled || settings.coverAudioInput !== null}
         trigger={<Clock3 className="h-3.5 w-3.5" />}
         content={
-          <label className="block w-48 text-2xs text-zinc-400">
+          <label className="block w-48 text-2xs text-muted-foreground">
             <span className="mb-2 flex justify-between gap-4">
               <span>DURATION</span>
-              <span className="font-mono text-zinc-200">
+              <span className="font-mono text-foreground">
                 {settings.durationMode === "auto"
                   ? "Auto"
                   : `${settings.manualDurationSeconds}s`}
@@ -115,11 +115,11 @@ export function MusicPromptControls({
         disabled={disabled}
         trigger={<Music2 className="h-3.5 w-3.5" />}
         content={
-          <div className="w-48 space-y-3 text-2xs text-zinc-400">
+          <div className="w-48 space-y-3 text-2xs text-muted-foreground">
             <label className="block">
               <span className="mb-2 flex justify-between gap-4">
                 <span>BPM</span>
-                <span className="font-mono text-zinc-200">
+                <span className="font-mono text-foreground">
                   {settings.bpm ?? "Auto"}
                 </span>
               </span>
@@ -147,7 +147,7 @@ export function MusicPromptControls({
                 aria-label="Music key and scale"
                 value={settings.keyScale ?? ""}
                 onChange={(event) => update({ keyScale: event.currentTarget.value || null })}
-                className="w-full rounded-md border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-xs text-zinc-200"
+                className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-xs text-foreground"
               >
                 <option value="">Auto</option>
                 {KEY_OPTIONS.map((key) => <option key={key} value={key}>{key}</option>)}
@@ -159,7 +159,7 @@ export function MusicPromptControls({
                 aria-label="Music time signature"
                 value={settings.timeSignature ?? ""}
                 onChange={(event) => update({ timeSignature: (event.currentTarget.value || null) as MusicTimeSignature | null })}
-                className="w-full rounded-md border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-xs text-zinc-200"
+                className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-xs text-foreground"
               >
                 <option value="">Auto</option>
                 {(policy?.timeSignatures ?? ["2/4", "3/4", "4/4", "6/8"]).map((value) => <option key={value} value={value}>{value}</option>)}
@@ -177,14 +177,14 @@ export function MusicPromptControls({
             disabled={disabled}
             trigger={<Mic2 className="h-3.5 w-3.5" />}
             content={
-              <div className="w-48 space-y-3 text-2xs text-zinc-400">
+              <div className="w-48 space-y-3 text-2xs text-muted-foreground">
                 <label className="block">
                   <span className="mb-1 block">LANGUAGE</span>
                   <select
                     aria-label="Music language"
                     value={settings.vocalLanguage}
                     onChange={(event) => update({ vocalLanguage: event.currentTarget.value })}
-                    className="w-full rounded-md border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-xs text-zinc-200"
+                    className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-xs text-foreground"
                   >
                     <option value="auto">Auto Detect</option>
                     {(policy?.supportedLanguages ?? ["en"])
@@ -198,7 +198,7 @@ export function MusicPromptControls({
                     aria-label="Music vocal character"
                     value={settings.vocalGender}
                     onChange={(event) => update({ vocalGender: event.currentTarget.value as MusicVocalGender })}
-                    className="w-full rounded-md border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-xs text-zinc-200"
+                    className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-xs text-foreground"
                   >
                     <option value="auto">Auto</option>
                     <option value="female">Female</option>
