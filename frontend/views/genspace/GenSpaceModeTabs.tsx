@@ -52,7 +52,7 @@ export function GenSpaceModeTabs({
         ))}
       </div>
       {favouriteIds.length ? (
-        <div className="mt-4 flex w-full flex-col items-center gap-1 border-t border-zinc-800 pt-2">
+        <div className="mt-4 flex w-full flex-col items-center gap-2 border-t border-zinc-800 pt-2">
           {favouriteIds.map((workflowId) => {
             const workflow = getQuickGenWorkflow(workflowId);
             if (!workflow) return null;
