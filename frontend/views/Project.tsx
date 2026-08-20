@@ -42,7 +42,10 @@ function WorkspaceFallback() {
       role="status"
       className="flex h-full items-center justify-center gap-2 bg-zinc-950 text-sm text-zinc-400"
     >
-      <Loader2 aria-hidden="true" className="h-5 w-5 animate-spin text-primary" />
+      <Loader2
+        aria-hidden="true"
+        className="h-5 w-5 animate-spin text-primary"
+      />
       <span>Loading workspace...</span>
     </div>
   );
@@ -61,7 +64,7 @@ export function Project() {
 
   if (!currentProjectMeta) {
     return (
-      <div className="h-screen bg-background flex items-center justify-center">
+      <div className="h-screen bg-zinc-950 flex items-center justify-center">
         <div className="text-center">
           <p className="text-zinc-400 mb-4">Project not found</p>
           <Button onClick={goHome}>Go Home</Button>
@@ -89,9 +92,9 @@ export function Project() {
   ];
 
   return (
-    <div className="h-screen bg-background flex flex-col">
+    <div className="h-screen bg-zinc-950 flex flex-col">
       {/* Header */}
-      <header className="flex items-center px-4 py-3 border-b border-zinc-800">
+      <header className="flex items-center px-4 py-3 bg-zinc-900">
         <div className="flex-1 flex items-center gap-4">
           {/* Back button and logo */}
           <button
@@ -104,7 +107,9 @@ export function Project() {
           <AivsLogo className="h-6 w-auto text-white" />
 
           {/* Project name */}
-          <span className="text-white font-medium">{currentProjectMeta.name}</span>
+          <span className="text-white font-medium">
+            {currentProjectMeta.name}
+          </span>
         </div>
 
         {/* Center - Tabs */}

@@ -268,7 +268,7 @@ export function ImageEditMediaInputs({
             <div
               data-genspace-dropzone
               data-drag-active={dragActive || undefined}
-              className="flex items-center justify-center w-full overflow-hidden rounded-lg border-2 border-dashed border-zinc-700 bg-zinc-900/50 min-h-20"
+              className="flex items-center justify-center w-full overflow-hidden rounded-lg border border-dashed text-2xs border-zinc-700 bg-zinc-900/50 min-h-20"
               onDragEnter={() => setDragActive(true)}
               onDragLeave={() => setDragActive(false)}
               onDragOver={(event) => {
@@ -316,7 +316,7 @@ export function ImageEditMediaInputs({
           }`}
         >
           <ImageMediaInputs
-            title="Reference images"
+            title="References"
             inputs={references}
             onChange={onReferencesChange}
             policy={referencePolicy}

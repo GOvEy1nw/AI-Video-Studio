@@ -187,98 +187,126 @@ body {
 }
 
 /* GenSpace controls inherit one accent from active media mode. */
-.genspace-mode-theme
+.genspace-mode-theme {
   button:not(:disabled)[aria-pressed="true"]:not(
-    [data-genspace-theme-ignore],
-    [data-genspace-theme-ignore] *
-  ),
-.genspace-mode-theme
+      [data-genspace-theme-ignore],
+      [data-genspace-theme-ignore] *
+    ),
   button:not(:disabled)[aria-selected="true"]:not(
-    [data-genspace-theme-ignore],
-    [data-genspace-theme-ignore] *
-  ),
-.genspace-mode-theme
+      [data-genspace-theme-ignore],
+      [data-genspace-theme-ignore] *
+    ),
   button:not(:disabled)[aria-checked="true"]:not(
-    [data-genspace-theme-ignore],
-    [data-genspace-theme-ignore] *
-  ) {
-  background-color: var(--genspace-mode-accent);
-  color: white;
-}
+      [data-genspace-theme-ignore],
+      [data-genspace-theme-ignore] *
+    ) {
+    background-color: var(--genspace-mode-accent);
+    color: white;
+  }
 
-.genspace-mode-theme
-  button.genspace-mode-tab[aria-selected="true"]:not(
-    [data-genspace-theme-ignore],
-    [data-genspace-theme-ignore] *
-  ) {
-  background-color: var(--genspace-mode-accent);
-  color: white;
-}
-
-.genspace-mode-theme
-  button:not(:disabled):not(.genspace-mode-tab):not(
-    [data-genspace-dropzone]
-  ):not([data-genspace-theme-ignore], [data-genspace-theme-ignore] *):hover,
-.genspace-mode-theme
   button.genspace-mode-tab:not(
-    [data-genspace-theme-ignore],
-    [data-genspace-theme-ignore] *
-  ):hover {
-  background-color: var(--genspace-mode-accent-hover);
-  color: white;
-}
+      [data-genspace-tool],
+      [data-genspace-tool] *,
+      [data-genspace-theme-ignore],
+      [data-genspace-theme-ignore] *
+    ) {
+    &[aria-selected="true"] {
+      background-color: var(--genspace-mode-accent);
+      color: white;
+    }
+    &:hover {
+      background-color: var(--genspace-mode-accent-hover);
+      color: white;
+    }
+  }
 
-.genspace-mode-theme
+  button:not(:disabled):not(.genspace-mode-tab):not(
+      [data-genspace-dropzone]
+    ):not([data-genspace-tool], [data-genspace-tool] *):not(
+      [data-genspace-theme-ignore],
+      [data-genspace-theme-ignore] *
+    ) {
+    &:hover {
+      background-color: var(--genspace-mode-accent-hover);
+      color: white;
+    }
+  }
+
   [data-genspace-generate]:not(:disabled):not(
-    [data-genspace-theme-ignore],
-    [data-genspace-theme-ignore] *
-  ) {
-  background-color: var(--genspace-mode-accent);
-  color: white;
-}
+      [data-genspace-theme-ignore],
+      [data-genspace-theme-ignore] *
+    ) {
+    background-color: var(--genspace-mode-accent);
+    color: white;
 
-.genspace-mode-theme
-  [data-genspace-generate]:not(:disabled):not(
-    [data-genspace-theme-ignore],
-    [data-genspace-theme-ignore] *
-  ):hover {
-  background-color: var(--genspace-mode-accent-hover);
-  color: white;
-}
+    &:hover {
+      background-color: var(--genspace-mode-accent-hover);
+      color: white;
+    }
+  }
 
-.genspace-mode-theme
   :is(input, select, textarea):not(
     [data-genspace-theme-ignore],
     [data-genspace-theme-ignore] *
-  ):focus {
-  border-color: var(--genspace-mode-accent);
-  color: white;
-}
+  ) {
+    &:focus {
+      border-color: var(--genspace-mode-accent);
+      color: white;
+    }
+  }
 
-.genspace-mode-theme
   :is(input[type="checkbox"], input[type="radio"], input[type="range"]):not(
     [data-genspace-theme-ignore],
     [data-genspace-theme-ignore] *
   ) {
-  accent-color: var(--genspace-mode-accent);
-  color: white;
-}
+    accent-color: var(--genspace-mode-accent);
+    color: white;
+  }
 
-.genspace-mode-theme
   [data-genspace-dropzone]:not(
     [data-genspace-theme-ignore],
     [data-genspace-theme-ignore] *
-  ):hover,
-.genspace-mode-theme
-  [data-drag-active="true"]:not(
-    [data-genspace-theme-ignore],
-    [data-genspace-theme-ignore] *
   ) {
-  border-color: var(--genspace-mode-accent);
-  background-color: color-mix(
-    in srgb,
-    var(--genspace-mode-accent) 20%,
-    transparent
-  );
-  color: white;
+    /* Base state */
+    color: var(--color-zinc-400);
+
+    /* Hover and drag-active states */
+    &:is(:hover, [data-drag-active="true"]) {
+      border-color: var(--genspace-mode-accent);
+      background-color: color-mix(
+        in srgb,
+        var(--genspace-mode-accent) 20%,
+        transparent
+      );
+      color: white;
+    }
+  }
+
+  button:not(:disabled)[data-genspace-tool]:not(
+      [data-genspace-theme-ignore],
+      [data-genspace-theme-ignore] *
+    ) {
+    /* Base state */
+    border-color: color-mix(
+      in srgb,
+      var(--genspace-mode-accent) 25%,
+      var(--color-zinc-700)
+    );
+    background-color: color-mix(
+      in srgb,
+      var(--genspace-mode-accent) 10%,
+      transparent
+    );
+    color: var(--color-zinc-400);
+    /* Hover and drag-active states */
+    &:hover {
+      border-color: var(--genspace-mode-accent);
+      background-color: color-mix(
+        in srgb,
+        var(--genspace-mode-accent) 30%,
+        transparent
+      );
+      color: white;
+    }
+  }
 }

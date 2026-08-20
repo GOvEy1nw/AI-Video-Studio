@@ -86,7 +86,7 @@ export function ModeSelector({
       role="dialog"
       aria-modal="true"
       aria-label={`${label} catalogue`}
-      className="absolute inset-0 z-40 overflow-y-auto bg-zinc-950 p-4 shadow-2xl"
+      className="absolute inset-0 z-40 overflow-y-auto bg-zinc-900 p-4 shadow-2xl"
     >
       <div className="mb-4 flex items-center gap-2">
         <button
@@ -134,7 +134,7 @@ export function ModeSelector({
                     : "hover:bg-zinc-800"
                 }`}
               >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-500/10 text-violet-300">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--genspace-mode-accent)_18%,transparent)] text-[var(--genspace-mode-accent-hover)]">
                   <Icon className="h-5 w-5" />
                 </span>
                 <span className="min-w-0">
@@ -177,18 +177,19 @@ export function ModeSelector({
   return (
     <div ref={setContainer} className="w-full">
       <button
+        data-genspace-tool
         ref={triggerRef}
         type="button"
         aria-label={triggerLabel}
         aria-expanded={isOpen}
         aria-haspopup="dialog"
         onClick={() => setIsOpen(true)}
-        className="flex w-full min-w-[180px] items-center gap-3 rounded-xl border border-zinc-700 bg-zinc-800/80 p-2.5 text-left transition-colors hover:border-zinc-600 hover:bg-zinc-800 focus-visible:outline-2 focus-visible:outline-violet-400"
+        className="flex w-full min-w-[180px] items-center gap-3 rounded-xl border p-2.5 text-left"
       >
         <span className="min-w-0 flex-1">
           <span className="mb-0.5 block text-2xs text-zinc-400">{label}</span>
           <span className="flex items-center gap-2 truncate text-sm font-semibold text-white">
-            <SelectedIcon className="h-4 w-4 shrink-0 text-violet-300" />
+            <SelectedIcon className="h-4 w-4 shrink-0 text-[var(--genspace-mode-accent-hover)]" />
             {selected.label}
             {selected.disabled ? (
               <span className="text-xs font-normal text-amber-300">
@@ -197,7 +198,7 @@ export function ModeSelector({
             ) : null}
           </span>
         </span>
-        <span className="rounded-lg bg-zinc-700/70 px-2 py-2 text-2xs text-zinc-300">
+        <span className="rounded-lg bg-[var(--genspace-mode-accent)] px-2 py-2 text-2xs text-white">
           Browse
         </span>
       </button>

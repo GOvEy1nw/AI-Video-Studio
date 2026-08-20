@@ -96,9 +96,7 @@ function formatGenerationProgressDetails(badges: string[]) {
   const step = badges.find((badge) => badge.startsWith("Step "));
   const phase = badges.find((badge) => badge.startsWith("Phase "));
   const section = badges.find((badge) => badge.startsWith("Section "));
-  return [step, phase ? `(${phase})` : null, section]
-    .filter(Boolean)
-    .join(" ");
+  return [step, phase ? `(${phase})` : null, section].filter(Boolean).join(" ");
 }
 
 function getGenerationStatusMessage(
@@ -462,13 +460,17 @@ function ImageViewport({
     offsetX: number;
     offsetY: number;
   } | null>(null);
-  const zoomed = transform.scale > 1 || transform.offset.x !== 0 || transform.offset.y !== 0;
+  const zoomed =
+    transform.scale > 1 || transform.offset.x !== 0 || transform.offset.y !== 0;
   return (
     <div
       className="relative flex h-full w-full touch-none items-center justify-center overflow-hidden p-5"
       onWheel={(event) => {
         event.preventDefault();
-        const scale = Math.min(4, Math.max(1, transform.scale + (event.deltaY < 0 ? 0.25 : -0.25)));
+        const scale = Math.min(
+          4,
+          Math.max(1, transform.scale + (event.deltaY < 0 ? 0.25 : -0.25)),
+        );
         onTransformChange({
           scale,
           offset: scale === 1 ? { x: 0, y: 0 } : transform.offset,
@@ -477,7 +479,9 @@ function ImageViewport({
       onPointerDown={(event) => {
         if (
           transform.scale <= 1 ||
-          (event.target as HTMLElement).closest("button, input, select, textarea, a, [role='slider']")
+          (event.target as HTMLElement).closest(
+            "button, input, select, textarea, a, [role='slider']",
+          )
         ) {
           return;
         }
@@ -538,23 +542,41 @@ function ImageViewport({
   );
 }
 
-function AssetPreview({ asset, isActive, transform, onTransformChange }: {
+function AssetPreview({
+  asset,
+  isActive,
+  transform,
+  onTransformChange,
+}: {
   asset: Asset;
   isActive: boolean;
   transform: ImageTransform;
   onTransformChange: (transform: ImageTransform) => void;
 }) {
   if (asset.type === "video" || asset.type === "audio") {
-    return <PlayableAssetPreview key={asset.url} asset={asset} isActive={isActive} />;
+    return (
+      <PlayableAssetPreview key={asset.url} asset={asset} isActive={isActive} />
+    );
   }
   return (
     <ImageViewport transform={transform} onTransformChange={onTransformChange}>
-      <img key={asset.url} src={asset.url} alt={asset.prompt} className="max-h-full max-w-full select-none object-contain" draggable={false} />
+      <img
+        key={asset.url}
+        src={asset.url}
+        alt={asset.prompt}
+        className="max-h-full max-w-full select-none object-contain"
+        draggable={false}
+      />
     </ImageViewport>
   );
 }
 
-function ImageComparePreview({ first, second, transform, onTransformChange }: {
+function ImageComparePreview({
+  first,
+  second,
+  transform,
+  onTransformChange,
+}: {
   first: string;
   second: string;
   transform: ImageTransform;
@@ -565,7 +587,14 @@ function ImageComparePreview({ first, second, transform, onTransformChange }: {
   const updateReveal = (clientX: number, viewer: HTMLElement | null) => {
     const bounds = viewer?.getBoundingClientRect();
     if (!bounds || bounds.width <= 0) return;
-    setReveal(Math.round(Math.max(0, Math.min(100, ((clientX - bounds.left) / bounds.width) * 100))));
+    setReveal(
+      Math.round(
+        Math.max(
+          0,
+          Math.min(100, ((clientX - bounds.left) / bounds.width) * 100),
+        ),
+      ),
+    );
   };
   return (
     <ImageViewport
@@ -576,7 +605,9 @@ function ImageComparePreview({ first, second, transform, onTransformChange }: {
       <div
         data-testid="compare-image-a"
         className="absolute inset-0"
-        style={{ transform: `translate(${transform.offset.x}px, ${transform.offset.y}px) scale(${transform.scale})` }}
+        style={{
+          transform: `translate(${transform.offset.x}px, ${transform.offset.y}px) scale(${transform.scale})`,
+        }}
       >
         <img
           src={first}
@@ -592,7 +623,9 @@ function ImageComparePreview({ first, second, transform, onTransformChange }: {
         <div
           data-testid="compare-image-b"
           className="absolute inset-0"
-          style={{ transform: `translate(${transform.offset.x}px, ${transform.offset.y}px) scale(${transform.scale})` }}
+          style={{
+            transform: `translate(${transform.offset.x}px, ${transform.offset.y}px) scale(${transform.scale})`,
+          }}
         >
           <img
             src={second}
@@ -602,8 +635,12 @@ function ImageComparePreview({ first, second, transform, onTransformChange }: {
           />
         </div>
       </div>
-      <span className="absolute left-2 top-2 rounded bg-black/70 px-2 py-1 text-xs text-white">A</span>
-      <span className="absolute right-2 top-2 rounded bg-black/70 px-2 py-1 text-xs text-white">B</span>
+      <span className="absolute left-2 top-2 rounded bg-black/70 px-2 py-1 text-xs text-white">
+        A
+      </span>
+      <span className="absolute right-2 top-2 rounded bg-black/70 px-2 py-1 text-xs text-white">
+        B
+      </span>
       <button
         type="button"
         role="slider"
@@ -614,7 +651,16 @@ function ImageComparePreview({ first, second, transform, onTransformChange }: {
         aria-valuenow={reveal}
         aria-valuetext={`${reveal}% Version B`}
         onKeyDown={(event) => {
-          const next = event.key === "Home" ? 0 : event.key === "End" ? 100 : event.key === "ArrowLeft" || event.key === "ArrowDown" ? Math.max(0, reveal - 1) : event.key === "ArrowRight" || event.key === "ArrowUp" ? Math.min(100, reveal + 1) : null;
+          const next =
+            event.key === "Home"
+              ? 0
+              : event.key === "End"
+                ? 100
+                : event.key === "ArrowLeft" || event.key === "ArrowDown"
+                  ? Math.max(0, reveal - 1)
+                  : event.key === "ArrowRight" || event.key === "ArrowUp"
+                    ? Math.min(100, reveal + 1)
+                    : null;
           if (next === null) return;
           event.preventDefault();
           event.stopPropagation();
@@ -633,11 +679,13 @@ function ImageComparePreview({ first, second, transform, onTransformChange }: {
         }}
         onPointerUp={(event) => {
           dividerDraggingRef.current = false;
-          if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture?.(event.pointerId);
+          if (event.currentTarget.hasPointerCapture?.(event.pointerId))
+            event.currentTarget.releasePointerCapture?.(event.pointerId);
         }}
         onPointerCancel={(event) => {
           dividerDraggingRef.current = false;
-          if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture?.(event.pointerId);
+          if (event.currentTarget.hasPointerCapture?.(event.pointerId))
+            event.currentTarget.releasePointerCapture?.(event.pointerId);
         }}
         className="absolute inset-y-0 z-10 w-6 -translate-x-1/2 cursor-col-resize touch-none outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
         style={{ left: `${reveal}%` }}
@@ -674,7 +722,9 @@ export function GenSpaceSelectedGeneration({
 }: GenSpaceSelectedGenerationProps) {
   const showingGeneration = generation.isRunning && generation.isSelected;
   const takeTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
-  const [comparisonTakeIndex, setComparisonTakeIndex] = useState<number | null>(null);
+  const [comparisonTakeIndex, setComparisonTakeIndex] = useState<number | null>(
+    null,
+  );
   const [imageTransform, setImageTransform] = useState<ImageTransform>({
     scale: 1,
     offset: { x: 0, y: 0 },
@@ -692,15 +742,16 @@ export function GenSpaceSelectedGeneration({
   ) => {
     if (!asset?.takes) return;
     const lastIndex = asset.takes.length - 1;
-    const nextIndex = event.key === "ArrowLeft"
-      ? (takeIndex + lastIndex) % asset.takes.length
-      : event.key === "ArrowRight"
-        ? (takeIndex + 1) % asset.takes.length
-        : event.key === "Home"
-          ? 0
-          : event.key === "End"
-            ? lastIndex
-            : null;
+    const nextIndex =
+      event.key === "ArrowLeft"
+        ? (takeIndex + lastIndex) % asset.takes.length
+        : event.key === "ArrowRight"
+          ? (takeIndex + 1) % asset.takes.length
+          : event.key === "Home"
+            ? 0
+            : event.key === "End"
+              ? lastIndex
+              : null;
     if (nextIndex === null) return;
     event.preventDefault();
     event.stopPropagation();
@@ -711,8 +762,9 @@ export function GenSpaceSelectedGeneration({
   const activeTake = asset?.takes?.[activeTakeIndex];
   const comparedTakes =
     asset?.type === "image" && comparisonTakeIndex !== null
-      ? [activeTake, asset.takes?.[comparisonTakeIndex]]
-          .filter((take): take is NonNullable<typeof take> => Boolean(take))
+      ? [activeTake, asset.takes?.[comparisonTakeIndex]].filter(
+          (take): take is NonNullable<typeof take> => Boolean(take),
+        )
       : [];
   const metadata = asset
     ? [
@@ -740,13 +792,11 @@ export function GenSpaceSelectedGeneration({
   return (
     <section
       data-testid="selected-generation-panel"
-      className="absolute inset-y-0 flex min-w-0 flex-col bg-zinc-950"
+      className="absolute inset-y-0 flex min-w-0 flex-col overflow-hidden bg-zinc-900 rounded-2xl m-2"
       style={style}
     >
-      <header className="flex h-30 shrink-0 items-center justify-between gap-4 border-b bg-zinc-900 border-zinc-800 px-5">
-        <div
-          className={`min-w-0 flex-1 ${showingGeneration ? "hidden" : ""}`}
-        >
+      <header className="flex h-30 shrink-0 items-center justify-between gap-4 bg-zinc-900 px-5">
+        <div className={`min-w-0 flex-1 ${showingGeneration ? "hidden" : ""}`}>
           <div className="flex min-w-0 mb-4 items-center gap-2">
             <h2
               className="min-w-0 truncate text-sm font-semibold text-white"
@@ -844,7 +894,9 @@ export function GenSpaceSelectedGeneration({
         </div>
       ) : asset ? (
         <>
-          {(asset.type === "image" || asset.type === "video") && asset.takes && asset.takes.length > 1 ? (
+          {(asset.type === "image" || asset.type === "video") &&
+          asset.takes &&
+          asset.takes.length > 1 ? (
             <div
               role="tablist"
               aria-label="Asset versions"
@@ -852,18 +904,20 @@ export function GenSpaceSelectedGeneration({
             >
               {asset.takes.map((take, index) => {
                 const active = activeTakeIndex === index;
-                const label = index === 0
-                  ? "Original"
-                  : take.generationParams?.mode === "upscale"
-                    ? `Upscaled version ${index}`
-                    : `Version ${index + 1}`;
-                const comparisonLabel = comparisonTakeIndex === null
-                  ? null
-                  : active
-                    ? "A"
-                    : comparisonTakeIndex === index
-                      ? "B"
-                      : null;
+                const label =
+                  index === 0
+                    ? "Original"
+                    : take.generationParams?.mode === "upscale"
+                      ? `Upscaled version ${index}`
+                      : `Version ${index + 1}`;
+                const comparisonLabel =
+                  comparisonTakeIndex === null
+                    ? null
+                    : active
+                      ? "A"
+                      : comparisonTakeIndex === index
+                        ? "B"
+                        : null;
                 return (
                   <button
                     key={`${take.createdAt}-${index}`}
@@ -877,7 +931,10 @@ export function GenSpaceSelectedGeneration({
                     }
                     tabIndex={active ? 0 : -1}
                     onClick={(event) => {
-                      if (asset.type === "image" && (event.ctrlKey || event.metaKey)) {
+                      if (
+                        asset.type === "image" &&
+                        (event.ctrlKey || event.metaKey)
+                      ) {
                         if (index === activeTakeIndex) {
                           setComparisonTakeIndex(null);
                         } else {
@@ -895,13 +952,25 @@ export function GenSpaceSelectedGeneration({
                       takeTabRefs.current[index] = node;
                     }}
                     className={`relative h-14 w-14 overflow-hidden rounded-lg border-2 bg-zinc-900 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 ${
-                      active ? "border-blue-500 ring-2 ring-blue-500/30" : "border-zinc-800 hover:border-zinc-600"
+                      active
+                        ? "border-blue-500 ring-2 ring-blue-500/30"
+                        : "border-zinc-800 hover:border-zinc-600"
                     }`}
                   >
                     {asset.type === "video" ? (
-                      <video src={take.url} muted preload="metadata" tabIndex={-1} className="h-full w-full object-cover" />
+                      <video
+                        src={take.url}
+                        muted
+                        preload="metadata"
+                        tabIndex={-1}
+                        className="h-full w-full object-cover"
+                      />
                     ) : (
-                      <img src={take.url} alt="" className="h-full w-full object-cover" />
+                      <img
+                        src={take.url}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
                     )}
                     {comparisonLabel ? (
                       <span className="absolute right-0 top-0 rounded-bl bg-violet-500 px-1 text-[10px] font-semibold text-white">
@@ -931,7 +1000,7 @@ export function GenSpaceSelectedGeneration({
               />
             )}
           </div>
-          <div className="shrink-0 border-t bg-zinc-900 border-zinc-800 px-5 py-4">
+          <div className="shrink-0 bg-zinc-900 px-5 py-4">
             <div className="flex flex-wrap gap-2">
               <ActionButton
                 label={asset.favorite ? "Favorited" : "Favorite"}

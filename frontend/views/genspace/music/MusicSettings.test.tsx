@@ -24,12 +24,11 @@ describe("MusicSettings", () => {
       />,
     );
 
-    expect(screen.getByText("Mode")).toBeTruthy();
-    await userEvent.click(screen.getByRole("button", { name: "Choose mode" }));
-    expect(screen.getByRole("button", { name: "Instrumental" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Auto Lyrics" })).toBeTruthy();
+    expect(screen.getByRole("tablist", { name: "Music type" })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "Instrumental" })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "Auto" })).toBeTruthy();
     await userEvent.click(
-      screen.getByRole("button", { name: "Custom Lyrics" }),
+      screen.getByRole("tab", { name: "Custom" }),
     );
     expect(onChange).toHaveBeenCalledWith({
       ...DEFAULT_MUSIC_SETTINGS,

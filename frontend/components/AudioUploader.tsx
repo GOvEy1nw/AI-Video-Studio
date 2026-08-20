@@ -1,64 +1,76 @@
-import { useCallback } from 'react'
-import { useDropzone } from 'react-dropzone'
-import { Upload, Music, RefreshCw, Trash2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { getNativeFilePath } from '@/lib/native-file-path'
+import { useCallback } from "react";
+import { useDropzone } from "react-dropzone";
+import { Upload, Music, RefreshCw, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { getNativeFilePath } from "@/lib/native-file-path";
 
 interface AudioUploaderProps {
-  onAudioSelect: (path: string | null) => void
-  selectedAudio: string | null
+  onAudioSelect: (path: string | null) => void;
+  selectedAudio: string | null;
 }
 
-export function AudioUploader({ onAudioSelect, selectedAudio }: AudioUploaderProps) {
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    const file = acceptedFiles[0]
-    if (file) {
-      const filePath = getNativeFilePath(file)
-      if (filePath) {
-        if (!await window.electronAPI?.approveFile?.(file)) return
-        const normalized = filePath.replace(/\\/g, '/')
-        const fileUrl = normalized.startsWith('/') ? `file://${normalized}` : `file:///${normalized}`
-        onAudioSelect(fileUrl)
+export function AudioUploader({
+  onAudioSelect,
+  selectedAudio,
+}: AudioUploaderProps) {
+  const onDrop = useCallback(
+    async (acceptedFiles: File[]) => {
+      const file = acceptedFiles[0];
+      if (file) {
+        const filePath = getNativeFilePath(file);
+        if (filePath) {
+          if (!(await window.electronAPI?.approveFile?.(file))) return;
+          const normalized = filePath.replace(/\\/g, "/");
+          const fileUrl = normalized.startsWith("/")
+            ? `file://${normalized}`
+            : `file:///${normalized}`;
+          onAudioSelect(fileUrl);
+        }
       }
-    }
-  }, [onAudioSelect])
+    },
+    [onAudioSelect],
+  );
 
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop,
     accept: {
-      'audio/mpeg': ['.mp3'],
-      'audio/wav': ['.wav'],
-      'audio/ogg': ['.ogg'],
-      'audio/aac': ['.aac'],
-      'audio/flac': ['.flac'],
-      'audio/mp4': ['.m4a'],
+      "audio/mpeg": [".mp3"],
+      "audio/wav": [".wav"],
+      "audio/ogg": [".ogg"],
+      "audio/aac": [".aac"],
+      "audio/flac": [".flac"],
+      "audio/mp4": [".m4a"],
     },
     maxSize: 50 * 1024 * 1024, // 50MB
     multiple: false,
     noClick: !!selectedAudio,
-  })
+  });
 
   const clearAudio = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    onAudioSelect(null)
-  }
+    e.stopPropagation();
+    onAudioSelect(null);
+  };
 
   const replaceAudio = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    open()
-  }
+    e.stopPropagation();
+    open();
+  };
 
   const getDisplayName = (path: string | null): string => {
-    if (!path) return ''
-    const name = path.split(/[/\\]/).pop()?.replace(/^file:/, '') || path
-    const decoded = decodeURIComponent(name)
-    const maxLength = 28
-    if (decoded.length <= maxLength) return decoded
-    const ext = decoded.split('.').pop() || ''
-    const baseName = decoded.slice(0, decoded.length - ext.length - 1)
-    const truncatedBase = baseName.slice(0, maxLength - ext.length - 4)
-    return `${truncatedBase}...${ext ? '.' + ext : ''}`
-  }
+    if (!path) return "";
+    const name =
+      path
+        .split(/[/\\]/)
+        .pop()
+        ?.replace(/^file:/, "") || path;
+    const decoded = decodeURIComponent(name);
+    const maxLength = 28;
+    if (decoded.length <= maxLength) return decoded;
+    const ext = decoded.split(".").pop() || "";
+    const baseName = decoded.slice(0, decoded.length - ext.length - 1);
+    const truncatedBase = baseName.slice(0, maxLength - ext.length - 4);
+    return `${truncatedBase}...${ext ? "." + ext : ""}`;
+  };
 
   return (
     <div className="w-full">
@@ -68,10 +80,10 @@ export function AudioUploader({ onAudioSelect, selectedAudio }: AudioUploaderPro
       <div
         {...getRootProps()}
         className={cn(
-          'relative border border-dashed border-zinc-600 rounded-lg cursor-pointer transition-colors',
-          'hover:border-zinc-500',
-          isDragActive && 'border-emerald-500 bg-emerald-500/5',
-          selectedAudio ? 'p-3' : 'p-6'
+          "relative border border-dashed text-2xs border-zinc-600 rounded-lg cursor-pointer transition-colors",
+          "hover:border-zinc-500",
+          isDragActive && "border-emerald-500 bg-emerald-500/5",
+          selectedAudio ? "p-3" : "p-6",
         )}
       >
         <input {...getInputProps()} />
@@ -85,7 +97,10 @@ export function AudioUploader({ onAudioSelect, selectedAudio }: AudioUploaderPro
 
             {/* Filename */}
             <div className="flex-1 min-w-0">
-              <p className="text-sm text-white truncate" title={getDisplayName(selectedAudio)}>
+              <p
+                className="text-sm text-white truncate"
+                title={getDisplayName(selectedAudio)}
+              >
                 {getDisplayName(selectedAudio)}
               </p>
             </div>
@@ -122,7 +137,10 @@ export function AudioUploader({ onAudioSelect, selectedAudio }: AudioUploaderPro
                 Drag audio file here
               </p>
               <p className="text-sm text-zinc-500">
-                Or <span className="text-emerald-400 underline">upload a file</span>
+                Or{" "}
+                <span className="text-emerald-400 underline">
+                  upload a file
+                </span>
               </p>
             </div>
           </div>
@@ -132,5 +150,5 @@ export function AudioUploader({ onAudioSelect, selectedAudio }: AudioUploaderPro
         mp3, wav, ogg, aac, flac, m4a. Max size is 50MB
       </p>
     </div>
-  )
+  );
 }

@@ -91,7 +91,7 @@ function LegacyPromptMedia({
       <div
         data-genspace-dropzone
         data-drag-active={imageDrag || undefined}
-        className={`relative mx-2 mt-2 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed transition-colors ${
+        className={`relative mx-2 mt-2 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-dashed text-2xs transition-colors ${
           imageDrag ? "" : "border-zinc-700 hover:border-zinc-500"
         }`}
         onDragOver={(event) => {
@@ -138,7 +138,7 @@ function LegacyPromptMedia({
       <div
         data-genspace-dropzone
         data-drag-active={audioDrag || undefined}
-        className={`relative mt-2 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed transition-colors ${
+        className={`relative mt-2 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-dashed text-2xs transition-colors ${
           audioDrag
             ? ""
             : media.inputAudio
@@ -613,7 +613,7 @@ export function VideoGenPanel({
           }
         />
       ) : null}
-      <div className="flex flex-wrap items-center gap-1.5 border-t border-zinc-800/60 px-4 py-3 text-xs text-zinc-400">
+      <div className="flex flex-wrap items-center gap-1.5 px-4 py-3 text-xs text-zinc-400">
         {isRetake ? (
           <div className="pr-2 text-2xs text-zinc-500">
             Trim in the panel above, then retake

@@ -1,4 +1,4 @@
-import { Image, Music, Star, Video } from "lucide-react";
+import { Image, Music, Video } from "lucide-react";
 import { getGenSpaceModeAccentStyle } from "./mode-accent";
 import type { GenSpaceMode } from "./types";
 import { getQuickGenWorkflow, type QuickGenWorkflowId } from "./workflows";
@@ -16,7 +16,7 @@ export function GenSpaceModeTabs({
 }) {
   return (
     <nav
-      className="flex w-14 shrink-0 flex-col items-center border-r border-zinc-800 bg-zinc-950 py-2"
+      className="flex w-14 shrink-0 flex-col m-2 items-center rounded-2xl bg-zinc-900 py-2"
       aria-label="Quick Gen media and favourites"
     >
       <div
@@ -64,7 +64,8 @@ export function GenSpaceModeTabs({
                 aria-label={`Open favourite ${workflow.label}`}
                 title={workflow.label}
                 onClick={() => onSelectWorkflow(workflow.id)}
-                className="flex h-9 w-9 items-center justify-center rounded-md text-violet-300 transition-colors hover:bg-violet-500/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400"
+                style={getGenSpaceModeAccentStyle(workflow.media)}
+                className="flex h-9 w-9 items-center justify-center rounded-md border border-[color-mix(in_srgb,var(--genspace-mode-accent)_35%,transparent)] bg-[color-mix(in_srgb,var(--genspace-mode-accent)_14%,transparent)] text-[var(--genspace-mode-accent-hover)] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--genspace-mode-accent-hover)]"
               >
                 <Icon className="h-3.5 w-3.5" />
               </button>

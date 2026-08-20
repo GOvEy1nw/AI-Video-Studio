@@ -341,7 +341,7 @@ export function GapGenerationModal({
                   ) : (
                     <div className="w-full h-full relative">
                       <div className="absolute inset-0 bg-zinc-800/70" />
-                      <div className="absolute inset-0 border border-dashed border-zinc-700" />
+                      <div className="absolute inset-0 border border-dashed text-2xs border-zinc-700" />
                       <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-3">
                         <Sparkles className="h-3.5 w-3.5 text-blue-400/40" />
                         <span className="text-xs text-zinc-500 font-medium text-center">

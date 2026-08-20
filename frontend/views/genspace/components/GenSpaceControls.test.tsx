@@ -184,7 +184,7 @@ describe("GenSpace shared controls", () => {
     expect(screen.getAllByText("Subject")).toHaveLength(2);
   });
 
-  it("shows First Frame, Last Frame, and Ref inputs immediately", () => {
+  it("shows First Frame, Last Frame, and Add media immediately", () => {
     const onChange = vi.fn();
     const profile = {
       inputMedia: {
@@ -222,9 +222,7 @@ describe("GenSpace shared controls", () => {
 
     expect(screen.getByTitle("Image 1 (Start)")).toBeTruthy();
     expect(screen.getByTitle("Image 2 (End)")).toBeTruthy();
-    expect(
-      screen.getByTitle("Click or drop video/audio from gallery"),
-    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Add media" })).toBeTruthy();
 
     fireEvent.drop(screen.getByTitle("Image 2 (End)").parentElement!, {
       dataTransfer: {

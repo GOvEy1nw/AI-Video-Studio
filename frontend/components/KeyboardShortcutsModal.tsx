@@ -712,7 +712,7 @@ export function KeyboardShortcutsModal() {
                                     : assigned && catColors
                                       ? `${catColors.bg} ${catColors.border}`
                                       : isDragging && !isModifier
-                                        ? "bg-zinc-800/80 border-zinc-600/80 border-dashed hover:border-blue-500/60 hover:bg-zinc-700/50"
+                                        ? "bg-zinc-800/80 border-zinc-600/80 border-dashed text-2xs hover:border-blue-500/60 hover:bg-zinc-700/50"
                                         : "bg-zinc-850 border-zinc-700/50 hover:border-zinc-600"
                           }
                           ${!isModifier ? "cursor-pointer" : ""}

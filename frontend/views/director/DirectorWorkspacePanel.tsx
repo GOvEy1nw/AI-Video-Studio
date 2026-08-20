@@ -1066,7 +1066,7 @@ export function DirectorWorkspacePanel(props: Props) {
                           className="group flex flex-col items-center gap-2 rounded-sm p-1 text-[11px] text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 disabled:opacity-40"
                           title="Add Key Frame"
                         >
-                          <span className="flex h-28 w-40 items-center justify-center rounded-sm border border-dashed border-zinc-600 bg-zinc-950/70">
+                          <span className="flex h-28 w-40 items-center justify-center rounded-sm border border-dashed text-2xs border-zinc-600 bg-zinc-950/70">
                             <ImageIcon className="h-7 w-7" />
                           </span>
                           <span className="flex h-8 items-start justify-center text-center leading-4">
@@ -1085,7 +1085,7 @@ export function DirectorWorkspacePanel(props: Props) {
                                 : "Add Continue Video"
                             }
                           >
-                            <span className="flex h-28 w-40 items-center justify-center rounded-sm border border-dashed border-zinc-600 bg-zinc-950/70">
+                            <span className="flex h-28 w-40 items-center justify-center rounded-sm border border-dashed text-2xs border-zinc-600 bg-zinc-950/70">
                               <Video className="h-7 w-7" />
                             </span>
                             <span className="flex h-8 items-start justify-center text-center leading-4">

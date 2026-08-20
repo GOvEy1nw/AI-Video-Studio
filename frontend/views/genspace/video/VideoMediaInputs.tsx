@@ -43,6 +43,56 @@ function readGalleryAsset(
   }
 }
 
+function ReferenceAddButton({
+  disabled = false,
+  dragActive = false,
+  onClick,
+  onDragEnter,
+  onDragLeave,
+  onDragOver,
+  onDrop,
+}: {
+  disabled?: boolean;
+  dragActive?: boolean;
+  onClick: () => void;
+  onDragEnter?: () => void;
+  onDragLeave?: () => void;
+  onDragOver?: (event: React.DragEvent<HTMLButtonElement>) => void;
+  onDrop?: (event: React.DragEvent<HTMLButtonElement>) => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label="Add media"
+      disabled={disabled}
+      title="Add media references"
+      data-drag-active={dragActive || undefined}
+      data-genspace-dropzone
+      onClick={onClick}
+      onDragEnter={onDragEnter}
+      onDragLeave={onDragLeave}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      className="flex w-auto shrink-0 items-center gap-2 rounded-lg border border-dashed text-2xs border-zinc-700 px-3 py-4 text-zinc-300 hover:border-zinc-500 disabled:cursor-not-allowed disabled:border-zinc-800 disabled:text-zinc-600"
+    >
+      {(["image", "video", "audio"] as const).map((type) => {
+        const Icon =
+          type === "image" ? Image : type === "video" ? Video : Music;
+        return (
+          <span
+            key={type}
+            className="flex h-7 w-7 items-center justify-center rounded-full border border-zinc-700 bg-zinc-800/70 text-zinc-400"
+          >
+            <Icon className="h-3.5 w-3.5" />
+          </span>
+        );
+      })}
+      <Plus className="h-3.5 w-3.5 text-zinc-500" />
+      <span className="text-2xs">Add media</span>
+    </button>
+  );
+}
+
 export function VideoMediaInputs({
   inputs,
   onChange,
@@ -152,7 +202,7 @@ export function VideoMediaInputs({
       role: "start_image" | "end_image" | "guide",
       expected?: GenSpaceMediaKind,
     ) =>
-    async (event: React.DragEvent<HTMLDivElement>) => {
+    async (event: React.DragEvent<HTMLElement>) => {
       event.preventDefault();
       setGuideDragActive(false);
       const asset = readGalleryAsset(event);
@@ -206,6 +256,7 @@ export function VideoMediaInputs({
             : undefined
         }
         title={`${label}${item ? " - Click for actions" : ""}`}
+        sizeClassName="aspect-square w-full"
         active={activeId === role}
         removeLabel={label}
         onRemove={() => {
@@ -296,65 +347,75 @@ export function VideoMediaInputs({
           onConfirm={() => setEditingGuideId(null)}
         />
       ) : null}
-      <div className="relative flex items-center gap-2 overflow-visible">
-        {styles.length && onOpenStyles ? (
-          <button
-            type="button"
-            onClick={onOpenStyles}
-            disabled={stylesDisabled}
-            aria-haspopup="dialog"
-            className={`flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-lg border border-dashed text-2xs transition-colors focus-visible:outline-2 focus-visible:outline-violet-400 disabled:opacity-40 ${
-              selectedStyle
-                ? "border-violet-400/50 bg-violet-500/10 text-violet-200"
-                : "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white"
-            }`}
-          >
-            <Palette className="mb-0.5 h-4 w-4" />
-            <span className="max-w-10 truncate">
-              {selectedStyle?.displayName ?? "Style"}
-            </span>
-          </button>
-        ) : null}
-        {frameSlot("start_image", "Image 1 (Start)")}
-        {frameSlot("end_image", "Image 2 (End)")}
-        <div
-          onDragEnter={() => setGuideDragActive(true)}
-          onDragLeave={() => setGuideDragActive(false)}
-        >
-          <CroppableMediaInputSlot
-            item={guide}
-            kind={guideKind}
-            label="Ref"
-            badge={guide ? (guideLabel ?? guide.role) : undefined}
-            title="Click or drop video/audio from gallery"
-            active={activeId === "guide_slot"}
+      <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-2">
+          {frameSlot("start_image", "Image 1 (Start)")}
+          {frameSlot("end_image", "Image 2 (End)")}
+        </div>
+        <div className="flex gap-2">
+          {styles.length && onOpenStyles ? (
+            <button
+              data-genspace-dropzone
+              type="button"
+              onClick={onOpenStyles}
+              disabled={stylesDisabled}
+              aria-haspopup="dialog"
+              className={`flex aspect-square w-full flex-col items-center justify-center rounded-lg border border-dashed text-2xs transition-colors disabled:opacity-40 ${
+                selectedStyle
+                  ? "border-violet-400/50 bg-violet-400/10 text-violet-200"
+                  : "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white"
+              }`}
+            >
+              <Palette className="mb-0.5 h-4 w-4" />
+              <span className="max-w-10 truncate">
+                {selectedStyle?.displayName ?? "Style"}
+              </span>
+            </button>
+          ) : null}
+          <ReferenceAddButton
             dragActive={guideDragActive}
-            removeLabel={guideKind === "audio" ? "audio input" : "video input"}
-            onRemove={() => {
-              if (!guide) return;
-              onChange(removeMediaInput(inputs, guide.id));
-              setActiveId(null);
-              setEditingGuideId(null);
-            }}
-            inputRef={guideInputRef}
-            onToggle={() =>
-              setActiveId((current) =>
-                current === "guide_slot" ? null : "guide_slot",
-              )
-            }
-            onDrop={dropFor("guide")}
-            onCropChange={(crop) => {
-              if (!guide) return;
-              onChange((current) =>
-                current.map((input) =>
-                  input.id === guide.id
-                    ? { ...input, crop: crop ?? undefined }
-                    : input,
-                ),
-              );
-            }}
-            menu={
-              guide ? (
+            onClick={() => guideInputRef.current?.click()}
+            onDragEnter={() => setGuideDragActive(true)}
+            onDragLeave={() => setGuideDragActive(false)}
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => void dropFor("guide")(event)}
+          />
+        </div>
+        {guide ? (
+          <div className="relative flex flex-wrap gap-2 overflow-visible">
+            <CroppableMediaInputSlot
+              item={guide}
+              kind={guideKind}
+              label="Ref"
+              badge={guideLabel ?? guide.role}
+              title="Click or drop video/audio from gallery"
+              active={activeId === "guide_slot"}
+              removeLabel={
+                guideKind === "audio" ? "audio input" : "video input"
+              }
+              sizeClassName="h-14 w-16"
+              onRemove={() => {
+                onChange(removeMediaInput(inputs, guide.id));
+                setActiveId(null);
+                setEditingGuideId(null);
+              }}
+              inputRef={guideInputRef}
+              onToggle={() =>
+                setActiveId((current) =>
+                  current === "guide_slot" ? null : "guide_slot",
+                )
+              }
+              onDrop={dropFor("guide")}
+              onCropChange={(crop) => {
+                onChange((current) =>
+                  current.map((input) =>
+                    input.id === guide.id
+                      ? { ...input, crop: crop ?? undefined }
+                      : input,
+                  ),
+                );
+              }}
+              menu={
                 <MediaRoleMenu
                   title={
                     guideKind === "video"
@@ -377,10 +438,10 @@ export function VideoMediaInputs({
                   }}
                   extra={guideExtra}
                 />
-              ) : null
-            }
-          />
-        </div>
+              }
+            />
+          </div>
+        ) : null}
       </div>
       <input
         ref={imageInputRef}
@@ -606,7 +667,7 @@ function H3MediaInputs({
           onConfirm={() => setEditingId(null)}
         />
       ) : null}
-      <div className="space-y-3">
+      <div className="space-y-2">
         <div className="grid grid-cols-2 gap-2">
           {(["start_image", "end_image"] as const).map((role) => {
             const item = inputs.find((input) => input.role === role);
@@ -661,42 +722,24 @@ function H3MediaInputs({
             );
           })}
         </div>
-        <button
-          type="button"
-          aria-label="Add media"
+        <ReferenceAddButton
           disabled={
             !referenceAvailability.image &&
             !referenceAvailability.video &&
             !referenceAvailability.audio
           }
-          title="Add media references"
           onClick={() => referenceInputRef.current?.click()}
           onDragOver={(event) => {
             if (
               referenceAvailability.image ||
               referenceAvailability.video ||
               referenceAvailability.audio
-            )
+            ) {
               event.preventDefault();
+            }
           }}
           onDrop={(event) => void dropReference(event)}
-          className="flex w-full items-center gap-2 rounded-lg border-2 border-dashed border-zinc-700 px-3 py-4 text-zinc-300 hover:border-zinc-500 disabled:cursor-not-allowed disabled:border-zinc-800 disabled:text-zinc-600"
-        >
-          {(["image", "video", "audio"] as const).map((type) => {
-            const Icon =
-              type === "image" ? Image : type === "video" ? Video : Music;
-            return (
-              <span
-                key={type}
-                className="flex h-7 w-7 items-center justify-center rounded-full border border-zinc-700 bg-zinc-800/70 text-zinc-400"
-              >
-                <Icon className="h-3.5 w-3.5" />
-              </span>
-            );
-          })}
-          <Plus className="h-3.5 w-3.5 text-zinc-500" />
-          <span className="text-sm">Add media</span>
-        </button>
+        />
         <div className="flex flex-wrap gap-2">
           {H3_REFERENCE_TYPES.flatMap((entry) =>
             inputs

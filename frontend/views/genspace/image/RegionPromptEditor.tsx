@@ -805,7 +805,7 @@ export function RegionPromptEditor({
               </div>
             </div>
           ) : (
-            <p className="rounded-lg border border-dashed border-zinc-800 px-3 py-4 text-center text-xs text-zinc-600">
+            <p className="rounded-lg border border-dashed text-2xs border-zinc-800 px-3 py-4 text-center text-zinc-600">
               Add or select a box to describe a region.
             </p>
           )}

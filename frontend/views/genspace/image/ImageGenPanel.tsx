@@ -56,7 +56,7 @@ export function ImageGenPanel({
           resolveInputFileUrl={media.resolveInputFileUrl}
           syncInputFileToGallery={media.syncInputFileToGallery}
         />
-        <div className="flex flex-wrap items-center gap-1.5 border-t border-zinc-800/60 px-4 py-3 text-xs text-zinc-400">
+        <div className="flex flex-wrap items-center gap-1.5 px-4 py-3 text-xs text-zinc-400">
           <GenerateButton
             onClick={generation.submit}
             disabled={!generation.canSubmit}
@@ -229,7 +229,7 @@ export function ImageGenPanel({
           actions={promptActions}
         />
       )}
-      <div className="flex flex-wrap items-center gap-1.5 border-t border-zinc-800/60 px-4 py-3 text-xs text-zinc-400">
+      <div className="flex flex-wrap items-center gap-1.5 px-4 py-3 text-xs text-zinc-400">
         <GenerateButton
           onClick={generation.submit}
           disabled={!generation.canSubmit}

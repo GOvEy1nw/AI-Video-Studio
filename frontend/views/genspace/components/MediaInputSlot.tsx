@@ -84,7 +84,7 @@ export function MediaInputSlot({
         className={`relative flex ${sizeClassName ?? "h-24 w-24"} shrink-0 items-center justify-center overflow-hidden rounded-lg disabled:cursor-not-allowed disabled:opacity-50 ${
           item
             ? "border bg-zinc-800"
-            : "flex-col border-2 border-dashed transition-colors hover:border-zinc-500"
+            : "flex-col border border-dashed text-2xs transition-colors hover:border-zinc-500"
         } border-zinc-700`}
       >
         {item ? (
@@ -113,7 +113,7 @@ export function MediaInputSlot({
           <>
             <Icon className="h-4 w-4 text-zinc-500" />
             {label ? (
-              <span className="mt-1 select-none text-2xs uppercase text-zinc-500">
+              <span className="mt-1 select-none text-2xs uppercase">
                 {label}
               </span>
             ) : null}

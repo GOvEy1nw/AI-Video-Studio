@@ -1,4 +1,4 @@
-import { FileText, Music2, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { SeedControl } from "../../../components/SeedControl";
 import type { ModelProfile } from "../../../types/model-profiles";
 import type {
@@ -7,13 +7,12 @@ import type {
   MusicVocalMode,
 } from "../../../types/music";
 import { GenPanelSection } from "../components/GenPanelSection";
-import { ModeSelector } from "../components/ModeSelector";
 import { resolveMusicVocalMode } from "./compile-music-request";
 
 const VOCAL_MODES = [
-  { value: "instrumental", label: "Instrumental", icon: Music2 },
-  { value: "auto-lyrics", label: "Auto Lyrics", icon: Sparkles },
-  { value: "custom-lyrics", label: "Custom Lyrics", icon: FileText },
+  { value: "instrumental", label: "Instrumental" },
+  { value: "custom-lyrics", label: "Custom" },
+  { value: "auto-lyrics", label: "Auto" },
 ] as const;
 
 export function MusicVocalModeTabs({
@@ -40,14 +39,59 @@ export function MusicVocalModeTabs({
       instrumental: mode === "instrumental",
       advancedLyricsMode: mode === "custom-lyrics" ? "custom" : "auto",
     });
+  const selectedMode = vocalModes.some(({ value }) => value === vocalMode)
+    ? vocalMode
+    : vocalModes[0]?.value;
+
+  if (!selectedMode) return null;
 
   return (
-    <ModeSelector
-      label="Mode"
-      value={vocalMode}
-      options={vocalModes}
-      onChange={(value) => setVocalMode(value as MusicVocalMode)}
-    />
+    <div role="tablist" aria-label="Music type" className="flex flex-1 gap-1">
+      {vocalModes.map(({ value, label }) => (
+        <button
+          key={value}
+          type="button"
+          role="tab"
+          aria-selected={selectedMode === value}
+          tabIndex={selectedMode === value ? 0 : -1}
+          onClick={() => setVocalMode(value)}
+          onKeyDown={(event) => {
+            if (
+              event.key !== "ArrowLeft" &&
+              event.key !== "ArrowRight" &&
+              event.key !== "Home" &&
+              event.key !== "End"
+            ) {
+              return;
+            }
+            event.preventDefault();
+            const currentIndex = vocalModes.findIndex(
+              (mode) => mode.value === value,
+            );
+            const nextIndex =
+              event.key === "Home"
+                ? 0
+                : event.key === "End"
+                  ? vocalModes.length - 1
+                  : (currentIndex +
+                      (event.key === "ArrowRight" ? 1 : -1) +
+                      vocalModes.length) %
+                    vocalModes.length;
+            const nextMode = vocalModes[nextIndex]!;
+            setVocalMode(nextMode.value);
+            event.currentTarget.parentElement
+              ?.querySelector<HTMLButtonElement>(
+                `[data-music-vocal-mode="${nextMode.value}"]`,
+              )
+              ?.focus();
+          }}
+          data-music-vocal-mode={value}
+          className="flex-1 rounded-md border border-zinc-700 px-3 py-2 text-sm font-medium text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white focus-visible:outline-2 focus-visible:outline-emerald-400"
+        >
+          {label}
+        </button>
+      ))}
+    </div>
   );
 }
 

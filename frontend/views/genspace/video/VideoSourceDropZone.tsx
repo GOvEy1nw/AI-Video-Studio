@@ -17,7 +17,7 @@ export function VideoSourceDropZone({
       data-testid="video-source-dropzone"
       data-genspace-dropzone
       data-drag-active={isDragOver || undefined}
-      className="m-4 flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-zinc-700 p-8 transition-colors"
+      className="m-4 flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed text-2xs border-zinc-700 p-8 transition-colors"
       onDragOver={(event) => {
         event.preventDefault();
         setIsDragOver(true);

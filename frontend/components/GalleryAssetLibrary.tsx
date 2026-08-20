@@ -191,14 +191,19 @@ export function GalleryAssetCard({
     }
     const card = cardRef.current;
     if (!card) return;
-    const observer = new IntersectionObserver(([entry]) => setIsVisible(entry.isIntersecting));
+    const observer = new IntersectionObserver(([entry]) =>
+      setIsVisible(entry.isIntersecting),
+    );
     observer.observe(card);
     return () => observer.disconnect();
   }, []);
-  const generatedThumbnail = useVideoThumbnail(asset.type === "video" ? asset.url : undefined, {
-    enabled: previewEnabled && isVisible,
-    fallback: thumbnailUrl,
-  });
+  const generatedThumbnail = useVideoThumbnail(
+    asset.type === "video" ? asset.url : undefined,
+    {
+      enabled: previewEnabled && isVisible,
+      fallback: thumbnailUrl,
+    },
+  );
   const hasStackedAudioTakes =
     asset.type === "audio" && (asset.takes?.length ?? 0) > 1;
 
@@ -273,7 +278,7 @@ export function GalleryAssetCard({
             <ClipWaveform url={asset.url} enabled={previewEnabled} />
           </div>
         ) : asset.type === "adjustment" ? (
-          <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 border border-dashed border-blue-500/30 bg-linear-to-br from-blue-900/40 to-zinc-900">
+          <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 border border-dashed text-2xs border-blue-500/30 bg-linear-to-br from-blue-900/40 to-zinc-900">
             <Layers className="h-8 w-8 text-blue-400" />
             <span className="text-[10px] font-medium text-blue-300/70">
               Adjustment Layer
@@ -373,7 +378,11 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
   const virtualAssetBodyRef = useRef<HTMLDivElement>(null);
   const selectionBoxRef = useRef<HTMLDivElement>(null);
   const selectionFrameRef = useRef<number>(0);
-  const [scrollState, setScrollState] = useState({ top: 0, width: 0, height: 0 });
+  const [scrollState, setScrollState] = useState({
+    top: 0,
+    width: 0,
+    height: 0,
+  });
   const pointerSelectionRef = useRef<
     (SelectionBox & { hasMoved: boolean; pointerId: number }) | null
   >(null);
@@ -385,7 +394,9 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
     if (!surface) return;
     const virtualBody = virtualAssetBodyRef.current;
     const virtualTop = virtualBody
-      ? surface.scrollTop + virtualBody.getBoundingClientRect().top - surface.getBoundingClientRect().top
+      ? surface.scrollTop +
+        virtualBody.getBoundingClientRect().top -
+        surface.getBoundingClientRect().top
       : 0;
     setScrollState((current) => {
       const next = {
@@ -393,7 +404,11 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
         width: surface.clientWidth || 320,
         height: surface.clientHeight || 500,
       };
-      return current.top === next.top && current.width === next.width && current.height === next.height ? current : next;
+      return current.top === next.top &&
+        current.width === next.width &&
+        current.height === next.height
+        ? current
+        : next;
     });
   }, []);
 
@@ -424,7 +439,8 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
     if (!multiSelectMode || !surface) return;
     const preventTextSelection = (event: Event) => event.preventDefault();
     surface.addEventListener("selectstart", preventTextSelection);
-    return () => surface.removeEventListener("selectstart", preventTextSelection);
+    return () =>
+      surface.removeEventListener("selectstart", preventTextSelection);
   }, [multiSelectMode]);
 
   const displayAssets = props.showFavorites
@@ -504,7 +520,8 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
       overlay.style.width = `${Math.abs(selection.currentX - selection.startX)}px`;
       overlay.style.height = `${Math.abs(selection.currentY - selection.startY)}px`;
     };
-    if (!selectionFrameRef.current) selectionFrameRef.current = requestAnimationFrame(updateOverlay);
+    if (!selectionFrameRef.current)
+      selectionFrameRef.current = requestAnimationFrame(updateOverlay);
     window.getSelection()?.removeAllRanges();
     event.preventDefault();
   };
@@ -541,7 +558,8 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
     }
 
     pointerSelectionRef.current = null;
-    if (selectionFrameRef.current) cancelAnimationFrame(selectionFrameRef.current);
+    if (selectionFrameRef.current)
+      cancelAnimationFrame(selectionFrameRef.current);
     selectionFrameRef.current = 0;
     selectionBoxRef.current?.style.setProperty("display", "none");
     if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
@@ -552,7 +570,8 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
   const handlePointerCancel = (event: PointerEvent<HTMLDivElement>) => {
     if (pointerSelectionRef.current?.pointerId !== event.pointerId) return;
     pointerSelectionRef.current = null;
-    if (selectionFrameRef.current) cancelAnimationFrame(selectionFrameRef.current);
+    if (selectionFrameRef.current)
+      cancelAnimationFrame(selectionFrameRef.current);
     selectionFrameRef.current = 0;
     selectionBoxRef.current?.style.setProperty("display", "none");
   };
@@ -580,7 +599,7 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
         const remainingSelection = [...next];
         selectionAnchorRef.current = next.has(asset.id)
           ? asset.id
-          : remainingSelection[remainingSelection.length - 1] ?? null;
+          : (remainingSelection[remainingSelection.length - 1] ?? null);
         return next;
       });
       return;
@@ -596,14 +615,19 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
         (candidate) => candidate.id === storedAnchorId,
       );
       const anchorId = storedAnchorIndex >= 0 ? storedAnchorId! : asset.id;
-      const anchorIndex = storedAnchorIndex >= 0
-        ? storedAnchorIndex
-        : assetOrder.findIndex((candidate) => candidate.id === asset.id);
-      const assetIndex = assetOrder.findIndex((candidate) => candidate.id === asset.id);
+      const anchorIndex =
+        storedAnchorIndex >= 0
+          ? storedAnchorIndex
+          : assetOrder.findIndex((candidate) => candidate.id === asset.id);
+      const assetIndex = assetOrder.findIndex(
+        (candidate) => candidate.id === asset.id,
+      );
       const start = Math.min(anchorIndex, assetIndex);
       const end = Math.max(anchorIndex, assetIndex);
       setMultiSelectedAssetIds(
-        new Set(assetOrder.slice(start, end + 1).map((candidate) => candidate.id)),
+        new Set(
+          assetOrder.slice(start, end + 1).map((candidate) => candidate.id),
+        ),
       );
       selectionAnchorRef.current = anchorId;
       return;
@@ -747,7 +771,9 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
         onPointerCancel={handlePointerCancel}
         onScroll={updateScrollState}
       >
-        {displayAssets.length === 0 ? props.emptyContent : props.viewMode === "list" ? (
+        {displayAssets.length === 0 ? (
+          props.emptyContent
+        ) : props.viewMode === "list" ? (
           <div className="flex flex-col gap-0.5">
             {props.leadingContent}
             <GalleryAssetList
@@ -759,7 +785,11 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
               scrollTop={scrollState.top}
               viewportHeight={scrollState.height}
               assetBodyRef={virtualAssetBodyRef}
-              getAssetColorLabel={(asset) => getColorLabel(asset.bin ? props.binColors[asset.bin] : undefined)}
+              getAssetColorLabel={(asset) =>
+                getColorLabel(
+                  asset.bin ? props.binColors[asset.bin] : undefined,
+                )
+              }
               onAssetClick={(event, clickedAsset, assetOrder) =>
                 selectAsset(event, clickedAsset, assetOrder)
               }
@@ -771,7 +801,9 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
         ) : (
           <div
             className="grid gap-2"
-            style={{ gridTemplateColumns: `repeat(${props.gridColumns}, minmax(0, 1fr))` }}
+            style={{
+              gridTemplateColumns: `repeat(${props.gridColumns}, minmax(0, 1fr))`,
+            }}
           >
             {props.leadingContent}
             <div
@@ -779,40 +811,68 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
               className="relative col-span-full"
               style={{ height: `${gridRowCount * gridRowHeight}px` }}
             >
-              {Array.from({ length: Math.max(0, gridRange.end - gridRange.start) }, (_, offset) => {
-                const row = gridRange.start + offset;
-                return (
-                  <div
-                    key={row}
-                    className="absolute left-0 right-0 grid gap-2"
-                    style={{ top: `${row * gridRowHeight}px`, gridTemplateColumns: `repeat(${props.gridColumns}, minmax(0, 1fr))` }}
-                  >
-                    {displayAssets.slice(row * props.gridColumns, (row + 1) * props.gridColumns).map((asset) => (
-                      <GalleryAssetCard
-                        key={asset.id}
-                        asset={asset}
-                        selected={renderedSelectedAssetIds?.has(asset.id)}
-                        thumbnailUrl={props.getThumbnailUrl(asset)}
-                        previewEnabled={props.previewEnabled && documentVisible}
-                        binColor={getColorLabel(asset.bin ? props.binColors[asset.bin] : undefined)?.color}
-                        onClick={(event, clickedAsset) =>
-                          selectAsset(event, clickedAsset, displayAssets)
-                        }
-                        multiSelectMode={multiSelectMode}
-                        onDoubleClick={props.onAssetDoubleClick}
-                        onDragStart={props.onAssetDragStart}
-                        onContextMenu={openContextMenu}
-                        onSelectTake={props.onSelectTake ? (takeIndex) => props.onSelectTake?.(asset, takeIndex) : undefined}
-                      />
-                    ))}
-                  </div>
-                );
-              })}
+              {Array.from(
+                { length: Math.max(0, gridRange.end - gridRange.start) },
+                (_, offset) => {
+                  const row = gridRange.start + offset;
+                  return (
+                    <div
+                      key={row}
+                      className="absolute left-0 right-0 grid gap-2"
+                      style={{
+                        top: `${row * gridRowHeight}px`,
+                        gridTemplateColumns: `repeat(${props.gridColumns}, minmax(0, 1fr))`,
+                      }}
+                    >
+                      {displayAssets
+                        .slice(
+                          row * props.gridColumns,
+                          (row + 1) * props.gridColumns,
+                        )
+                        .map((asset) => (
+                          <GalleryAssetCard
+                            key={asset.id}
+                            asset={asset}
+                            selected={renderedSelectedAssetIds?.has(asset.id)}
+                            thumbnailUrl={props.getThumbnailUrl(asset)}
+                            previewEnabled={
+                              props.previewEnabled && documentVisible
+                            }
+                            binColor={
+                              getColorLabel(
+                                asset.bin
+                                  ? props.binColors[asset.bin]
+                                  : undefined,
+                              )?.color
+                            }
+                            onClick={(event, clickedAsset) =>
+                              selectAsset(event, clickedAsset, displayAssets)
+                            }
+                            multiSelectMode={multiSelectMode}
+                            onDoubleClick={props.onAssetDoubleClick}
+                            onDragStart={props.onAssetDragStart}
+                            onContextMenu={openContextMenu}
+                            onSelectTake={
+                              props.onSelectTake
+                                ? (takeIndex) =>
+                                    props.onSelectTake?.(asset, takeIndex)
+                                : undefined
+                            }
+                          />
+                        ))}
+                    </div>
+                  );
+                },
+              )}
             </div>
           </div>
         )}
       </div>
-      <div ref={selectionBoxRef} aria-hidden="true" className="pointer-events-none fixed z-50 hidden border border-blue-400 bg-blue-500/10" />
+      <div
+        ref={selectionBoxRef}
+        aria-hidden="true"
+        className="pointer-events-none fixed z-50 hidden border border-blue-400 bg-blue-500/10"
+      />
       {props.footerOverlay}
     </div>
   );

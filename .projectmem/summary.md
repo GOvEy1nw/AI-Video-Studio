@@ -1,11 +1,14 @@
 # projectmem - AI-Video-Studio
 
-_Last updated: 2026-08-19_
+_Last updated: 2026-08-20_
 
 ## Project purpose
 AiVS is a local-first Electron desktop application for project-based AI image, video, music, and sound-effect creation. It gives Windows/NVIDIA users curated Quick Gen, Director, Video Editor, and Asset Library workflows backed exclusively by the bundled local WanGP/Wan2GP runtime.
 
 ## Recent issues
+- [DONE] #0126 AIVS-016 refinement frontend build is blocked in the restricted sandbox by access-denied reads of unchanged Electron modules. [pnpm build:frontend] -> Confirmed AIVS-016 refinement production bundles pass when Vite can read unchanged Electron modules outside the restricted sandbox. [pnpm build:frontend] (fixed)
+- [DONE] #0125 AIVS-016 focused controls test still expects the removed empty LTX Ref tile; two Cover Song cases also fail from pre-existing empty renders. [frontend/views/genspace/components/GenSpaceControls.test.tsx] -> Aligned the focused LTX controls regression with the new Start/End plus Add media layout; targeted test passes. The two Cover Song failures remain unrelated and pre-existing. [frontend/views/genspace/components/GenSpaceControls.test.tsx] (fixed)
+  - Partial attempt: Updated the focused LTX controls assertion to the requested Add media entry instead of the removed empty Ref tile; rerun pending. [frontend/views/genspace/components/GenSpaceControls.test.tsx]
 - [DONE] #0124 LTX Style tile is initially off-screen at the default Electron width because it follows all media slots [frontend/views/genspace/video/VideoMediaInputs.tsx] -> LTX Style is now the first media-input tile, visible at 1384x835 without scrolling and confirmed to open the modal [frontend/views/genspace/video/VideoMediaInputs.tsx] (fixed)
 - [DONE] #0123 Electron dev smoke cannot load several electron modules because sandboxed Vite gets Windows access-denied errors [pnpm dev / Electron visual QA] -> Electron QA succeeded after an approved unsandboxed launch with REMOTE_DEBUGGING_PORT=9222; rail, overlay, focus, favourites, and Styles interactions passed [pnpm dev / Electron visual QA] (fixed)
 - [DONE] #0122 Ordinary video submission readiness guard is buried after image fallbacks and omits the active generation lock [frontend/views/genspace/hooks/useGenSpaceController.tsx] -> Plain video generation now visibly shares the installed-compatible-profile and active-generation submission guards with tool/retake flows [frontend/views/genspace/hooks/useGenSpaceController.tsx] (fixed)
@@ -263,9 +266,9 @@ AiVS is a local-first Electron desktop application for project-based AI image, v
 - AIVS-015.01 gallery selection follows desktop semantics: Ctrl/Meta toggles one asset, Shift selects an anchored contiguous rendered range, plain activation exits transient multi-select; selected generation derives A from activeTakeIndex and stores only optional Ctrl-selected B. [frontend/components/GalleryAssetLibrary.tsx]
 - Styles use one backend-only style_prompt string: it may accompany a LoRA as its prompt suffix or stand alone for prompt-only styles; the renderer continues to submit only styleId. [backend/model_profiles/types.py]
 - AIVS-016 uses stable media-prefixed Quick Gen workflow IDs as the single navigation/favourites contract; controller selection keeps a compatible curated profile or switches to the first compatible installed profile, while existing app settings persist favourites and existing Styles modal behavior stays unchanged. [frontend/views/genspace/]
+- AIVS-016 UI accents remain presentation-only: the existing GenSpace mode-accent CSS variables colour current launchers/catalogues, while each favourite supplies its workflow media variables; no new theme or state registry. [frontend/views/genspace/]
 
 ## Notes
-- AIVS-014 is in Human Review: MiniMax Music 3 is an experimental curated music profile/pack with verified prompt mappings and profile-driven control gating; 35 backend, 5 frontend, and 4 Electron tests, both typechecks, production build, 13-path WanGP manifest resolution, and independent review passed. Live download/GPU audio validation remains pending. [backend/model_profiles/audio_profiles.py]
 - AIVS-015 completed to Human Review: Quick Gen Image/Video Upscale uses WanGP Media Flow catalog and shared lifecycle; focused tests/typechecks/build/Electron smoke pass, live GPU upscale remains unrun
 - AIVS-015 human-review UI follow-up completed: Upscale Method reuses SettingsDropdown without synthetic options, Scale is a discrete supported-value slider, TS/build/Electron interaction pass, task returned to Human Review
 - AIVS-015 follow-up completed: 2x minimum, selected footer Upscale handoff, Asset.takes stacking, active-version metadata/tabs, legacy compatibility, and isolated keyboard navigation; focused checks and independent review passed. Final Electron run hit the retryable catalog startup error and did not complete the retry path. [frontend/views/genspace]
@@ -275,6 +278,7 @@ AiVS is a local-first Electron desktop application for project-based AI image, v
 - AIVS-012 Human Review follow-up completed: backend-only style_prompt supports LoRA-only, prompt-only, and combined styles; 12 LTX entries inject upstream suffixes, Soft/Crisp remain neutral; 4 focused tests, Pyright, diff check, and fresh review passed. [backend/model_profiles/]
 - AIVS-012 progress regression follow-up completed to Human Review: style LoRA download messages now occupy statusDetail instead of phaseIndex; focused bridge test, Pyright, diff check, and fresh ship review passed. [backend/services/wangp_bridge.py]
 - AIVS-016 completed: Quick Gen now uses a media/favourites rail and prompt-pane workflow catalogue, persists stable favourite workflow IDs, routes workflow selection to compatible installed profiles with stale-profile submit guards, and shows LTX Styles first in video media inputs; focused tests, TS/Python checks, build, Electron QA, and independent review passed. [frontend/views/genspace]
+- AIVS-016 Human Review refinement completed: LTX uses large H3-style frames plus Styles/Add media row, music uses accessible tabs, and workflow accents are media-coloured; focused tests, TS, build, Electron QA, and ship review passed. [frontend/views/genspace/]
 
 ## Key files
 - `.git/backlog.md`

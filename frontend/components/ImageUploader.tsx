@@ -1,66 +1,78 @@
-import { useCallback } from 'react'
-import { useDropzone } from 'react-dropzone'
-import { Upload, Image as ImageIcon, RefreshCw, Trash2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { getNativeFilePath } from '@/lib/native-file-path'
+import { useCallback } from "react";
+import { useDropzone } from "react-dropzone";
+import { Upload, Image as ImageIcon, RefreshCw, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { getNativeFilePath } from "@/lib/native-file-path";
 
 interface ImageUploaderProps {
-  onImageSelect: (path: string | null) => void
-  selectedImage: string | null
+  onImageSelect: (path: string | null) => void;
+  selectedImage: string | null;
 }
 
-export function ImageUploader({ onImageSelect, selectedImage }: ImageUploaderProps) {
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    const file = acceptedFiles[0]
-    if (file) {
-      const filePath = getNativeFilePath(file)
-      if (filePath) {
-        if (!await window.electronAPI?.approveFile?.(file)) return
-        const normalized = filePath.replace(/\\/g, '/')
-        const fileUrl = normalized.startsWith('/') ? `file://${normalized}` : `file:///${normalized}`
-        onImageSelect(fileUrl)
-      } else {
-        const url = URL.createObjectURL(file)
-        onImageSelect(url)
+export function ImageUploader({
+  onImageSelect,
+  selectedImage,
+}: ImageUploaderProps) {
+  const onDrop = useCallback(
+    async (acceptedFiles: File[]) => {
+      const file = acceptedFiles[0];
+      if (file) {
+        const filePath = getNativeFilePath(file);
+        if (filePath) {
+          if (!(await window.electronAPI?.approveFile?.(file))) return;
+          const normalized = filePath.replace(/\\/g, "/");
+          const fileUrl = normalized.startsWith("/")
+            ? `file://${normalized}`
+            : `file:///${normalized}`;
+          onImageSelect(fileUrl);
+        } else {
+          const url = URL.createObjectURL(file);
+          onImageSelect(url);
+        }
       }
-    }
-  }, [onImageSelect])
+    },
+    [onImageSelect],
+  );
 
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop,
     accept: {
-      'image/png': ['.png'],
-      'image/jpeg': ['.jpg', '.jpeg'],
-      'image/webp': ['.webp'],
+      "image/png": [".png"],
+      "image/jpeg": [".jpg", ".jpeg"],
+      "image/webp": [".webp"],
     },
     maxSize: 10 * 1024 * 1024, // 10MB
     multiple: false,
     noClick: !!selectedImage, // Disable click when image is loaded
-  })
+  });
 
   const clearImage = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    onImageSelect(null)
-  }
+    e.stopPropagation();
+    onImageSelect(null);
+  };
 
   const replaceImage = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    open()
-  }
+    e.stopPropagation();
+    open();
+  };
 
   // Extract and truncate filename from path for display
   const getDisplayName = (path: string | null): string => {
-    if (!path) return ''
+    if (!path) return "";
     // Extract filename from path or URL
-    const name = path.split(/[/\\]/).pop()?.replace(/^file:/, '') || path
-    const decoded = decodeURIComponent(name)
-    const maxLength = 28
-    if (decoded.length <= maxLength) return decoded
-    const ext = decoded.split('.').pop() || ''
-    const baseName = decoded.slice(0, decoded.length - ext.length - 1)
-    const truncatedBase = baseName.slice(0, maxLength - ext.length - 4) // 4 for '...' and '.'
-    return `${truncatedBase}...${ext ? '.' + ext : ''}`
-  }
+    const name =
+      path
+        .split(/[/\\]/)
+        .pop()
+        ?.replace(/^file:/, "") || path;
+    const decoded = decodeURIComponent(name);
+    const maxLength = 28;
+    if (decoded.length <= maxLength) return decoded;
+    const ext = decoded.split(".").pop() || "";
+    const baseName = decoded.slice(0, decoded.length - ext.length - 1);
+    const truncatedBase = baseName.slice(0, maxLength - ext.length - 4); // 4 for '...' and '.'
+    return `${truncatedBase}...${ext ? "." + ext : ""}`;
+  };
 
   return (
     <div className="w-full">
@@ -70,10 +82,10 @@ export function ImageUploader({ onImageSelect, selectedImage }: ImageUploaderPro
       <div
         {...getRootProps()}
         className={cn(
-          'relative border border-dashed border-zinc-600 rounded-lg cursor-pointer transition-colors',
-          'hover:border-zinc-500',
-          isDragActive && 'border-blue-500 bg-blue-500/5',
-          selectedImage ? 'p-3' : 'p-6'
+          "relative border border-dashed text-2xs border-zinc-600 rounded-lg cursor-pointer transition-colors",
+          "hover:border-zinc-500",
+          isDragActive && "border-blue-500 bg-blue-500/5",
+          selectedImage ? "p-3" : "p-6",
         )}
       >
         <input {...getInputProps()} />
@@ -91,7 +103,10 @@ export function ImageUploader({ onImageSelect, selectedImage }: ImageUploaderPro
 
             {/* Filename */}
             <div className="flex-1 min-w-0">
-              <p className="text-sm text-white truncate" title={getDisplayName(selectedImage)}>
+              <p
+                className="text-sm text-white truncate"
+                title={getDisplayName(selectedImage)}
+              >
                 {getDisplayName(selectedImage)}
               </p>
             </div>
@@ -128,7 +143,8 @@ export function ImageUploader({ onImageSelect, selectedImage }: ImageUploaderPro
                 Drag image file here
               </p>
               <p className="text-sm text-zinc-500">
-                Or <span className="text-blue-400 underline">upload a file</span>
+                Or{" "}
+                <span className="text-blue-400 underline">upload a file</span>
               </p>
             </div>
           </div>
@@ -138,5 +154,5 @@ export function ImageUploader({ onImageSelect, selectedImage }: ImageUploaderPro
         png, jpeg, webp. Max size is 10MB
       </p>
     </div>
-  )
+  );
 }

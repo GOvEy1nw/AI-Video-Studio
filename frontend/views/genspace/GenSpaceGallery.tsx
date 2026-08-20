@@ -73,7 +73,7 @@ function GenSpaceGalleryView({
     <div
       {...dropZoneProps}
       data-testid="genspace-gallery-dropzone"
-      className="absolute inset-y-0 right-0 border-l border-zinc-800 bg-zinc-900"
+      className="absolute inset-y-0 right-0 bg-zinc-900 rounded-2xl m-2 ml-0"
       style={style}
     >
       {onResize && (
@@ -138,156 +138,156 @@ function GenSpaceGalleryView({
         </div>
       ) : null}
       <GalleryAssetLibrary
-          {...library}
-          className="absolute inset-0 pl-2 pt-4"
-          headerAction={
-            <>
-              <AssetLibraryImportButton
-                onClick={() => fileInputRef.current?.click()}
+        {...library}
+        className="absolute inset-0 pl-4 pt-4"
+        headerAction={
+          <>
+            <AssetLibraryImportButton
+              onClick={() => fileInputRef.current?.click()}
+            />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="video/*,audio/*,image/*"
+              multiple
+              className="hidden"
+              onChange={(event) => {
+                onImportFiles(Array.from(event.target.files ?? []));
+                event.target.value = "";
+              }}
+            />
+          </>
+        }
+        emptyContent={
+          assets.length === 0 ? (
+            <div className="py-8 text-center">
+              <p className="text-sm text-zinc-500">No assets yet</p>
+              <p className="mt-1 text-xs text-zinc-600">
+                Generate in Gen Space or import
+              </p>
+            </div>
+          ) : (
+            library.emptyContent
+          )
+        }
+        listActions={(asset) => (
+          <>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                library.onToggleFavorite?.(asset);
+              }}
+              className={
+                asset.favorite
+                  ? "p-1 text-red-400"
+                  : "p-1 text-zinc-600 hover:text-zinc-300"
+              }
+              aria-label="Toggle favorite"
+            >
+              <Heart
+                className={`h-3 w-3 ${asset.favorite ? "fill-current" : ""}`}
               />
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="video/*,audio/*,image/*"
-                multiple
-                className="hidden"
-                onChange={(event) => {
-                  onImportFiles(Array.from(event.target.files ?? []));
-                  event.target.value = "";
-                }}
-              />
-            </>
-          }
-          emptyContent={
-            assets.length === 0 ? (
-              <div className="py-8 text-center">
-                <p className="text-sm text-zinc-500">No assets yet</p>
-                <p className="mt-1 text-xs text-zinc-600">
-                  Generate in Gen Space or import
-                </p>
-              </div>
-            ) : (
-              library.emptyContent
-            )
-          }
-          listActions={(asset) => (
-            <>
+            </button>
+            {asset.generationParams ? (
               <button
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation();
-                  library.onToggleFavorite?.(asset);
+                  library.onCopySettings?.(asset);
                 }}
-                className={
-                  asset.favorite
-                    ? "p-1 text-red-400"
-                    : "p-1 text-zinc-600 hover:text-zinc-300"
-                }
-                aria-label="Toggle favorite"
+                className="p-1 text-zinc-600 hover:text-zinc-300"
+                aria-label="Copy settings"
               >
-                <Heart
-                  className={`h-3 w-3 ${asset.favorite ? "fill-current" : ""}`}
-                />
+                <ClipboardPaste className="h-3 w-3" />
               </button>
-              {asset.generationParams ? (
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    library.onCopySettings?.(asset);
-                  }}
-                  className="p-1 text-zinc-600 hover:text-zinc-300"
-                  aria-label="Copy settings"
-                >
-                  <ClipboardPaste className="h-3 w-3" />
-                </button>
-              ) : null}
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  library.onDeleteAsset?.(asset);
+            ) : null}
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                library.onDeleteAsset?.(asset);
+              }}
+              className="p-1 text-zinc-600 hover:text-red-400"
+              aria-label="Delete asset"
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
+          </>
+        )}
+        leadingContent={
+          <>
+            {generation.isRunning ? (
+              <div
+                role="button"
+                tabIndex={0}
+                aria-label="Select active generation"
+                aria-pressed={generation.isSelected}
+                data-testid="active-generation-card"
+                onClick={generation.onSelect}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    generation.onSelect();
+                  }
                 }}
-                className="p-1 text-zinc-600 hover:text-red-400"
-                aria-label="Delete asset"
+                className={`relative aspect-square cursor-pointer overflow-hidden rounded-xl border-2 bg-zinc-800 transition-colors ${
+                  generation.isSelected
+                    ? "ring-2"
+                    : "border-transparent hover:border-zinc-700"
+                }`}
+                style={{
+                  ...getGenSpaceModeAccentStyle(generation.mode),
+                  backgroundColor:
+                    "color-mix(in srgb, var(--genspace-mode-accent) 22%, var(--color-zinc-800))",
+                  ...(generation.isSelected
+                    ? {
+                        borderColor: "var(--genspace-mode-accent)",
+                        boxShadow:
+                          "0 0 0 2px color-mix(in srgb, var(--genspace-mode-accent) 30%, transparent)",
+                      }
+                    : {}),
+                }}
               >
-                <Trash2 className="h-3 w-3" />
-              </button>
-            </>
-          )}
-          leadingContent={
-            <>
-              {generation.isRunning ? (
-                <div
-                  role="button"
-                  tabIndex={0}
-                  aria-label="Select active generation"
-                  aria-pressed={generation.isSelected}
-                  data-testid="active-generation-card"
-                  onClick={generation.onSelect}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      generation.onSelect();
-                    }
-                  }}
-                  className={`relative aspect-square cursor-pointer overflow-hidden rounded-xl border-2 bg-zinc-800 transition-colors ${
-                    generation.isSelected
-                      ? "ring-2"
-                      : "border-transparent hover:border-zinc-700"
-                  }`}
-                  style={{
-                    ...getGenSpaceModeAccentStyle(generation.mode),
-                    backgroundColor:
-                      "color-mix(in srgb, var(--genspace-mode-accent) 22%, var(--color-zinc-800))",
-                    ...(generation.isSelected
-                      ? {
-                          borderColor: "var(--genspace-mode-accent)",
-                          boxShadow:
-                            "0 0 0 2px color-mix(in srgb, var(--genspace-mode-accent) 30%, transparent)",
-                        }
-                      : {}),
-                  }}
-                >
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-4">
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-4">
+                  <div
+                    role="progressbar"
+                    aria-label="Generation progress"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={generationProgress}
+                    className="h-1.5 w-full max-w-32 overflow-hidden rounded-full bg-black/30"
+                  >
                     <div
-                      role="progressbar"
-                      aria-label="Generation progress"
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                      aria-valuenow={generationProgress}
-                      className="h-1.5 w-full max-w-32 overflow-hidden rounded-full bg-black/30"
-                    >
-                      <div
-                        className="h-full bg-[var(--genspace-mode-accent)] transition-all"
-                        style={{ width: `${generationProgress}%` }}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        generation.cancel();
-                      }}
-                      disabled={generation.isCancelling}
-                      className="rounded-md border border-white/15 bg-black/30 px-2 py-1 text-xs text-zinc-200 transition-colors hover:bg-black/50 disabled:cursor-wait disabled:opacity-60"
-                    >
-                      {generation.isCancelling ? "Cancelling..." : "Cancel"}
-                    </button>
+                      className="h-full bg-[var(--genspace-mode-accent)] transition-all"
+                      style={{ width: `${generationProgress}%` }}
+                    />
                   </div>
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      generation.cancel();
+                    }}
+                    disabled={generation.isCancelling}
+                    className="rounded-md border border-white/15 bg-black/30 px-2 py-1 text-xs text-zinc-200 transition-colors hover:bg-black/50 disabled:cursor-wait disabled:opacity-60"
+                  >
+                    {generation.isCancelling ? "Cancelling..." : "Cancel"}
+                  </button>
                 </div>
-              ) : null}
-              {isImporting ? (
-                <div className="relative aspect-square overflow-hidden rounded-xl bg-zinc-800">
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <LoaderCircle className="mb-2 h-8 w-8 animate-spin text-violet-400" />
-                    <p className="text-sm text-zinc-400">Importing...</p>
-                  </div>
+              </div>
+            ) : null}
+            {isImporting ? (
+              <div className="relative aspect-square overflow-hidden rounded-xl bg-zinc-800">
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <LoaderCircle className="mb-2 h-8 w-8 animate-spin text-violet-400" />
+                  <p className="text-sm text-zinc-400">Importing...</p>
                 </div>
-              ) : null}
-            </>
-          }
-        />
+              </div>
+            ) : null}
+          </>
+        }
+      />
     </div>
   );
 }
