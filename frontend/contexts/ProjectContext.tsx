@@ -54,6 +54,7 @@ function takeFromAsset(asset: Asset): AssetTake {
 export interface ProjectContextType {
   persistenceStatus: { pendingCount: number; saving: boolean; lastError: string | null }
   retryProjectPersistence: () => void
+  awaitProjectPersistence: (projectId: string) => Promise<void>
   // Navigation
   currentView: ViewType
   setCurrentView: (view: ViewType) => void
@@ -464,6 +465,11 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   }
 
   const retryProjectPersistence = useCallback(() => persistenceQueueRef.current?.retry(), [])
+  const awaitProjectPersistence = useCallback(async (projectId: string) => {
+    const queue = persistenceQueueRef.current
+    const revision = queue?.getRevision(projectId)
+    if (queue && revision !== undefined) await queue.waitForPersistedRevision(projectId, revision)
+  }, [])
   const currentLifetime = useCallback((id: string) => projectLifetimeRef.current.get(id) ?? 0, [])
 
   const deferPersistedPaths = useCallback((projectId: string, paths: string[]) => {
@@ -1230,6 +1236,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const compatibilityValue = useMemo<ProjectContextType>(() => ({
     persistenceStatus,
     retryProjectPersistence,
+    awaitProjectPersistence,
     ...navigationValue,
     ...projectListValue,
     currentProject,
@@ -1248,6 +1255,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     projectAssetsValue,
     projectListValue,
     retryProjectPersistence,
+    awaitProjectPersistence,
     updateProjectGenSpaceSeed,
   ])
   

@@ -21,7 +21,7 @@ def route_generate_music(
     req: GenerateMusicRequest,
     handler: AppHandler = Depends(get_state_service),
 ) -> GenerateMusicResponse:
-    return handler.music_generation.generate(req)
+    return handler.generation_queue.run_legacy("audio.music", req, GenerateMusicResponse)
 
 
 @router.post("/music/compose-lyrics", response_model=ComposeMusicLyricsResponse)

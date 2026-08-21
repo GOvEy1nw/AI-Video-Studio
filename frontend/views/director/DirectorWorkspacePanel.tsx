@@ -40,7 +40,6 @@ import { AspectRatioDropdown } from "../genspace/components/AspectRatioDropdown"
 import { useAppSettings } from "@/contexts/AppSettingsContext";
 import type { ModelProfile } from "@/types/model-profiles";
 import { useGeneration } from "@/hooks/use-generation";
-import { copyToAssetFolder } from "@/lib/asset-copy";
 import { buildDirectorRequest } from "@/lib/director-request";
 import {
   ltxFrameCountToTimelineFrames,
@@ -147,9 +146,6 @@ export function DirectorWorkspacePanel(props: Props) {
     null,
   );
   const [continueSelected, setContinueSelected] = useState(false);
-  const [assetPersistError, setAssetPersistError] = useState<string | null>(
-    null,
-  );
   const [mediaImportError, setMediaImportError] = useState<string | null>(null);
   const [mediaDragOver, setMediaDragOver] = useState(false);
   const [playheadFrame, setPlayheadFrame] = useState(0);
@@ -158,12 +154,6 @@ export function DirectorWorkspacePanel(props: Props) {
   const [globalSettingsOpen, setGlobalSettingsOpen] = useState(false);
   const globalSettingsMenuRef = useRef<HTMLDivElement>(null);
   const globalSettingsSurfaceRef = useRef<HTMLDivElement>(null);
-  const processedPath = useRef<string | null>(null);
-  const persistingPath = useRef<string | null>(null);
-  const pendingGeneration = useRef<{
-    timelineId: string;
-    sequence: DirectorSequenceV1;
-  } | null>(null);
   const { settings: appSettings, updateSettings } = useAppSettings();
   const generation = useGeneration();
 
@@ -280,112 +270,6 @@ export function DirectorWorkspacePanel(props: Props) {
         (asset) => asset.id === sequence.latestGenerationAssetId,
       )
     : undefined;
-  const generationBelongsToCurrentTimeline =
-    pendingGeneration.current?.timelineId === props.timeline?.id;
-
-  useEffect(() => {
-    const persist = async () => {
-      const pending = pendingGeneration.current;
-      const outputPath = generation.videoPath;
-      if (
-        !pending ||
-        !outputPath ||
-        processedPath.current === outputPath ||
-        persistingPath.current === outputPath
-      )
-        return;
-      persistingPath.current = outputPath;
-      try {
-        const authored = pending.sequence;
-        const copied = await copyToAssetFolder(outputPath, props.projectId);
-        const path = copied?.path || outputPath;
-        const url = copied?.url || generation.videoUrl;
-        if (!url) throw new Error("Generated video URL is unavailable");
-        const result = generation.directorResult;
-        const metadata = {
-          schemaVersion: 1 as const,
-          timelineId: pending.timelineId,
-          compiledPrompt: result?.compiledPrompt || authored.globalPrompt,
-          resolvedFrameCount:
-            result?.resolvedFrameCount || authored.output.durationFrames,
-          modelProfileId: authored.output.modelProfileId,
-          generatedAt: Date.now(),
-        };
-        const existing = authored.latestGenerationAssetId
-          ? props.assets.find(
-              (asset) =>
-                asset.id === authored.latestGenerationAssetId &&
-                asset.type === "video",
-            )
-          : undefined;
-        if (existing) {
-          props.addTakeToAsset(props.projectId, existing.id, {
-            url,
-            path,
-            createdAt: Date.now(),
-          });
-          props.updateAsset(props.projectId, existing.id, {
-            prompt: authored.globalPrompt,
-            resolution: authored.output.resolutionTier,
-            duration:
-              (authored.output.durationFrames - 1) / authored.output.fps,
-            directorGeneration: metadata,
-          });
-          const liveSequence = props.timelines.find(
-            (item) => item.id === pending.timelineId,
-          )?.sequence;
-          if (liveSequence)
-            props.updateDirectorTimeline(props.projectId, pending.timelineId, {
-              ...liveSequence,
-              latestGenerationVisible: true,
-              latestGenerationTakeIndex: existing.takes?.length ?? 1,
-              updatedAt: Date.now(),
-            });
-        } else {
-          const asset = props.addAsset(props.projectId, {
-            type: "video",
-            path,
-            url,
-            prompt: authored.globalPrompt,
-            resolution: authored.output.resolutionTier,
-            duration:
-              (authored.output.durationFrames - 1) / authored.output.fps,
-            source: "generated",
-            directorGeneration: metadata,
-          });
-          const liveSequence = props.timelines.find(
-            (item) => item.id === pending.timelineId,
-          )?.sequence;
-          if (liveSequence) {
-            props.updateDirectorTimeline(props.projectId, pending.timelineId, {
-              ...liveSequence,
-              latestGenerationAssetId: asset.id,
-              latestGenerationVisible: true,
-              latestGenerationTakeIndex: 0,
-              updatedAt: Date.now(),
-            });
-          }
-        }
-        processedPath.current = outputPath;
-        pendingGeneration.current = null;
-      } finally {
-        persistingPath.current = null;
-      }
-    };
-    void persist().catch((error: unknown) => {
-      setAssetPersistError(
-        error instanceof Error
-          ? error.message
-          : "Could not save Director output asset",
-      );
-    });
-  }, [
-    generation.directorResult,
-    generation.videoPath,
-    generation.videoUrl,
-    props,
-  ]);
-
   if (!sequence) {
     return (
       <div className="h-full min-w-0 flex-1 bg-app-bg p-4 text-xs text-subtle-foreground">
@@ -606,12 +490,19 @@ export function DirectorWorkspacePanel(props: Props) {
 
   const generate = () => {
     if (!validation?.canGenerate || !props.timeline) return;
-    processedPath.current = null;
-    setAssetPersistError(null);
-    pendingGeneration.current = { timelineId: props.timeline.id, sequence };
     void generation.generateDirector(
       buildDirectorRequest(sequence, props.assets),
-    );
+      {
+        kind: "director-output",
+        timelineId: props.timeline.id,
+        globalPrompt: sequence.globalPrompt,
+        resolutionTier: sequence.output.resolutionTier,
+        durationFrames: sequence.output.durationFrames,
+        fps: sequence.output.fps,
+        modelProfileId: sequence.output.modelProfileId,
+        latestGenerationAssetId: sequence.latestGenerationAssetId,
+      },
+    ).catch(() => undefined);
   };
 
   const revertContinueVideo = () => {
@@ -1151,40 +1042,18 @@ export function DirectorWorkspacePanel(props: Props) {
                 assets={props.assets}
                 playheadFrame={playheadFrame}
                 isPlaying={isPlaying}
-                liveVideoUrl={
-                  generationBelongsToCurrentTimeline
-                    ? generation.videoUrl
-                    : null
-                }
-                livePreviewUrl={
-                  generationBelongsToCurrentTimeline
-                    ? generation.previewUrl
-                    : null
-                }
-                progress={generation.progress}
-                statusMessage={generation.statusMessage}
-                phase={
-                  generationBelongsToCurrentTimeline ? generation.phase : ""
-                }
-                modelDownload={
-                  generationBelongsToCurrentTimeline
-                    ? generation.modelDownload
-                    : null
-                }
-                isGenerating={
-                  generationBelongsToCurrentTimeline && generation.isGenerating
-                }
+                liveVideoUrl={null}
+                livePreviewUrl={null}
+                progress={0}
+                statusMessage=""
+                phase=""
+                modelDownload={null}
+                isGenerating={false}
               />
               <div className="px-2 absolute bottom-0 mb-2 mt-2 max-h-24 space-y-1 overflow-y-auto w-full">
                 {generation.error && (
                   <div className="rounded-sm border border-red-800 bg-red-950/40 p-2 text-xs text-red-300">
                     {formatDirectorError(generation.error)}
-                  </div>
-                )}
-                {assetPersistError && (
-                  <div className="rounded-sm border border-red-800 bg-red-950/40 p-2 text-xs text-red-300">
-                    Generation completed, but asset save failed:{" "}
-                    {assetPersistError}
                   </div>
                 )}
                 {generation.directorResult?.warnings.map((warning) => (
@@ -1334,12 +1203,8 @@ export function DirectorWorkspacePanel(props: Props) {
               continueSelected={continueSelected}
               maxDurationSeconds={profile?.director.maxDurationSeconds}
               generateLabel={latestAsset ? "Regenerate" : "Generate"}
-              generateDisabled={
-                !validation?.canGenerate || generation.isGenerating
-              }
-              isGenerating={
-                generationBelongsToCurrentTimeline && generation.isGenerating
-              }
+              generateDisabled={!validation?.canGenerate}
+              isGenerating={false}
               playheadFrame={playheadFrame}
               onPlayheadChange={(frame) => {
                 setIsPlaying(false);

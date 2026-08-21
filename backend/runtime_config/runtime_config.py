@@ -24,4 +24,6 @@ class RuntimeConfig:
     wangp_extra_args: tuple[str, ...]
     wangp_checkpoints_dir: Path | None = None
     wangp_loras_dir: Path | None = None
+    generation_queue_file: Path | None = None
+    generation_queue_max_pending: int = 100
 

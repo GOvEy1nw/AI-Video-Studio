@@ -164,6 +164,8 @@ export interface AssetTake {
   generationParams?: GenerationParams | null
   seed?: number
   variationIndex?: number
+  generationJobId?: string
+  generationOutputIndex?: number
 }
 
 export interface Asset {
@@ -186,6 +188,8 @@ export interface Asset {
   activeTakeIndex?: number // Which take is currently active (default = 0 / latest)
   colorLabel?: string // Color label for organization (e.g. 'violet', 'blue', 'green', 'yellow', 'red', 'rose', 'orange', 'mango')
   directorGeneration?: DirectorGenerationMetadata
+  generationJobId?: string
+  generationOutputIndex?: number
 }
 
 export interface Track {

@@ -296,16 +296,17 @@ class MusicGenerationHandler(StateHandlerBase):
 
         self._generation.start_generation_job(f"lyrics-{uuid.uuid4().hex[:8]}")
         try:
-            lyrics = self._compose_text(
-                profile=profile,
-                description=req.description,
-                lyrics_prompt=req.lyricsPrompt,
-                language=req.vocalLanguage,
-                duration_seconds=req.durationSeconds,
-                think=req.think,
-                seed=req.seed,
-                error_prefix="MUSIC_COMPOSE_UNAVAILABLE",
-            )
+            with self._generation.helper_lane():
+                lyrics = self._compose_text(
+                    profile=profile,
+                    description=req.description,
+                    lyrics_prompt=req.lyricsPrompt,
+                    language=req.vocalLanguage,
+                    duration_seconds=req.durationSeconds,
+                    think=req.think,
+                    seed=req.seed,
+                    error_prefix="MUSIC_COMPOSE_UNAVAILABLE",
+                )
             self._generation.complete_generation([])
             return ComposeMusicLyricsResponse(lyrics=lyrics, usedThinking=req.think)
         except HTTPError as exc:

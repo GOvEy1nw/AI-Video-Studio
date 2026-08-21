@@ -95,7 +95,6 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
     addAsset,
     deleteAsset,
     updateAsset,
-    addTakeToAsset,
     deleteTakeFromAsset,
     setAssetActiveTake,
     createAssetBin,
@@ -139,10 +138,6 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
     isGenerating: isRegenerating,
     progress: regenProgress,
     statusMessage: regenStatusMessage,
-    videoUrl: regenVideoUrl,
-    videoPath: regenVideoPath,
-    imageUrl: regenImageUrl,
-    imagePath: regenImagePath,
     error: regenError,
     cancel: regenCancel,
     reset: regenReset,
@@ -414,6 +409,7 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
   const playbackTimeRef = useRef(0); // authoritative time during playback
   const clipsRef = useRef(clips); // mirror of clips state
   const tracksRef = useRef(tracks); // mirror of tracks state
+  const subtitlesRef = useRef(subtitles); // mirror of subtitle state
   const assetsRef = useRef<any[]>([]); // mirror of assets state
   const isPlayingRef = useRef(false); // mirror of isPlaying state
   const shuttleSpeedRef = useRef(0); // mirror of shuttleSpeed
@@ -442,6 +438,9 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
   useEffect(() => {
     tracksRef.current = tracks;
   }, [tracks]);
+  useEffect(() => {
+    subtitlesRef.current = subtitles;
+  }, [subtitles]);
   useEffect(() => {
     isPlayingRef.current = isPlaying;
   }, [isPlaying]);
@@ -921,6 +920,25 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
     loadedTimelineIdRef.current = activeTimeline.id;
   }, [activeTimeline?.id]);
 
+  // Queue completions can update the loaded timeline through ProjectContext.
+  // Mirror that durable update locally so a pending editor autosave cannot restore stale data.
+  useEffect(() => {
+    if (!activeTimeline || loadedTimelineIdRef.current !== activeTimeline.id) return;
+    const nextClips = activeTimeline.clips || [];
+    const nextTracks = activeTimeline.tracks || [];
+    const nextSubtitles = activeTimeline.subtitles || [];
+    if (
+      clipsRef.current === nextClips &&
+      tracksRef.current === nextTracks &&
+      subtitlesRef.current === nextSubtitles
+    ) return;
+
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    if (clipsRef.current !== nextClips) setClips(nextClips.map(migrateClip));
+    if (tracksRef.current !== nextTracks) setTracks(migrateTracks(nextTracks));
+    if (subtitlesRef.current !== nextSubtitles) setSubtitles(nextSubtitles);
+  }, [activeTimeline?.clips, activeTimeline?.tracks, activeTimeline?.subtitles]);
+
   // Debounced auto-save: when clips, tracks, or subtitles change, schedule a save
   useEffect(() => {
     if (!currentProjectId || !loadedTimelineIdRef.current) return;
@@ -1160,23 +1178,16 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
     clips,
     tracks,
     setClips,
-    setTracks,
     setSubtitles,
     currentProjectId,
-    addAsset,
+    timelineId: activeTimeline?.id ?? null,
     resolveClipSrc,
     regenGenerate,
     regenGenerateImage,
-    regenVideoUrl,
-    regenVideoPath,
-    regenImageUrl,
-    regenImagePath,
     isRegenerating,
     regenProgress,
     regenCancel,
     regenReset,
-    regenError,
-    projectId: currentProjectId ?? "",
   });
   deleteGapRef.current = deleteGap;
 
@@ -1296,24 +1307,17 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
     setClips,
     assets,
     currentProjectId,
-    addAsset,
+    timelineId: activeTimeline?.id ?? null,
     updateAsset,
-    addTakeToAsset,
     deleteTakeFromAsset,
     resolveClipSrc,
     regenGenerate,
     regenGenerateImage,
-    regenVideoUrl,
-    regenVideoPath,
-    regenImageUrl,
-    regenImagePath,
     isRegenerating,
     regenProgress,
     regenStatusMessage,
     regenCancel,
     regenReset,
-    regenError,
-    projectId: currentProjectId ?? "",
   });
 
   useEditorKeyboard({

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useOptionalGenerationQueue } from "../../../contexts/GenerationQueueContext";
 
 export function GenerateButton({
   onClick,
@@ -13,6 +14,8 @@ export function GenerateButton({
   label: string;
   icon: ReactNode;
 }) {
+  const queue = useOptionalGenerationQueue();
+  const displayLabel = queue?.active || queue?.queued.length ? "Add to queue" : label;
   return (
     <button
       type="button"
@@ -26,7 +29,7 @@ export function GenerateButton({
       }`}
     >
       <span className={loading ? "animate-pulse" : ""}>{icon}</span>
-      {label}
+      {displayLabel}
     </button>
   );
 }

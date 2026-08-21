@@ -135,6 +135,7 @@ def _resolve_wangp_attention_mode(root: Path | None, extra_args: tuple[str, ...]
 SETTINGS_DIR = APP_DATA_DIR
 SETTINGS_DIR.mkdir(parents=True, exist_ok=True)
 SETTINGS_FILE = SETTINGS_DIR / "settings.json"
+GENERATION_QUEUE_FILE = APP_DATA_DIR / "generation-queue.json"
 
 DEFAULT_APP_SETTINGS = AppSettings()
 
@@ -195,6 +196,7 @@ runtime_config = RuntimeConfig(
     wangp_extra_args=WANGP_EXTRA_ARGS,
     wangp_checkpoints_dir=WANGP_CHECKPOINTS_DIR,
     wangp_loras_dir=WANGP_LORAS_DIR,
+    generation_queue_file=GENERATION_QUEUE_FILE,
 )
 
 handler = build_initial_state(runtime_config, DEFAULT_APP_SETTINGS)
@@ -223,6 +225,8 @@ def precache_model_files(model_dir: Path) -> int:
 
 def background_warmup() -> None:
     handler.health.default_warmup()
+    if handler.wangp_bridge.get_status().session_ready:
+        handler.generation_queue.set_runtime_ready(True)
 
 
 def log_hardware_info() -> None:

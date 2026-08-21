@@ -19,6 +19,8 @@ import { Project } from "./views/Project";
 import { SettingsModal, type SettingsTabId } from "./components/SettingsModal";
 import { Button } from "./components/ui/button";
 import { ConnectionIndicator } from "./components/ModelStatusDropdown";
+import { GenerationQueueProvider } from "./contexts/GenerationQueueContext";
+import { GenerationQueuePopover } from "./components/GenerationQueuePopover";
 
 const loadPythonSetup = () => import("./components/PythonSetup");
 const loadLogViewer = () => import("./components/LogViewer");
@@ -235,6 +237,7 @@ function AppContent() {
       {renderView()}
 
       <div className="fixed top-[18px] right-3 z-50 flex items-center gap-1.5">
+        <GenerationQueuePopover />
         <ConnectionIndicator reconnecting={isReconnecting} />
         <button
           onClick={handleReconnect}
@@ -292,10 +295,12 @@ export default function App() {
       <AppSettingsProvider>
         <ModelProfilesProvider>
           <ProjectProvider>
-            <KeyboardShortcutsProvider>
-          <AppContent />
-          <KeyboardShortcutsModal />
-            </KeyboardShortcutsProvider>
+            <GenerationQueueProvider>
+              <KeyboardShortcutsProvider>
+                <AppContent />
+                <KeyboardShortcutsModal />
+              </KeyboardShortcutsProvider>
+            </GenerationQueueProvider>
           </ProjectProvider>
         </ModelProfilesProvider>
       </AppSettingsProvider>

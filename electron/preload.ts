@@ -58,6 +58,8 @@ const electronAPI: ElectronAPI = {
   // Project assets
   copyToProjectAssets: (srcPath: string, projectId: string): Promise<{ success: boolean; path?: string; url?: string; error?: string }> =>
     ipcRenderer.invoke('copy-to-project-assets', srcPath, projectId),
+  copyGeneratedOutputToProjectAssets: (srcPath: string, projectId: string): Promise<{ success: boolean; path?: string; url?: string; error?: string }> =>
+    ipcRenderer.invoke('copy-generated-output-to-project-assets', srcPath, projectId),
   importToProjectAssets: (options: {
     srcPath: string
     projectId: string

@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
-import { backendFetch } from '../lib/backend'
-import { logger } from '../lib/logger'
+import { useGenerationQueue } from '../contexts/GenerationQueueContext'
+import { useProjects } from '../contexts/ProjectContext'
+import type { RetakeSubmissionSnapshot } from '../views/genspace/types'
 
 export type RetakeMode = 'replace_audio_and_video' | 'replace_video' | 'replace_audio'
 
@@ -25,6 +26,8 @@ interface UseRetakeState {
 }
 
 export function useRetake() {
+  const { currentProject, currentProjectId, genSpaceRetakeSource } = useProjects()
+  const queue = useGenerationQueue()
   const [state, setState] = useState<UseRetakeState>({
     isRetaking: false,
     retakeStatus: '',
@@ -32,7 +35,7 @@ export function useRetake() {
     result: null,
   })
 
-  const submitRetake = useCallback(async (params: RetakeSubmitParams) => {
+  const submitRetake = useCallback(async (params: RetakeSubmitParams, submittedSnapshot?: RetakeSubmissionSnapshot | null) => {
     if (!params.videoPath) return
 
     setState({
@@ -43,47 +46,33 @@ export function useRetake() {
     })
 
     try {
-      const response = await backendFetch('/api/retake', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          video_path: params.videoPath,
-          start_time: params.startTime,
-          duration: params.duration,
-          prompt: params.prompt,
-          mode: params.mode,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (response.ok && data.status === 'complete' && data.video_path) {
-        const pathNormalized = data.video_path.replace(/\\/g, '/')
-        const videoUrl = pathNormalized.startsWith('/') ? `file://${pathNormalized}` : `file:///${pathNormalized}`
-
-        setState({
-          isRetaking: false,
-          retakeStatus: 'Retake complete!',
-          retakeError: null,
-          result: {
-            videoPath: data.video_path,
-            videoUrl,
-          },
-        })
-        return
+      if (!currentProjectId) throw new Error('Select a project before generating')
+      const snapshot = submittedSnapshot ?? {
+        projectId: currentProjectId,
+        submittedAt: Date.now(),
+        prompt: params.prompt,
+        input: { videoPath: params.videoPath, startTime: params.startTime, duration: params.duration, videoDuration: params.duration },
       }
-
-      const errorMsg = data.error || 'Unknown error'
-      setState({
-        isRetaking: false,
-        retakeStatus: '',
-        retakeError: errorMsg,
-        result: null,
+      const parent = currentProject?.assets.find((asset) => asset.id === genSpaceRetakeSource?.assetId)
+        ?? currentProject?.assets.find((asset) => asset.path === params.videoPath || asset.takes?.some((take) => take.path === params.videoPath))
+      await queue.submit({
+        kind: 'video.retake',
+        payload: { video_path: params.videoPath, start_time: params.startTime, duration: params.duration, prompt: params.prompt, mode: params.mode },
+        summary: { label: 'Video retake', mediaKind: 'video', operation: 'video.retake', promptPreview: params.prompt },
+        clientContext: {
+          schemaVersion: 1,
+          projectId: currentProjectId,
+          intent: {
+            kind: 'retake-output',
+            snapshot,
+            ...(parent ? { parentAssetId: parent.id } : {}),
+            ...(genSpaceRetakeSource?.linkedClipIds?.length ? { clipIds: genSpaceRetakeSource.linkedClipIds } : {}),
+          },
+        },
       })
-      logger.error(`Retake failed: ${errorMsg}`)
+      setState({ isRetaking: false, retakeStatus: '', retakeError: null, result: null })
     } catch (error) {
       const message = (error as Error).message || 'Unknown error'
-      logger.error(`Retake error: ${message}`)
       setState({
         isRetaking: false,
         retakeStatus: '',
@@ -91,7 +80,7 @@ export function useRetake() {
         result: null,
       })
     }
-  }, [])
+  }, [currentProject?.assets, currentProjectId, genSpaceRetakeSource?.assetId, genSpaceRetakeSource?.linkedClipIds, queue])
 
   const resetRetake = useCallback(() => {
     setState({

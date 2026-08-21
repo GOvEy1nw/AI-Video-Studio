@@ -1,8 +1,6 @@
 import {
   useCallback,
-  useRef,
   type Dispatch,
-  type MutableRefObject,
   type SetStateAction,
 } from "react";
 import type { ReframePanelState } from "../video/ReframePanel";
@@ -89,8 +87,6 @@ export function useGenSpaceGenerationActions({
   reframeInput,
   retakeInput,
   setLocalError,
-  reframeSubmissionRef,
-  retakeSubmissionRef,
   generate,
   generateImage,
   generateMusic,
@@ -130,8 +126,6 @@ export function useGenSpaceGenerationActions({
   reframeInput: ReframePanelState;
   retakeInput: RetakeInput;
   setLocalError: Dispatch<SetStateAction<string | null>>;
-  reframeSubmissionRef: MutableRefObject<ReframeSubmissionSnapshot | null>;
-  retakeSubmissionRef: MutableRefObject<RetakeSubmissionSnapshot | null>;
   generate: UseGenerationReturn["generate"];
   generateImage: UseGenerationReturn["generateImage"];
   generateMusic: UseGenerationReturn["generateMusic"];
@@ -140,13 +134,8 @@ export function useGenSpaceGenerationActions({
   generateUpscale?: UseGenerationReturn["generateUpscale"];
   upscaleMethod?: UpscaleMethodId | null;
   upscaleScale?: number | null;
-  submitRetake: (params: RetakeSubmitParams) => Promise<void>;
+  submitRetake: (params: RetakeSubmitParams, snapshot?: RetakeSubmissionSnapshot | null) => Promise<void>;
 }) {
-  const imageSubmissionRef = useRef<ImageSubmissionSnapshot | null>(null);
-  const videoSubmissionRef = useRef<VideoSubmissionSnapshot | null>(null);
-  const musicSubmissionRef = useRef<MusicSubmissionSnapshot | null>(null);
-  const sfxSubmissionRef = useRef<SfxSubmissionSnapshot | null>(null);
-  const speechSubmissionRef = useRef<SpeechSubmissionSnapshot | null>(null);
   const submit = useCallback(async () => {
     const upscaleMediaKind = mode === "image" && imageMode === "upscale"
       ? "image" as const
@@ -160,9 +149,10 @@ export function useGenSpaceGenerationActions({
       if (!currentProjectId || !source || !sourcePath) return;
       const upscale = { mediaKind: upscaleMediaKind, method: upscaleMethod, scale: upscaleScale, source: { ...source, path: sourcePath } };
       const snapshot = { projectId: currentProjectId, submittedAt: Date.now(), prompt: "", settings: { ...settings }, inputs: [upscale.source], assetPaths: projectAssets.map(({ url, path }) => ({ url, path })), upscale };
-      if (upscaleMediaKind === "image") imageSubmissionRef.current = { ...snapshot, imageMode: "upscale" };
-      else videoSubmissionRef.current = { ...snapshot, inputImage: null, inputAudio: null, videoTool: "upscale" };
-      await generateUpscale({ sourcePath, mediaKind: upscaleMediaKind, method: upscaleMethod, scale: upscaleScale });
+      const submission = upscaleMediaKind === "image"
+        ? { ...snapshot, imageMode: "upscale" as const }
+        : { ...snapshot, inputImage: null, inputAudio: null, videoTool: "upscale" as const };
+      await generateUpscale({ sourcePath, mediaKind: upscaleMediaKind, method: upscaleMethod, scale: upscaleScale }, submission);
       return;
     }
     if (
@@ -179,7 +169,7 @@ export function useGenSpaceGenerationActions({
       );
       if (!command) return;
       setSettings(command.normalizedSettings);
-      reframeSubmissionRef.current = {
+      const snapshot: ReframeSubmissionSnapshot = {
         projectId: currentProjectId,
         submittedAt: Date.now(),
         prompt: command.prompt,
@@ -195,6 +185,8 @@ export function useGenSpaceGenerationActions({
         command.useAudioTrack,
         undefined,
         command.reframe,
+        undefined,
+        { kind: "reframe-output", snapshot },
       );
       return;
     }
@@ -203,13 +195,13 @@ export function useGenSpaceGenerationActions({
       if (!currentProjectId) return;
       const command = buildRetakeGenerationCommand(prompt, retakeInput);
       if (!command) return;
-      retakeSubmissionRef.current = {
+      const snapshot: RetakeSubmissionSnapshot = {
         projectId: currentProjectId,
         submittedAt: Date.now(),
         prompt: command.snapshot.prompt,
         input: { ...retakeInput, ...command.snapshot.input },
       };
-      await submitRetake(command.request);
+      await submitRetake(command.request, snapshot);
       return;
     }
 
@@ -224,8 +216,8 @@ export function useGenSpaceGenerationActions({
       if (!sfxSettings || !generateSfx) return;
       const command = buildSfxGenerationCommand(prompt, sfxSettings);
       if (!command) return;
-      sfxSubmissionRef.current = { projectId: currentProjectId, submittedAt: Date.now(), prompt: command.request.prompt, recipe: command.recipe };
-      await generateSfx(command.request);
+      const snapshot: SfxSubmissionSnapshot = { projectId: currentProjectId, submittedAt: Date.now(), prompt: command.request.prompt, recipe: command.recipe };
+      await generateSfx(command.request, { kind: "sfx-output", snapshot });
       return;
     }
 
@@ -237,8 +229,8 @@ export function useGenSpaceGenerationActions({
         promptEnhancementEnabled,
       );
       if (!command) return;
-      speechSubmissionRef.current = { projectId: currentProjectId, submittedAt: Date.now(), prompt: command.request.text, recipe: command.recipe };
-      await generateSpeech(command.request);
+      const snapshot: SpeechSubmissionSnapshot = { projectId: currentProjectId, submittedAt: Date.now(), prompt: command.request.text, recipe: command.recipe };
+      await generateSpeech(command.request, { kind: "speech-output", snapshot });
       return;
     }
 
@@ -257,13 +249,13 @@ export function useGenSpaceGenerationActions({
         setLocalError(command.message);
         return;
       }
-      musicSubmissionRef.current = {
+      const snapshot: MusicSubmissionSnapshot = {
         projectId: currentProjectId,
         submittedAt: Date.now(),
         prompt: command.prompt,
         recipe: command.snapshot,
       };
-      await generateMusic(command.request);
+      await generateMusic(command.request, { kind: "music-output", snapshot });
       return;
     }
 
@@ -295,7 +287,7 @@ export function useGenSpaceGenerationActions({
             type: "video" as const,
           }]
         : [];
-      videoSubmissionRef.current = {
+      const snapshot: VideoSubmissionSnapshot = {
         projectId: currentProjectId,
         submittedAt: Date.now(),
         prompt,
@@ -316,6 +308,7 @@ export function useGenSpaceGenerationActions({
         undefined,
         undefined,
         command.videoTool,
+        { kind: "video-output", snapshot },
       );
       return;
     }
@@ -358,7 +351,7 @@ export function useGenSpaceGenerationActions({
         imageMode === "edit" && editImage
           ? [editImage, ...submittedImageInputs]
           : submittedImageInputs;
-      imageSubmissionRef.current = {
+      const snapshot: ImageSubmissionSnapshot = {
         projectId: currentProjectId,
         submittedAt: Date.now(),
         prompt: effectivePrompt,
@@ -392,12 +385,15 @@ export function useGenSpaceGenerationActions({
           command.settings,
           command.inputMedia,
           command.edit,
+          { kind: "image-output", snapshot },
         );
       } else {
         await generateImage(
           command.prompt,
           command.settings,
           command.inputMedia,
+          undefined,
+          { kind: "image-output", snapshot },
         );
       }
       return;
@@ -416,7 +412,7 @@ export function useGenSpaceGenerationActions({
       setSettings(command.normalizedSettings);
     }
     if (!currentProjectId) return;
-    videoSubmissionRef.current = {
+    const snapshot: VideoSubmissionSnapshot = {
       projectId: currentProjectId,
       submittedAt: Date.now(),
       prompt: effectivePrompt,
@@ -433,6 +429,10 @@ export function useGenSpaceGenerationActions({
       command.audioPath,
       command.inputMedia,
       command.useAudioTrack,
+      undefined,
+      undefined,
+      undefined,
+      { kind: "video-output", snapshot },
     );
   }, [
     currentProjectId,
@@ -462,9 +462,7 @@ export function useGenSpaceGenerationActions({
     promptEnhancementEnabled,
     projectAssets,
     reframeInput,
-    reframeSubmissionRef,
     retakeInput,
-    retakeSubmissionRef,
     setLocalError,
     setSettings,
     selectedVideoTool,
@@ -476,12 +474,5 @@ export function useGenSpaceGenerationActions({
     upscaleMethod,
     upscaleScale,
   ]);
-  return {
-    submit,
-    imageSubmissionRef,
-    videoSubmissionRef,
-    musicSubmissionRef,
-    sfxSubmissionRef,
-    speechSubmissionRef,
-  };
+  return { submit };
 }

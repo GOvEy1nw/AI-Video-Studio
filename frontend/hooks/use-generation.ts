@@ -1,21 +1,16 @@
-import { useCallback, useState } from "react";
-import type {
-  GenerateDirectorRequest,
-  GenerateDirectorResponse,
-} from "../types/director";
-import type { GenerationSettings } from "../types/generation";
-import type { ImageEditRequest } from "../types/image-edit";
-import type {
-  ComposeMusicLyricsRequest,
-  GenerateMusicRequest,
-  MusicEffectiveSettings,
-} from "../types/music";
-import {
-  createImageProgressFormatter,
-  createVideoProgressFormatter,
-  formatMusicProgress,
-  normaliseProgressResponse,
-} from "./generation/progress";
+import { useCallback, useRef, useState } from 'react'
+import type { GenerateDirectorRequest } from '../types/director'
+import type { GenerationSettings } from '../types/generation'
+import type { ImageEditRequest } from '../types/image-edit'
+import type { ComposeMusicLyricsRequest, GenerateMusicRequest } from '../types/music'
+import type { GenerateSfxRequest } from '../types/sfx'
+import type { GenerateSpeechRequest } from '../types/speech'
+import type { SubmittedVideoToolId } from '../types/video-tools'
+import type { UpscaleMediaKind, UpscaleMethodId } from '../types/upscale'
+import { useProjects } from '../contexts/ProjectContext'
+import { useGenerationQueue, type GenerationQueueDraft, type QueueClientContext, type QueuePersistenceIntent } from '../contexts/GenerationQueueContext'
+import type { ImageSubmissionSnapshot, VideoSubmissionSnapshot } from '../views/genspace/types'
+import { backendFetch } from '../lib/backend'
 import {
   buildDirectorRequestBody,
   buildImageRequestBody,
@@ -25,376 +20,117 @@ import {
   buildVideoRequestBody,
   type GenerationInputMediaRequest,
   type GenerationReframeOptions,
-} from "./generation/request-builders";
-import type { GenerateSfxRequest } from "../types/sfx";
-import type { GenerateSpeechRequest } from "../types/speech";
-import type {
-  GenerateMusicResult,
-  GenerationState,
-  MusicOutput,
-  GenerateSfxResult,
-  GenerateSpeechResult,
-} from "./generation/types";
-import { useGenerationJob } from "./generation/useGenerationJob";
-import type { SubmittedVideoToolId } from "../types/video-tools";
-import type { UpscaleMediaKind, UpscaleMethodId } from "../types/upscale";
+} from './generation/request-builders'
+import { emptyGenerationState, type GenerateMusicResult, type GenerateSfxResult, type GenerateSpeechResult, type GenerationState, type MusicOutput } from './generation/types'
 
-export type { GenerateMusicResult, MusicOutput };
-export type { GenerateSfxResult };
-export type { GenerateSpeechResult };
-
-export type InputMediaRequest = GenerationInputMediaRequest;
-export type ReframeGenerateOptions = GenerationReframeOptions;
+export type { GenerateMusicResult, MusicOutput, GenerateSfxResult, GenerateSpeechResult }
+export type InputMediaRequest = GenerationInputMediaRequest
+export type ReframeGenerateOptions = GenerationReframeOptions
 
 export interface UseGenerationReturn extends GenerationState {
-  isComposingLyrics: boolean;
-  generate: (
-    prompt: string,
-    imagePath: string | null,
-    settings: GenerationSettings,
-    audioPath?: string | null,
-    inputMedia?: InputMediaRequest[],
-    useAudioTrack?: boolean,
-    shotPrompts?: { seconds: number; prompt: string }[],
-    reframe?: ReframeGenerateOptions,
-    videoTool?: SubmittedVideoToolId,
-  ) => Promise<void>;
-  generateDirector: (request: GenerateDirectorRequest) => Promise<void>;
-  generateImage: (
-    prompt: string,
-    settings: GenerationSettings,
-    inputMedia?: InputMediaRequest[],
-    edit?: ImageEditRequest,
-  ) => Promise<void>;
-  generateUpscale: (request: { sourcePath: string; mediaKind: UpscaleMediaKind; method: UpscaleMethodId; scale: number }) => Promise<void>;
-  generateMusic: (
-    request: GenerateMusicRequest,
-  ) => Promise<GenerateMusicResult | null>;
-  generateSfx: (request: GenerateSfxRequest) => Promise<GenerateSfxResult | null>;
-  generateSpeech: (request: GenerateSpeechRequest) => Promise<GenerateSpeechResult | null>;
-  composeMusicLyrics: (
-    request: ComposeMusicLyricsRequest,
-  ) => Promise<string | null>;
-  cancel: () => Promise<void>;
-  reset: () => void;
+  isComposingLyrics: boolean
+  generate: (prompt: string, imagePath: string | null, settings: GenerationSettings, audioPath?: string | null, inputMedia?: InputMediaRequest[], useAudioTrack?: boolean, shotPrompts?: { seconds: number; prompt: string }[], reframe?: ReframeGenerateOptions, videoTool?: SubmittedVideoToolId, intent?: QueuePersistenceIntent) => Promise<void>
+  generateDirector: (request: GenerateDirectorRequest, intent?: Extract<QueueClientContext['intent'], { kind: 'director-output' }>) => Promise<void>
+  generateImage: (prompt: string, settings: GenerationSettings, inputMedia?: InputMediaRequest[], edit?: ImageEditRequest, intent?: QueuePersistenceIntent) => Promise<void>
+  generateUpscale: (request: { sourcePath: string; mediaKind: UpscaleMediaKind; method: UpscaleMethodId; scale: number }, snapshot?: ImageSubmissionSnapshot | VideoSubmissionSnapshot) => Promise<void>
+  generateMusic: (request: GenerateMusicRequest, intent?: QueuePersistenceIntent) => Promise<GenerateMusicResult | null>
+  generateSfx: (request: GenerateSfxRequest, intent?: QueuePersistenceIntent) => Promise<GenerateSfxResult | null>
+  generateSpeech: (request: GenerateSpeechRequest, intent?: QueuePersistenceIntent) => Promise<GenerateSpeechResult | null>
+  composeMusicLyrics: (request: ComposeMusicLyricsRequest) => Promise<string | null>
+  cancel: () => Promise<void>
+  reset: () => void
 }
 
 export function generatedPathToFileUrl(path: string): string {
-  const normalized = path.replace(/\\/g, "/");
-  return normalized.startsWith("/")
-    ? `file://${normalized}`
-    : `file:///${normalized}`;
+  const normalized = path.replace(/\\/g, '/')
+  return normalized.startsWith('/') ? `file://${normalized}` : `file:///${normalized}`
 }
 
 export function useGeneration(): UseGenerationReturn {
-  const { state, runJob, cancel, reset } = useGenerationJob();
-  const [isComposingLyrics, setIsComposingLyrics] = useState(false);
+  const { currentProject, currentProjectId } = useProjects()
+  const queue = useGenerationQueue()
+  const [state, setState] = useState<GenerationState>(emptyGenerationState)
+  const [isComposingLyrics, setIsComposingLyrics] = useState(false)
+  const submittedJobId = useRef<string | null>(null)
 
-  const runVideoRequest = useCallback(
-    async ({
-      prompt,
-      imagePath,
-      settings,
-      audioPath,
-      inputMedia,
-      useAudioTrack,
-      shotPrompts,
-      reframe,
-      videoTool,
-      directorRequest,
-    }: {
-      prompt: string;
-      imagePath: string | null;
-      settings: GenerationSettings | null;
-      audioPath?: string | null;
-      inputMedia?: InputMediaRequest[];
-      useAudioTrack?: boolean;
-      shotPrompts?: { seconds: number; prompt: string }[];
-      reframe?: ReframeGenerateOptions;
-      videoTool?: SubmittedVideoToolId;
-      directorRequest?: GenerateDirectorRequest;
-    }) => {
-      const request = directorRequest
-        ? buildDirectorRequestBody(directorRequest)
-        : buildVideoRequestBody({
-            prompt,
-            imagePath,
-            settings,
-            audioPath,
-            inputMedia,
-            useAudioTrack,
-            shotPrompts,
-            reframe,
-            videoTool,
-          });
-      await runJob<GenerateDirectorResponse | null>({
-        endpoint: request.endpoint,
-        body: request.body,
-        initialStatus: directorRequest
-          ? "Generating Director sequence..."
-          : settings?.model === "pro"
-            ? "Loading Pro model & generating..."
-            : "Generating video...",
-        formatProgress: createVideoProgressFormatter(
-          settings?.model === "pro" ? 120 : 45,
-        ),
-        parseResponse: async (response) => {
-          const result = (await response.json()) as {
-            status?: string;
-            video_path?: string;
-            resolvedSeed?: number;
-            error?: string;
-          };
-          if (result.error) throw new Error(result.error);
-          if (result.status === "cancelled") {
-            return {
-              value: null,
-              patch: { statusMessage: "Cancelled" },
-            };
-          }
-          if (result.status !== "complete" || !result.video_path) {
-            throw new Error("Generation did not return a video");
-          }
-          return {
-            value: directorRequest
-              ? (result as GenerateDirectorResponse)
-              : null,
-            patch: {
-              progress: 100,
-              statusMessage: "Complete!",
-              videoUrl: generatedPathToFileUrl(result.video_path),
-              videoPath: result.video_path,
-              videoSeed: result.resolvedSeed ?? null,
-              directorResult: directorRequest
-                ? (result as GenerateDirectorResponse)
-                : null,
-            },
-          };
-        },
-      });
-    },
-    [runJob],
-  );
+  const submit = useCallback(async (draft: Omit<GenerationQueueDraft, 'clientContext'> & { clientContext?: Omit<QueueClientContext, 'schemaVersion' | 'projectId'> }) => {
+    if (!currentProjectId) throw new Error('Select a project before generating')
+    submittedJobId.current = null
+    setState((previous) => ({ ...previous, isGenerating: true, error: null, statusMessage: 'Adding to queue…', phase: 'queued' }))
+    try {
+      const admission = await queue.submit({ ...draft, clientContext: { schemaVersion: 1, projectId: currentProjectId, ...draft.clientContext } })
+      submittedJobId.current = admission.jobId
+      setState(emptyGenerationState())
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      setState({ ...emptyGenerationState(), error: message })
+      throw error
+    }
+  }, [currentProjectId, queue])
 
-  const generate = useCallback<UseGenerationReturn["generate"]>(
-    async (
-      prompt,
-      imagePath,
-      settings,
-      audioPath,
-      inputMedia,
-      useAudioTrack,
-      shotPrompts,
-      reframe,
-      videoTool,
-    ) => {
-      await runVideoRequest({
-        prompt,
-        imagePath,
-        settings,
-        audioPath,
-        inputMedia,
-        useAudioTrack,
-        shotPrompts,
-        reframe,
-        videoTool,
-      });
-    },
-    [runVideoRequest],
-  );
+  const generate = useCallback<UseGenerationReturn['generate']>(async (prompt, imagePath, settings, audioPath, inputMedia, useAudioTrack, shotPrompts, reframe, videoTool, intent) => {
+    const request = buildVideoRequestBody({ prompt, imagePath, settings, audioPath, inputMedia, useAudioTrack, shotPrompts, reframe, videoTool })
+    await submit({ kind: 'video.generate', payload: request.body as Record<string, unknown>, summary: { label: 'Video generation', mediaKind: 'video', operation: 'video.generate', promptPreview: prompt }, ...(intent ? { clientContext: { intent } } : {}) })
+  }, [submit])
 
-  const generateDirector = useCallback(
-    async (directorRequest: GenerateDirectorRequest) => {
-      await runVideoRequest({
-        prompt: "",
-        imagePath: null,
-        settings: null,
-        directorRequest,
-      });
-    },
-    [runVideoRequest],
-  );
+  const generateDirector = useCallback(async (request: GenerateDirectorRequest, intent?: Extract<QueueClientContext['intent'], { kind: 'director-output' }>) => {
+    const built = buildDirectorRequestBody(request)
+    await submit({ kind: 'director.generate', payload: built.body as Record<string, unknown>, summary: { label: 'Director generation', mediaKind: 'video', operation: 'director.generate', promptPreview: request.globalPrompt }, ...(intent ? { clientContext: { intent } } : {}) })
+  }, [submit])
 
-  const generateImage = useCallback<UseGenerationReturn["generateImage"]>(
-    async (prompt, settings, inputMedia, edit) => {
-      const imageCount = settings.variations || 1;
-      await runJob<void>({
-        endpoint: "/api/generate-image",
-        body: buildImageRequestBody(prompt, settings, inputMedia, edit),
-        initialStatus:
-          imageCount > 1
-            ? `Generating ${imageCount} images...`
-            : "Generating image...",
-        failureMessage: "Image generation failed",
-        formatProgress: createImageProgressFormatter(imageCount),
-        parseResponse: async (response) => {
-          const result = (await response.json()) as {
-            status?: string;
-            image_paths?: string[];
-            image_path?: string;
-            resolvedSeed?: number;
-            error?: string;
-          };
-          if (result.error) throw new Error(result.error);
-          if (result.status === "cancelled") {
-            return {
-              value: undefined,
-              patch: { statusMessage: "Cancelled" },
-            };
-          }
-          const paths = Array.isArray(result.image_paths)
-            ? result.image_paths
-            : result.image_path
-              ? [result.image_path]
-              : [];
-          if (result.status !== "complete" || paths.length === 0) {
-            throw new Error("Image generation did not return an image");
-          }
-          const urls = paths.map(generatedPathToFileUrl);
-          return {
-            value: undefined,
-            patch: {
-              progress: 100,
-              statusMessage: "Complete!",
-              imageUrl: urls[0],
-              imagePath: paths[0],
-              imageUrls: urls,
-              imagePaths: paths,
-              imageSeed: result.resolvedSeed ?? null,
-            },
-          };
-        },
-      });
-    },
-    [runJob],
-  );
+  const generateImage = useCallback<UseGenerationReturn['generateImage']>(async (prompt, settings, inputMedia, edit, intent) => {
+    await submit({ kind: 'image.generate', payload: buildImageRequestBody(prompt, settings, inputMedia, edit) as Record<string, unknown>, summary: { label: 'Image generation', mediaKind: 'image', operation: 'image.generate', promptPreview: prompt, variationCount: settings.variations || 1 }, ...(intent ? { clientContext: { intent } } : {}) })
+  }, [submit])
 
-  const generateUpscale = useCallback<UseGenerationReturn["generateUpscale"]>(
-    async (request) => {
-      await runJob<void>({
-        endpoint: "/api/media-upscale",
-        body: request,
-        initialStatus: "Upscaling media...",
-        failureMessage: "Upscale failed",
-        formatProgress: (progress) => normaliseProgressResponse(progress),
-        parseResponse: async (response) => {
-          const result = (await response.json()) as { status?: string; media_path?: string; error?: string };
-          if (result.error) throw new Error(result.error);
-          if (result.status === "cancelled") return { value: undefined, patch: { statusMessage: "Cancelled" } };
-          if (result.status !== "complete" || !result.media_path) throw new Error("Upscale did not return media");
-          const url = generatedPathToFileUrl(result.media_path);
-          return request.mediaKind === "image"
-            ? { value: undefined, patch: { progress: 100, statusMessage: "Complete!", imageUrl: url, imagePath: result.media_path, imageUrls: [url], imagePaths: [result.media_path] } }
-            : { value: undefined, patch: { progress: 100, statusMessage: "Complete!", videoUrl: url, videoPath: result.media_path } };
-        },
-      });
-    },
-    [runJob],
-  );
+  const generateUpscale = useCallback<UseGenerationReturn['generateUpscale']>(async (request, snapshot) => {
+    const parent = currentProject?.assets.find((asset) =>
+      asset.path === request.sourcePath || asset.takes?.some((take) => take.path === request.sourcePath),
+    )
+    await submit({
+      kind: 'media.upscale',
+      payload: request,
+      summary: { label: 'Upscale', mediaKind: request.mediaKind, operation: 'media.upscale' },
+      ...(parent ? { clientContext: { intent: snapshot
+        ? request.mediaKind === 'image'
+          ? { kind: 'add-take' as const, parentAssetId: parent.id, mediaKind: 'image' as const, snapshot: snapshot as ImageSubmissionSnapshot }
+          : { kind: 'add-take' as const, parentAssetId: parent.id, mediaKind: 'video' as const, snapshot: snapshot as VideoSubmissionSnapshot }
+        : { kind: 'add-take' as const, parentAssetId: parent.id } } } : {}),
+    })
+  }, [currentProject?.assets, submit])
 
-  const generateMusic = useCallback(
-    async (
-      request: GenerateMusicRequest,
-    ): Promise<GenerateMusicResult | null> =>
-      runJob<GenerateMusicResult>({
-        ...buildMusicRequestBody(request),
-        initialStatus: "Preparing music...",
-        failureMessage: "Music generation failed",
-        formatProgress: formatMusicProgress,
-        parseResponse: async (response) => {
-          const payload = (await response.json()) as {
-            outputs: MusicOutput[];
-            resolvedLyrics?: string | null;
-            effectiveSettings?: MusicEffectiveSettings | null;
-            warnings?: string[];
-          };
-          const result: GenerateMusicResult = {
-            outputs: payload.outputs,
-            resolvedLyrics: payload.resolvedLyrics ?? undefined,
-            effectiveSettings: payload.effectiveSettings ?? undefined,
-            warnings: payload.warnings ?? [],
-          };
-          return {
-            value: result,
-            patch: {
-              progress: 100,
-              statusMessage: "Complete!",
-              musicResult: result,
-            },
-          };
-        },
-      }),
-    [runJob],
-  );
+  const generateMusic = useCallback(async (request: GenerateMusicRequest, intent?: QueuePersistenceIntent): Promise<GenerateMusicResult | null> => {
+    const built = buildMusicRequestBody(request)
+    await submit({ kind: 'audio.music', payload: built.body as unknown as Record<string, unknown>, summary: { label: 'Music generation', mediaKind: 'audio', operation: 'audio.music', promptPreview: request.description }, ...(intent ? { clientContext: { intent } } : {}) })
+    return null
+  }, [submit])
 
-  const generateSfx = useCallback((request: GenerateSfxRequest): Promise<GenerateSfxResult | null> =>
-    runJob<GenerateSfxResult | null>({
-      ...buildSfxRequestBody(request), initialStatus: "Preparing sound effects...",
-      failureMessage: "Sound effects generation failed", formatProgress: (progress) => normaliseProgressResponse(progress),
-      parseResponse: async (response) => {
-        const payload = (await response.json()) as { status?: string; audio_path?: string; resolvedSeed?: number; error?: string }
-        if (payload.error) throw new Error(payload.error)
-        if (payload.status === "cancelled") return { value: null, patch: { statusMessage: "Cancelled" } }
-        if (payload.status !== "complete" || !payload.audio_path) throw new Error("SFX generation did not return audio")
-        const result = { audioPath: payload.audio_path, resolvedSeed: payload.resolvedSeed }
-        return { value: result, patch: { progress: 100, statusMessage: "Complete!", sfxResult: result } }
-      },
-    }), [runJob])
+  const generateSfx = useCallback(async (request: GenerateSfxRequest, intent?: QueuePersistenceIntent): Promise<GenerateSfxResult | null> => {
+    const built = buildSfxRequestBody(request)
+    await submit({ kind: 'audio.sfx', payload: built.body as unknown as Record<string, unknown>, summary: { label: 'Sound effect generation', mediaKind: 'audio', operation: 'audio.sfx', promptPreview: request.prompt }, ...(intent ? { clientContext: { intent } } : {}) })
+    return null
+  }, [submit])
 
-  const generateSpeech = useCallback((request: GenerateSpeechRequest): Promise<GenerateSpeechResult | null> =>
-    runJob<GenerateSpeechResult | null>({
-      ...buildSpeechRequestBody(request), initialStatus: "Preparing speech...",
-      failureMessage: "Speech generation failed", formatProgress: (progress) => normaliseProgressResponse(progress),
-      parseResponse: async (response) => {
-        const payload = (await response.json()) as { status?: string; audio_path?: string; resolvedSeed?: number; error?: string }
-        if (payload.error) throw new Error(payload.error)
-        if (payload.status === "cancelled") return { value: null, patch: { statusMessage: "Cancelled" } }
-        if (payload.status !== "complete" || !payload.audio_path) throw new Error("Speech generation did not return audio")
-        const result = { audioPath: payload.audio_path, resolvedSeed: payload.resolvedSeed }
-        return { value: result, patch: { progress: 100, statusMessage: "Complete!", speechResult: result } }
-      },
-    }), [runJob])
+  const generateSpeech = useCallback(async (request: GenerateSpeechRequest, intent?: QueuePersistenceIntent): Promise<GenerateSpeechResult | null> => {
+    const built = buildSpeechRequestBody(request)
+    await submit({ kind: 'audio.speech', payload: built.body as unknown as Record<string, unknown>, summary: { label: 'Speech generation', mediaKind: 'audio', operation: 'audio.speech', promptPreview: request.text }, ...(intent ? { clientContext: { intent } } : {}) })
+    return null
+  }, [submit])
 
-  const composeMusicLyrics = useCallback(
-    async (request: ComposeMusicLyricsRequest): Promise<string | null> => {
-      setIsComposingLyrics(true);
-      try {
-        return await runJob<string>({
-          endpoint: "/api/music/compose-lyrics",
-          body: request,
-          initialStatus: "Composing lyrics...",
-          failureMessage: "Could not compose lyrics",
-          markGenerating: false,
-          preserveResults: true,
-          formatProgress: (progress) =>
-            normaliseProgressResponse(progress),
-          parseResponse: async (response) => {
-            const payload = (await response.json()) as { lyrics: string };
-            return {
-              value: payload.lyrics,
-              patch: { statusMessage: "Lyrics composed" },
-            };
-          },
-        });
-      } finally {
-        setIsComposingLyrics(false);
-      }
-    },
-    [runJob],
-  );
+  const composeMusicLyrics = useCallback(async (request: ComposeMusicLyricsRequest) => {
+    setIsComposingLyrics(true)
+    try {
+      const response = await backendFetch('/api/music/compose-lyrics', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(request) })
+      if (!response.ok) throw new Error(await response.text())
+      return (await response.json() as { lyrics?: string }).lyrics ?? null
+    } finally {
+      setIsComposingLyrics(false)
+    }
+  }, [])
 
-  return {
-    ...state,
-    generate,
-    generateDirector,
-    generateImage,
-    generateUpscale,
-    generateMusic,
-    generateSfx,
-    generateSpeech,
-    composeMusicLyrics,
-    isComposingLyrics,
-    cancel,
-    reset,
-  };
+  const cancel = useCallback(async () => {
+    if (submittedJobId.current) await queue.cancel(submittedJobId.current)
+  }, [queue])
+  const reset = useCallback(() => setState(emptyGenerationState()), [])
+
+  return { ...state, isComposingLyrics, generate, generateDirector, generateImage, generateUpscale, generateMusic, generateSfx, generateSpeech, composeMusicLyrics, cancel, reset }
 }

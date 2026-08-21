@@ -1,0 +1,6 @@
+# #0158 Added revision waiters so queue acknowledgements can wait for durable project-save coverage, including coalesced newer revisions and final failure rejection.
+
+- 2026-08-20T21:37:13Z `issue`: Added revision waiters so queue acknowledgements can wait for durable project-save coverage, including coalesced newer revisions and final failure rejection. [frontend/contexts/project-persistence-queue.ts]
+- 2026-08-20T21:37:13Z `attempt`: Added revision waiters so queue acknowledgements can wait for durable project-save coverage, including coalesced newer revisions and final failure rejection. [frontend/contexts/project-persistence-queue.ts] (worked)
+- 2026-08-20T21:49:54Z `attempt`: Added one queue provider, immutable admission, queue-only result copy, provenance dedupe, durable-save acknowledgement, and toolbar controls; specialized retake, Director, and editor persistence still need job-context consumers. [frontend/contexts/GenerationQueueContext.tsx] (partial)
+- 2026-08-20T23:28:25Z `fix`: Confirmed revision waiters cover coalesced durable saves and reject final failures; queue acknowledgements wait for exact originating-project persistence and focused tests pass. [frontend/contexts/project-persistence-queue.ts]

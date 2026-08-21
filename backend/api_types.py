@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Literal, NamedTuple, TypeAlias, TypedDict
+from typing import Any, Literal, NamedTuple, TypeAlias, TypedDict
 from typing import Annotated
 
 from pydantic import BaseModel, Field, StringConstraints, model_validator
@@ -1056,3 +1056,123 @@ class IcLoraGenerateRequest(BaseModel):
     cfg_guidance_scale: float = 1.0
     negative_prompt: str = ""
     images: list[IcLoraImageInput] = Field(default_factory=_default_ic_lora_images)
+
+
+# ============================================================
+# Persistent generation queue API
+# ============================================================
+
+
+class QueuedImageGeneration(BaseModel):
+    kind: Literal["image.generate"]
+    payload: GenerateImageRequest
+
+
+class QueuedVideoGeneration(BaseModel):
+    kind: Literal["video.generate"]
+    payload: GenerateVideoRequest
+
+
+class QueuedMusicGeneration(BaseModel):
+    kind: Literal["audio.music"]
+    payload: GenerateMusicRequest
+
+
+class QueuedSfxGeneration(BaseModel):
+    kind: Literal["audio.sfx"]
+    payload: GenerateSfxRequest
+
+
+class QueuedSpeechGeneration(BaseModel):
+    kind: Literal["audio.speech"]
+    payload: GenerateSpeechRequest
+
+
+class QueuedUpscaleGeneration(BaseModel):
+    kind: Literal["media.upscale"]
+    payload: MediaUpscaleRequest
+
+
+class QueuedRetakeGeneration(BaseModel):
+    kind: Literal["video.retake"]
+    payload: RetakeRequest
+
+
+class QueuedDirectorGeneration(BaseModel):
+    kind: Literal["director.generate"]
+    payload: GenerateDirectorRequest
+
+
+QueuedGenerationPayload: TypeAlias = Annotated[
+    QueuedImageGeneration | QueuedVideoGeneration | QueuedMusicGeneration | QueuedSfxGeneration
+    | QueuedSpeechGeneration | QueuedUpscaleGeneration | QueuedRetakeGeneration | QueuedDirectorGeneration,
+    Field(discriminator="kind"),
+]
+
+
+class GenerationJobSummary(BaseModel):
+    label: str = Field(max_length=256)
+    mediaKind: Literal["image", "video", "audio"]
+    operation: str = Field(max_length=128)
+    promptPreview: str | None = Field(default=None, max_length=512)
+    modelLabel: str | None = Field(default=None, max_length=256)
+    projectName: str | None = Field(default=None, max_length=256)
+    variationCount: int | None = Field(default=None, ge=1, le=100)
+
+
+class GenerationQueueSubmitRequest(BaseModel):
+    schemaVersion: Literal[1]
+    clientRequestId: str = Field(min_length=1, max_length=256)
+    job: QueuedGenerationPayload
+    summary: GenerationJobSummary
+    clientContext: dict[str, Any]
+
+
+class GenerationQueueAdmission(BaseModel):
+    jobId: str
+    status: str
+    queuePosition: int
+    revision: int
+    duplicate: bool
+
+
+class GenerationQueueOrderRequest(BaseModel):
+    expectedRevision: int = Field(ge=0)
+    jobIds: list[str]
+
+
+class GenerationQueueCancelResponse(BaseModel):
+    id: str
+    status: str
+
+
+class GenerationQueuePersistenceRef(BaseModel):
+    kind: Literal["asset", "take", "director_document", "clip_update"]
+    id: str = Field(min_length=1, max_length=256)
+    parentId: str | None = Field(default=None, min_length=1, max_length=256)
+
+
+class GenerationQueueAcknowledgedOutput(BaseModel):
+    outputIndex: int = Field(ge=0)
+    refs: list[GenerationQueuePersistenceRef] = Field(min_length=1)
+
+
+class GenerationQueueAcknowledgementRequest(BaseModel):
+    consumer: Literal["electron-project-persistence"]
+    projectId: str = Field(min_length=1, max_length=256)
+    persistedAt: str
+    outputs: list[GenerationQueueAcknowledgedOutput]
+
+
+class GenerationQueueJobDetail(BaseModel):
+    id: str
+    kind: str
+    status: str
+    summary: dict[str, Any]
+    clientContext: dict[str, Any]
+    result: dict[str, Any] | None = None
+    error: str | None = None
+    createdAt: str
+    startedAt: str | None = None
+    finishedAt: str | None = None
+    acknowledgedAt: str | None = None

@@ -1,115 +1,60 @@
-import { act, renderHook } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { backendFetch } from "../lib/backend";
-import type { GenerateDirectorRequest } from "../types/director";
-import type { GenerateMusicRequest } from "../types/music";
-import { DEFAULT_VIDEO_SETTINGS } from "../views/genspace/constants";
-import { useGeneration } from "./use-generation";
+import { act, renderHook } from '@testing-library/react'
+import { beforeEach, expect, it, vi } from 'vitest'
+import { DEFAULT_VIDEO_SETTINGS } from '../views/genspace/constants'
+import { useGeneration } from './use-generation'
 
-vi.mock("../lib/backend", () => ({ backendFetch: vi.fn() }));
+const queue: { submit: ReturnType<typeof vi.fn>; active: { id: string } | null; cancel: ReturnType<typeof vi.fn> } = { submit: vi.fn(), active: null, cancel: vi.fn() }
+vi.mock('../contexts/GenerationQueueContext', () => ({ useGenerationQueue: () => queue }))
+vi.mock('../contexts/ProjectContext', () => ({ useProjects: () => ({ currentProjectId: 'project', currentProject: { id: 'project', assets: [] } }) }))
 
-const fetchMock = vi.mocked(backendFetch);
+beforeEach(() => {
+  queue.submit.mockReset()
+  queue.cancel.mockReset()
+  queue.active = null
+})
 
-afterEach(() => fetchMock.mockReset());
+it('blocks duplicate button submissions only while queue admission is pending', async () => {
+  let resolveAdmission!: () => void
+  queue.submit.mockReturnValue(new Promise((resolve) => { resolveAdmission = () => resolve({ jobId: 'job-b', duplicate: false }) }))
+  const { result } = renderHook(() => useGeneration())
+  let admission!: Promise<void>
 
-describe("useGeneration compatibility facade", () => {
-  it.each([
-    {
-      payload: { status: "complete", image_path: "C:\\one.png" },
-      paths: ["C:\\one.png"],
-    },
-    {
-      payload: {
-        status: "complete",
-        image_paths: ["C:\\one.png", "C:\\two.png"],
-      },
-      paths: ["C:\\one.png", "C:\\two.png"],
-    },
-  ])("accepts legacy and current image result paths", async ({ payload, paths }) => {
-    fetchMock.mockResolvedValueOnce(
-      new Response(JSON.stringify(payload), { status: 200 }),
-    );
-    const { result } = renderHook(() => useGeneration());
-    await act(async () => {
-      await result.current.generateImage(
-        "image",
-        { ...DEFAULT_VIDEO_SETTINGS, cameraMotion: "none" },
-      );
-    });
-    expect(result.current.imagePaths).toEqual(paths);
-  });
+  act(() => { admission = result.current.generate('scene', null, { ...DEFAULT_VIDEO_SETTINGS, cameraMotion: 'none' }) })
+  expect(result.current.isGenerating).toBe(true)
 
-  it("maps music results without changing the public shape", async () => {
-    fetchMock.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          outputs: [{ path: "C:\\song.wav", variationIndex: 0 }],
-          resolvedLyrics: "lyrics",
-          warnings: ["warning"],
-        }),
-        { status: 200 },
-      ),
-    );
-    const request: GenerateMusicRequest = {
-      schemaVersion: 2,
-      modelProfileId: "ace",
-      description: "song",
-      vocalMode: "auto-lyrics",
-      lyricsThink: false,
-      durationMode: "auto",
-      durationSeconds: 60,
-      vocalLanguage: "en",
-      vocalGender: "auto",
-      enhanceDescription: false,
-      audioInputs: [],
-      weirdness: 50,
-      promptInfluence: 75,
-      variations: 1,
-    };
-    const { result } = renderHook(() => useGeneration());
-    await act(async () => void (await result.current.generateMusic(request)));
-    expect(result.current.musicResult).toMatchObject({
-      resolvedLyrics: "lyrics",
-      warnings: ["warning"],
-      outputs: [{ path: "C:\\song.wav", variationIndex: 0 }],
-    });
-  });
+  resolveAdmission()
+  await act(() => admission)
 
-  it("keeps the Director endpoint and response facade compatible", async () => {
-    fetchMock.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          status: "complete",
-          video_path: "C:\\director.mp4",
-          warnings: [],
-        }),
-        { status: 200 },
-      ),
-    );
-    const request: GenerateDirectorRequest = {
-      schemaVersion: 1,
-      modelProfileId: "ltx",
-      resolutionTier: "540p",
-      aspectRatio: "16:9",
-      fps: 24,
-      requestedDurationSeconds: 5,
-      durationFrames: 121,
-      generateAudio: true,
-      promptRelayEpsilon: 0.001,
-      globalPrompt: "scene",
-      promptSegments: [],
-    };
-    const { result } = renderHook(() => useGeneration());
-    await act(async () => void (await result.current.generateDirector(request)));
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/director/generate",
-      expect.objectContaining({
-        method: "POST",
-        body: JSON.stringify(request),
-      }),
-    );
-    expect(result.current.directorResult?.video_path).toBe(
-      "C:\\director.mp4",
-    );
-  });
-});
+  expect(result.current.isGenerating).toBe(false)
+  expect(queue.submit).toHaveBeenCalledWith(expect.objectContaining({
+    kind: 'video.generate',
+    clientContext: expect.objectContaining({ projectId: 'project', schemaVersion: 1 }),
+  }))
+})
+
+it('cancels the job submitted by this hook rather than another active job', async () => {
+  queue.active = { id: 'job-a' }
+  queue.submit.mockResolvedValue({ jobId: 'job-b', duplicate: false })
+  const { result } = renderHook(() => useGeneration())
+
+  await act(() => result.current.generate('scene', null, { ...DEFAULT_VIDEO_SETTINGS, cameraMotion: 'none' }))
+  await act(() => result.current.cancel())
+
+  expect(queue.cancel).toHaveBeenCalledWith('job-b')
+})
+
+it('does not cancel a prior job while a new admission is unresolved', async () => {
+  queue.submit.mockResolvedValueOnce({ jobId: 'job-a', duplicate: false })
+  const { result } = renderHook(() => useGeneration())
+  await act(() => result.current.generate('first', null, { ...DEFAULT_VIDEO_SETTINGS, cameraMotion: 'none' }))
+
+  let resolveAdmission!: () => void
+  queue.submit.mockReturnValueOnce(new Promise((resolve) => { resolveAdmission = () => resolve({ jobId: 'job-b', duplicate: false }) }))
+  let admission!: Promise<void>
+  act(() => { admission = result.current.generate('second', null, { ...DEFAULT_VIDEO_SETTINGS, cameraMotion: 'none' }) })
+  await act(() => result.current.cancel())
+
+  expect(queue.cancel).not.toHaveBeenCalled()
+  resolveAdmission()
+  await act(() => admission)
+})

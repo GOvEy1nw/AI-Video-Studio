@@ -17,7 +17,6 @@ import {
   useProjectMeta,
   useProjectNavigation,
 } from "../../../contexts/ProjectContext";
-import type { GenSpaceRetakeSource } from "../../../contexts/ProjectContext";
 import { useGeneration } from "../../../hooks/use-generation";
 import { useRetake } from "../../../hooks/use-retake";
 import {
@@ -57,7 +56,6 @@ import { useGenSpaceModeState } from "./useGenSpaceModeState";
 import { useGenSpaceAudioState } from "./useGenSpaceAudioState";
 import { useGenSpaceSettingsState } from "./useGenSpaceSettingsState";
 import { useGenSpaceGenerationActions } from "./useGenSpaceGenerationActions";
-import { useGenSpaceResultPersistence } from "./useGenSpaceResultPersistence";
 import { useGenSpaceGallery } from "./useGenSpaceGallery";
 import { useGenSpaceMediaInputs } from "./useGenSpaceMediaInputs";
 import type {
@@ -109,9 +107,7 @@ export function useGenSpaceController(isActive: boolean) {
     assets: projectAssets,
     assetBins,
     assetBinColors,
-    getProjectAssets,
     addAsset,
-    addTakeToAsset,
     deleteTakeFromAsset,
     setAssetActiveTake,
     deleteAsset,
@@ -130,7 +126,6 @@ export function useGenSpaceController(isActive: boolean) {
     setGenSpaceAudioUrl,
     genSpaceRetakeSource,
     setGenSpaceRetakeSource,
-    setPendingRetakeUpdate,
   } = useGenSpaceHandoffs();
   const {
     settings: appSettings,
@@ -247,15 +242,6 @@ export function useGenSpaceController(isActive: boolean) {
     sectionIndex,
     sectionCount,
     previewUrl,
-    videoUrl,
-    videoPath,
-    videoSeed,
-    imageUrls,
-    imagePaths,
-    imageSeed,
-    musicResult,
-    sfxResult,
-    speechResult,
     error,
     cancel,
     reset,
@@ -285,14 +271,11 @@ export function useGenSpaceController(isActive: boolean) {
     isRetaking,
     retakeStatus,
     retakeError,
-    retakeResult,
   } = useRetake();
 
   const {
     retakeInput,
     reframeInput,
-    reframeSubmissionRef,
-    retakeSubmissionRef,
     isRetakeMode,
     isToolsMode,
     isReframeMode,
@@ -461,9 +444,6 @@ export function useGenSpaceController(isActive: boolean) {
   );
   const [promptEnhancementEnabled, setPromptEnhancementEnabled] =
     usePromptEnhancementPreference(isToolsMode, selectedTool);
-  const [activeRetakeSource, setActiveRetakeSource] =
-    useState<GenSpaceRetakeSource | null>(null);
-
   useGenSpaceExternalHandoffs({
     editImageUrl: genSpaceEditImageUrl,
     clearEditImage: () => setGenSpaceEditImageUrl(null),
@@ -534,14 +514,7 @@ export function useGenSpaceController(isActive: boolean) {
     updateSettings,
   ]);
 
-  const {
-    submit: handleGenerate,
-    imageSubmissionRef,
-    videoSubmissionRef,
-    musicSubmissionRef,
-    sfxSubmissionRef,
-    speechSubmissionRef,
-  } = useGenSpaceGenerationActions({
+  const { submit: handleGenerate } = useGenSpaceGenerationActions({
     mode,
     imageMode,
     regionPrompt,
@@ -571,8 +544,6 @@ export function useGenSpaceController(isActive: boolean) {
     reframeInput,
     retakeInput,
     setLocalError,
-    reframeSubmissionRef,
-    retakeSubmissionRef,
     generate,
     generateImage,
     generateUpscale,
@@ -830,43 +801,11 @@ export function useGenSpaceController(isActive: boolean) {
     isDragOver: isGalleryDragOver,
     isImporting: isGalleryImporting,
     filterActive: galleryFilterActive,
-    selectAsset,
     syncInputFileToGallery,
     syncInputFileToGalleryAsset,
     rootDragHandlers,
     overlays: galleryOverlays,
   } = gallery;
-  useGenSpaceResultPersistence({
-    videoUrl,
-    videoPath,
-    videoSeed,
-    isGenerating,
-    addAsset,
-    reset,
-    videoSubmissionRef,
-    reframeSubmissionRef,
-    retakeResult,
-    isRetaking,
-    retakeSubmissionRef,
-    getProjectAssets,
-    activeRetakeSource,
-    setActiveRetakeSource,
-    addTakeToAsset,
-    setPendingRetakeUpdate,
-    resetRetake,
-    imageUrls,
-    imagePaths,
-    imageSeed,
-    imageSubmissionRef,
-    musicResult,
-    musicSubmissionRef,
-    sfxResult,
-    sfxSubmissionRef,
-    speechResult,
-    speechSubmissionRef,
-    onAssetAdded: selectAsset,
-    onPersistenceError: setLocalError,
-  });
   const isPanelMode = isRetakeMode || isToolsMode;
   const selectedMusicProfile =
     musicProfiles.find(
@@ -1177,41 +1116,7 @@ export function useGenSpaceController(isActive: boolean) {
   const activeProfileId = getActiveGenerationProfileId({
     mode,
     audioSubmode,
-    submitted: {
-      image: imageSubmissionRef.current
-        ? {
-            profileId: imageSubmissionRef.current.settings.imageProfileId,
-            submittedAt: imageSubmissionRef.current.submittedAt ?? 0,
-          }
-        : undefined,
-      video: videoSubmissionRef.current
-        ? {
-            profileId: videoSubmissionRef.current.settings.videoProfileId,
-            submittedAt: videoSubmissionRef.current.submittedAt ?? 0,
-          }
-        : undefined,
-      reframe: reframeSubmissionRef.current
-        ? {
-            profileId: reframeSubmissionRef.current.settings.videoProfileId,
-            submittedAt: reframeSubmissionRef.current.submittedAt ?? 0,
-          }
-        : undefined,
-      music: musicSubmissionRef.current
-        ? {
-            profileId: musicSubmissionRef.current.recipe.profileId,
-            submittedAt: musicSubmissionRef.current.submittedAt ?? 0,
-          }
-        : undefined,
-      sfx: sfxSubmissionRef.current
-        ? {
-            profileId: sfxSubmissionRef.current.recipe.modelProfileId,
-            submittedAt: sfxSubmissionRef.current.submittedAt ?? 0,
-          }
-        : undefined,
-      speech: speechSubmissionRef.current
-        ? { profileId: speechSubmissionRef.current.recipe.modelProfileId, submittedAt: speechSubmissionRef.current.submittedAt ?? 0 }
-        : undefined,
-    },
+    submitted: {},
     selected: {
       image: imageSettings.profileId,
       video: videoSettings.profileId,

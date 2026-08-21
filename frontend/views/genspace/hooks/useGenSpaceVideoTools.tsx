@@ -1,10 +1,8 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import type { ReframePanelState } from "../video/ReframePanel";
 import { RetakePanel } from "../video/RetakePanel";
 import type {
   GenSpaceMode,
-  ReframeSubmissionSnapshot,
-  RetakeSubmissionSnapshot,
   GenSpaceMediaInput,
   VideoProcessMode,
 } from "../types";
@@ -54,8 +52,6 @@ export function useGenSpaceVideoTools({
     ready: false,
   });
   const [reframePanelKey, setReframePanelKey] = useState(0);
-  const reframeSubmissionRef = useRef<ReframeSubmissionSnapshot | null>(null);
-  const retakeSubmissionRef = useRef<RetakeSubmissionSnapshot | null>(null);
   const isRetakeMode = mode === "video" && videoMode === "retake";
   const isToolsMode = mode === "video" && videoMode === "reframe";
   const isReframeMode = isToolsMode && selectedTool === "reframe";
@@ -212,8 +208,6 @@ export function useGenSpaceVideoTools({
   return {
     retakeInput,
     reframeInput,
-    reframeSubmissionRef,
-    retakeSubmissionRef,
     isRetakeMode,
     isToolsMode,
     isReframeMode,

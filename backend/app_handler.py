@@ -21,8 +21,11 @@ from handlers import (
     SpeechGenerationHandler,
     VideoGenerationHandler,
 )
+from handlers.generation_queue_handler import GenerationQueueHandler
 from runtime_config.runtime_config import RuntimeConfig
 from services.wangp_bridge import WanGPBridge
+from services.generation_queue_executor import GenerationJobExecutor
+from services.generation_queue_store import GenerationQueueStore
 from services.interfaces import (
     GpuInfo,
 )
@@ -148,6 +151,15 @@ class AppHandler:
             generation_handler=self.generation,
             wangp_bridge=self.wangp_bridge,
         )
+
+        queue_file = config.generation_queue_file or config.settings_file.with_name("generation-queue.json")
+        self.generation_queue = GenerationQueueHandler(
+            store=GenerationQueueStore(queue_file),
+            executor=GenerationJobExecutor(self),
+            max_pending=config.generation_queue_max_pending,
+        )
+        self.state.generation_queue = self.generation_queue.state
+        self.generation.set_generation_queue(self.generation_queue)
 
         self.health = HealthHandler(
             state=self.state,

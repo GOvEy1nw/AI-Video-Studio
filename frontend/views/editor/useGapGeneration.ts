@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
-import type { TimelineClip, Track, SubtitleClip, Asset } from '../../types/project'
-import { DEFAULT_COLOR_CORRECTION } from '../../types/project'
+import type { TimelineClip, Track, SubtitleClip } from '../../types/project'
 import type { GenerationSettings } from '../../types/generation'
-import { copyToAssetFolder } from '../../lib/asset-copy'
+import type { UseGenerationReturn } from '../../hooks/use-generation'
+import type { QueuePersistenceIntent } from '../../contexts/GenerationQueueContext'
 import { backendFetch } from '../../lib/backend'
 import { fileUrlToPath } from '../../lib/url-to-path'
 import { getNativeFilePath } from '../../lib/native-file-path'
@@ -11,46 +11,32 @@ export interface UseGapGenerationParams {
   clips: TimelineClip[]
   tracks: Track[]
   setClips: React.Dispatch<React.SetStateAction<TimelineClip[]>>
-  setTracks: React.Dispatch<React.SetStateAction<Track[]>>
   setSubtitles: React.Dispatch<React.SetStateAction<SubtitleClip[]>>
   currentProjectId: string | null
-  addAsset: (projectId: string, asset: Omit<Asset, 'id' | 'createdAt'>) => Asset
+  timelineId: string | null
   resolveClipSrc: (clip: TimelineClip | null) => string
-  regenGenerate: (prompt: string, imagePath: string | null, settings: GenerationSettings) => Promise<void>
-  regenGenerateImage: (prompt: string, settings: GenerationSettings) => Promise<void>
-  regenVideoUrl: string | null
-  regenVideoPath: string | null
-  regenImageUrl: string | null
-  regenImagePath: string | null
+  regenGenerate: UseGenerationReturn['generate']
+  regenGenerateImage: UseGenerationReturn['generateImage']
   isRegenerating: boolean
   regenProgress: number
   regenCancel: () => void
   regenReset: () => void
-  regenError: string | null
-  projectId: string
 }
 
 export function useGapGeneration({
   clips,
   tracks,
   setClips,
-  setTracks,
   setSubtitles,
   currentProjectId,
-  addAsset,
+  timelineId,
   resolveClipSrc,
   regenGenerate,
   regenGenerateImage,
-  regenVideoUrl,
-  regenVideoPath,
-  regenImageUrl,
-  regenImagePath,
   isRegenerating,
   regenProgress,
   regenCancel,
   regenReset,
-  regenError,
-  projectId,
 }: UseGapGenerationParams) {
   // Gap selection and generation
   const [selectedGap, setSelectedGap] = useState<{ trackIndex: number; startTime: number; endTime: number } | null>(null)
@@ -149,7 +135,7 @@ export function useGapGeneration({
 
   // Handle starting generation in a gap
   const handleGapGenerate = useCallback(async () => {
-    if (!selectedGap || !gapGenerateMode || !gapPrompt.trim() || !currentProjectId) return
+    if (!selectedGap || !gapGenerateMode || !gapPrompt.trim() || !currentProjectId || !timelineId) return
     
     const gap = selectedGap
     const mode = gapGenerateMode
@@ -160,6 +146,20 @@ export function useGapGeneration({
     const settings: GenerationSettings = {
       ...gapSettings,
       duration: Math.min(Math.max(1, Math.round(gapDuration)), gapSettings.model === 'pro' ? 10 : 20),
+    }
+    const targetTrack = tracks[gap.trackIndex]
+    if (!targetTrack) return
+    const existingAudioTrack = tracks.find((track) => track.kind === 'audio' && !track.locked && track.sourcePatched !== false)
+    const clipId = crypto.randomUUID()
+    const audioClipId = crypto.randomUUID()
+    const createAudioTrack = !existingAudioTrack && mode !== 'text-to-image' && gapApplyAudioToTrack && settings.audio
+      ? { id: crypto.randomUUID(), name: `A${tracks.filter((track) => track.kind === 'audio').length + 1}` }
+      : undefined
+    const intent: QueuePersistenceIntent = {
+      kind: 'editor-gap-output', timelineId, trackId: targetTrack.id, clipId, audioClipId,
+      ...(existingAudioTrack ? { audioTrackId: existingAudioTrack.id } : {}),
+      ...(createAudioTrack ? { audioTrackId: createAudioTrack.id, createAudioTrack } : {}),
+      startTime: gap.startTime, endTime: gap.endTime, mode, prompt: finalPrompt, settings, applyAudio: gapApplyAudioToTrack,
     }
 
     // Save generating gap state so we can show indicator and place result later
@@ -180,7 +180,7 @@ export function useGapGeneration({
     
     try {
       if (mode === 'text-to-image') {
-        await regenGenerateImage(finalPrompt, settings)
+        await regenGenerateImage(finalPrompt, settings, undefined, undefined, intent)
       } else {
         // Convert File to filesystem path for the JSON-based generate API
         let imagePath: string | null = null
@@ -195,151 +195,16 @@ export function useGapGeneration({
             imagePath = await window.electronAPI.saveTemporaryFile(b64, '.png', 'base64')
           }
         }
-        await regenGenerate(finalPrompt, imagePath, settings)
+        await regenGenerate(finalPrompt, imagePath, settings, undefined, undefined, undefined, undefined, undefined, undefined, intent)
       }
+      setGeneratingGap(null)
+      setGapPrompt('')
+      setGapImageFile(null)
     } catch (err) {
       console.error('Gap generation failed:', err)
       setGeneratingGap(null)
     }
-  }, [selectedGap, gapGenerateMode, gapPrompt, gapSettings, gapImageFile, gapApplyAudioToTrack, currentProjectId, regenGenerate, regenGenerateImage])
-
-  // When generation completes, place the result in the gap
-  useEffect(() => {
-    if (!generatingGap || isRegenerating) return
-    
-    const isImageResult = generatingGap.mode === 'text-to-image'
-    const origUrl = isImageResult ? regenImageUrl : regenVideoUrl
-    const origPath = isImageResult ? regenImagePath : regenVideoPath
-    if (!origUrl || !currentProjectId) {
-      // Generation ended with no result (cancelled or failed) - clean up
-      if (!isRegenerating && generatingGap) {
-        setGeneratingGap(null)
-        if (!regenError) regenReset()
-      }
-      return
-    }
-
-    const gap = generatingGap
-    const gapDuration = gap.endTime - gap.startTime
-    const type = isImageResult ? 'image' : 'video'
-
-    ;(async () => {
-      const srcPath = origPath || origUrl
-      const copied = await copyToAssetFolder(srcPath, projectId)
-      const finalPath = copied?.path ?? srcPath
-      const finalUrl = copied?.url ?? origUrl
-
-      const asset = addAsset(currentProjectId, {
-        type: type as 'image' | 'video',
-        path: finalPath,
-        url: finalUrl,
-        prompt: gap.prompt,
-        resolution: isImageResult ? gap.settings.imageResolution : gap.settings.videoResolution,
-        duration: type === 'video' ? gapDuration : undefined,
-        generationParams: {
-          mode: (isImageResult ? 'text-to-image' : (gap.imageFile ? 'image-to-video' : 'text-to-video')) as 'text-to-video' | 'image-to-video' | 'text-to-image',
-          prompt: gap.prompt,
-          model: gap.settings.model,
-          duration: Math.min(Math.max(1, Math.round(gapDuration)), gap.settings.model === 'pro' ? 10 : 20),
-          resolution: isImageResult ? gap.settings.imageResolution : gap.settings.videoResolution,
-          fps: gap.settings.fps,
-          audio: gap.settings.audio,
-          cameraMotion: gap.settings.cameraMotion,
-          imageAspectRatio: gap.settings.imageAspectRatio,
-          imageSteps: gap.settings.imageSteps,
-        },
-        takes: [{
-          url: finalUrl,
-          path: finalPath,
-          createdAt: Date.now(),
-        }],
-        activeTakeIndex: 0,
-      })
-      
-      const videoClipId = `clip-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-      const audioClipId = `clip-${Date.now()}-a-${Math.random().toString(36).substr(2, 9)}`
-
-      // Determine if we should create a linked audio clip
-      const shouldCreateAudio = type === 'video' && gap.applyAudio && gap.settings.audio
-
-      // Find or create an audio track for the linked audio clip
-      let audioTrackIndex = -1
-      if (shouldCreateAudio) {
-        audioTrackIndex = tracks.findIndex(t => t.kind === 'audio' && !t.locked && t.sourcePatched !== false)
-        if (audioTrackIndex < 0) {
-          const audioTrackCount = tracks.filter(t => t.kind === 'audio').length
-          const newAudioTrack: Track = {
-            id: `track-${Date.now()}-audio`,
-            name: `A${audioTrackCount + 1}`,
-            muted: false,
-            locked: false,
-            kind: 'audio',
-          }
-          audioTrackIndex = tracks.length
-          setTracks(prev => [...prev, newAudioTrack])
-        }
-      }
-
-      const newClip: TimelineClip = {
-        id: videoClipId,
-        assetId: asset.id,
-        type: type === 'image' ? 'image' : 'video',
-        startTime: gap.startTime,
-        duration: gapDuration,
-        trimStart: 0,
-        trimEnd: 0,
-        speed: 1,
-        reversed: false,
-        muted: false,
-        volume: 1,
-        trackIndex: gap.trackIndex,
-        asset,
-        flipH: false,
-        flipV: false,
-        transitionIn: { type: 'none', duration: 0 },
-        transitionOut: { type: 'none', duration: 0 },
-        colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
-        opacity: 100,
-        ...(shouldCreateAudio && audioTrackIndex >= 0 ? { linkedClipIds: [audioClipId] } : {}),
-      }
-
-      const newClips: TimelineClip[] = [newClip]
-
-      if (shouldCreateAudio && audioTrackIndex >= 0) {
-        newClips.push({
-          id: audioClipId,
-          assetId: asset.id,
-          type: 'audio',
-          startTime: gap.startTime,
-          duration: gapDuration,
-          trimStart: 0,
-          trimEnd: 0,
-          speed: 1,
-          reversed: false,
-          muted: false,
-          volume: 1,
-          trackIndex: audioTrackIndex,
-          asset,
-          flipH: false,
-          flipV: false,
-          transitionIn: { type: 'none', duration: 0 },
-          transitionOut: { type: 'none', duration: 0 },
-          colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
-          opacity: 100,
-          linkedClipIds: [videoClipId],
-        })
-      }
-      
-      setClips(prev => [...prev, ...newClips])
-      
-      // Clean up generating state
-      setGeneratingGap(null)
-      setGapPrompt('')
-      setGapImageFile(null)
-      regenReset()
-    })()
-    
-  }, [regenVideoUrl, regenImageUrl, isRegenerating, generatingGap, regenError])
+  }, [selectedGap, gapGenerateMode, gapPrompt, gapSettings, gapImageFile, gapApplyAudioToTrack, currentProjectId, timelineId, tracks, regenGenerate, regenGenerateImage])
 
   // --- Gap context-aware prompt suggestion ---
   // Use refs so the async function always reads the latest values without re-creating

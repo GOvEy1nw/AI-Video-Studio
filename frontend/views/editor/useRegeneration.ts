@@ -1,48 +1,39 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import type { Asset, TimelineClip } from '../../types/project'
 import type { GenerationSettings } from '../../types/generation'
-import { copyToAssetFolder } from '../../lib/asset-copy'
 import { backendFetch } from '../../lib/backend'
 import { fileUrlToPath } from '../../lib/url-to-path'
 import { logger } from '../../lib/logger'
+import type { UseGenerationReturn } from '../../hooks/use-generation'
+import type { QueuePersistenceIntent } from '../../contexts/GenerationQueueContext'
 
 export interface UseRegenerationParams {
   clips: TimelineClip[]
   setClips: React.Dispatch<React.SetStateAction<TimelineClip[]>>
   assets: Asset[]
   currentProjectId: string | null
-  addAsset: (projectId: string, asset: Omit<Asset, 'id' | 'createdAt'>) => Asset
+  timelineId: string | null
   updateAsset: (projectId: string, assetId: string, updates: Partial<Asset>) => void
-  addTakeToAsset: (projectId: string, assetId: string, take: { url: string; path: string; createdAt: number }) => void
   deleteTakeFromAsset: (projectId: string, assetId: string, takeIndex: number) => void
   resolveClipSrc: (clip: TimelineClip | null) => string
   // Generation hook values
-  regenGenerate: (prompt: string, imagePath: string | null, settings: GenerationSettings) => Promise<void>
-  regenGenerateImage: (prompt: string, settings: GenerationSettings) => Promise<void>
-  regenVideoUrl: string | null
-  regenVideoPath: string | null
-  regenImageUrl: string | null
-  regenImagePath: string | null
+  regenGenerate: UseGenerationReturn['generate']
+  regenGenerateImage: UseGenerationReturn['generateImage']
   isRegenerating: boolean
   regenProgress: number
   regenStatusMessage: string
   regenCancel: () => void
   regenReset: () => void
-  regenError: string | null
-  projectId: string
 }
 
 export function useRegeneration(params: UseRegenerationParams) {
   const {
-    clips, setClips, assets, currentProjectId,
-    addAsset, updateAsset, addTakeToAsset, deleteTakeFromAsset,
+    clips, setClips, assets, currentProjectId, timelineId,
+    updateAsset, deleteTakeFromAsset,
     resolveClipSrc,
     regenGenerate, regenGenerateImage,
-    regenVideoUrl, regenVideoPath, regenImageUrl, regenImagePath,
     isRegenerating, regenProgress, regenStatusMessage,
     regenCancel, regenReset,
-    regenError,
-    projectId,
   } = params
 
   // Track which asset/clip is being regenerated
@@ -69,7 +60,7 @@ export function useRegeneration(params: UseRegenerationParams) {
   })
 
   const handleI2vGenerate = useCallback(async () => {
-    if (!i2vClipId || !i2vPrompt.trim() || !currentProjectId) return
+    if (!i2vClipId || !i2vPrompt.trim() || !currentProjectId || !timelineId) return
 
     const clip = clips.find(c => c.id === i2vClipId)
     if (!clip) return
@@ -90,81 +81,17 @@ export function useRegeneration(params: UseRegenerationParams) {
     }
 
     try {
-      await regenGenerate(i2vPrompt, imagePath, settings)
+      const intent: QueuePersistenceIntent = { kind: 'editor-i2v-output', timelineId, clipId: clip.id, prompt: i2vPrompt, settings, duration: clip.duration }
+      await regenGenerate(i2vPrompt, imagePath, settings, undefined, undefined, undefined, undefined, undefined, undefined, intent)
+      setI2vClipId(null)
+      setI2vPrompt('')
     } catch (err) {
       logger.error(`I2V generation failed: ${err}`)
     }
-  }, [i2vClipId, i2vPrompt, i2vSettings, currentProjectId, clips, resolveClipSrc, regenGenerate])
-
-  // When I2V generation completes, replace the image clip with a video clip
-  useEffect(() => {
-    if (!i2vClipId || isRegenerating) return
-    if (!regenVideoUrl || !currentProjectId) return
-
-    const clip = clips.find(c => c.id === i2vClipId)
-    if (!clip) { setI2vClipId(null); return }
-
-      ;(async () => {
-        const srcPath = regenVideoPath || regenVideoUrl
-        const copied = await copyToAssetFolder(srcPath, projectId)
-        const finalPath = copied?.path ?? srcPath
-        const finalUrl = copied?.url ?? regenVideoUrl
-        const savedI2vSettings: GenerationSettings = {
-              ...i2vSettings,
-              duration: Math.min(Math.max(1, Math.round(clip.duration)), i2vSettings.model === 'pro' ? 10 : 20),
-            }
-
-        const asset = addAsset(currentProjectId, {
-          type: 'video',
-          path: finalPath,
-          url: finalUrl,
-          prompt: i2vPrompt,
-          resolution: savedI2vSettings.videoResolution,
-          duration: clip.duration,
-          generationParams: {
-            mode: 'image-to-video',
-            prompt: i2vPrompt,
-            model: savedI2vSettings.model,
-            duration: savedI2vSettings.duration,
-            resolution: savedI2vSettings.videoResolution,
-            fps: savedI2vSettings.fps,
-            audio: savedI2vSettings.audio,
-            cameraMotion: savedI2vSettings.cameraMotion,
-          },
-        takes: [{
-          url: finalUrl,
-          path: finalPath,
-          createdAt: Date.now(),
-        }],
-        activeTakeIndex: 0,
-      })
-
-      setClips(prev => prev.map(c => {
-        if (c.id !== i2vClipId) return c
-        return {
-          ...c,
-          assetId: asset.id,
-          type: 'video' as const,
-          asset,
-        }
-      }))
-
-      setI2vClipId(null)
-      setI2vPrompt('')
-      regenReset()
-    })()
-
-  }, [regenVideoUrl, isRegenerating, regenVideoPath, currentProjectId, clips, i2vClipId, i2vPrompt, i2vSettings, addAsset, setClips, regenReset, projectId])
-
-  // Clean up I2V state when generation fails
-  useEffect(() => {
-    if (!i2vClipId || isRegenerating || !regenError) return
-    setI2vClipId(null)
-    setI2vPrompt('')
-  }, [regenError, i2vClipId, isRegenerating])
+  }, [i2vClipId, i2vPrompt, i2vSettings, currentProjectId, timelineId, clips, resolveClipSrc, regenGenerate])
 
   const handleRegenerate = useCallback(async (assetId: string, clipId?: string) => {
-    if (!currentProjectId || isRegenerating) return
+    if (!currentProjectId || !timelineId || isRegenerating) return
     const asset = assets.find(a => a.id === assetId)
     if (!asset) return
 
@@ -250,41 +177,41 @@ export function useRegeneration(params: UseRegenerationParams) {
       return
     }
 
-    if (params.mode === 'text-to-image') {
-      regenGenerateImage(params.prompt, {
-        model: params.model as 'fast' | 'pro',
-        duration: params.duration,
-        videoResolution: '540p',
-        fps: params.fps,
-        audio: params.audio,
-        cameraMotion: params.cameraMotion,
-        imageResolution: params.resolution,
-        imageAspectRatio: params.imageAspectRatio || '16:9',
-        imageSteps: params.imageSteps || 8,
-        variations: 1,
-      })
-    } else {
-      // For video generation (T2V or I2V)
-      // Extract filesystem path from the input image URL if present
-      const imagePath = params.mode === 'image-to-video' && params.inputImageUrl
-        ? fileUrlToPath(params.inputImageUrl)
-        : null
-
-      const videoSettings: GenerationSettings = {
-        model: params.model as 'fast' | 'pro',
-        duration: params.duration,
-        videoResolution: params.resolution,
-        fps: params.fps,
-        audio: params.audio,
-        cameraMotion: params.cameraMotion,
-        imageResolution: '1080p',
-        imageAspectRatio: params.imageAspectRatio || '16:9',
-        imageSteps: params.imageSteps || 8,
+    const intent: QueuePersistenceIntent = { kind: 'editor-regenerate-output', timelineId, parentAssetId: asset.id, ...(clipId ? { clipId } : {}) }
+    try {
+      if (params.mode === 'text-to-image') {
+        await regenGenerateImage(params.prompt, {
+          model: params.model as 'fast' | 'pro',
+          duration: params.duration,
+          videoResolution: '540p',
+          fps: params.fps,
+          audio: params.audio,
+          cameraMotion: params.cameraMotion,
+          imageResolution: params.resolution,
+          imageAspectRatio: params.imageAspectRatio || '16:9',
+          imageSteps: params.imageSteps || 8,
+          variations: 1,
+        }, undefined, undefined, intent)
+      } else {
+        const imagePath = params.mode === 'image-to-video' && params.inputImageUrl
+          ? fileUrlToPath(params.inputImageUrl)
+          : null
+        const videoSettings: GenerationSettings = {
+          model: params.model as 'fast' | 'pro', duration: params.duration,
+          videoResolution: params.resolution, fps: params.fps, audio: params.audio,
+          cameraMotion: params.cameraMotion, imageResolution: '1080p',
+          imageAspectRatio: params.imageAspectRatio || '16:9', imageSteps: params.imageSteps || 8,
+        }
+        await regenGenerate(params.prompt, imagePath, videoSettings, undefined, undefined, undefined, undefined, undefined, undefined, intent)
       }
-
-      regenGenerate(params.prompt, imagePath, videoSettings)
+    } catch (error) {
+      logger.error(`Regeneration queue admission failed: ${error}`)
+    } finally {
+      if (clipId) setClips((current) => current.map((clip) => clip.id === clipId ? { ...clip, isRegenerating: false } : clip))
+      setRegeneratingAssetId(null)
+      setRegeneratingClipId(null)
     }
-  }, [currentProjectId, isRegenerating, assets, clips, regenGenerate, regenGenerateImage, resolveClipSrc, updateAsset])
+  }, [currentProjectId, timelineId, isRegenerating, assets, clips, regenGenerate, regenGenerateImage, resolveClipSrc, setClips, updateAsset])
 
   const handleCancelRegeneration = useCallback(() => {
     regenCancel()
@@ -296,80 +223,6 @@ export function useRegeneration(params: UseRegenerationParams) {
     setRegeneratingClipId(null)
     regenReset()
   }, [regenCancel, regenReset, regeneratingClipId])
-
-  // Handle regeneration video result
-  useEffect(() => {
-    if (regenVideoUrl && regenVideoPath && regeneratingAssetId && currentProjectId && !isRegenerating) {
-      ;(async () => {
-        const copied = await copyToAssetFolder(regenVideoPath, projectId)
-        const finalPath = copied?.path ?? regenVideoPath
-        const finalUrl = copied?.url ?? regenVideoUrl
-
-        addTakeToAsset(currentProjectId, regeneratingAssetId, {
-          url: finalUrl,
-          path: finalPath,
-          createdAt: Date.now(),
-        })
-
-        if (regeneratingClipId) {
-          setClips(prev => prev.map(c => {
-            if (c.id !== regeneratingClipId) return c
-            const asset = assets.find(a => a.id === c.assetId)
-            const newTakeIdx = asset?.takes ? asset.takes.length : 1
-            return { ...c, isRegenerating: false, takeIndex: newTakeIdx }
-          }))
-        }
-
-        setRegeneratingAssetId(null)
-        setRegeneratingClipId(null)
-        regenReset()
-      })()
-    }
-  }, [regenVideoUrl, regenVideoPath, regeneratingAssetId, currentProjectId, isRegenerating])
-
-  // Handle regeneration image result
-  useEffect(() => {
-    if (regenImageUrl && regeneratingAssetId && currentProjectId && !isRegenerating) {
-      ;(async () => {
-        const srcPath = regenImagePath || regenImageUrl
-        const copied = await copyToAssetFolder(srcPath, projectId)
-        const finalPath = copied?.path ?? srcPath
-        const finalUrl = copied?.url ?? regenImageUrl
-
-        addTakeToAsset(currentProjectId, regeneratingAssetId, {
-          url: finalUrl,
-          path: finalPath,
-          createdAt: Date.now(),
-        })
-
-        if (regeneratingClipId) {
-          setClips(prev => prev.map(c => {
-            if (c.id !== regeneratingClipId) return c
-            const asset = assets.find(a => a.id === c.assetId)
-            const newTakeIdx = asset?.takes ? asset.takes.length : 1
-            return { ...c, isRegenerating: false, takeIndex: newTakeIdx }
-          }))
-        }
-
-        setRegeneratingAssetId(null)
-        setRegeneratingClipId(null)
-        regenReset()
-      })()
-    }
-  }, [regenImageUrl, regeneratingAssetId, currentProjectId, isRegenerating])
-
-  // Clean up regeneration state when generation fails (let the error dialog handle regenReset)
-  useEffect(() => {
-    if (!regeneratingAssetId || isRegenerating || !regenError) return
-    if (regeneratingClipId) {
-      setClips(prev => prev.map(c =>
-        c.id === regeneratingClipId ? { ...c, isRegenerating: false } : c
-      ))
-    }
-    setRegeneratingAssetId(null)
-    setRegeneratingClipId(null)
-    // Do NOT call regenReset() — let the error dialog handle it
-  }, [regenError, regeneratingAssetId, isRegenerating])
 
   // Handle take navigation on a clip (also updates linked audio/video clips)
   const handleClipTakeChange = useCallback((clipId: string, direction: 'prev' | 'next') => {

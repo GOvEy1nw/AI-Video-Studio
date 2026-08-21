@@ -60,4 +60,25 @@ describe('ProjectPersistenceQueue', () => {
     expect(save).toHaveBeenCalledTimes(1)
     expect(queue.getPersistedRevision('p')).toBe(3)
   })
+
+  it('settles an exact revision waiter when a newer coalesced save covers it', async () => {
+    const first = deferred<void>()
+    const save = vi.fn().mockReturnValueOnce(first.promise).mockResolvedValue(undefined)
+    const queue = new ProjectPersistenceQueue({ save, remove: vi.fn(), onError: vi.fn(), maxAutomaticRetries: 0 })
+
+    const revision = queue.enqueueSave(project('p', 'first'), 0)
+    const persisted = queue.waitForPersistedRevision('p', revision)
+    queue.enqueueSave(project('p', 'latest'), 0)
+    first.resolve()
+
+    await expect(persisted).resolves.toBeUndefined()
+    expect(queue.getPersistedRevision('p')).toBe(2)
+  })
+
+  it('rejects an exact revision waiter after its final save failure', async () => {
+    const queue = new ProjectPersistenceQueue({ save: vi.fn().mockRejectedValue(new Error('disk full')), remove: vi.fn(), onError: vi.fn(), maxAutomaticRetries: 0 })
+    const revision = queue.enqueueSave(project('p', 'latest'), 0)
+
+    await expect(queue.waitForPersistedRevision('p', revision)).rejects.toThrow('disk full')
+  })
 })

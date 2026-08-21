@@ -9,6 +9,7 @@ from progress_types import DownloadUnit, ModelDownloadProgress
 
 if TYPE_CHECKING:
     from state.app_settings import AppSettings
+    from state.generation_queue_types import GenerationQueueState
 
 
 @dataclass
@@ -96,3 +97,4 @@ class AppState:
     generation: GenerationState | None
     startup: StartupState
     app_settings: AppSettings
+    generation_queue: "GenerationQueueState | None" = None

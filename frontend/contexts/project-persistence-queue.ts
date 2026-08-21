@@ -21,6 +21,7 @@ export class ProjectPersistenceQueue {
   private readonly persistedRevisions = new Map<string, number>()
   private readonly maxAutomaticRetries: number
   private readonly retryDelayMs: number
+  private readonly waiters = new Map<string, Map<number, { resolve: () => void; reject: (error: unknown) => void }[]>>()
   private draining = false
   private retryTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -61,6 +62,21 @@ export class ProjectPersistenceQueue {
     return this.persistedRevisions.get(id)
   }
 
+  getRevision(id: string): number | undefined {
+    return this.revisions.get(id)
+  }
+
+  waitForPersistedRevision(id: string, revision: number): Promise<void> {
+    if ((this.persistedRevisions.get(id) ?? 0) >= revision) return Promise.resolve()
+    return new Promise<void>((resolve, reject) => {
+      const byRevision = this.waiters.get(id) ?? new Map()
+      const waiters = byRevision.get(revision) ?? []
+      waiters.push({ resolve, reject })
+      byRevision.set(revision, waiters)
+      this.waiters.set(id, byRevision)
+    })
+  }
+
   get pendingCount(): number {
     return this.pending.size
   }
@@ -88,6 +104,7 @@ export class ProjectPersistenceQueue {
           if (operation.kind === 'save') await this.options.save(operation.project, operation.position)
           else await this.options.remove(operation.id)
           this.persistedRevisions.set(id, operation.revision)
+          this.resolveWaiters(id, operation.revision)
           this.options.onPersisted?.(operation)
           this.notify()
         } catch (error) {
@@ -103,6 +120,8 @@ export class ProjectPersistenceQueue {
               this.retryTimer = null
               void this.drain()
             }, this.retryDelayMs)
+          } else {
+            this.rejectWaiters(id, operation.revision, error)
           }
           break
         }
@@ -115,5 +134,29 @@ export class ProjectPersistenceQueue {
 
   private notify(): void {
     this.options.onChange?.({ pendingCount: this.pendingCount, saving: this.saving })
+  }
+
+  private resolveWaiters(id: string, persistedRevision: number): void {
+    const byRevision = this.waiters.get(id)
+    if (!byRevision) return
+    for (const [revision, waiters] of byRevision) {
+      if (revision <= persistedRevision) {
+        byRevision.delete(revision)
+        waiters.forEach(({ resolve }) => resolve())
+      }
+    }
+    if (byRevision.size === 0) this.waiters.delete(id)
+  }
+
+  private rejectWaiters(id: string, failedRevision: number, error: unknown): void {
+    const byRevision = this.waiters.get(id)
+    if (!byRevision) return
+    for (const [revision, waiters] of byRevision) {
+      if (revision <= failedRevision) {
+        byRevision.delete(revision)
+        waiters.forEach(({ reject }) => reject(error))
+      }
+    }
+    if (byRevision.size === 0) this.waiters.delete(id)
   }
 }

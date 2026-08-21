@@ -31,11 +31,12 @@ class PromptEnhancementHandler(StateHandlerBase):
         self._wangp_bridge = wangp_bridge
 
     def enhance(self, req: EnhancePromptRequest) -> EnhancePromptResponse:
-        if self._generation.is_generation_running():
-            raise HTTPError(409, "Generation already in progress")
+        with self._generation.helper_lane():
+            return self._enhance(req)
+
+    def _enhance(self, req: EnhancePromptRequest) -> EnhancePromptResponse:
         if req.inputImagePath and not Path(req.inputImagePath).exists():
             raise HTTPError(400, f"INPUT_IMAGE_NOT_FOUND: {req.inputImagePath}")
-
         model_type = self._resolve_model_type(req)
         try:
             enhanced = self._wangp_bridge.enhance_prompt(

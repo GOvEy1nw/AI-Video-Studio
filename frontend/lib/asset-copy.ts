@@ -23,3 +23,18 @@ export async function copyToAssetFolder(
   }
   return null
 }
+
+/** Queue results stay in staging until their durable acknowledgement succeeds. */
+export async function copyQueuedOutputToAssetFolder(
+  srcPath: string,
+  projectId: string,
+): Promise<{ path: string; url: string } | null> {
+  if (!srcPath || !projectId || !window.electronAPI) return null
+  try {
+    const result = await window.electronAPI.copyGeneratedOutputToProjectAssets(srcPath, projectId)
+    if (result.success && result.path && result.url) return { path: result.path, url: result.url }
+    return null
+  } catch {
+    return null
+  }
+}

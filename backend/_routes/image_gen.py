@@ -17,5 +17,5 @@ def route_generate_image(
     handler: AppHandler = Depends(get_state_service),
 ) -> GenerateImageResponse:
     """POST /api/generate-image."""
-    return handler.image_generation.generate(req)
+    return handler.generation_queue.run_legacy("image.generate", req, GenerateImageResponse)
 

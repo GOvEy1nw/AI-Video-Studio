@@ -13,4 +13,4 @@ router = APIRouter(prefix="/api", tags=["retake"])
 
 @router.post("/retake", response_model=RetakeResponse)
 def route_retake(req: RetakeRequest, handler: AppHandler = Depends(get_state_service)) -> RetakeResponse:
-    return handler.retake.run(req)
+    return handler.generation_queue.run_legacy("video.retake", req, RetakeResponse)

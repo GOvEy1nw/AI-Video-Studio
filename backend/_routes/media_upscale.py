@@ -16,4 +16,4 @@ def route_catalog(handler: AppHandler = Depends(get_state_service)) -> MediaUpsc
 
 @router.post("", response_model=MediaUpscaleResponse)
 def route_upscale(req: MediaUpscaleRequest, handler: AppHandler = Depends(get_state_service)) -> MediaUpscaleResponse:
-    return handler.media_upscale.upscale(req)
+    return handler.generation_queue.run_legacy("media.upscale", req, MediaUpscaleResponse)

@@ -4,10 +4,6 @@ import type { UseGenerationReturn } from "../../../hooks/use-generation";
 import type { ImageEditToolMode } from "../../../types/image-edit";
 import { DEFAULT_MUSIC_SETTINGS } from "../../../types/music";
 import { DEFAULT_VIDEO_SETTINGS } from "../constants";
-import type {
-  ReframeSubmissionSnapshot,
-  RetakeSubmissionSnapshot,
-} from "../types";
 import {
   createEmptyRegionPrompt,
   serializeRegionPrompt,
@@ -28,12 +24,6 @@ describe("useGenSpaceGenerationActions", () => {
     const generateImage: UseGenerationReturn["generateImage"] = vi.fn(
       async () => undefined,
     );
-    const reframeSubmissionRef: {
-      current: ReframeSubmissionSnapshot | null;
-    } = { current: null };
-    const retakeSubmissionRef: {
-      current: RetakeSubmissionSnapshot | null;
-    } = { current: null };
 
     const { result } = renderHook(() =>
       useGenSpaceGenerationActions({
@@ -73,8 +63,6 @@ describe("useGenSpaceGenerationActions", () => {
           videoDuration: 0,
         },
         setLocalError: vi.fn(),
-        reframeSubmissionRef,
-        retakeSubmissionRef,
         generate: vi.fn(async () => undefined),
         generateImage,
         generateMusic: vi.fn(async () => null),
@@ -90,9 +78,8 @@ describe("useGenSpaceGenerationActions", () => {
       effectivePrompt,
       expect.objectContaining({ enhancePrompt: true }),
       [],
-    );
-    expect(result.current.imageSubmissionRef.current?.prompt).toBe(
-      effectivePrompt,
+      undefined,
+      { kind: "image-output", snapshot: expect.objectContaining({ prompt: effectivePrompt }) },
     );
   });
 
@@ -115,12 +102,6 @@ describe("useGenSpaceGenerationActions", () => {
         },
       ],
     };
-    const reframeSubmissionRef: {
-      current: ReframeSubmissionSnapshot | null;
-    } = { current: null };
-    const retakeSubmissionRef: {
-      current: RetakeSubmissionSnapshot | null;
-    } = { current: null };
 
     const { result } = renderHook(() =>
       useGenSpaceGenerationActions({
@@ -170,8 +151,6 @@ describe("useGenSpaceGenerationActions", () => {
           videoDuration: 0,
         },
         setLocalError: vi.fn(),
-        reframeSubmissionRef,
-        retakeSubmissionRef,
         generate: vi.fn(async () => undefined),
         generateImage,
         generateMusic: vi.fn(async () => null),
@@ -186,21 +165,15 @@ describe("useGenSpaceGenerationActions", () => {
       serialized,
       expect.objectContaining({ enhancePrompt: false }),
       [],
+      undefined,
+      { kind: "image-output", snapshot: expect.objectContaining({ prompt: serialized, inputs: [] }) },
     );
-    expect(result.current.imageSubmissionRef.current?.prompt).toBe(serialized);
-    expect(result.current.imageSubmissionRef.current?.inputs).toEqual([]);
   });
 
   it("submits only the active Edit workflow inputs and recipe", async () => {
     const generateImage: UseGenerationReturn["generateImage"] = vi.fn(
       async () => undefined,
     );
-    const reframeSubmissionRef: {
-      current: ReframeSubmissionSnapshot | null;
-    } = { current: null };
-    const retakeSubmissionRef: {
-      current: RetakeSubmissionSnapshot | null;
-    } = { current: null };
     const editImage = {
       id: "master",
       url: "file:///C:/master.png",
@@ -273,8 +246,6 @@ describe("useGenSpaceGenerationActions", () => {
             videoDuration: 0,
           },
           setLocalError: vi.fn(),
-          reframeSubmissionRef,
-          retakeSubmissionRef,
           generate: vi.fn(async () => undefined),
           generateImage,
           generateMusic: vi.fn(async () => null),
@@ -293,10 +264,7 @@ describe("useGenSpaceGenerationActions", () => {
       },
     ]);
     expect(call?.[3]).toEqual({ image: { path: "C:/master.png" } });
-    expect(result.current.imageSubmissionRef.current?.inputs).toEqual([
-      editImage,
-      reference,
-    ]);
+    expect(call?.[4]).toEqual({ kind: "image-output", snapshot: expect.objectContaining({ inputs: [editImage, reference] }) });
 
     vi.mocked(generateImage).mockClear();
     rerender({ toolMode: "retouch" });
@@ -307,10 +275,7 @@ describe("useGenSpaceGenerationActions", () => {
       image: { path: "C:/master.png" },
       mask: editMask,
     });
-    expect(result.current.imageSubmissionRef.current?.editMask).toEqual(
-      editMask,
-    );
-    expect(result.current.imageSubmissionRef.current?.editOutpaint).toBeUndefined();
+    expect(call?.[4]).toEqual({ kind: "image-output", snapshot: expect.objectContaining({ editMask, editOutpaint: undefined }) });
 
     vi.mocked(generateImage).mockClear();
     rerender({ toolMode: "reframe" });
@@ -321,22 +286,13 @@ describe("useGenSpaceGenerationActions", () => {
       image: { path: "C:/master.png" },
       outpaint: editOutpaint,
     });
-    expect(result.current.imageSubmissionRef.current?.editMask).toBeUndefined();
-    expect(result.current.imageSubmissionRef.current?.editOutpaint).toEqual(
-      editOutpaint,
-    );
+    expect(call?.[4]).toEqual({ kind: "image-output", snapshot: expect.objectContaining({ editMask: undefined, editOutpaint }) });
   });
 
   it("passes a selected video tool through generation and snapshots its source", async () => {
     const generate: UseGenerationReturn["generate"] = vi.fn(
       async () => undefined,
     );
-    const reframeSubmissionRef: {
-      current: ReframeSubmissionSnapshot | null;
-    } = { current: null };
-    const retakeSubmissionRef: {
-      current: RetakeSubmissionSnapshot | null;
-    } = { current: null };
     const toolInput = {
       id: "tool-source",
       url: "file:///C:/source.mp4",
@@ -386,8 +342,6 @@ describe("useGenSpaceGenerationActions", () => {
           videoDuration: 0,
         },
         setLocalError: vi.fn(),
-        reframeSubmissionRef,
-        retakeSubmissionRef,
         generate,
         generateImage: vi.fn(async () => undefined),
         generateMusic: vi.fn(async () => null),
@@ -415,11 +369,7 @@ describe("useGenSpaceGenerationActions", () => {
       undefined,
       undefined,
       "relight",
+      { kind: "video-output", snapshot: expect.objectContaining({ prompt: "relight this shot", videoTool: "relight", inputs: [toolInput] }) },
     );
-    expect(result.current.videoSubmissionRef.current).toMatchObject({
-      prompt: "relight this shot",
-      videoTool: "relight",
-      inputs: [toolInput],
-    });
   });
 });

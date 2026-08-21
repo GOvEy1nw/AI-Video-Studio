@@ -24,7 +24,7 @@ def route_generate(
     handler: AppHandler = Depends(get_state_service),
 ) -> GenerateVideoResponse:
     """POST /api/generate — video generation from JSON body."""
-    return handler.video_generation.generate(req)
+    return handler.generation_queue.run_legacy("video.generate", req, GenerateVideoResponse)
 
 
 @router.post("/enhance-prompt", response_model=EnhancePromptResponse)

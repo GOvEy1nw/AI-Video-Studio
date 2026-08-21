@@ -11,4 +11,4 @@ router = APIRouter(prefix="/api", tags=["audio"])
 
 @router.post("/generate-speech", response_model=GenerateSpeechResponse)
 def route_generate_speech(req: GenerateSpeechRequest, handler: AppHandler = Depends(get_state_service)) -> GenerateSpeechResponse:
-    return handler.speech_generation.generate(req)
+    return handler.generation_queue.run_legacy("audio.speech", req, GenerateSpeechResponse)

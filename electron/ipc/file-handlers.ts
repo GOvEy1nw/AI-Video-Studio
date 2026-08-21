@@ -277,6 +277,19 @@ export function registerFileHandlers(): void {
     }
   })
 
+  ipcMain.handle('copy-generated-output-to-project-assets', async (_event, srcPath: string, projectId: string) => {
+    try {
+      const resolvedSrc = validatePath(srcPath, getAllowedRoots())
+      const assetsRoot = getProjectAssetsPath()
+      const destDir = projectAssetCategoryDir(assetsRoot, projectId, 'generated')
+      const imported = await importProjectAsset(resolvedSrc, destDir, 'suffix', 'copy')
+      return { success: true, path: imported.destPath, url: imported.url }
+    } catch (error) {
+      logger.error(`Error copying generated output to project assets: ${error}`)
+      return { success: false, error: String(error) }
+    }
+  })
+
   ipcMain.handle('import-to-project-assets', async (_event, options: {
     srcPath: string
     projectId: string

@@ -14,4 +14,4 @@ def route_generate_director(
     request: GenerateDirectorRequest,
     handler: AppHandler = Depends(get_state_service),
 ) -> GenerateDirectorResponse:
-    return handler.director_generation.generate(request)
+    return handler.generation_queue.run_legacy("director.generate", request, GenerateDirectorResponse)
