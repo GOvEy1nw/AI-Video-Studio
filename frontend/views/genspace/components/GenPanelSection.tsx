@@ -32,7 +32,7 @@ export function GenPanelSection({
   return (
     <div className={sectionClass}>
       {title ? (
-        <div className="mb-2 w-full text-2xs font-medium uppercase tracking-wider text-subtle-foreground">
+        <div className="mb-2 w-full text-xs font-medium uppercase tracking-wider text-subtle-foreground">
           {title}
         </div>
       ) : null}

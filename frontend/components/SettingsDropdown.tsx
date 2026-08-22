@@ -224,7 +224,7 @@ export function SettingsDropdown({
           className={`${
             variant === "mode"
               ? "flex items-center overflow-hidden rounded-xl border border-border bg-input text-xs font-medium text-foreground transition-colors hover:border-border-strong hover:bg-surface-hover"
-              : "flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md bg-card px-1 py-1 text-2xs font-medium leading-none tracking-wider text-foreground transition-colors"
+              : "flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md bg-input px-3 py-2 text-xs font-medium leading-none tracking-wider text-foreground transition-colors"
           } ${
             disabled
               ? "cursor-not-allowed opacity-50"

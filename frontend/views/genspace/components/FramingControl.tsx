@@ -242,8 +242,8 @@ export function FramingControl({
         aria-expanded={isOpen}
         aria-controls="framing-settings-popover"
         title="Camera settings"
-        className={`inline-flex items-center gap-1.5 rounded-md transition-colors disabled:opacity-40 ${
-          buttonLabel ? "px-2 py-1.5" : "px-1 py-1"
+        className={`inline-flex items-center gap-2 rounded-xl transition-colors disabled:opacity-40 ${
+          buttonLabel ? "px-3 py-2" : "px-3 py-2"
         } ${
           value
             ? "bg-primary/15 text-primary hover:bg-primary/25"

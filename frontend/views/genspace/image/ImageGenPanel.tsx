@@ -236,7 +236,7 @@ export function ImageGenPanel({
         />
       )}
       {imageTools.mode !== "region" && promptFooterControls ? (
-        <div className="flex flex-wrap items-center gap-1 px-4 py-2 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-2 px-4 py-2 text-xs text-muted-foreground">
           {promptFooterControls}
         </div>
       ) : null}

@@ -72,6 +72,14 @@ class MusicGenerationHandler(StateHandlerBase):
         created_paths: list[Path] = []
 
         try:
+            wangp_default_settings = self._wangp_bridge.resolve_profiles(
+                profile.wangp_model_type,
+                accelerator_profile_id=profile.wangp_accelerator_profile_for(
+                    profile.wangp_model_type
+                ),
+                preset_profile_id=profile.wangp_preset_profile_id,
+            )
+            wangp_default_settings.update(profile.wangp_default_settings)
             audio_task, effective_duration, warnings = self._resolve_input_audio(req, profile)
             resolved_lyrics, response_lyrics = self._resolve_lyrics(req)
             self._generation.update_progress("preparing_music", 0)
@@ -121,7 +129,7 @@ class MusicGenerationHandler(StateHandlerBase):
                         ),
                     )
 
-                default_settings = dict(profile.wangp_default_settings)
+                default_settings = dict(wangp_default_settings)
                 default_settings["prompt_enhancer"] = _resolve_prompt_enhancer(profile, req)
                 path = self._wangp_bridge.generate_music(
                     description=description,

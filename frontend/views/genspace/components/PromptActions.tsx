@@ -25,7 +25,7 @@ export function PromptActions({
   enhanceTitle?: string;
 }) {
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-2">
       {showEnhance && onEnhance ? (
         <button
           type="button"
@@ -36,7 +36,7 @@ export function PromptActions({
             (enhanceEnabled === undefined && !prompt.trim())
           }
           aria-pressed={enhanceEnabled}
-          className={`flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] font-medium transition-colors disabled:opacity-40 disabled:hover:bg-transparent ${
+          className={`flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium transition-colors disabled:opacity-40 disabled:hover:bg-transparent ${
             enhanceEnabled
               ? "bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25"
               : "bg-surface-raised text-muted-foreground hover:bg-surface-hover hover:text-foreground disabled:hover:text-muted-foreground"

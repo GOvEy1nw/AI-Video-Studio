@@ -123,7 +123,7 @@ export function MusicGenPanel({
           </div>
         }
       />
-      <div className="flex flex-wrap items-center gap-1 px-4 py-2 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-2 px-4 py-2 text-xs text-muted-foreground">
         <MusicPromptControls
           settings={music.settings}
           onChange={music.setSettings}

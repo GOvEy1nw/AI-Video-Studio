@@ -11,7 +11,11 @@ from typing import cast
 
 import pytest
 
-from services.wangp_bridge import WanGPBridge, resolve_audio_performance_profile
+from services.wangp_bridge import (
+    CUSTOM_FINETUNE_CHECKPOINT_KEY,
+    WanGPBridge,
+    resolve_audio_performance_profile,
+)
 
 
 @pytest.mark.parametrize("profile", [1.0, 2.0, 3.0, 4.5, 5.0])
@@ -462,6 +466,81 @@ def test_z_image_uses_eight_step_floor() -> None:
     assert bridge._normalize_image_steps(12) == 12
 
 
+def test_custom_finetune_override_is_job_scoped_and_restored(tmp_path: Path) -> None:
+    bridge = _make_bridge()
+    bridge._output_dir = tmp_path / "outputs"
+    bridge._config_dir = tmp_path / "config"
+    checkpoint = tmp_path / "custom.safetensors"
+    checkpoint.write_bytes(b"checkpoint")
+    model_definition: dict[str, object] = {"URLs": ["base.safetensors"]}
+    submissions: list[list[str]] = []
+    close_calls = 0
+
+    class FakeSession:
+        def _ensure_runtime(self):  # type: ignore[no-untyped-def]
+            return SimpleNamespace(
+                module=SimpleNamespace(models_def={"z_image": model_definition})
+            )
+
+        def submit_manifest(self, manifest):  # type: ignore[no-untyped-def]
+            assert CUSTOM_FINETUNE_CHECKPOINT_KEY not in manifest[0]["params"]
+            submissions.append(cast(list[str], model_definition["URLs"]))
+            return object()
+
+        def close(self) -> None:
+            nonlocal close_calls
+            close_calls += 1
+
+    bridge._get_session = lambda: FakeSession()  # type: ignore[method-assign]
+    bridge._wait_for_job = lambda **_kwargs: ["E:/tmp/out.png"]  # type: ignore[method-assign]
+
+    def run(checkpoint_path: str | None) -> list[str]:
+        params: dict[str, object] = {"model_type": "z_image"}
+        if checkpoint_path is not None:
+            params[CUSTOM_FINETUNE_CHECKPOINT_KEY] = checkpoint_path
+        return bridge._run_manifest(
+            manifest=[{"id": 1, "params": params}],
+            media_suffixes={".png"},
+            on_progress=lambda *_args: None,
+            is_cancelled=lambda: False,
+        )
+
+    assert run(str(checkpoint)) == ["E:/tmp/out.png"]
+    assert run(str(checkpoint)) == ["E:/tmp/out.png"]
+    assert close_calls == 0
+    assert run(None) == ["E:/tmp/out.png"]
+    assert submissions == [
+        [str(checkpoint.resolve())],
+        [str(checkpoint.resolve())],
+        ["base.safetensors"],
+    ]
+    assert close_calls == 1
+    assert model_definition["URLs"] == ["base.safetensors"]
+
+
+def test_custom_finetune_rejects_missing_checkpoint(tmp_path: Path) -> None:
+    bridge = _make_bridge()
+    bridge._output_dir = tmp_path / "outputs"
+    bridge._config_dir = tmp_path / "config"
+    bridge._get_session = lambda: SimpleNamespace()  # type: ignore[method-assign]
+
+    with pytest.raises(RuntimeError, match="CUSTOM_FINETUNE_FILE_NOT_FOUND"):
+        bridge._run_manifest(
+            manifest=[
+                {
+                    "id": 1,
+                    "params": {
+                        "model_type": "z_image",
+                        CUSTOM_FINETUNE_CHECKPOINT_KEY: str(tmp_path / "missing.safetensors"),
+                    },
+                }
+            ],
+            media_suffixes={".png"},
+            on_progress=lambda *_args: None,
+            is_cancelled=lambda: False,
+        )
+
+
 def test_ltx2_video_uses_full_video_length_as_sliding_window_size() -> None:
     bridge = _make_bridge()
     captured: dict[str, object] = {}
@@ -501,7 +580,15 @@ def test_ltx2_video_uses_full_video_length_as_sliding_window_size() -> None:
             {"_preview": {"mode": "tae", "update_rate": "adaptive", "device": "auto", "max_edge": 512, "preview_fps": 16, "webp_quality": 72}},
         ),
         (
+            "aivs_ltx2_25_22B_distilled",
+            {"_preview": {"mode": "tae", "update_rate": "adaptive", "device": "auto", "max_edge": 512, "preview_fps": 16, "webp_quality": 72}},
+        ),
+        (
             "minimax_h3_ref2va_pruned",
+            {"_preview": {"mode": "tae", "update_rate": "adaptive", "device": "auto", "max_edge": 512, "preview_fps": 16, "webp_quality": 72}},
+        ),
+        (
+            "aivs_minimax_h3_ref2va_hybrid_20b",
             {"_preview": {"mode": "tae", "update_rate": "adaptive", "device": "auto", "max_edge": 512, "preview_fps": 16, "webp_quality": 72}},
         ),
         ("wan2_2_t2v", {}),

@@ -112,15 +112,18 @@ describe("GenSpace media input logic", () => {
     expect(inferMediaKindForRole("start_image")).toBe("image");
   });
 
-  it("locks image aspect to visual inputs except Region and Reframe", () => {
+  it("locks image aspect only to Edit source images except Reframe", () => {
     const reference = input("reference", "reference_subject", "image");
 
     expect(isImageAspectRatioLocked("create", "edit", [], false)).toBe(false);
     expect(
       isImageAspectRatioLocked("create", "edit", [reference], false),
-    ).toBe(true);
+    ).toBe(false);
     expect(isImageAspectRatioLocked("edit", "edit", [], true)).toBe(true);
     expect(isImageAspectRatioLocked("edit", "retouch", [], true)).toBe(true);
+    expect(
+      isImageAspectRatioLocked("edit", "edit", [reference], false),
+    ).toBe(false);
     expect(
       isImageAspectRatioLocked("edit", "reframe", [reference], true),
     ).toBe(false);
@@ -129,17 +132,26 @@ describe("GenSpace media input logic", () => {
     ).toBe(false);
   });
 
-  it("locks video aspect to image/video inputs but not audio or Reframe", () => {
+  it("locks video aspect only to start/end frames, not other references", () => {
     const audio = input("audio", "audio_to_video", "audio");
     const video = input("video", "continue_video", "video");
+    const reference = input("reference", "reference_image", "image");
 
     expect(isVideoAspectRatioLocked("generate", [], false)).toBe(false);
     expect(isVideoAspectRatioLocked("generate", [audio], false)).toBe(false);
-    expect(isVideoAspectRatioLocked("generate", [video], false)).toBe(true);
+    expect(isVideoAspectRatioLocked("generate", [video], false)).toBe(false);
+    expect(isVideoAspectRatioLocked("generate", [reference], false)).toBe(false);
     expect(
       isVideoAspectRatioLocked(
         "generate",
         [input("legacy-image", "start_image")],
+        false,
+      ),
+    ).toBe(true);
+    expect(
+      isVideoAspectRatioLocked(
+        "generate",
+        [input("end-frame", "end_image")],
         false,
       ),
     ).toBe(true);

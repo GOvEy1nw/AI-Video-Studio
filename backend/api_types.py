@@ -985,7 +985,7 @@ def _default_image_input_media() -> list[GenerateImageInputMedia]:
 
 
 class GenerateImageRequest(BaseModel):
-    prompt: NonEmptyPrompt
+    prompt: Annotated[str, StringConstraints(strip_whitespace=True)] = ""
     enhancePrompt: bool = False
     width: int = 1024
     height: int = 1024
@@ -1001,6 +1001,12 @@ class GenerateImageRequest(BaseModel):
     resolutionTier: Literal["540p", "720p", "1080p", "1440p", "2160p"] | None = None
     inputMedia: list[GenerateImageInputMedia] = Field(default_factory=_default_image_input_media)
     edit: GenerateImageEdit | None = None
+
+    @model_validator(mode="after")
+    def validate_prompt(self) -> "GenerateImageRequest":
+        if not self.prompt and (self.edit is None or self.edit.outpaint is None):
+            raise ValueError("prompt is required unless an outpaint edit is provided")
+        return self
 
 
 class SuggestGapPromptRequest(BaseModel):

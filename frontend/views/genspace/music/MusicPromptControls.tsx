@@ -1,8 +1,4 @@
-import {
-  Clock3,
-  Mic2,
-  Music2,
-} from "lucide-react";
+import { Clock3, Mic2, Music2 } from "lucide-react";
 import { SettingsDropdown } from "../../../components/SettingsDropdown";
 import type { ModelProfile } from "../../../types/model-profiles";
 import type {
@@ -146,11 +142,17 @@ export function MusicPromptControls({
               <select
                 aria-label="Music key and scale"
                 value={settings.keyScale ?? ""}
-                onChange={(event) => update({ keyScale: event.currentTarget.value || null })}
+                onChange={(event) =>
+                  update({ keyScale: event.currentTarget.value || null })
+                }
                 className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-xs text-foreground"
               >
                 <option value="">Auto</option>
-                {KEY_OPTIONS.map((key) => <option key={key} value={key}>{key}</option>)}
+                {KEY_OPTIONS.map((key) => (
+                  <option key={key} value={key}>
+                    {key}
+                  </option>
+                ))}
               </select>
             </label>
             <label className="block">
@@ -158,11 +160,22 @@ export function MusicPromptControls({
               <select
                 aria-label="Music time signature"
                 value={settings.timeSignature ?? ""}
-                onChange={(event) => update({ timeSignature: (event.currentTarget.value || null) as MusicTimeSignature | null })}
+                onChange={(event) =>
+                  update({
+                    timeSignature: (event.currentTarget.value ||
+                      null) as MusicTimeSignature | null,
+                  })
+                }
                 className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-xs text-foreground"
               >
                 <option value="">Auto</option>
-                {(policy?.timeSignatures ?? ["2/4", "3/4", "4/4", "6/8"]).map((value) => <option key={value} value={value}>{value}</option>)}
+                {(policy?.timeSignatures ?? ["2/4", "3/4", "4/4", "6/8"]).map(
+                  (value) => (
+                    <option key={value} value={value}>
+                      {value}
+                    </option>
+                  ),
+                )}
               </select>
             </label>
           </div>
@@ -183,13 +196,19 @@ export function MusicPromptControls({
                   <select
                     aria-label="Music language"
                     value={settings.vocalLanguage}
-                    onChange={(event) => update({ vocalLanguage: event.currentTarget.value })}
+                    onChange={(event) =>
+                      update({ vocalLanguage: event.currentTarget.value })
+                    }
                     className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-xs text-foreground"
                   >
                     <option value="auto">Auto Detect</option>
                     {(policy?.supportedLanguages ?? ["en"])
                       .filter((language) => language !== "unknown")
-                      .map((language) => <option key={language} value={language}>{language.toUpperCase()}</option>)}
+                      .map((language) => (
+                        <option key={language} value={language}>
+                          {language.toUpperCase()}
+                        </option>
+                      ))}
                   </select>
                 </label>
                 <label className="block">
@@ -197,7 +216,12 @@ export function MusicPromptControls({
                   <select
                     aria-label="Music vocal character"
                     value={settings.vocalGender}
-                    onChange={(event) => update({ vocalGender: event.currentTarget.value as MusicVocalGender })}
+                    onChange={(event) =>
+                      update({
+                        vocalGender: event.currentTarget
+                          .value as MusicVocalGender,
+                      })
+                    }
                     className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-xs text-foreground"
                   >
                     <option value="auto">Auto</option>

@@ -23,6 +23,8 @@ from progress_types import DownloadUnit, ModelDownloadProgress
 
 logger = logging.getLogger(__name__)
 AUDIO_PROFILE_THREE_PLUS = 3.5
+CUSTOM_FINETUNE_CHECKPOINT_KEY = "_aivs_custom_checkpoint"
+_CUSTOM_FINETUNE_EXTENSIONS = {".safetensors", ".gguf"}
 
 
 def resolve_audio_performance_profile(global_profile: float) -> float:
@@ -92,6 +94,9 @@ class WanGPBridge:
         self._extra_args = tuple(extra_args)
         self._session = None
         self._submitted_manifest_once = False
+        self._last_submitted_model_type: str | None = None
+        self._last_submitted_custom_checkpoint: str | None = None
+        self._last_submission_state_unknown = False
         self._session_lock = threading.Lock()
         self._last_preview_write_at = 0.0
         self._preview_options: dict[str, object] = {
@@ -502,7 +507,8 @@ class WanGPBridge:
             effective_settings["config"] = ""
         preview_data: dict[str, object] = {}
         if isinstance(model_type, str) and (
-            model_type.startswith("ltx") or model_type.startswith("minimax_h3_")
+            model_type.startswith(("ltx", "aivs_ltx2_"))
+            or model_type.startswith(("minimax_h3_", "aivs_minimax_h3_"))
         ):
             with self._session_lock:
                 preview_data = {"_preview": dict(self._preview_options)}
@@ -944,6 +950,14 @@ class WanGPBridge:
         is_cancelled: CancelledCallback,
     ) -> list[str]:
         session = self._get_session()
+        custom_checkpoint = self._pop_custom_finetune_checkpoint(manifest)
+        model_type = self._manifest_model_type(manifest)
+        checkpoint = (
+            self._validate_custom_finetune_checkpoint(custom_checkpoint)
+            if custom_checkpoint is not None
+            else None
+        )
+        effective_checkpoint = str(checkpoint) if checkpoint is not None else None
         self._output_dir.mkdir(parents=True, exist_ok=True)
         self._config_dir.mkdir(parents=True, exist_ok=True)
 
@@ -952,14 +966,126 @@ class WanGPBridge:
         on_progress(startup_phase, 2, None, None)
         import json
         self._apply_output_settings(session, manifest)
-        logger.info("Submitting WanGP manifest: %s", json.dumps(manifest, indent=2))
-        job = session.submit_manifest(manifest)
-        return self._wait_for_job(
-            job=job,
-            media_suffixes=media_suffixes,
-            on_progress=on_progress,
-            is_cancelled=is_cancelled,
-        )
+        try:
+            self._reload_model_for_checkpoint_change(
+                session, model_type, effective_checkpoint
+            )
+            if checkpoint is None:
+                logger.info("Submitting WanGP manifest: %s", json.dumps(manifest, indent=2))
+                job = session.submit_manifest(manifest)
+                outputs = self._wait_for_job(
+                    job=job,
+                    media_suffixes=media_suffixes,
+                    on_progress=on_progress,
+                    is_cancelled=is_cancelled,
+                )
+            else:
+                runtime = session._ensure_runtime()
+                models_def_value = getattr(runtime.module, "models_def", None)
+                if not isinstance(models_def_value, dict):
+                    raise RuntimeError(
+                        "CUSTOM_FINETUNE_RUNTIME_UNAVAILABLE: WanGP model definitions are unavailable."
+                    )
+                models_def = cast(dict[str, object], models_def_value)
+                model_definition_value = models_def.get(model_type)
+                if not isinstance(model_definition_value, dict):
+                    raise RuntimeError(
+                        f"CUSTOM_FINETUNE_MODEL_UNAVAILABLE: WanGP model '{model_type}' is unavailable."
+                    )
+                model_definition = cast(dict[str, object], model_definition_value)
+                if "URLs" not in model_definition:
+                    raise RuntimeError(
+                        f"CUSTOM_FINETUNE_MODEL_UNSUPPORTED: WanGP model '{model_type}' has no checkpoint URLs."
+                    )
+
+                original_urls = model_definition["URLs"]
+                try:
+                    model_definition["URLs"] = [effective_checkpoint]
+                    logger.info(
+                        "Submitting WanGP manifest with a custom finetune for %s", model_type
+                    )
+                    job = session.submit_manifest(manifest)
+                    outputs = self._wait_for_job(
+                        job=job,
+                        media_suffixes=media_suffixes,
+                        on_progress=on_progress,
+                        is_cancelled=is_cancelled,
+                    )
+                finally:
+                    model_definition["URLs"] = original_urls
+        except Exception:
+            self._last_submitted_model_type = model_type
+            self._last_submitted_custom_checkpoint = effective_checkpoint
+            self._last_submission_state_unknown = True
+            raise
+
+        self._last_submitted_model_type = model_type
+        self._last_submitted_custom_checkpoint = effective_checkpoint
+        self._last_submission_state_unknown = False
+        return outputs
+
+    def _reload_model_for_checkpoint_change(
+        self, session: object, model_type: str, checkpoint: str | None
+    ) -> None:
+        if (
+            self._last_submitted_model_type != model_type
+            or (
+                not self._last_submission_state_unknown
+                and self._last_submitted_custom_checkpoint == checkpoint
+            )
+        ):
+            return
+        close = getattr(session, "close", None)
+        if not callable(close):
+            raise RuntimeError("CUSTOM_FINETUNE_RUNTIME_UNAVAILABLE: WanGP session cannot reload models.")
+        close()
+
+    @staticmethod
+    def _manifest_model_type(manifest: list[dict[str, object]]) -> str:
+        if len(manifest) != 1:
+            raise RuntimeError(
+                "CUSTOM_FINETUNE_MANIFEST_UNSUPPORTED: expected one generation request."
+            )
+        params_value = manifest[0].get("params")
+        params = cast(dict[str, object], params_value) if isinstance(params_value, dict) else None
+        model_type = params.get("model_type") if params is not None else None
+        if not isinstance(model_type, str):
+            raise RuntimeError(
+                "CUSTOM_FINETUNE_MODEL_UNAVAILABLE: generation model is unavailable."
+            )
+        return model_type
+
+    @staticmethod
+    def _validate_custom_finetune_checkpoint(value: object) -> Path:
+        if not isinstance(value, str) or not value.strip():
+            raise RuntimeError("CUSTOM_FINETUNE_INVALID_PATH: select a local checkpoint file.")
+        checkpoint = Path(value).expanduser().resolve()
+        if checkpoint.suffix.lower() not in _CUSTOM_FINETUNE_EXTENSIONS:
+            raise RuntimeError(
+                "CUSTOM_FINETUNE_UNSUPPORTED_FORMAT: use a .safetensors or .gguf checkpoint."
+            )
+        if not checkpoint.is_file():
+            raise RuntimeError(f"CUSTOM_FINETUNE_FILE_NOT_FOUND: {checkpoint}")
+        return checkpoint
+
+    @staticmethod
+    def _pop_custom_finetune_checkpoint(manifest: list[dict[str, object]]) -> object | None:
+        checkpoints: list[object] = []
+        for item in manifest:
+            params_value = item.get("params")
+            if isinstance(params_value, dict):
+                params = cast(dict[str, object], params_value)
+            else:
+                continue
+            if CUSTOM_FINETUNE_CHECKPOINT_KEY in params:
+                checkpoints.append(params.pop(CUSTOM_FINETUNE_CHECKPOINT_KEY))
+        if not checkpoints:
+            return None
+        if len(checkpoints) != 1:
+            raise RuntimeError(
+                "CUSTOM_FINETUNE_MANIFEST_UNSUPPORTED: expected one custom checkpoint."
+            )
+        return checkpoints[0]
 
     def _wait_for_job(
         self,

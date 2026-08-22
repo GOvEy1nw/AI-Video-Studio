@@ -1,0 +1,8 @@
+# #0211 Blank Image Reframe prompts do not fall back to 'outpaint' like blank Video Reframe prompts.
+
+- 2026-08-22T16:09:04Z `issue`: Blank Image Reframe prompts do not fall back to 'outpaint' like blank Video Reframe prompts. [backend/handlers/image_generation_handler.py; backend/api_types.py]
+- 2026-08-22T16:13:38Z `attempt`: Allowed omitted or blank image prompts only for outpaint edits and compiled them to 'outpaint'; validation pending. [backend/api_types.py; backend/handlers/image_generation_handler.py; backend/tests/test_image_edit.py] (partial)
+- 2026-08-22T16:14:08Z `attempt`: Focused regressions confirm omitted Image Reframe prompts submit 'outpaint' while empty, whitespace, and missing non-Reframe image prompts remain rejected. [backend/api_types.py; backend/handlers/image_generation_handler.py; backend/tests/test_image_edit.py] (worked)
+- 2026-08-22T16:16:51Z `attempt`: Removed the Quick Gen prompt gate only for ready Image Reframe workflows; other image edit modes still require text. Frontend validation pending. [frontend/views/genspace/hooks/useGenSpaceController.tsx] (partial)
+- 2026-08-22T16:17:43Z `attempt`: Quick Gen Image Reframe blank-prompt submit gate is type-correct; strict TS is blocked only by unrelated unused imports, while scoped type relationships pass with unused checks disabled. [frontend/views/genspace/hooks/useGenSpaceController.tsx] (worked)
+- 2026-08-22T16:24:03Z `fix`: Blank Image Reframe is enabled end to end and submits 'outpaint'; ordinary image workflows still reject missing or blank prompts. [frontend/views/genspace/hooks/useGenSpaceController.tsx; backend/api_types.py; backend/handlers/image_generation_handler.py]

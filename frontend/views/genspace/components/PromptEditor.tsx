@@ -263,7 +263,7 @@ export function PromptEditor({
           {actions || bottomRight ? (
             <div
               data-testid="prompt-editor-footer"
-              className="flex items-center justify-between bg-input gap-2 px-2 py-1.5 rounded-b-lg"
+              className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-b-lg"
             >
               <div
                 data-testid="prompt-editor-footer-left"

@@ -42,6 +42,14 @@ class SpeechGenerationHandler(StateHandlerBase):
             raise HTTPError(409, "Generation already in progress") from exc
         temporary_paths: list[Path] = []
         try:
+            wangp_default_settings = self._wangp_bridge.resolve_profiles(
+                profile.wangp_model_type,
+                accelerator_profile_id=profile.wangp_accelerator_profile_for(
+                    profile.wangp_model_type
+                ),
+                preset_profile_id=profile.wangp_preset_profile_id,
+            )
+            wangp_default_settings.update(profile.wangp_default_settings)
             effective_references = [
                 self._materialize_reference(reference, temporary_paths)
                 for reference in references
@@ -51,7 +59,7 @@ class SpeechGenerationHandler(StateHandlerBase):
             audio_path = self._wangp_bridge.generate_speech(
                 text=req.text,
                 model_type=profile.wangp_model_type,
-                default_settings=profile.wangp_default_settings,
+                default_settings=wangp_default_settings,
                 reference_audio_paths=[str(path) for path in effective_references],
                 enhance_prompt=req.enhancePrompt,
                 seed=req.seed,

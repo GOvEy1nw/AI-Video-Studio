@@ -46,6 +46,7 @@ class TestGetSettings:
             "webpQuality": 72,
         }
         assert data["quickGenFavouriteWorkflows"] == []
+        assert data["customFinetunes"] == {}
         assert "ltxApiKey" not in data
         assert "falApiKey" not in data
         assert "geminiApiKey" not in data
@@ -74,6 +75,27 @@ class TestPostSettings:
         r = client.post("/api/settings", json={"useTorchCompile": True})
         assert r.status_code == 200
         assert test_state.state.app_settings.use_torch_compile is True
+
+    def test_custom_finetunes_round_trip(self, client, test_state):
+        response = client.post(
+            "/api/settings",
+            json={
+                "customFinetunes": {
+                    "ltx2_25_quality": r"E:\Models\ltx-quality.safetensors",
+                    "z_image_turbo": r"E:\Models\z-image.safetensors",
+                }
+            },
+        )
+        assert response.status_code == 200
+
+        custom_finetunes = {"z_image_turbo": r"E:\Models\z-image.safetensors"}
+        response = client.post("/api/settings", json={"customFinetunes": custom_finetunes})
+
+        assert response.status_code == 200
+        assert client.get("/api/settings").json()["customFinetunes"] == custom_finetunes
+        assert test_state.state.app_settings.custom_finetunes == custom_finetunes
+        saved = json.loads(test_state.config.settings_file.read_text(encoding="utf-8"))
+        assert saved["custom_finetunes"] == custom_finetunes
 
     def test_update_multiple_fields(self, client, test_state):
         r = client.post("/api/settings", json={"useTorchCompile": True, "loadOnStartup": True})

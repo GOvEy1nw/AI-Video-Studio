@@ -124,6 +124,7 @@ class AppSettings(SettingsBaseModel):
     output_settings: OutputSettings = Field(default_factory=OutputSettings)
     preview_settings: PreviewSettings = Field(default_factory=PreviewSettings)
     quick_gen_favourite_workflows: list[str] = Field(default_factory=list)
+    custom_finetunes: dict[str, str] = Field(default_factory=dict)
 
     @field_validator("prompt_cache_size", mode="before")
     @classmethod
@@ -213,6 +214,7 @@ class SettingsResponse(SettingsBaseModel):
     output_settings: OutputSettings = Field(default_factory=OutputSettings)
     preview_settings: PreviewSettings = Field(default_factory=PreviewSettings)
     quick_gen_favourite_workflows: list[str] = Field(default_factory=list)
+    custom_finetunes: dict[str, str] = Field(default_factory=dict)
 
 
 def to_settings_response(settings: AppSettings) -> SettingsResponse:

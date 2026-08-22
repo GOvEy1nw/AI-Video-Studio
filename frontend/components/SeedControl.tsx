@@ -104,7 +104,7 @@ export function SeedControl({
         onClick={() => setOpen((value) => !value)}
         disabled={disabled}
         aria-pressed={seedLocked}
-        className={`flex items-center gap-1 rounded-md bg-input px-1.5 py-1 text-xs font-medium tracking-wider text-foreground leading-none items-center px-3 py-1.5 whitespace-nowrap transition-colors disabled:opacity-40 ${
+        className={`flex items-center gap-2 rounded-xl bg-input px-3 py-2 text-xs font-medium tracking-wider text-foreground leading-none items-center whitespace-nowrap transition-colors disabled:opacity-40 ${
           seedLocked
             ? "bg-primary/15 text-primary hover:bg-primary/25"
             : "text-muted-foreground hover:bg-surface-hover hover:text-foreground"

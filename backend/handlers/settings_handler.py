@@ -71,6 +71,8 @@ class SettingsHandler(StateHandlerBase):
 
         if patch_payload:
             merged_payload = deep_merge_dicts(before_payload, patch_payload)
+            if "custom_finetunes" in patch_payload:
+                merged_payload["custom_finetunes"] = patch_payload["custom_finetunes"]
             try:
                 updated_settings = AppSettings.model_validate(merged_payload)
             except ValidationError as exc:

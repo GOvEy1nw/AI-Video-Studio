@@ -54,6 +54,7 @@ export interface AppSettings {
   outputSettings: OutputSettings
   previewSettings: PreviewSettings
   quickGenFavouriteWorkflows: string[]
+  customFinetunes: Record<string, string>
 }
 
 const DEFAULT_OUTPUT_SETTINGS: OutputSettings = {
@@ -91,6 +92,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   outputSettings: DEFAULT_OUTPUT_SETTINGS,
   previewSettings: DEFAULT_PREVIEW_SETTINGS,
   quickGenFavouriteWorkflows: [],
+  customFinetunes: {},
 }
 
 interface AppSettingsContextValue {
@@ -127,6 +129,13 @@ function normalizeAppSettings(data: Partial<AppSettings>): AppSettings {
       ...(data.previewSettings ?? {}),
     },
     quickGenFavouriteWorkflows: data.quickGenFavouriteWorkflows ?? DEFAULT_APP_SETTINGS.quickGenFavouriteWorkflows,
+    customFinetunes: data.customFinetunes && typeof data.customFinetunes === 'object'
+      ? Object.fromEntries(
+          Object.entries(data.customFinetunes).filter(
+            (entry): entry is [string, string] => typeof entry[1] === 'string',
+          ),
+        )
+      : DEFAULT_APP_SETTINGS.customFinetunes,
   }
 }
 

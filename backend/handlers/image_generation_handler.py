@@ -19,7 +19,8 @@ from model_profiles.profiles import ImageInputRole, ModelProfile
 from server_utils.media_validation import validate_image_file
 from services.media_crop import crop_image_media
 from services.image_edit import materialize_image_edit
-from services.wangp_bridge import WanGPBridge
+from services.reframe_wangp_mapping import ReframePadding, map_reframe_to_wangp
+from services.wangp_bridge import CUSTOM_FINETUNE_CHECKPOINT_KEY, WanGPBridge
 from state.app_state_types import AppState
 
 if TYPE_CHECKING:
@@ -90,16 +91,6 @@ class ImageGenerationHandler(StateHandlerBase):
         # exact WxH. The frontend never sends a vague value like '1080p'
         # — the backend resolves it to e.g. '1920x1088'.
         wangp_model_type = profile.wangp_model_type if profile is not None else self._config.wangp_image_model_type
-        wangp_default_settings = dict(profile.wangp_default_settings) if profile is not None else {}
-        output_settings = settings.output_settings
-        wangp_default_settings.update(
-            {
-                "image_output_codec": f"{output_settings.image_codec}_{output_settings.image_quality}"
-                if output_settings.image_codec in {"jpeg", "webp"}
-                else output_settings.image_codec,
-                "metadata_type": output_settings.metadata_mode,
-            }
-        )
         temporary_crop_paths: list[Path] = []
         generation_started = False
         try:
@@ -113,6 +104,27 @@ class ImageGenerationHandler(StateHandlerBase):
             temporary_crop_paths.extend(input_settings.temporary_paths)
             if input_settings.model_type is not None:
                 wangp_model_type = input_settings.model_type
+            if profile is not None:
+                wangp_default_settings = self._wangp_bridge.resolve_profiles(
+                    wangp_model_type,
+                    accelerator_profile_id=profile.wangp_accelerator_profile_for(wangp_model_type),
+                    preset_profile_id=profile.wangp_preset_profile_id,
+                )
+                wangp_default_settings.update(profile.wangp_default_settings)
+                custom_checkpoint = settings.custom_finetunes.get(profile.id)
+                if custom_checkpoint:
+                    wangp_default_settings[CUSTOM_FINETUNE_CHECKPOINT_KEY] = custom_checkpoint
+            else:
+                wangp_default_settings = {}
+            output_settings = settings.output_settings
+            wangp_default_settings.update(
+                {
+                    "image_output_codec": f"{output_settings.image_codec}_{output_settings.image_quality}"
+                    if output_settings.image_codec in {"jpeg", "webp"}
+                    else output_settings.image_codec,
+                    "metadata_type": output_settings.metadata_mode,
+                }
+            )
             wangp_default_settings.update(input_settings.settings)
             wangp_default_settings["prompt_enhancer"] = (
                 "TI" if input_settings.enhancer_has_image else "T"
@@ -129,7 +141,7 @@ class ImageGenerationHandler(StateHandlerBase):
                 self._generation.update_progress("inference", int(offset * 100 / num_images), offset, num_images)
                 output_paths.extend(
                     self._wangp_bridge.generate_images(
-                        prompt=req.prompt,
+                        prompt=req.prompt.strip() or "outpaint",
                         width=width,
                         height=height,
                         num_steps=num_steps,
@@ -386,6 +398,7 @@ class ImageGenerationHandler(StateHandlerBase):
                 400,
                 f"INPAINTING_NOT_SUPPORTED: {profile.display_name}",
             )
+        outpaint_settings: dict[str, str] = {}
         if edit.outpaint is not None:
             if not profile.outpainting:
                 raise HTTPError(
@@ -401,6 +414,22 @@ class ImageGenerationHandler(StateHandlerBase):
                     "OUTPAINT_ASPECT_MISMATCH: request aspect ratio must match "
                     "the outpaint recipe",
                 )
+            padding = edit.outpaint.padding
+            outpaint = map_reframe_to_wangp(
+                edit.outpaint.aspectMode,
+                ReframePadding(
+                    top=max(1, round(padding.top)) if padding.top > 0 else 0,
+                    bottom=max(1, round(padding.bottom)) if padding.bottom > 0 else 0,
+                    left=max(1, round(padding.left)) if padding.left > 0 else 0,
+                    right=max(1, round(padding.right)) if padding.right > 0 else 0,
+                ),
+                video_width=width,
+                video_height=height,
+            )
+            outpaint_settings = {
+                "video_guide_outpainting": outpaint.video_guide_outpainting,
+                "video_guide_outpainting_ratio": outpaint.video_guide_outpainting_ratio,
+            }
         if reference_paths and not profile.masked_edit_references:
             raise HTTPError(
                 400,
@@ -416,6 +445,9 @@ class ImageGenerationHandler(StateHandlerBase):
             height=height,
             mask_recipe=edit.mask,
             outpaint=edit.outpaint,
+            background=(255, 0, 0)
+            if profile.wangp_model_type in {"flux2_klein_4b", "flux2_klein_9b"}
+            else (127, 127, 127),
         )
         prompt_type = "VAGI" if reference_paths else "VAG"
         settings.update(
@@ -427,6 +459,7 @@ class ImageGenerationHandler(StateHandlerBase):
                 "image_mask": str(mask_path.resolve()),
                 "denoising_strength": 1.0,
                 "masking_strength": 1.0,
+                **outpaint_settings,
             }
         )
         if reference_paths:

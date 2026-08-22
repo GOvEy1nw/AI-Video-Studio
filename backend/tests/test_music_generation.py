@@ -3,7 +3,12 @@
 from __future__ import annotations
 
 import wave
+from dataclasses import replace
 from pathlib import Path
+
+from api_types import GenerateMusicRequest
+from handlers import music_generation_handler
+from model_profiles import get_music_profile
 
 
 def _request(**overrides: object) -> dict[str, object]:
@@ -50,6 +55,32 @@ def test_instrumental_generation_maps_product_values(client, enable_wangp) -> No
     assert call.temperature == 0.85
     assert call.lm_guidance_scale == 2.5
     assert call.default_settings["prompt_enhancer"] == ""
+
+
+def test_curated_preset_profile_reaches_music_generation(
+    test_state, enable_wangp, monkeypatch
+) -> None:
+    profile = get_music_profile("ace_step_15_turbo")
+    assert profile is not None
+    patched_profile = replace(profile, wangp_preset_profile_id="test_music_preset")
+    monkeypatch.setattr(
+        music_generation_handler,
+        "get_music_profile",
+        lambda profile_id: patched_profile if profile_id == patched_profile.id else None,
+    )
+
+    response = test_state.music_generation.generate(
+        GenerateMusicRequest.model_validate(_request())
+    )
+
+    assert response.status == "success"
+    assert enable_wangp.resolved_profile_calls == [
+        (patched_profile.wangp_model_type, None, "test_music_preset")
+    ]
+    assert (
+        enable_wangp.music_calls[0].default_settings["resolved_preset_profile_id"]
+        == "test_music_preset"
+    )
 
 
 def test_custom_lyrics_are_normalized_and_returned(client, enable_wangp) -> None:

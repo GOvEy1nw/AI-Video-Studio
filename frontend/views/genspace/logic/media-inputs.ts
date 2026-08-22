@@ -174,23 +174,17 @@ export function inferMediaKindForRole(role: string): GenSpaceMediaKind {
   return "image";
 }
 
-function hasVisualMediaInput(inputs: GenSpaceMediaInput[]): boolean {
-  return inputs.some(({ role, type }) =>
-    type ? type !== "audio" : inferMediaKindForRole(role) !== "audio",
-  );
-}
-
 export function isImageAspectRatioLocked(
   processMode: ImageProcessMode,
   editToolMode: ImageEditToolMode,
-  inputs: GenSpaceMediaInput[],
+  _inputs: GenSpaceMediaInput[],
   hasEditImage: boolean,
 ): boolean {
-  if (processMode === "region") return false;
-  if (processMode === "edit" && editToolMode === "reframe") return false;
-  return processMode === "create"
-    ? hasVisualMediaInput(inputs)
-    : hasEditImage || hasVisualMediaInput(inputs);
+  return (
+    processMode === "edit" &&
+    editToolMode !== "reframe" &&
+    hasEditImage
+  );
 }
 
 export function isVideoAspectRatioLocked(
@@ -200,7 +194,8 @@ export function isVideoAspectRatioLocked(
 ): boolean {
   return (
     processMode === "generate" &&
-    (hasLegacyImage || hasVisualMediaInput(inputs))
+    (hasLegacyImage ||
+      inputs.some(({ role }) => role === "start_image" || role === "end_image"))
   );
 }
 

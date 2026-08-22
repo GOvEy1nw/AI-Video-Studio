@@ -185,7 +185,7 @@ export function MusicSettings({
                 isComposing ||
                 policy?.supportsComposeLyrics === false
               }
-              className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
+              className="flex items-center gap-2 rounded-md px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
             >
               <Sparkles className="h-3.5 w-3.5" />{" "}
               {isComposing ? "Composing…" : "Compose Lyrics"}

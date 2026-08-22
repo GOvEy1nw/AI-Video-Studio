@@ -859,8 +859,8 @@ export function useGenSpaceController(isActive: boolean) {
         ? !!editImage && !!activeUpscaleSelection.method && activeUpscaleSelection.scale !== null && !isGenerating
         : mode === "image" && imageMode === "region"
         ? isRegionPromptReady(regionPrompt)
-        : mode === "image" && imageMode === "edit"
-          ? !!editImage && !!prompt.trim() && editWorkflowReady
+      : mode === "image" && imageMode === "edit"
+          ? !!editImage && (editToolMode === "reframe" || !!prompt.trim()) && editWorkflowReady
           : !!prompt.trim();
   const promptButtonLabel = isToolsMode
     ? selectedTool === "upscale" ? "Upscale" : getVideoToolLabel(selectedTool)

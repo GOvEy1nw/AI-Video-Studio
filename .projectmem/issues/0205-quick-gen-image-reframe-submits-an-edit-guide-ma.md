@@ -1,0 +1,6 @@
+# #0205 Quick Gen image Reframe submits an edit guide/mask contract and does not outpaint like the equivalent Wan2GP Krea 2 workflow.
+
+- 2026-08-22T15:21:50Z `issue`: Quick Gen image Reframe submits an edit guide/mask contract and does not outpaint like the equivalent Wan2GP Krea 2 workflow. [frontend/views/genspace/image; backend/handlers/image_generation_handler.py; backend/services/wangp_bridge.py]
+- 2026-08-22T15:35:14Z `attempt`: Added an outpaint-only image branch that reuses the Reframe mapper and submits image_mode 1, KI, image_refs, and directional outpainting; validation stalled and float padding conversion still needed review. [backend/handlers/image_generation_handler.py; backend/tests/test_image_edit.py] (partial)
+- 2026-08-22T15:39:26Z `attempt`: Routed outpaint-only image edits through native WanGP Reframe settings with rounded nonzero padding, while retaining masked guide/mask handling; focused regression and Pyright pass. [backend/handlers/image_generation_handler.py; backend/tests/test_image_edit.py] (worked)
+- 2026-08-22T15:52:30Z `fix`: Outpaint-only image Reframe now submits Krea-compatible image refs and directional WanGP outpainting; focused image/mapping tests and Pyright pass. [backend/handlers/image_generation_handler.py; backend/tests/test_image_edit.py]

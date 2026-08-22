@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from api_types import GenerateImageRequest
 from services.video_clip import VideoMetadata
 from tests.fakes.fake_wangp_bridge import FakeWanGPBridge
 
@@ -1241,6 +1242,31 @@ class TestGenerateImage:
         assert call.num_steps == 8
         assert call.seed is None
         assert call.default_settings["prompt_enhancer"] == ""
+
+    def test_curated_preset_profile_reaches_image_generation(
+        self, test_state, enable_wangp: FakeWanGPBridge
+    ):
+        response = test_state.image_generation.generate(
+            GenerateImageRequest.model_validate(
+                {
+                "prompt": "A cat",
+                "modelProfileId": "krea2_turbo",
+                "aspectRatio": "1:1",
+                "resolutionTier": "720p",
+                }
+            )
+        )
+
+        assert response.status == "complete"
+        assert enable_wangp.resolved_profile_calls == [
+            ("krea2_turbo", None, "unlockkrea2")
+        ]
+        assert (
+            enable_wangp.image_calls[0].default_settings[
+                "resolved_preset_profile_id"
+            ]
+            == "unlockkrea2"
+        )
 
     def test_prompt_enhancer_uses_text_without_input_image(
         self, client, enable_wangp: FakeWanGPBridge

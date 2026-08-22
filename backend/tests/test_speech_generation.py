@@ -1,9 +1,14 @@
 """Focused speech profile and request contracts."""
 
-from pathlib import Path
 import wave
+from dataclasses import replace
+from pathlib import Path
 
 import pytest
+
+from api_types import GenerateSpeechRequest
+from handlers import speech_generation_handler
+from model_profiles import get_music_profile
 
 
 def request(**overrides: object) -> dict[str, object]:
@@ -52,6 +57,32 @@ def test_omnivoice_text_only_and_index_reference_validation(client, enable_wangp
         "model_mode": "EN",
         "custom_settings": {"speech_speed": 1.0, "text_normalization": "Yes"},
     }
+
+
+def test_curated_preset_profile_reaches_speech_generation(
+    test_state, enable_wangp, monkeypatch
+) -> None:
+    profile = get_music_profile("omnivoice")
+    assert profile is not None
+    patched_profile = replace(profile, wangp_preset_profile_id="test_speech_preset")
+    monkeypatch.setattr(
+        speech_generation_handler,
+        "get_music_profile",
+        lambda profile_id: patched_profile if profile_id == patched_profile.id else None,
+    )
+
+    response = test_state.speech_generation.generate(
+        GenerateSpeechRequest.model_validate(request())
+    )
+
+    assert response.status == "complete"
+    assert enable_wangp.resolved_profile_calls == [
+        (patched_profile.wangp_model_type, None, "test_speech_preset")
+    ]
+    assert (
+        enable_wangp.speech_calls[0].default_settings["resolved_preset_profile_id"]
+        == "test_speech_preset"
+    )
 
 
 def test_speech_dialogue_requires_both_speakers_and_preserves_references(client, enable_wangp, tmp_path: Path) -> None:

@@ -312,30 +312,30 @@ export function VideoGenPanel({
     <button
       type="button"
       disabled
-      className="flex cursor-not-allowed items-center gap-1.5 rounded-md bg-input px-2 py-1 text-2xs text-subtle-foreground"
+      className="flex cursor-not-allowed items-center gap-1.5 rounded-md bg-input px-2 py-1 text-xs text-subtle-foreground"
     >
       <Clock className="h-3.5 w-3.5" />
-      <span>auto</span>
+      <span className="text-xs">auto</span>
     </button>
   ) : durationFollowsGuide ? (
     <button
       type="button"
       disabled
-      className="flex cursor-not-allowed items-center gap-1.5 rounded-md bg-input px-2 py-1 text-2xs text-subtle-foreground"
+      className="flex cursor-not-allowed items-center gap-1.5 rounded-md bg-input px-2 py-1 text-xs text-subtle-foreground"
     >
       <Clock className="h-3.5 w-3.5" />
-      <span>auto</span>
+      <span className="text-xs">auto</span>
     </button>
   ) : (
     <SettingsDropdown
-      title={isContinueVideo ? "EXTEND BY" : "DURATION"}
+      title=""
       value={String(videoSettings.duration)}
       onChange={() => undefined}
       options={[]}
       align="right"
       triggerLabel="Video duration"
       content={
-        <label className="block w-48 text-2xs text-muted-foreground">
+        <label className="block w-48 text-xs text-muted-foreground">
           <span className="mb-2 flex items-center justify-between gap-4">
             <span>{isContinueVideo ? "Extend by" : "Duration"}</span>
             <span className="font-mono text-foreground">
@@ -362,7 +362,7 @@ export function VideoGenPanel({
       trigger={
         <>
           <Clock className="h-3.5 w-3.5" />
-          <span>
+          <span className="text-xs">
             {isContinueVideo ? "+" : ""}
             {videoSettings.duration}s
           </span>
@@ -611,7 +611,7 @@ export function VideoGenPanel({
         />
       ) : null}
       {!isUpscale && !isPanelMode ? (
-        <div className="flex flex-wrap items-center gap-1 px-4 py-2 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-2 px-4 py-2 text-xs text-muted-foreground">
           {durationControl}
           {resolutionControl}
           {aspectRatioControl}

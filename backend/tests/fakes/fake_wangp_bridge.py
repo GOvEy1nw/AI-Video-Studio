@@ -205,6 +205,8 @@ class FakeWanGPBridge:
         )
         if self.raise_on_resolve_profiles is not None:
             raise self.raise_on_resolve_profiles
+        if preset_profile_id is not None:
+            return {"resolved_preset_profile_id": preset_profile_id}
         if accelerator_profile_id == "ltx2_25_two_stage_hq_res2s_15_3":
             return {
                 "sample_solver": "res2s",

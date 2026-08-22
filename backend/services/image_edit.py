@@ -113,6 +113,7 @@ def materialize_image_edit(
     height: int,
     mask_recipe: ImageEditMaskRecipe | None,
     outpaint: ImageEditOutpaintRecipe | None,
+    background: tuple[int, int, int] = (127, 127, 127),
 ) -> tuple[Path, Path]:
     """Return temporary guide/mask PNGs aligned to output resolution."""
     guide_path = _temporary_png("aivs_edit_guide_")
@@ -148,7 +149,7 @@ def materialize_image_edit(
                 (max(1, right - left), max(1, bottom - top)),
                 Image.Resampling.LANCZOS,
             )
-            guide = Image.new("RGB", (width, height), (127, 127, 127))
+            guide = Image.new("RGB", (width, height), background)
             guide.paste(resized, (left, top))
 
         edit_mask = Image.new("L", (width, height), 255 if outpaint else 0)
