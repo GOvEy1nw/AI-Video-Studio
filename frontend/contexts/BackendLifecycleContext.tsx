@@ -73,6 +73,7 @@ export function BackendLifecycleProvider({ children }: { children: ReactNode }) 
   const [error, setError] = useState<string | null>(null);
   const healthRequestRef = useRef<HealthRequest | null>(null);
   const lifecycleGenerationRef = useRef(0);
+  const restartRequestRef = useRef<Promise<void> | null>(null);
 
   const checkHealth = useCallback((): Promise<boolean> => {
     const generation = lifecycleGenerationRef.current;
@@ -124,8 +125,23 @@ export function BackendLifecycleProvider({ children }: { children: ReactNode }) 
     return request;
   }, []);
 
-  const restart = useCallback(async () => {
-    await window.electronAPI.restartPythonBackend();
+  const restart = useCallback(() => {
+    if (restartRequestRef.current) {
+      return restartRequestRef.current;
+    }
+
+    lifecycleGenerationRef.current += 1;
+    healthRequestRef.current = null;
+    setProcessStatus("restarting");
+    const request = window.electronAPI.restartPythonBackend();
+    restartRequestRef.current = request;
+    const clearRequest = () => {
+      if (restartRequestRef.current === request) {
+        restartRequestRef.current = null;
+      }
+    };
+    void request.then(clearRequest, clearRequest);
+    return request;
   }, []);
 
   const handleBackendStatus = useCallback(

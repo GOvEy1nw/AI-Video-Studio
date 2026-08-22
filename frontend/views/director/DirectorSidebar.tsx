@@ -230,9 +230,9 @@ export function DirectorSidebar(props: Props) {
     : undefined;
 
   return (
-    <aside className="flex h-full min-h-0 flex-col border-r border-border bg-background">
+    <aside className="flex h-full min-h-0 flex-col bg-background">
       <div
-        className="flex min-h-0 flex-col"
+        className="flex min-h-0 flex-col bg-card rounded-2xl ml-2 mt-2 border border-border"
         style={{ height: props.assetsHeight }}
       >
         {!takesAsset ? (
@@ -270,9 +270,7 @@ export function DirectorSidebar(props: Props) {
             onGridColumnsChange={setAssetGridColumns}
             showFavorites={showFavorites}
             onShowFavoritesChange={setShowFavorites}
-            getThumbnailUrl={(asset) =>
-              asset.thumbnail
-            }
+            getThumbnailUrl={(asset) => asset.thumbnail}
             previewEnabled={props.isActive}
             selectedAssetIds={selectedAssetIds}
             onSelectedAssetIdsChange={setSelectedAssetIds}
@@ -361,7 +359,7 @@ export function DirectorSidebar(props: Props) {
       </div>
 
       <div
-        className="group relative z-10 h-1 shrink-0 cursor-row-resize bg-transparent transition-colors hover:bg-blue-500/40 active:bg-blue-500/60"
+        className="group relative z-10 h-2 shrink-0 cursor-row-resize bg-transparent transition-colors hover:bg-blue-500/40 active:bg-blue-500/60"
         onMouseDown={props.onAssetsResizeStart}
         role="separator"
         aria-label="Resize Asset Library"
@@ -370,7 +368,7 @@ export function DirectorSidebar(props: Props) {
       </div>
 
       <div
-        className="flex flex-col min-h-[330px]"
+        className="flex flex-col min-h-[330px] bg-card rounded-2xl ml-2 mb-2 border border-border"
         style={
           props.assetsHeight > 0
             ? { flex: "1 1 0%" }

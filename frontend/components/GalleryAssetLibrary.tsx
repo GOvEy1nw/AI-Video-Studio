@@ -699,7 +699,9 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
       <div className="flex shrink-0 flex-col gap-2 pb-2 pr-2">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-1">
-            <span className="text-sm font-semibold text-foreground">Assets</span>
+            <span className="text-sm font-semibold text-foreground">
+              Assets
+            </span>
             {props.headerAction}
           </div>
           <div className="flex items-center gap-1">
@@ -759,7 +761,7 @@ export function GalleryAssetLibrary(props: GalleryAssetLibraryProps) {
 
       <div
         ref={selectionSurfaceRef}
-        className={`gallery-scrollbar min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-gutter-stable ${multiSelectMode ? "select-none" : ""} ${props.scrollClassName ?? ""}`}
+        className={`gallery-scrollbar min-h-0 flex-1 overflow-y-auto overflow-x-hidden -mr-4 scrollbar-gutter-stable ${multiSelectMode ? "select-none" : ""} ${props.scrollClassName ?? ""}`}
         style={
           multiSelectMode
             ? { ...props.scrollStyle, userSelect: "none" }

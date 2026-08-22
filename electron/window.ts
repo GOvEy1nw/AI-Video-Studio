@@ -5,6 +5,7 @@ import { isDev, getCurrentDir } from './config'
 import { logger } from './logger'
 
 let mainWindow: BrowserWindow | null = null
+export const TITLE_BAR_HEIGHT = 34
 
 export function createWindow(): BrowserWindow {
   // Get the path to preload script
@@ -31,8 +32,13 @@ export function createWindow(): BrowserWindow {
       nodeIntegration: false,
       webSecurity: isDev ? false : true,
     },
-    backgroundColor: '#1a1a1a',
-    titleBarStyle: 'default',
+    backgroundColor: '#18181b',
+    titleBarStyle: 'hidden',
+    titleBarOverlay: {
+      color: '#18181b',
+      symbolColor: '#ffffff',
+      height: TITLE_BAR_HEIGHT,
+    },
     show: false,
   })
 
@@ -46,6 +52,19 @@ export function createWindow(): BrowserWindow {
 
   mainWindow.once('ready-to-show', () => {
     mainWindow?.show()
+  })
+
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.type !== 'keyDown' || input.isAutoRepeat || input.control || input.alt || input.meta) return
+    const key = input.key.toLowerCase()
+    if (key === 'f12' && !input.shift) {
+      event.preventDefault()
+      mainWindow?.webContents.toggleDevTools()
+    } else if (key === 'f5') {
+      event.preventDefault()
+      if (input.shift) mainWindow?.webContents.reloadIgnoringCache()
+      else mainWindow?.webContents.reload()
+    }
   })
 
   mainWindow.on('closed', () => {

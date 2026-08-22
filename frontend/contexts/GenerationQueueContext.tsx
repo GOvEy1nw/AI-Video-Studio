@@ -31,11 +31,39 @@ export interface GenerationQueueJob {
   id: string
   kind: GenerationQueueKind
   status: GenerationQueueStatus
-  summary: { label: string; mediaKind: 'image' | 'video' | 'audio'; operation: string; promptPreview?: string; variationCount?: number }
-  progress?: { percent?: number; phase?: string }
+  summary: {
+    label: string
+    mediaKind: 'image' | 'video' | 'audio'
+    operation: string
+    promptPreview?: string
+    modelLabel?: string
+    badges?: string[]
+    referenceThumbnailUrl?: string
+    variationCount?: number
+  }
+  progress?: {
+    percent?: number | null
+    phase?: string | null
+    previewUrl?: string | null
+    statusDetail?: string | null
+    currentStep?: number | null
+    totalSteps?: number | null
+    phaseIndex?: number | null
+    phaseCount?: number | null
+    sectionIndex?: number | null
+    sectionCount?: number | null
+  }
   error?: string | null
   clientContext?: QueueClientContext
   result?: { kind: GenerationQueueKind; response: Record<string, unknown> } | null
+}
+
+export function getQueueProgressBadges(progress: GenerationQueueJob['progress']): string[] {
+  return [
+    typeof progress?.phaseIndex === 'number' && typeof progress.phaseCount === 'number' ? `Phase ${progress.phaseIndex}/${progress.phaseCount}` : null,
+    typeof progress?.currentStep === 'number' && typeof progress.totalSteps === 'number' ? `Step ${progress.currentStep}/${progress.totalSteps}` : null,
+    typeof progress?.sectionIndex === 'number' && typeof progress.sectionCount === 'number' ? `Section ${progress.sectionIndex}/${progress.sectionCount}` : null,
+  ].filter((badge): badge is string => badge !== null)
 }
 
 export type QueuePersistenceIntent =

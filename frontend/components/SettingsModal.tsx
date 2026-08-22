@@ -1,5 +1,6 @@
 import {
   ExternalLink,
+  FileText,
   Folder,
   Info,
   Moon,
@@ -19,6 +20,7 @@ import {
 } from "../contexts/AppSettingsContext";
 import { AivsLogo } from "./AivsLogo";
 import { ModelPackManager } from "./ModelPackManager";
+import { LogViewer } from "./LogViewer";
 import { useModelProfiles } from "../contexts/ModelProfilesContext";
 
 interface SettingsModalProps {
@@ -27,7 +29,7 @@ interface SettingsModalProps {
   initialTab?: TabId;
 }
 
-export type SettingsTabId = "general" | "models" | "advanced" | "about";
+export type SettingsTabId = "general" | "models" | "advanced" | "logs" | "about";
 type TabId = SettingsTabId;
 
 interface FolderLocation {
@@ -247,6 +249,7 @@ export function SettingsModal({
     { id: "general" as TabId, label: "General", icon: Settings },
     { id: "models" as TabId, label: "Model Manager", icon: Package },
     { id: "advanced" as TabId, label: "Advanced", icon: SlidersHorizontal },
+    { id: "logs" as TabId, label: "Logs", icon: FileText },
     { id: "about" as TabId, label: "About", icon: Info },
   ];
 
@@ -721,6 +724,12 @@ export function SettingsModal({
                   </p>
                 )}
               </div>
+            </div>
+          )}
+
+          {activeTab === "logs" && (
+            <div className="h-[calc(min(820px,88vh)-12rem)] min-h-96">
+              <LogViewer isOpen={true} onClose={() => {}} embedded />
             </div>
           )}
 

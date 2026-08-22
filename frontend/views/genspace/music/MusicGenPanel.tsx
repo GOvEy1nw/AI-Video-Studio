@@ -112,12 +112,6 @@ export function MusicGenPanel({
         }
         bottomRight={
           <div className="flex items-center gap-1">
-            <MusicPromptControls
-              settings={music.settings}
-              onChange={music.setSettings}
-              profile={selectedProfile}
-              disabled={generation.isRunning}
-            />
             <PresetPromptPicker
               label="music prompt"
               groups={MUSIC_PRESET_GROUPS}
@@ -129,6 +123,14 @@ export function MusicGenPanel({
           </div>
         }
       />
+      <div className="flex flex-wrap items-center gap-1 px-4 py-2 text-xs text-muted-foreground">
+        <MusicPromptControls
+          settings={music.settings}
+          onChange={music.setSettings}
+          profile={selectedProfile}
+          disabled={generation.isRunning}
+        />
+      </div>
       <MusicSettings
         description={prompt.value}
         settings={music.settings}

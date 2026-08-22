@@ -3,6 +3,10 @@
 @source "../index.html";
 @source "./";
 
+.app-titlebar {
+  -webkit-app-region: drag;
+}
+
 /* Product-editable runtime tokens. Values are RGB channels: R G B. */
 :root,
 :root[data-theme="dark"] {
@@ -38,7 +42,7 @@
   --accent: 43 97 255;
   --accent-dark: 26 80 224;
   --accent-foreground: 255 255 255;
-  --bg: 248 250 252;
+  --bg: 229 234 239;
   --surface: 255 255 255;
   --surface-raised: 241 245 249;
   --surface-hover: 226 232 240;

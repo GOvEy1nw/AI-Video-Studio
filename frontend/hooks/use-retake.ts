@@ -58,7 +58,7 @@ export function useRetake() {
       await queue.submit({
         kind: 'video.retake',
         payload: { video_path: params.videoPath, start_time: params.startTime, duration: params.duration, prompt: params.prompt, mode: params.mode },
-        summary: { label: 'Video retake', mediaKind: 'video', operation: 'video.retake', promptPreview: params.prompt },
+        summary: { label: 'Video retake', mediaKind: 'video', operation: 'video.retake', promptPreview: params.prompt, badges: [`${params.duration}s`] },
         clientContext: {
           schemaVersion: 1,
           projectId: currentProjectId,

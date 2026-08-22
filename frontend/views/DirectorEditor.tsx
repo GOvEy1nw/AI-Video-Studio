@@ -97,9 +97,7 @@ export function DirectorEditor({ isActive }: { isActive: boolean }) {
     [profiles],
   );
   const activeTimeline =
-    timelines.find(
-      (timeline) => timeline.id === activeDirectorTimelineId,
-    ) ||
+    timelines.find((timeline) => timeline.id === activeDirectorTimelineId) ||
     timelines[0] ||
     null;
   const openTimelines = timelines.filter((timeline) =>
@@ -202,10 +200,7 @@ export function DirectorEditor({ isActive }: { isActive: boolean }) {
 
   return (
     <div className="flex h-full min-h-0 bg-background">
-      <div
-        className="min-w-0 shrink-0"
-        style={{ width: layout.leftWidth }}
-      >
+      <div className="min-w-0 shrink-0" style={{ width: layout.leftWidth }}>
         <DirectorSidebar
           isActive={isActive}
           projectId={currentProjectId}
@@ -267,7 +262,7 @@ export function DirectorEditor({ isActive }: { isActive: boolean }) {
         />
       </div>
       <div
-        className="w-1 shrink-0 cursor-col-resize bg-transparent hover:bg-blue-500/40 active:bg-blue-500/60 transition-colors relative group z-10"
+        className="w-2 shrink-0 cursor-col-resize bg-transparent hover:bg-blue-500/40 active:bg-blue-500/60 transition-colors relative group z-10"
         onMouseDown={(event) => startResize(event, "leftWidth", 1, 200, 480)}
         role="separator"
         aria-label="Resize Director sidebar"

@@ -145,6 +145,7 @@ const electronAPI: ElectronAPI = {
   startPythonBackend: (): Promise<void> => ipcRenderer.invoke('start-python-backend'),
   restartPythonBackend: (): Promise<void> => ipcRenderer.invoke('restart-python-backend'),
   getBackendHealthStatus: (): Promise<BackendHealthStatus | null> => ipcRenderer.invoke('get-backend-health-status'),
+  setTitleBarOverlay: (theme: 'dark' | 'light'): Promise<void> => ipcRenderer.invoke('set-title-bar-overlay', theme),
   onPythonSetupProgress: (cb: (data: unknown) => void) => {
     ipcRenderer.on('python-setup-progress', (_: unknown, data: unknown) => cb(data))
   },

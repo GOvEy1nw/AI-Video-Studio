@@ -13,6 +13,13 @@ import type { QuickGenWorkflowId } from "../workflows";
 import type { ModelProfile } from "../../../types/model-profiles";
 import type { GenSpaceMediaInput } from "../types";
 
+vi.mock("../../../contexts/AppSettingsContext", () => ({
+  useAppSettings: () => ({
+    settings: { uiTheme: "dark" },
+    setUiTheme: vi.fn(),
+  }),
+}));
+
 afterEach(cleanup);
 
 describe("GenSpace shared controls", () => {

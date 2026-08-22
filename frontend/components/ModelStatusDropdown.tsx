@@ -1,50 +1,43 @@
 import { useState, useEffect } from "react";
-import { Loader2, AlertCircle } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { useBackend } from "../hooks/use-backend";
+import { logger } from "../lib/logger";
 
 export type ConnectionState = "connecting" | "ready" | "disconnected";
 
 interface ConnectionIndicatorProps {
   className?: string;
-  reconnecting?: boolean;
 }
 
 export function ConnectionIndicator({
   className = "",
-  reconnecting = false,
 }: ConnectionIndicatorProps) {
-  const { status, processStatus } = useBackend();
-  const [connectionState, setConnectionState] =
-    useState<ConnectionState>("connecting");
+  const { status, processStatus, restart } = useBackend();
+  const [connectionTimedOut, setConnectionTimedOut] = useState(false);
 
   const bridgeReady = status.connected && processStatus === "alive";
-  const wangpReady = bridgeReady && status.modelsLoaded && !reconnecting;
+  const wangpReady = bridgeReady && status.modelsLoaded;
   const readyCount = (bridgeReady ? 1 : 0) + (wangpReady ? 1 : 0);
   const isReady = readyCount === 2;
-
-  // Watch ready state
-  useEffect(() => {
-    if (isReady) {
-      setConnectionState("ready");
-    } else if (processStatus === "dead" && !reconnecting) {
-      setConnectionState("disconnected");
-    } else {
-      setConnectionState("connecting");
-    }
-  }, [isReady, processStatus, reconnecting]);
+  const isRestarting = processStatus === "restarting";
 
   // Timer for 60 seconds limit on backend connection. WanGP preload can take longer.
   useEffect(() => {
-    if (connectionState !== "connecting" || bridgeReady) return;
+    if (bridgeReady || isRestarting) {
+      setConnectionTimedOut(false);
+      return;
+    }
 
-    const timer = setTimeout(() => {
-      if (!bridgeReady) {
-        setConnectionState("disconnected");
-      }
-    }, 60000);
+    const timer = setTimeout(() => setConnectionTimedOut(true), 60000);
 
     return () => clearTimeout(timer);
-  }, [bridgeReady, connectionState]);
+  }, [bridgeReady, isRestarting]);
+
+  const connectionState: ConnectionState = isReady
+    ? "ready"
+    : processStatus === "dead" || (connectionTimedOut && !bridgeReady)
+      ? "disconnected"
+      : "connecting";
 
   const label =
     connectionState === "ready"
@@ -53,40 +46,31 @@ export function ConnectionIndicator({
         ? `Launching Inference Engine ${readyCount}/2`
         : "Inference Engine Disconnected";
 
-  const title =
-    connectionState === "ready"
-      ? "Inference Engine Ready."
-      : connectionState === "disconnected"
-        ? "Inference Engine Disconnected."
-        : `Bridge ${bridgeReady ? "connected" : "connecting"}; Inference Engine ${wangpReady ? "ready" : "preloading"}`;
+  const handleReconnect = async () => {
+    try {
+      await restart();
+    } catch (error) {
+      logger.error(`Failed to restart/reconnect backend: ${error}`);
+    }
+  };
 
   return (
-    <div
-      title={title}
-      aria-label={title}
-      className={`
-        flex items-center gap-2 px-3 py-1.5 rounded-lg select-none text-xs font-medium
-        ${
-          connectionState === "ready"
-            ? "bg-green-500/10 text-green-400"
-            : connectionState === "connecting"
-              ? "bg-amber-500/10 text-amber-400"
-              : "bg-red-500/10 text-red-400"
-        }
-        ${className}
-      `}
+    <button
+      type="button"
+      title={label}
+      aria-label={`${label}. Restart Inference Engine`}
+      aria-busy={isRestarting}
+      disabled={isRestarting}
+      onClick={() => void handleReconnect()}
+      className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-wait ${
+        connectionState === "ready"
+          ? "bg-emerald-500 text-emerald-950 hover:bg-emerald-400"
+          : connectionState === "connecting"
+            ? "bg-amber-400 text-amber-950 hover:bg-amber-300"
+            : "bg-red-500 text-white hover:bg-red-400"
+      } ${className}`}
     >
-      {connectionState === "connecting" && (
-        <Loader2 className="h-3.5 w-3.5 text-amber-400 animate-spin" />
-      )}
-      {connectionState === "ready" && (
-        <div className="w-2 h-2 bg-green-500 rounded-full" />
-      )}
-      {connectionState === "disconnected" && (
-        <AlertCircle className="h-3.5 w-3.5 text-red-400" />
-      )}
-
-      <span>{label}</span>
-    </div>
+      <RefreshCw className={`h-4 w-4 ${isRestarting ? "animate-spin" : ""}`} />
+    </button>
   );
 }

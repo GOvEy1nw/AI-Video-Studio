@@ -490,9 +490,8 @@ export function DirectorWorkspacePanel(props: Props) {
 
   const generate = () => {
     if (!validation?.canGenerate || !props.timeline) return;
-    void generation.generateDirector(
-      buildDirectorRequest(sequence, props.assets),
-      {
+    void generation
+      .generateDirector(buildDirectorRequest(sequence, props.assets), {
         kind: "director-output",
         timelineId: props.timeline.id,
         globalPrompt: sequence.globalPrompt,
@@ -501,8 +500,8 @@ export function DirectorWorkspacePanel(props: Props) {
         fps: sequence.output.fps,
         modelProfileId: sequence.output.modelProfileId,
         latestGenerationAssetId: sequence.latestGenerationAssetId,
-      },
-    ).catch(() => undefined);
+      })
+      .catch(() => undefined);
   };
 
   const revertContinueVideo = () => {
@@ -544,15 +543,168 @@ export function DirectorWorkspacePanel(props: Props) {
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="flex h-full items-stretch">
             <div
-              className="flex min-w-40 flex-none flex-col"
+              className="flex min-w-40 flex-none flex-col bg-card rounded-2xl my-2 border border-border p-4 pb-0"
               style={{ width: `${props.settingsPercent}%` }}
             >
-              <header className="flex min-h-10 items-center gap-2 overflow-x-auto px-3">
-                <Film className="h-4 w-4 text-blue-400" />
-                <strong className="mr-1 text-xs text-foreground">DIRECTOR</strong>
-                <span className="whitespace-nowrap text-[11px] text-subtle-foreground">
-                  24 fps
-                </span>
+              <header className="flex items-center gap-2 px-3 pb-2">
+                <div className="flex items-center gap-1">
+                  <span className="text-[12px] font-bold uppercase tracking-wide text-subtle-foreground">
+                    Global Settings
+                  </span>
+                </div>
+                <div ref={globalSettingsMenuRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setGlobalSettingsOpen((open) => !open)}
+                    className="rounded-sm p-1 text-subtle-foreground hover:bg-surface-hover hover:text-foreground"
+                    aria-label="More global settings"
+                    aria-expanded={globalSettingsOpen}
+                    aria-haspopup="dialog"
+                  >
+                    <SettingsIcon className="h-4 w-4" />
+                  </button>
+                  {globalSettingsOpen && (
+                    <FloatingMenu
+                      ref={globalSettingsSurfaceRef}
+                      anchorRef={globalSettingsMenuRef}
+                      placement="bottom-start"
+                      gap={8}
+                      className="w-72 space-y-4 overflow-y-auto rounded-md border border-border bg-popover p-3 text-left font-normal normal-case tracking-normal shadow-xl"
+                      role="dialog"
+                      aria-label="Global settings controls"
+                    >
+                      <SeedSettings
+                        seedLocked={appSettings.seedLocked}
+                        lockedSeed={appSettings.lockedSeed}
+                        onChange={updateSettings}
+                        disabled={generation.isGenerating}
+                      />
+                      <label
+                        className="block space-y-1.5 border-t border-border pt-3"
+                        title="Prompt Relay epsilon: lower values make segment transitions sharper; higher values make them softer."
+                      >
+                        <span className="flex items-center justify-between text-xs font-medium text-muted-foreground">
+                          <span>Prompt Relay epsilon</span>
+                          <span className="font-mono text-muted-foreground">
+                            {sequence.output.promptRelayEpsilon ?? 0.001}
+                          </span>
+                        </span>
+                        <input
+                          type="number"
+                          min="0.0001"
+                          max="0.99"
+                          step="0.0001"
+                          value={sequence.output.promptRelayEpsilon ?? 0.001}
+                          onChange={(event) => {
+                            const promptRelayEpsilon = Number(
+                              event.target.value,
+                            );
+                            if (
+                              !Number.isFinite(promptRelayEpsilon) ||
+                              promptRelayEpsilon < 0.0001 ||
+                              promptRelayEpsilon > 0.99
+                            )
+                              return;
+                            commit({
+                              ...sequence,
+                              output: {
+                                ...sequence.output,
+                                promptRelayEpsilon,
+                              },
+                            });
+                          }}
+                          className="w-full rounded-md border border-border-strong bg-input px-2.5 py-1.5 text-sm text-foreground focus:border-blue-500 focus:outline-hidden"
+                          aria-label="Prompt Relay epsilon"
+                        />
+                      </label>
+                      {sharedKeyframe ? (
+                        <label className="block space-y-1.5 border-t border-border pt-3">
+                          <span className="flex items-center justify-between text-xs font-medium text-muted-foreground">
+                            <span>Image Strength</span>
+                            <span className="font-mono text-muted-foreground">
+                              {sharedKeyframe.strength.toFixed(2)}
+                            </span>
+                          </span>
+                          <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.05"
+                            value={sharedKeyframe.strength}
+                            onChange={(event) => {
+                              const strength = Number(event.target.value);
+                              commit({
+                                ...sequence,
+                                promptSegments: sequence.promptSegments.map(
+                                  (segment) =>
+                                    segment.keyframe
+                                      ? {
+                                          ...segment,
+                                          keyframe: {
+                                            ...segment.keyframe,
+                                            strength,
+                                          },
+                                        }
+                                      : segment,
+                                ),
+                              });
+                            }}
+                            className="w-full accent-primary"
+                          />
+                        </label>
+                      ) : (
+                        <div
+                          className="flex items-center justify-between border-t border-border pt-3 text-xs font-medium text-subtle-foreground"
+                          title="Add a Key Frame to enable strength"
+                        >
+                          <span>Image Strength</span>
+                          <Lock className="h-3 w-3" />
+                        </div>
+                      )}
+                    </FloatingMenu>
+                  )}
+                </div>
+                <div className="flex min-w-0 items-center gap-1">
+                  <SettingsDropdown
+                    title="RESOLUTION"
+                    value={sequence.output.resolutionTier}
+                    onChange={(resolutionTier) =>
+                      commit({
+                        ...sequence,
+                        output: {
+                          ...sequence.output,
+                          resolutionTier,
+                        },
+                      })
+                    }
+                    options={(profile?.ui.allowedResolutionTiers ?? []).map(
+                      (value) => ({ value, label: value }),
+                    )}
+                    placement="bottom"
+                    trigger={
+                      <>
+                        <Monitor className="h-3.5 w-3.5" />
+                        <span>
+                          {sequence.output.resolutionTier.replace("p", "")}
+                        </span>
+                      </>
+                    }
+                  />
+                  <AspectRatioDropdown
+                    value={sequence.output.aspectRatio}
+                    onChange={(aspectRatio) =>
+                      commit({
+                        ...sequence,
+                        output: {
+                          ...sequence.output,
+                          aspectRatio,
+                        },
+                      })
+                    }
+                    allowedAspectRatios={profile?.ui.allowedAspectRatios}
+                    placement="bottom"
+                  />
+                </div>
                 <button
                   onClick={undo}
                   className="ml-auto text-subtle-foreground hover:text-foreground"
@@ -570,124 +722,7 @@ export function DirectorWorkspacePanel(props: Props) {
               </header>
               <div className="p-2">
                 <div className="mb-2 flex items-center justify-between gap-2 text-[12px] font-bold uppercase tracking-wide text-subtle-foreground">
-                  <div className="flex items-center gap-1">
-                    <span>Global Settings</span>
-                    <div ref={globalSettingsMenuRef} className="relative">
-                      <button
-                        type="button"
-                        onClick={() => setGlobalSettingsOpen((open) => !open)}
-                        className="rounded-sm p-1 text-subtle-foreground hover:bg-surface-hover hover:text-foreground"
-                        aria-label="More global settings"
-                        aria-expanded={globalSettingsOpen}
-                        aria-haspopup="dialog"
-                      >
-                        <SettingsIcon className="h-4 w-4" />
-                      </button>
-                      {globalSettingsOpen && (
-                        <FloatingMenu
-                          ref={globalSettingsSurfaceRef}
-                          anchorRef={globalSettingsMenuRef}
-                          placement="bottom-start"
-                          gap={8}
-                          className="w-72 space-y-4 overflow-y-auto rounded-md border border-border bg-popover p-3 text-left font-normal normal-case tracking-normal shadow-xl"
-                          role="dialog"
-                          aria-label="Global settings controls"
-                        >
-                          <SeedSettings
-                            seedLocked={appSettings.seedLocked}
-                            lockedSeed={appSettings.lockedSeed}
-                            onChange={updateSettings}
-                            disabled={generation.isGenerating}
-                          />
-                          <label
-                            className="block space-y-1.5 border-t border-border pt-3"
-                            title="Prompt Relay epsilon: lower values make segment transitions sharper; higher values make them softer."
-                          >
-                            <span className="flex items-center justify-between text-xs font-medium text-muted-foreground">
-                              <span>Prompt Relay epsilon</span>
-                              <span className="font-mono text-muted-foreground">
-                                {sequence.output.promptRelayEpsilon ?? 0.001}
-                              </span>
-                            </span>
-                            <input
-                              type="number"
-                              min="0.0001"
-                              max="0.99"
-                              step="0.0001"
-                              value={
-                                sequence.output.promptRelayEpsilon ?? 0.001
-                              }
-                              onChange={(event) => {
-                                const promptRelayEpsilon = Number(
-                                  event.target.value,
-                                );
-                                if (
-                                  !Number.isFinite(promptRelayEpsilon) ||
-                                  promptRelayEpsilon < 0.0001 ||
-                                  promptRelayEpsilon > 0.99
-                                )
-                                  return;
-                                commit({
-                                  ...sequence,
-                                  output: {
-                                    ...sequence.output,
-                                    promptRelayEpsilon,
-                                  },
-                                });
-                              }}
-                              className="w-full rounded-md border border-border-strong bg-input px-2.5 py-1.5 text-sm text-foreground focus:border-blue-500 focus:outline-hidden"
-                              aria-label="Prompt Relay epsilon"
-                            />
-                          </label>
-                          {sharedKeyframe ? (
-                            <label className="block space-y-1.5 border-t border-border pt-3">
-                              <span className="flex items-center justify-between text-xs font-medium text-muted-foreground">
-                                <span>Image Strength</span>
-                                <span className="font-mono text-muted-foreground">
-                                  {sharedKeyframe.strength.toFixed(2)}
-                                </span>
-                              </span>
-                              <input
-                                type="range"
-                                min="0"
-                                max="1"
-                                step="0.05"
-                                value={sharedKeyframe.strength}
-                                onChange={(event) => {
-                                  const strength = Number(event.target.value);
-                                  commit({
-                                    ...sequence,
-                                    promptSegments: sequence.promptSegments.map(
-                                      (segment) =>
-                                        segment.keyframe
-                                          ? {
-                                              ...segment,
-                                              keyframe: {
-                                                ...segment.keyframe,
-                                                strength,
-                                              },
-                                            }
-                                          : segment,
-                                    ),
-                                  });
-                                }}
-                                className="w-full accent-primary"
-                              />
-                            </label>
-                          ) : (
-                            <div
-                              className="flex items-center justify-between border-t border-border pt-3 text-xs font-medium text-subtle-foreground"
-                              title="Add a Key Frame to enable strength"
-                            >
-                              <span>Image Strength</span>
-                              <Lock className="h-3 w-3" />
-                            </div>
-                          )}
-                        </FloatingMenu>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex min-w-0 items-center gap-1">
+                  <div className="flex w-full min-w-0 items-center gap-1">
                     <ModelPicker
                       profiles={enabledProfiles}
                       value={sequence.output.modelProfileId}
@@ -709,45 +744,6 @@ export function DirectorWorkspacePanel(props: Props) {
                       placement="bottom"
                       icon={<Film className="h-5 w-5" />}
                     />
-                    <SettingsDropdown
-                      title="RESOLUTION"
-                      value={sequence.output.resolutionTier}
-                      onChange={(resolutionTier) =>
-                        commit({
-                          ...sequence,
-                          output: {
-                            ...sequence.output,
-                            resolutionTier,
-                          },
-                        })
-                      }
-                      options={(profile?.ui.allowedResolutionTiers ?? []).map(
-                        (value) => ({ value, label: value }),
-                      )}
-                      placement="bottom"
-                      trigger={
-                        <>
-                          <Monitor className="h-3.5 w-3.5" />
-                          <span>
-                            {sequence.output.resolutionTier.replace("p", "")}
-                          </span>
-                        </>
-                      }
-                    />
-                    <AspectRatioDropdown
-                      value={sequence.output.aspectRatio}
-                      onChange={(aspectRatio) =>
-                        commit({
-                          ...sequence,
-                          output: {
-                            ...sequence.output,
-                            aspectRatio,
-                          },
-                        })
-                      }
-                      allowedAspectRatios={profile?.ui.allowedAspectRatios}
-                      placement="bottom"
-                    />
                   </div>
                 </div>
                 <textarea
@@ -759,7 +755,6 @@ export function DirectorWorkspacePanel(props: Props) {
                   placeholder="Add your global text prompt here…"
                 />
               </div>
-                  <div className="mx-auto my-2 h-0.5 w-1/2 bg-border"></div>
               <div className="flex min-h-0 h-full flex-col p-2">
                 <div className="mb-2 text-[12px] font-bold uppercase tracking-wide text-subtle-foreground">
                   Segment Settings
@@ -1036,7 +1031,7 @@ export function DirectorWorkspacePanel(props: Props) {
               aria-label="Resize Director settings and output"
             />
 
-            <div className="flex min-w-80 flex-1 flex-col overflow-hidden bg-card">
+            <div className="flex min-w-80 flex-1 flex-col overflow-hidden bg-card rounded-2xl mr-2 my-2 border border-border">
               <DirectorPreview
                 sequence={sequence}
                 assets={props.assets}
@@ -1087,7 +1082,7 @@ export function DirectorWorkspacePanel(props: Props) {
           </div>
         </div>
 
-        <div className="flex h-10 shrink-0 items-center bg-surface px-3">
+        <div className="flex h-10 shrink-0 items-center bg-surface px-3 rounded-2xl mr-1 mb-1 border border-border">
           <span className="w-44 font-mono text-[12px] tabular-nums text-amber-400">
             {timecode(playheadFrame, sequence.output.fps)} (Frame{" "}
             {playheadFrame})
@@ -1156,16 +1151,16 @@ export function DirectorWorkspacePanel(props: Props) {
           aria-label="Resize Director timeline"
         />
         <div
-          className="flex min-h-0 shrink-0 flex-col border-t border-border bg-surface"
+          className="flex min-h-0 shrink-0 flex-col bg-surface rounded-2xl mr-1 mb-2 pt-1 border border-border overflow-hidden"
           style={{ height: props.timelineHeight }}
         >
-          <div className="flex h-8 shrink-0 items-center gap-0.5 overflow-x-auto bg-surface-raised px-1">
+          <div className="flex h-8 shrink-0 items-center gap-0.5 overflow-x-auto bg-surface px-1">
             {props.openTimelines.map((timeline) => (
               <button
                 key={timeline.id}
                 type="button"
                 onClick={() => props.onSelectTimeline(timeline.id)}
-                className={`group flex h-6 max-w-44 shrink-0 cursor-pointer items-center gap-1 rounded-t pl-3 pr-1 text-xs font-medium transition-colors ${timeline.id === props.timeline?.id ? "border-l border-r border-t border-border bg-surface text-foreground" : "text-subtle-foreground hover:bg-surface-hover hover:text-foreground"}`}
+                className={`group flex h-6 max-w-44 shrink-0 cursor-pointer items-center gap-1 rounded-t pl-3 pr-1 text-xs font-medium transition-colors ${timeline.id === props.timeline?.id ? "border-l border-r border-t border-border rounded-t-xl bg-surface text-foreground" : "text-subtle-foreground hover:bg-surface-hover hover:text-foreground"}`}
               >
                 <span className="truncate">{timeline.name}</span>
                 <span

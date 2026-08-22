@@ -1,6 +1,7 @@
 import { Check, Image, Music, Video } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { FloatingMenu } from "../../components/FloatingMenu";
+import { SidebarUtilityButtons } from "../../components/SidebarUtilityButtons";
 import { getGenSpaceModeAccentStyle } from "./mode-accent";
 import type { GenSpaceMode } from "./types";
 import { getQuickGenWorkflow, type QuickGenWorkflowId } from "./workflows";
@@ -116,13 +117,19 @@ export function GenSpaceModeTabs({
 
   const handleMenuKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     const items = Array.from(
-      menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') ?? [],
+      menuRef.current?.querySelectorAll<HTMLButtonElement>(
+        '[role="menuitem"]',
+      ) ?? [],
     );
     if (!items.length) return;
-    const currentIndex = items.indexOf(document.activeElement as HTMLButtonElement);
+    const currentIndex = items.indexOf(
+      document.activeElement as HTMLButtonElement,
+    );
     let nextIndex: number | null = null;
-    if (event.key === "ArrowDown") nextIndex = (currentIndex + 1) % items.length;
-    if (event.key === "ArrowUp") nextIndex = (currentIndex - 1 + items.length) % items.length;
+    if (event.key === "ArrowDown")
+      nextIndex = (currentIndex + 1) % items.length;
+    if (event.key === "ArrowUp")
+      nextIndex = (currentIndex - 1 + items.length) % items.length;
     if (event.key === "Home") nextIndex = 0;
     if (event.key === "End") nextIndex = items.length - 1;
     if (nextIndex === null) return;
@@ -132,7 +139,7 @@ export function GenSpaceModeTabs({
 
   return (
     <nav
-      className="flex w-14 shrink-0 flex-col m-2 items-center rounded-2xl bg-card py-2"
+      className="flex w-14 shrink-0 flex-col m-2 items-center rounded-2xl bg-card py-2 border border-border"
       aria-label="Quick Gen media and favourites"
     >
       <div
@@ -169,7 +176,7 @@ export function GenSpaceModeTabs({
         ))}
       </div>
       {favouriteIds.length ? (
-        <div className="mt-4 flex w-full flex-col items-center gap-2 border-t border-border pt-2">
+        <div className="mt-4 flex w-full flex-col items-center gap-2 pt-2">
           {favouriteIds.map((workflowId) => {
             const workflow = getQuickGenWorkflow(workflowId);
             if (!workflow) return null;
@@ -201,7 +208,8 @@ export function GenSpaceModeTabs({
                   if (
                     event.key !== "ContextMenu" &&
                     !(event.shiftKey && event.key === "F10")
-                  ) return;
+                  )
+                    return;
                   event.preventDefault();
                   const bounds = event.currentTarget.getBoundingClientRect();
                   openContextMenu(
@@ -299,6 +307,9 @@ export function GenSpaceModeTabs({
           </button>
         </FloatingMenu>
       ) : null}
+      <div className="mt-auto w-full">
+        <SidebarUtilityButtons />
+      </div>
     </nav>
   );
 }

@@ -65,7 +65,11 @@ import { EditorInspector } from "./editor/EditorInspector";
 import { EditorTimelinePanel } from "./editor/EditorTimelinePanel";
 import { buildMenuDefinitions } from "./editor/buildMenuDefinitions";
 import { usePlaybackEngine } from "./editor/usePlaybackEngine";
-import { buildPlaybackIndex, selectDissolveAtTime, selectVisualAtTime } from "./editor/playback-index";
+import {
+  buildPlaybackIndex,
+  selectDissolveAtTime,
+  selectVisualAtTime,
+} from "./editor/playback-index";
 import { getCachedVideoThumbnail } from "../lib/video-thumbnail-service";
 import { GapGenerationModal } from "./editor/GapGenerationModal";
 import { GenerationErrorDialog } from "../components/GenerationErrorDialog";
@@ -145,7 +149,9 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
 
   // Get the active timeline from context
   const activeTimeline = currentProjectId
-    ? timelines.find((timeline) => timeline.id === persistedActiveTimelineId) || timelines[0] || null
+    ? timelines.find((timeline) => timeline.id === persistedActiveTimelineId) ||
+      timelines[0] ||
+      null
     : null;
 
   // Local working copies of clips and tracks (for responsive editing without saving on every frame)
@@ -923,7 +929,8 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
   // Queue completions can update the loaded timeline through ProjectContext.
   // Mirror that durable update locally so a pending editor autosave cannot restore stale data.
   useEffect(() => {
-    if (!activeTimeline || loadedTimelineIdRef.current !== activeTimeline.id) return;
+    if (!activeTimeline || loadedTimelineIdRef.current !== activeTimeline.id)
+      return;
     const nextClips = activeTimeline.clips || [];
     const nextTracks = activeTimeline.tracks || [];
     const nextSubtitles = activeTimeline.subtitles || [];
@@ -931,13 +938,18 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
       clipsRef.current === nextClips &&
       tracksRef.current === nextTracks &&
       subtitlesRef.current === nextSubtitles
-    ) return;
+    )
+      return;
 
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     if (clipsRef.current !== nextClips) setClips(nextClips.map(migrateClip));
     if (tracksRef.current !== nextTracks) setTracks(migrateTracks(nextTracks));
     if (subtitlesRef.current !== nextSubtitles) setSubtitles(nextSubtitles);
-  }, [activeTimeline?.clips, activeTimeline?.tracks, activeTimeline?.subtitles]);
+  }, [
+    activeTimeline?.clips,
+    activeTimeline?.tracks,
+    activeTimeline?.subtitles,
+  ]);
 
   // Debounced auto-save: when clips, tracks, or subtitles change, schedule a save
   useEffect(() => {
@@ -1092,7 +1104,9 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
   // so the preview doesn't flash black due to throttled currentTime being stale.
   const monitorClip = useMemo(() => {
     if (isPlaying && playbackActiveClipId) {
-      return playbackIndex.clipById.get(playbackActiveClipId)?.clip ?? activeClip;
+      return (
+        playbackIndex.clipById.get(playbackActiveClipId)?.clip ?? activeClip
+      );
     }
     return activeClip;
   }, [isPlaying, playbackActiveClipId, activeClip, playbackIndex]);
@@ -1125,7 +1139,10 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
     return {
       outgoing: dissolve.outgoing.clip,
       incoming: dissolve.incoming.clip,
-      progress: Math.max(0, Math.min(1, (currentTime - dissolve.start) / dissolve.duration)),
+      progress: Math.max(
+        0,
+        Math.min(1, (currentTime - dissolve.start) / dissolve.duration),
+      ),
     };
   }, [playbackIndex, currentTime]);
 
@@ -1140,7 +1157,9 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
   const resolveClipSrc = useCallback(
     (clip: TimelineClip | null): string => {
       if (!clip) return "";
-      return playbackIndex.clipById.get(clip.id)?.sourceUrl || clip.importedUrl || "";
+      return (
+        playbackIndex.clipById.get(clip.id)?.sourceUrl || clip.importedUrl || ""
+      );
     },
     [playbackIndex],
   );
@@ -1940,7 +1959,11 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
   // Get the effective URL for a clip (considering its take index)
   const getClipUrl = useCallback(
     (clip: TimelineClip): string | null => {
-      return playbackIndex.clipById.get(clip.id)?.sourceUrl || clip.importedUrl || null;
+      return (
+        playbackIndex.clipById.get(clip.id)?.sourceUrl ||
+        clip.importedUrl ||
+        null
+      );
     },
     [playbackIndex],
   );
@@ -1973,7 +1996,10 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
     );
     const urls = [...new Set(Object.values(clipUrlMap))].filter((url) => {
       const cached = resolutionCache[url];
-      return !(cached && cached.width > 0 && cached.height > 0) && !probingUrlsRef.current.has(url);
+      return (
+        !(cached && cached.width > 0 && cached.height > 0) &&
+        !probingUrlsRef.current.has(url)
+      );
     });
     const startNext = () => {
       while (!cancelled && inFlight < 2 && cursor < urls.length) {
@@ -1992,7 +2018,10 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
           video.muted = true;
           video.onloadedmetadata = () => {
             if (!cancelled) {
-              setResolutionCache((prev) => ({ ...prev, [url]: { width: video.videoWidth, height: video.videoHeight } }));
+              setResolutionCache((prev) => ({
+                ...prev,
+                [url]: { width: video.videoWidth, height: video.videoHeight },
+              }));
             }
             activeMedia.delete(video);
             video.removeAttribute("src");
@@ -2011,7 +2040,13 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
           activeMedia.set(image, url);
           image.onload = () => {
             if (!cancelled) {
-              setResolutionCache((prev) => ({ ...prev, [url]: { width: image.naturalWidth, height: image.naturalHeight } }));
+              setResolutionCache((prev) => ({
+                ...prev,
+                [url]: {
+                  width: image.naturalWidth,
+                  height: image.naturalHeight,
+                },
+              }));
             }
             activeMedia.delete(image);
             finish();
@@ -2302,7 +2337,7 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
         />
         {/* Left resize handle */}
         <div
-          className="w-1 shrink-0 cursor-col-resize bg-transparent hover:bg-blue-500/40 active:bg-blue-500/60 transition-colors relative group z-10"
+          className="w-2 shrink-0 cursor-col-resize bg-transparent hover:bg-blue-500/40 active:bg-blue-500/60 transition-colors relative group z-10"
           onMouseDown={(e) => handleResizeDragStart("left", e)}
         >
           <div className="absolute inset-y-0 -left-1 -right-1" />
@@ -2321,8 +2356,8 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
                     onClick={() => setShowLayoutMenu((v) => !v)}
                     className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[12px] transition-colors ${
                       showLayoutMenu
-        ? "bg-surface-raised text-foreground"
-        : "text-muted-foreground hover:text-foreground hover:bg-surface-raised/50"
+                        ? "bg-surface-raised text-foreground"
+                        : "text-muted-foreground hover:text-foreground hover:bg-surface-raised/50"
                     }`}
                   >
                     <LayoutGrid className="h-3.5 w-3.5" />
@@ -2334,7 +2369,7 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
                       anchorRef={layoutMenuRef}
                       placement="bottom-end"
                       role="menu"
-      className="w-56 overflow-y-auto rounded-lg border border-border bg-surface py-1 shadow-xl"
+                      className="w-56 overflow-y-auto rounded-lg border border-border bg-surface py-1 shadow-xl"
                     >
                       {savingPresetName !== null ? (
                         <div className="px-2 py-1.5">
@@ -2540,7 +2575,9 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
             }}
             setSourceSplitPercent={setSourceSplitPercent}
             shuttleSpeed={shuttleSpeed}
-            onTimelineResize={(event) => handleResizeDragStart("timeline", event)}
+            onTimelineResize={(event) =>
+              handleResizeDragStart("timeline", event)
+            }
           />
           <EditorTimelinePanel
             tabsProps={{
@@ -2608,8 +2645,14 @@ export function VideoEditor({ isActive }: { isActive: boolean }) {
               onDeleteSubtitleTrack: (trackIndex, name) => {
                 if (!confirm(`Delete subtitle track "${name}"?`)) return;
                 pushTrackUndo();
-                setTracks((current) => current.filter((_, index) => index !== trackIndex));
-                setSubtitles((current) => current.filter((subtitle) => subtitle.trackIndex !== trackIndex));
+                setTracks((current) =>
+                  current.filter((_, index) => index !== trackIndex),
+                );
+                setSubtitles((current) =>
+                  current.filter(
+                    (subtitle) => subtitle.trackIndex !== trackIndex,
+                  ),
+                );
               },
               onDeleteTrack: deleteTrack,
             }}

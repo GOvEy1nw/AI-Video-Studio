@@ -582,9 +582,6 @@ export function VideoGenPanel({
           bottomRight={
             !isRetake ? (
               <div className="flex flex-wrap items-center justify-end gap-1">
-                {durationControl}
-                {!isTools ? resolutionControl : null}
-                {!isTools ? aspectRatioControl : null}
                 {!isPanelMode ? (
                   <FramingControl
                     value={framing.value}
@@ -612,6 +609,13 @@ export function VideoGenPanel({
             ) : undefined
           }
         />
+      ) : null}
+      {!isUpscale && !isPanelMode ? (
+        <div className="flex flex-wrap items-center gap-1 px-4 py-2 text-xs text-muted-foreground">
+          {durationControl}
+          {resolutionControl}
+          {aspectRatioControl}
+        </div>
       ) : null}
       <div className="flex flex-wrap items-center gap-1.5 px-4 py-3 text-xs text-muted-foreground">
         {isRetake ? (

@@ -23,7 +23,7 @@ export function ModelDropdownTrigger({
   return (
     <span className="min-w-0 flex-1">
       <span className="flex min-w-0 min-h-[20px] items-center gap-3">
-        <span className="flex h-4 w-4 shrink-0 items-center justify-center text-muted">
+        <span className="flex h-4 w-4 shrink-0 items-center justify-center text-muted-foreground">
           {icon}
         </span>
         <span className="flex min-w-0 items-center gap-1.5">

@@ -44,10 +44,7 @@ export interface EditorTimelineTabsProps {
     source?: "tab" | "panel",
   ) => void;
   onFinishRename: () => void;
-  onTimelineTabContextMenu: (
-    event: MouseEvent,
-    timelineId: string,
-  ) => void;
+  onTimelineTabContextMenu: (event: MouseEvent, timelineId: string) => void;
   onCloseTimelineTab: (timelineId: string) => void;
   onAddTimeline: () => void;
   onDuplicateTimeline: (timelineId: string) => void;
@@ -88,14 +85,16 @@ export function EditorTimelineTabs({
         .map((timeline) => (
           <div
             key={timeline.id}
-            className={`group flex items-center gap-1 pl-3 pr-1 h-6 rounded-t text-xs font-medium cursor-pointer transition-colors shrink-0 ${
+            className={`group flex items-center gap-1 pl-3 pr-1 h-6 rounded-t text-xs font-medium cursor-pointer rounded-t-xl transition-colors shrink-0 ${
               timeline.id === activeTimeline?.id
                 ? "bg-surface text-foreground border-t border-l border-r border-border"
                 : "text-subtle-foreground hover:text-muted-foreground hover:bg-surface-raised/50"
             }`}
             onClick={() => onSwitchTimeline(timeline.id)}
             onDoubleClick={() => onStartRename(timeline.id, timeline.name)}
-            onContextMenu={(event) => onTimelineTabContextMenu(event, timeline.id)}
+            onContextMenu={(event) =>
+              onTimelineTabContextMenu(event, timeline.id)
+            }
           >
             {renamingTimelineId === timeline.id && renameSource === "tab" ? (
               <input

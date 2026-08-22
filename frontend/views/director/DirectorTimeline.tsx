@@ -637,9 +637,7 @@ export function DirectorTimeline({
       aria-label="Director Timeline"
     >
       <div className="flex">
-        <div className="flex h-6 w-40 shrink-0 items-center justify-center border-b border-r border-border bg-surface-raised font-mono text-2xs text-subtle-foreground">
-          24 FPS
-        </div>
+        <div className="flex h-6 w-40 shrink-0 items-center justify-center border-b border-r border-border bg-surface font-mono text-2xs text-subtle-foreground"></div>
         <div ref={rulerScrollRef} className="min-w-0 flex-1 overflow-hidden">
           <TimelineRuler
             durationUnits={rulerDurationFrames}
@@ -662,7 +660,7 @@ export function DirectorTimeline({
       </div>
 
       <div className="flex min-h-0 flex-1">
-        <div className="w-40 shrink-0 border-r border-border bg-surface-raised">
+        <div className="w-40 shrink-0 border-r border-border bg-surface">
           <div
             className="flex items-center justify-end border-b border-border px-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
             style={{ height: GENERATED_HEIGHT }}
@@ -748,7 +746,7 @@ export function DirectorTimeline({
             onMouseDown={startPlayheadDrag}
           >
             <div
-              className="absolute inset-x-0 top-0 border-b border-border bg-surface-raised/50"
+              className="absolute inset-x-0 top-0 border-b border-border bg-surface"
               style={{ height: GENERATED_HEIGHT }}
             />
             <div
@@ -763,7 +761,7 @@ export function DirectorTimeline({
               }}
             />
             <div
-              className="absolute inset-x-0 border-b border-border bg-surface-raised/50"
+              className="absolute inset-x-0 border-b border-border bg-surface"
               style={{
                 top: GENERATED_HEIGHT + PROMPT_HEIGHT + LOCKED_HEIGHT,
                 height: LOCKED_HEIGHT,
@@ -1109,7 +1107,7 @@ export function DirectorTimeline({
           </div>
         </div>
       </div>
-      <div className="flex h-9 shrink-0 items-center gap-2 border-t border-border bg-surface-raised px-2">
+      <div className="flex h-9 shrink-0 items-center gap-2 border-t border-border bg-card px-2">
         <TimelineZoomControls
           value={zoom}
           min={0.5}

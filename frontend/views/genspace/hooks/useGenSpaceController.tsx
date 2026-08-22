@@ -20,6 +20,11 @@ import {
 import { useGeneration } from "../../../hooks/use-generation";
 import { useRetake } from "../../../hooks/use-retake";
 import {
+  getQueueProgressBadges,
+  useGenerationQueue,
+} from "../../../contexts/GenerationQueueContext";
+import { GenerationQueuePanel } from "../../../components/GenerationQueuePanel";
+import {
   useImageProfiles,
   useMusicProfiles,
   useSfxProfiles,
@@ -40,7 +45,6 @@ import {
   replaceGuideInput,
   replaceInputForRole,
 } from "../logic/media-inputs";
-import { getActiveGenerationProfileId } from "../logic/active-generation-profile";
 import {
   compileMusicRequest,
 } from "../music/compile-music-request";
@@ -163,6 +167,8 @@ export function useGenSpaceController(isActive: boolean) {
     setPrompt,
   });
   const [localError, setLocalError] = useState<string | null>(null);
+  const { active: activeQueueJob, cancel: cancelQueueJob } = useGenerationQueue();
+  const [selectedQueueJobId, setSelectedQueueJobId] = useState<string | null>(null);
   const [framingSettings, setFramingSettings] =
     useState<FramingSettings | null>(null);
   const [regionPrompt, setRegionPrompt] = useState(createEmptyRegionPrompt);
@@ -229,21 +235,8 @@ export function useGenSpaceController(isActive: boolean) {
     composeMusicLyrics,
     isComposingLyrics,
     isGenerating,
-    isCancelling,
-    progress,
-    phase,
-    progressUnit,
     modelDownload,
-    statusMessage,
-    phaseIndex,
-    phaseCount,
-    currentStep,
-    totalSteps,
-    sectionIndex,
-    sectionCount,
-    previewUrl,
     error,
-    cancel,
     reset,
   } = useGeneration();
   const upscale = useGenSpaceUpscaleState();
@@ -1084,83 +1077,36 @@ export function useGenSpaceController(isActive: boolean) {
     },
   };
 
-  const transferActive =
-    modelDownload !== null ||
-    progressUnit === "bytes" ||
-    progressUnit === "files";
-  const modelLifecycleActive =
-    phase === "checking_model_files" || phase === "loading_model";
-  const generationBadges = useMemo(
-    () =>
-      [
-        phaseIndex !== null && phaseCount !== null
-          ? `Phase ${phaseIndex}/${phaseCount}`
-          : null,
-        !transferActive && currentStep !== null && totalSteps !== null
-          ? `Step ${currentStep}/${totalSteps}`
-          : null,
-        sectionIndex !== null && sectionCount !== null
-          ? `Section ${sectionIndex}/${sectionCount}`
-          : null,
-      ].filter(Boolean) as string[],
-    [
-      currentStep,
-      phaseCount,
-      phaseIndex,
-      sectionCount,
-      sectionIndex,
-      totalSteps,
-      transferActive,
-    ],
-  );
-  const activeProfileId = getActiveGenerationProfileId({
-    mode,
-    audioSubmode,
-    submitted: {},
-    selected: {
-      image: imageSettings.profileId,
-      video: videoSettings.profileId,
-      music: musicSettings.profileId,
-      sfx: sfxSettings.profileId,
-      speech: speechSettings.profileId,
-    },
-  });
-  const activeGenerationModelName =
-    profileNames.get(activeProfileId) ??
-    activeProfileId.split("_").join(" ");
+  useEffect(() => {
+    if (selectedQueueJobId && selectedQueueJobId !== activeQueueJob?.id) {
+      setSelectedQueueJobId(null);
+    }
+  }, [activeQueueJob?.id, selectedQueueJobId]);
+  useEffect(() => {
+    if (galleryOverlays.selectedAsset) setSelectedQueueJobId(null);
+  }, [galleryOverlays.selectedAsset]);
+  const queueGeneration = useMemo<GenSpaceGalleryProps["generation"]>(() => {
+    const progress = activeQueueJob?.progress;
+    const statusDetails = getQueueProgressBadges(progress);
+    return {
+      mode: activeQueueJob?.summary.mediaKind === "audio"
+        ? "music"
+        : activeQueueJob?.summary.mediaKind ?? mode,
+      isRunning: Boolean(activeQueueJob),
+      isSelected: selectedQueueJobId === activeQueueJob?.id,
+      isCancelling: activeQueueJob?.status === "cancel_requested",
+      previewUrl: progress?.previewUrl ?? null,
+      modelDownload: null,
+      modelLifecycleActive: false,
+      statusMessage: progress?.statusDetail ?? progress?.phase ?? activeQueueJob?.status ?? "",
+      progress: progress?.percent ?? 0,
+      badges: [...(activeQueueJob?.summary.badges ?? []), ...statusDetails],
+      modelName: activeQueueJob?.summary.modelLabel ?? activeQueueJob?.summary.label ?? "",
+      onSelect: () => activeQueueJob && setSelectedQueueJobId(activeQueueJob.id),
+      cancel: () => { if (activeQueueJob) void cancelQueueJob(activeQueueJob.id); },
+    };
+  }, [activeQueueJob, cancelQueueJob, mode, selectedQueueJobId]);
 
-  const galleryGeneration = useMemo<GenSpaceGalleryProps["generation"]>(
-    () => ({
-      mode,
-      isRunning: isGenerating,
-      isSelected: isGenerating && galleryOverlays.selectedAsset === null,
-      isCancelling,
-      previewUrl,
-      modelDownload,
-      modelLifecycleActive,
-      statusMessage,
-      progress,
-      badges: generationBadges,
-      modelName: activeGenerationModelName,
-      onSelect: () => galleryOverlays.setSelectedAsset(null),
-      cancel: () => void cancel(),
-    }),
-    [
-      cancel,
-      activeGenerationModelName,
-      generationBadges,
-      galleryOverlays.selectedAsset,
-      galleryOverlays.setSelectedAsset,
-      isCancelling,
-      isGenerating,
-      mode,
-      modelDownload,
-      modelLifecycleActive,
-      previewUrl,
-      progress,
-      statusMessage,
-    ],
-  );
   const handleImportFiles = useCallback(
     (files: File[]) => void importFilesToGallery(files),
     [importFilesToGallery],
@@ -1193,20 +1139,27 @@ export function useGenSpaceController(isActive: boolean) {
       isImporting: isGalleryImporting,
       filterActive: galleryFilterActive,
       isPanelMode,
-      generation: galleryGeneration,
+      generation: queueGeneration,
+      queue: <GenerationQueuePanel selectedJobId={selectedQueueJobId} onSelectActive={(jobId) => {
+        galleryOverlays.setSelectedAsset(null);
+        setSelectedQueueJobId(jobId);
+      }} />,
     } satisfies GenSpaceGalleryProps,
     selectedGeneration: {
       asset: galleryOverlays.selectedAsset,
       modelName: galleryOverlays.selectedAsset
         ? getAssetModelName(galleryOverlays.selectedAsset)
         : undefined,
-      generation: galleryGeneration,
+      generation: queueGeneration,
       selectedIndex: galleryOverlays.selectedIndex,
       visibleAssetCount: galleryLibrary.visibleAssets.length,
       copiedPrompt: galleryOverlays.copiedPrompt,
       canGoPrev: galleryOverlays.canGoPrev,
       canGoNext: galleryOverlays.canGoNext,
-      onClose: () => galleryOverlays.setSelectedAsset(null),
+      onClose: () => {
+        if (selectedQueueJobId) setSelectedQueueJobId(null);
+        else galleryOverlays.setSelectedAsset(null);
+      },
       onPrevious: galleryOverlays.goToPrev,
       onNext: galleryOverlays.goToNext,
       onCopyPrompt: handleCopyPrompt,

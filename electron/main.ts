@@ -1,5 +1,5 @@
 import './app-paths'
-import { app } from 'electron'
+import { app, Menu } from 'electron'
 import { setupCSP } from './csp'
 import { registerExportHandlers } from './export/export-handler'
 import { stopExportProcess } from './export/ffmpeg-utils'
@@ -46,6 +46,7 @@ if (!gotLock) {
   })
 
   app.whenReady().then(async () => {
+    Menu.setApplicationMenu(null)
     setupCSP()
     createWindow()
     initAutoUpdater()

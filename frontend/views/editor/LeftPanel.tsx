@@ -194,12 +194,12 @@ export function LeftPanel(props: LeftPanelProps) {
 
   return (
     <div
-      className="shrink-0 border-r border-border flex flex-col bg-background"
+      className="shrink-0 flex flex-col bg-background"
       style={{ width: leftPanelWidth }}
     >
       {/* Assets Section */}
       <div
-        className="flex min-h-0 flex-col"
+        className="flex min-h-0 flex-col bg-card rounded-2xl ml-2 mt-2 border border-border"
         style={
           assetsHeight > 0 ? { height: assetsHeight } : { flex: "1 1 60%" }
         }
@@ -249,9 +249,7 @@ export function LeftPanel(props: LeftPanelProps) {
               onGridColumnsChange={setAssetGridColumns}
               showFavorites={showFavorites}
               onShowFavoritesChange={setShowFavorites}
-              getThumbnailUrl={(asset) =>
-                asset.thumbnail
-              }
+              getThumbnailUrl={(asset) => asset.thumbnail}
               previewEnabled={previewEnabled}
               selectedAssetIds={selectedAssetIds}
               onSelectedAssetIdsChange={setSelectedAssetIds}
@@ -304,7 +302,9 @@ export function LeftPanel(props: LeftPanelProps) {
               }
               emptyContent={
                 <div className="py-8 text-center">
-                  <p className="text-sm text-subtle-foreground">No assets yet</p>
+                  <p className="text-sm text-subtle-foreground">
+                    No assets yet
+                  </p>
                   <p className="mt-1 text-xs text-subtle-foreground">
                     Generate in Gen Space or import
                   </p>
@@ -466,7 +466,7 @@ export function LeftPanel(props: LeftPanelProps) {
 
       {/* Resize handle between Assets and Timelines */}
       <div
-        className="h-1 shrink-0 cursor-row-resize bg-transparent hover:bg-blue-500/40 active:bg-blue-500/60 transition-colors relative group z-10"
+        className="h-2 shrink-0 cursor-row-resize bg-transparent hover:bg-blue-500/40 active:bg-blue-500/60 transition-colors relative group z-10"
         onMouseDown={(e) => handleResizeDragStart("assets", e)}
       >
         <div className="absolute inset-x-0 -top-1 -bottom-1" />
@@ -474,7 +474,7 @@ export function LeftPanel(props: LeftPanelProps) {
 
       {/* Timelines Section */}
       <div
-        className="flex flex-col min-h-[330px]"
+        className="flex flex-col min-h-[330px] bg-card rounded-2xl ml-2 mb-2 border border-border"
         style={
           assetsHeight > 0
             ? { flex: "1 1 0%" }

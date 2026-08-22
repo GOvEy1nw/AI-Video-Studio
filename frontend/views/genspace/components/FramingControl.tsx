@@ -90,7 +90,7 @@ function FramingSlider({
         <span className="truncate text-2xs font-semibold uppercase tracking-[0.12em] text-muted">
           {label}
         </span>
-        <span className="shrink-0 text-[10px] font-medium text-violet-300">
+        <span className="shrink-0 text-[10px] font-medium text-primary">
           {displayedValue}
         </span>
       </span>
@@ -223,7 +223,7 @@ export function FramingControl({
     <div ref={controlRef} className="flex min-w-0 items-center gap-1.5">
       {indicator ? (
         <span
-          className="max-w-64 truncate rounded-md bg-violet-500/10 px-2 py-1 text-[10px] font-medium text-violet-300"
+          className="max-w-64 truncate rounded-md bg-primary/10 px-2 py-1 text-[10px] font-medium text-primary"
           title={indicator}
         >
           {indicator}
@@ -246,8 +246,8 @@ export function FramingControl({
           buttonLabel ? "px-2 py-1.5" : "px-1 py-1"
         } ${
           value
-            ? "bg-violet-500/15 text-violet-300 hover:bg-violet-500/25"
-            : "bg-popover text-muted hover:text-foreground"
+            ? "bg-primary/15 text-primary hover:bg-primary/25"
+            : "bg-surface-raised text-muted-foreground hover:bg-surface-hover hover:text-foreground"
         }`}
       >
         <Camera className="h-3.5 w-3.5" />
@@ -306,7 +306,7 @@ export function FramingControl({
                           title={preset.description}
                           className={`rounded-full border px-2.5 py-1.5 text-[10px] font-medium transition-colors ${
                             selected
-                              ? "border-violet-500 bg-violet-500/15 text-violet-200"
+                              ? "border-primary bg-primary/15 text-primary"
                               : "border-border bg-surface-raised text-muted-foreground hover:border-border-strong hover:bg-surface"
                           }`}
                         >

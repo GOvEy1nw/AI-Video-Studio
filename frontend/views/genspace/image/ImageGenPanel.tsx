@@ -223,7 +223,6 @@ export function ImageGenPanel({
           placeholder="A close-up of a woman talking on the phone..."
           bottomRight={
             <div className="flex flex-wrap items-center justify-end gap-1">
-              {promptFooterControls}
               {imageTools.mode === "create" ? (
                 <FramingControl
                   value={framing.value}
@@ -236,6 +235,11 @@ export function ImageGenPanel({
           actions={promptActions}
         />
       )}
+      {imageTools.mode !== "region" && promptFooterControls ? (
+        <div className="flex flex-wrap items-center gap-1 px-4 py-2 text-xs text-muted-foreground">
+          {promptFooterControls}
+        </div>
+      ) : null}
       <div className="flex flex-wrap items-center gap-1.5 px-4 py-3 text-xs text-muted-foreground">
         <GenerateButton
           onClick={generation.submit}

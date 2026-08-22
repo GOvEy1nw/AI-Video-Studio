@@ -9,6 +9,7 @@ import type { SubmittedVideoToolId } from '../types/video-tools'
 import type { UpscaleMediaKind, UpscaleMethodId } from '../types/upscale'
 import { useProjects } from '../contexts/ProjectContext'
 import { useGenerationQueue, type GenerationQueueDraft, type QueueClientContext, type QueuePersistenceIntent } from '../contexts/GenerationQueueContext'
+import { useModelProfiles } from '../contexts/ModelProfilesContext'
 import type { ImageSubmissionSnapshot, VideoSubmissionSnapshot } from '../views/genspace/types'
 import { backendFetch } from '../lib/backend'
 import {
@@ -46,12 +47,27 @@ export function generatedPathToFileUrl(path: string): string {
   return normalized.startsWith('/') ? `file://${normalized}` : `file:///${normalized}`
 }
 
+function queueBadges(values: Array<string | number | null | undefined>): string[] {
+  return values.filter((value): value is string | number => value !== null && value !== undefined && value !== '').map(String).slice(0, 8)
+}
+
+function firstImageReferenceUrl(inputMedia?: GenerationInputMediaRequest[], fallbackPath?: string | null): string | undefined {
+  const imageReference = inputMedia?.find((input) => input.type === 'image')
+  const path = imageReference?.path ?? fallbackPath
+  return path ? generatedPathToFileUrl(path) : undefined
+}
+
 export function useGeneration(): UseGenerationReturn {
   const { currentProject, currentProjectId } = useProjects()
   const queue = useGenerationQueue()
+  const { all: modelProfiles } = useModelProfiles()
   const [state, setState] = useState<GenerationState>(emptyGenerationState)
   const [isComposingLyrics, setIsComposingLyrics] = useState(false)
   const submittedJobId = useRef<string | null>(null)
+  const modelLabel = useCallback((profileId: string | undefined) => {
+    if (!profileId) return undefined
+    return modelProfiles.find((profile) => profile.id === profileId)?.displayName ?? profileId
+  }, [modelProfiles])
 
   const submit = useCallback(async (draft: Omit<GenerationQueueDraft, 'clientContext'> & { clientContext?: Omit<QueueClientContext, 'schemaVersion' | 'projectId'> }) => {
     if (!currentProjectId) throw new Error('Select a project before generating')
@@ -70,17 +86,32 @@ export function useGeneration(): UseGenerationReturn {
 
   const generate = useCallback<UseGenerationReturn['generate']>(async (prompt, imagePath, settings, audioPath, inputMedia, useAudioTrack, shotPrompts, reframe, videoTool, intent) => {
     const request = buildVideoRequestBody({ prompt, imagePath, settings, audioPath, inputMedia, useAudioTrack, shotPrompts, reframe, videoTool })
-    await submit({ kind: 'video.generate', payload: request.body as Record<string, unknown>, summary: { label: 'Video generation', mediaKind: 'video', operation: 'video.generate', promptPreview: prompt }, ...(intent ? { clientContext: { intent } } : {}) })
-  }, [submit])
+    await submit({ kind: 'video.generate', payload: request.body as Record<string, unknown>, summary: {
+      label: reframe ? 'Reframe' : 'Video generation', mediaKind: 'video', operation: reframe ? 'video.reframe' : 'video.generate', promptPreview: prompt,
+      modelLabel: modelLabel(settings?.videoProfileId),
+      badges: queueBadges([settings?.duration ? `${settings.duration}s` : null, settings?.videoResolution, settings?.aspectRatio]),
+      referenceThumbnailUrl: firstImageReferenceUrl(inputMedia, imagePath),
+    }, ...(intent ? { clientContext: { intent } } : {}) })
+  }, [modelLabel, submit])
 
   const generateDirector = useCallback(async (request: GenerateDirectorRequest, intent?: Extract<QueueClientContext['intent'], { kind: 'director-output' }>) => {
     const built = buildDirectorRequestBody(request)
-    await submit({ kind: 'director.generate', payload: built.body as Record<string, unknown>, summary: { label: 'Director generation', mediaKind: 'video', operation: 'director.generate', promptPreview: request.globalPrompt }, ...(intent ? { clientContext: { intent } } : {}) })
-  }, [submit])
+    await submit({ kind: 'director.generate', payload: built.body as Record<string, unknown>, summary: {
+      label: 'Director generation', mediaKind: 'video', operation: 'director.generate', promptPreview: request.globalPrompt,
+      modelLabel: modelLabel(request.modelProfileId),
+      badges: queueBadges([request.resolutionTier, request.durationFrames && request.fps ? `${Math.round(request.durationFrames / request.fps)}s` : null]),
+    }, ...(intent ? { clientContext: { intent } } : {}) })
+  }, [modelLabel, submit])
 
   const generateImage = useCallback<UseGenerationReturn['generateImage']>(async (prompt, settings, inputMedia, edit, intent) => {
-    await submit({ kind: 'image.generate', payload: buildImageRequestBody(prompt, settings, inputMedia, edit) as Record<string, unknown>, summary: { label: 'Image generation', mediaKind: 'image', operation: 'image.generate', promptPreview: prompt, variationCount: settings.variations || 1 }, ...(intent ? { clientContext: { intent } } : {}) })
-  }, [submit])
+    await submit({ kind: 'image.generate', payload: buildImageRequestBody(prompt, settings, inputMedia, edit) as Record<string, unknown>, summary: {
+      label: 'Image generation', mediaKind: 'image', operation: 'image.generate', promptPreview: prompt,
+      modelLabel: modelLabel(settings.imageProfileId),
+      badges: queueBadges([settings.imageResolution, settings.imageAspectRatio]),
+      referenceThumbnailUrl: firstImageReferenceUrl(inputMedia, edit?.image.path),
+      variationCount: settings.variations || 1,
+    }, ...(intent ? { clientContext: { intent } } : {}) })
+  }, [modelLabel, submit])
 
   const generateUpscale = useCallback<UseGenerationReturn['generateUpscale']>(async (request, snapshot) => {
     const parent = currentProject?.assets.find((asset) =>
@@ -89,7 +120,7 @@ export function useGeneration(): UseGenerationReturn {
     await submit({
       kind: 'media.upscale',
       payload: request,
-      summary: { label: 'Upscale', mediaKind: request.mediaKind, operation: 'media.upscale' },
+      summary: { label: 'Upscale', mediaKind: request.mediaKind, operation: 'media.upscale', modelLabel: request.method, badges: queueBadges([`${request.scale}×`]), referenceThumbnailUrl: request.mediaKind === 'image' ? generatedPathToFileUrl(request.sourcePath) : undefined },
       ...(parent ? { clientContext: { intent: snapshot
         ? request.mediaKind === 'image'
           ? { kind: 'add-take' as const, parentAssetId: parent.id, mediaKind: 'image' as const, snapshot: snapshot as ImageSubmissionSnapshot }
@@ -100,21 +131,21 @@ export function useGeneration(): UseGenerationReturn {
 
   const generateMusic = useCallback(async (request: GenerateMusicRequest, intent?: QueuePersistenceIntent): Promise<GenerateMusicResult | null> => {
     const built = buildMusicRequestBody(request)
-    await submit({ kind: 'audio.music', payload: built.body as unknown as Record<string, unknown>, summary: { label: 'Music generation', mediaKind: 'audio', operation: 'audio.music', promptPreview: request.description }, ...(intent ? { clientContext: { intent } } : {}) })
+    await submit({ kind: 'audio.music', payload: built.body as unknown as Record<string, unknown>, summary: { label: 'Music generation', mediaKind: 'audio', operation: 'audio.music', promptPreview: request.description, modelLabel: modelLabel(request.modelProfileId), badges: queueBadges([`${request.durationSeconds}s`]) }, ...(intent ? { clientContext: { intent } } : {}) })
     return null
-  }, [submit])
+  }, [modelLabel, submit])
 
   const generateSfx = useCallback(async (request: GenerateSfxRequest, intent?: QueuePersistenceIntent): Promise<GenerateSfxResult | null> => {
     const built = buildSfxRequestBody(request)
-    await submit({ kind: 'audio.sfx', payload: built.body as unknown as Record<string, unknown>, summary: { label: 'Sound effect generation', mediaKind: 'audio', operation: 'audio.sfx', promptPreview: request.prompt }, ...(intent ? { clientContext: { intent } } : {}) })
+    await submit({ kind: 'audio.sfx', payload: built.body as unknown as Record<string, unknown>, summary: { label: 'Sound effect generation', mediaKind: 'audio', operation: 'audio.sfx', promptPreview: request.prompt, modelLabel: modelLabel(request.modelProfileId), badges: queueBadges([`${request.durationSeconds}s`]) }, ...(intent ? { clientContext: { intent } } : {}) })
     return null
-  }, [submit])
+  }, [modelLabel, submit])
 
   const generateSpeech = useCallback(async (request: GenerateSpeechRequest, intent?: QueuePersistenceIntent): Promise<GenerateSpeechResult | null> => {
     const built = buildSpeechRequestBody(request)
-    await submit({ kind: 'audio.speech', payload: built.body as unknown as Record<string, unknown>, summary: { label: 'Speech generation', mediaKind: 'audio', operation: 'audio.speech', promptPreview: request.text }, ...(intent ? { clientContext: { intent } } : {}) })
+    await submit({ kind: 'audio.speech', payload: built.body as unknown as Record<string, unknown>, summary: { label: 'Speech generation', mediaKind: 'audio', operation: 'audio.speech', promptPreview: request.text, modelLabel: modelLabel(request.modelProfileId) }, ...(intent ? { clientContext: { intent } } : {}) })
     return null
-  }, [submit])
+  }, [modelLabel, submit])
 
   const composeMusicLyrics = useCallback(async (request: ComposeMusicLyricsRequest) => {
     setIsComposingLyrics(true)

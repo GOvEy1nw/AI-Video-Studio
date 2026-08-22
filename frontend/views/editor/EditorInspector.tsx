@@ -26,7 +26,7 @@ export function EditorInspector({
   return (
     <>
       <div
-        className="w-1 shrink-0 cursor-col-resize bg-transparent hover:bg-blue-500/40 active:bg-blue-500/60 transition-colors relative group z-10"
+        className="w-2 shrink-0 cursor-col-resize bg-transparent hover:bg-blue-500/40 active:bg-blue-500/60 transition-colors relative group z-10"
         onMouseDown={onResizeDragStart}
       >
         <div className="absolute inset-y-0 -left-1 -right-1" />
@@ -43,7 +43,9 @@ export function EditorInspector({
           </button>
         </Tooltip>
       </div>
-      {subtitlePanelProps && <SubtitlePropertiesPanel {...subtitlePanelProps} />}
+      {subtitlePanelProps && (
+        <SubtitlePropertiesPanel {...subtitlePanelProps} />
+      )}
       {clipPanelProps ? (
         <ClipPropertiesPanel {...clipPanelProps} />
       ) : !subtitlePanelProps ? (

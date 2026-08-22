@@ -78,92 +78,141 @@ export function EditorTimelinePanel({
 }: EditorTimelinePanelProps) {
   return (
     <>
-      <EditorTimelineTabs {...tabsProps} />
-      <div
-        className="bg-surface border-t border-border flex overflow-hidden shrink-0"
-        style={{ height: layout.timelineHeight }}
-      >
-        <EditorTimelineToolRail {...toolRailProps} />
+      <div className="bg-card rounded-2xl mr-2 mb-2 border border-border pt-1 overflow-hidden">
+        <EditorTimelineTabs {...tabsProps} />
         <div
-          className="flex-1 min-w-0 flex flex-col"
-          onMouseDown={ruler.onActivateTimeline}
+          className="bg-surface border-t border-border flex overflow-hidden shrink-0"
+          style={{ height: layout.timelineHeight }}
         >
-          <div className="flex shrink-0">
-            <div
-              className="w-32 h-6 shrink-0 border-b border-r border-border bg-surface flex items-center justify-center cursor-text"
-              onClick={() => {
-                if (!ruler.editingTimecode) {
-                  ruler.onSetTimecodeInput(ruler.formatTime(ruler.currentTime));
-                  ruler.onSetEditingTimecode(true);
-                  requestAnimationFrame(() => ruler.timecodeInputRef.current?.select());
-                }
-              }}
-            >
-              {ruler.editingTimecode ? (
-                <input
-                  ref={ruler.timecodeInputRef}
-                  autoFocus
-                  className="w-full h-full bg-surface text-amber-400 text-[11px] font-mono font-medium text-center outline-hidden border-none tabular-nums tracking-tight px-1"
-                  value={ruler.timecodeInput}
-                  onChange={(event) => ruler.onSetTimecodeInput(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      const time = parseTime(ruler.timecodeInput);
-                      if (time !== null) {
-                        const clamped = Math.max(0, Math.min(ruler.totalDuration, time));
-                        ruler.onSetCurrentTime(clamped);
-                        ruler.playbackTimeRef.current = clamped;
-                      }
-                      ruler.onSetEditingTimecode(false);
-                    } else if (event.key === "Escape") {
-                      ruler.onSetEditingTimecode(false);
-                    }
-                    event.stopPropagation();
-                  }}
-                  onClick={(event) => event.stopPropagation()}
-                  onBlur={() => ruler.onSetEditingTimecode(false)}
-                />
-              ) : (
-                <span className="text-[11px] font-mono font-medium text-amber-400 tabular-nums tracking-tight select-none">
-                  {ruler.formatTime(ruler.currentTime)}
-                </span>
-              )}
-            </div>
-            <div ref={ruler.rulerScrollRef} className="flex-1 overflow-hidden">
-              <TimelineRuler
-                ref={ruler.timelineRef}
-                durationUnits={ruler.totalDuration}
-                pixelsPerUnit={ruler.pixelsPerSecond}
-                majorInterval={ruler.rulerInterval}
-                minorInterval={ruler.rulerSubInterval}
-                formatLabel={ruler.formatTime}
-                className="cursor-pointer"
-                onMouseDown={ruler.onRulerMouseDown}
+          <EditorTimelineToolRail {...toolRailProps} />
+          <div
+            className="flex-1 min-w-0 flex flex-col"
+            onMouseDown={ruler.onActivateTimeline}
+          >
+            <div className="flex shrink-0">
+              <div
+                className="w-32 h-6 shrink-0 border-b border-r border-border bg-surface flex items-center justify-center cursor-text"
+                onClick={() => {
+                  if (!ruler.editingTimecode) {
+                    ruler.onSetTimecodeInput(
+                      ruler.formatTime(ruler.currentTime),
+                    );
+                    ruler.onSetEditingTimecode(true);
+                    requestAnimationFrame(() =>
+                      ruler.timecodeInputRef.current?.select(),
+                    );
+                  }
+                }}
               >
-                {ruler.inPoint !== null && (
-                  <div className="absolute top-0 bottom-0 left-0 bg-black/40 pointer-events-none z-10" style={{ width: `${ruler.inPoint * ruler.pixelsPerSecond}px` }} />
+                {ruler.editingTimecode ? (
+                  <input
+                    ref={ruler.timecodeInputRef}
+                    autoFocus
+                    className="w-full h-full bg-surface text-amber-400 text-[11px] font-mono font-medium text-center outline-hidden border-none tabular-nums tracking-tight px-1"
+                    value={ruler.timecodeInput}
+                    onChange={(event) =>
+                      ruler.onSetTimecodeInput(event.target.value)
+                    }
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        const time = parseTime(ruler.timecodeInput);
+                        if (time !== null) {
+                          const clamped = Math.max(
+                            0,
+                            Math.min(ruler.totalDuration, time),
+                          );
+                          ruler.onSetCurrentTime(clamped);
+                          ruler.playbackTimeRef.current = clamped;
+                        }
+                        ruler.onSetEditingTimecode(false);
+                      } else if (event.key === "Escape") {
+                        ruler.onSetEditingTimecode(false);
+                      }
+                      event.stopPropagation();
+                    }}
+                    onClick={(event) => event.stopPropagation()}
+                    onBlur={() => ruler.onSetEditingTimecode(false)}
+                  />
+                ) : (
+                  <span className="text-[11px] font-mono font-medium text-amber-400 tabular-nums tracking-tight select-none">
+                    {ruler.formatTime(ruler.currentTime)}
+                  </span>
                 )}
-                {ruler.outPoint !== null && (
-                  <div className="absolute top-0 bottom-0 right-0 bg-black/40 pointer-events-none z-10" style={{ left: `${ruler.outPoint * ruler.pixelsPerSecond}px` }} />
-                )}
-                {(ruler.inPoint !== null || ruler.outPoint !== null) && (
-                  <div className="absolute top-0 bottom-0 border-t-2 border-b-2 border-blue-400/60 pointer-events-none z-10" style={{ left: `${(ruler.inPoint ?? 0) * ruler.pixelsPerSecond}px`, width: `${((ruler.outPoint ?? ruler.totalDuration) - (ruler.inPoint ?? 0)) * ruler.pixelsPerSecond}px` }} />
-                )}
-                {ruler.inPoint !== null && <InOutMarker label="IN" point={ruler.inPoint} pixelsPerSecond={ruler.pixelsPerSecond} onMouseDown={() => ruler.onStartMarkerDrag("timelineIn")} />}
-                {ruler.outPoint !== null && <InOutMarker label="OUT" point={ruler.outPoint} pixelsPerSecond={ruler.pixelsPerSecond} onMouseDown={() => ruler.onStartMarkerDrag("timelineOut")} />}
-                <TimelinePlayhead ref={ruler.playheadRulerRef} position={ruler.currentTime * ruler.pixelsPerSecond} rulerHead className="z-20" />
-              </TimelineRuler>
+              </div>
+              <div
+                ref={ruler.rulerScrollRef}
+                className="flex-1 overflow-hidden"
+              >
+                <TimelineRuler
+                  ref={ruler.timelineRef}
+                  durationUnits={ruler.totalDuration}
+                  pixelsPerUnit={ruler.pixelsPerSecond}
+                  majorInterval={ruler.rulerInterval}
+                  minorInterval={ruler.rulerSubInterval}
+                  formatLabel={ruler.formatTime}
+                  className="cursor-pointer"
+                  onMouseDown={ruler.onRulerMouseDown}
+                >
+                  {ruler.inPoint !== null && (
+                    <div
+                      className="absolute top-0 bottom-0 left-0 bg-black/40 pointer-events-none z-10"
+                      style={{
+                        width: `${ruler.inPoint * ruler.pixelsPerSecond}px`,
+                      }}
+                    />
+                  )}
+                  {ruler.outPoint !== null && (
+                    <div
+                      className="absolute top-0 bottom-0 right-0 bg-black/40 pointer-events-none z-10"
+                      style={{
+                        left: `${ruler.outPoint * ruler.pixelsPerSecond}px`,
+                      }}
+                    />
+                  )}
+                  {(ruler.inPoint !== null || ruler.outPoint !== null) && (
+                    <div
+                      className="absolute top-0 bottom-0 border-t-2 border-b-2 border-blue-400/60 pointer-events-none z-10"
+                      style={{
+                        left: `${(ruler.inPoint ?? 0) * ruler.pixelsPerSecond}px`,
+                        width: `${((ruler.outPoint ?? ruler.totalDuration) - (ruler.inPoint ?? 0)) * ruler.pixelsPerSecond}px`,
+                      }}
+                    />
+                  )}
+                  {ruler.inPoint !== null && (
+                    <InOutMarker
+                      label="IN"
+                      point={ruler.inPoint}
+                      pixelsPerSecond={ruler.pixelsPerSecond}
+                      onMouseDown={() => ruler.onStartMarkerDrag("timelineIn")}
+                    />
+                  )}
+                  {ruler.outPoint !== null && (
+                    <InOutMarker
+                      label="OUT"
+                      point={ruler.outPoint}
+                      pixelsPerSecond={ruler.pixelsPerSecond}
+                      onMouseDown={() => ruler.onStartMarkerDrag("timelineOut")}
+                    />
+                  )}
+                  <TimelinePlayhead
+                    ref={ruler.playheadRulerRef}
+                    position={ruler.currentTime * ruler.pixelsPerSecond}
+                    rulerHead
+                    className="z-20"
+                  />
+                </TimelineRuler>
+              </div>
             </div>
-          </div>
-          <div className="flex flex-1 min-h-0 flex-col">
-            <div className="flex flex-1 min-h-0">
-              <TimelineTrackHeaders {...trackHeadersProps} />
-              <TimelineTrackCanvas {...trackCanvasProps} />
+            <div className="flex flex-1 min-h-0 flex-col">
+              <div className="flex flex-1 min-h-0">
+                <TimelineTrackHeaders {...trackHeadersProps} />
+                <TimelineTrackCanvas {...trackCanvasProps} />
+              </div>
             </div>
           </div>
         </div>
+        <TimelineBottomControls {...bottomControls} />
       </div>
-      <TimelineBottomControls {...bottomControls} />
     </>
   );
 }
@@ -190,11 +239,19 @@ function InOutMarker({
         onMouseDown();
       }}
     >
-      <div className={`absolute top-0 bottom-0 left-[5px] w-1.5 bg-blue-400 flex flex-col justify-between pointer-events-none ${isIn ? "rounded-l-sm" : "rounded-r-sm"}`}>
-        <div className={`w-3 h-0.5 bg-blue-400 ${isIn ? "rounded-r" : "rounded-l -ml-1.5"}`} />
-        <div className={`w-3 h-0.5 bg-blue-400 ${isIn ? "rounded-r" : "rounded-l -ml-1.5"}`} />
+      <div
+        className={`absolute top-0 bottom-0 left-[5px] w-1.5 bg-blue-400 flex flex-col justify-between pointer-events-none ${isIn ? "rounded-l-sm" : "rounded-r-sm"}`}
+      >
+        <div
+          className={`w-3 h-0.5 bg-blue-400 ${isIn ? "rounded-r" : "rounded-l -ml-1.5"}`}
+        />
+        <div
+          className={`w-3 h-0.5 bg-blue-400 ${isIn ? "rounded-r" : "rounded-l -ml-1.5"}`}
+        />
       </div>
-      <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 text-[8px] font-bold text-blue-400 whitespace-nowrap pointer-events-none">{label}</div>
+      <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 text-[8px] font-bold text-blue-400 whitespace-nowrap pointer-events-none">
+        {label}
+      </div>
     </div>
   );
 }
@@ -222,31 +279,88 @@ function TimelineBottomControls({
           <div className="w-px h-4 bg-border" />
           <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
             <Gauge className="h-3 w-3" />
-            <select value={selectedClip.speed} onChange={(event) => {
-              const newSpeed = parseFloat(event.target.value);
-              let newDuration = selectedClip.duration * (selectedClip.speed / newSpeed);
-              newDuration = Math.min(newDuration, getMaxClipDuration({ ...selectedClip, speed: newSpeed }));
-              onUpdateClip(selectedClip.id, { speed: newSpeed, duration: Math.max(0.5, newDuration) });
-            }} className="bg-surface-raised border border-border rounded-sm px-1.5 py-0.5 text-[10px] text-foreground">
-              <option value={0.25}>0.25x</option><option value={0.5}>0.5x</option><option value={0.75}>0.75x</option><option value={1}>1x</option><option value={1.25}>1.25x</option><option value={1.5}>1.5x</option><option value={2}>2x</option><option value={4}>4x</option>
+            <select
+              value={selectedClip.speed}
+              onChange={(event) => {
+                const newSpeed = parseFloat(event.target.value);
+                let newDuration =
+                  selectedClip.duration * (selectedClip.speed / newSpeed);
+                newDuration = Math.min(
+                  newDuration,
+                  getMaxClipDuration({ ...selectedClip, speed: newSpeed }),
+                );
+                onUpdateClip(selectedClip.id, {
+                  speed: newSpeed,
+                  duration: Math.max(0.5, newDuration),
+                });
+              }}
+              className="bg-surface-raised border border-border rounded-sm px-1.5 py-0.5 text-[10px] text-foreground"
+            >
+              <option value={0.25}>0.25x</option>
+              <option value={0.5}>0.5x</option>
+              <option value={0.75}>0.75x</option>
+              <option value={1}>1x</option>
+              <option value={1.25}>1.25x</option>
+              <option value={1.5}>1.5x</option>
+              <option value={2}>2x</option>
+              <option value={4}>4x</option>
             </select>
           </div>
         </>
       )}
       <div className="w-px h-4 bg-border" />
-      <Button variant="outline" size="sm" className="h-6 border-border text-muted-foreground text-[10px] px-2" onClick={onShowExportModal}><Upload className="h-3 w-3 mr-1" />Export</Button>
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-6 border-border text-muted-foreground text-[10px] px-2"
+        onClick={onShowExportModal}
+      >
+        <Upload className="h-3 w-3 mr-1" />
+        Export
+      </Button>
       {tracks.some((track) => track.type === "subtitle") && (
         <>
           <div className="w-px h-4 bg-border" />
           <div className="flex items-center gap-1">
-            <button onClick={() => subtitleFileInputRef.current?.click()} className="h-6 px-2 rounded-sm bg-amber-900/30 border border-amber-700/30 text-amber-400 hover:bg-amber-900/50 text-[10px] flex items-center gap-1 transition-colors" title="Import SRT subtitles"><FileUp className="h-3 w-3" />Import SRT</button>
-            <button onClick={onExportSrt} disabled={subtitles.length === 0} className="h-6 px-2 rounded-sm bg-amber-900/30 border border-amber-700/30 text-amber-400 hover:bg-amber-900/50 text-[10px] flex items-center gap-1 transition-colors disabled:opacity-40 disabled:cursor-not-allowed" title="Export SRT subtitles"><FileDown className="h-3 w-3" />Export SRT</button>
+            <button
+              onClick={() => subtitleFileInputRef.current?.click()}
+              className="h-6 px-2 rounded-sm bg-amber-900/30 border border-amber-700/30 text-amber-400 hover:bg-amber-900/50 text-[10px] flex items-center gap-1 transition-colors"
+              title="Import SRT subtitles"
+            >
+              <FileUp className="h-3 w-3" />
+              Import SRT
+            </button>
+            <button
+              onClick={onExportSrt}
+              disabled={subtitles.length === 0}
+              className="h-6 px-2 rounded-sm bg-amber-900/30 border border-amber-700/30 text-amber-400 hover:bg-amber-900/50 text-[10px] flex items-center gap-1 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Export SRT subtitles"
+            >
+              <FileDown className="h-3 w-3" />
+              Export SRT
+            </button>
           </div>
-          <input ref={subtitleFileInputRef} type="file" accept=".srt" onChange={onImportSrt} className="hidden" />
+          <input
+            ref={subtitleFileInputRef}
+            type="file"
+            accept=".srt"
+            onChange={onImportSrt}
+            className="hidden"
+          />
         </>
       )}
       <div className="flex-1" />
-      <TimelineZoomControls value={zoom} min={Math.max(0.01, getMinZoom())} max={4} step={0.25} onChange={(value) => { centerOnPlayheadRef.current = true; onSetZoom(+value.toFixed(2)); }} onFit={onFitToView} />
+      <TimelineZoomControls
+        value={zoom}
+        min={Math.max(0.01, getMinZoom())}
+        max={4}
+        step={0.25}
+        onChange={(value) => {
+          centerOnPlayheadRef.current = true;
+          onSetZoom(+value.toFixed(2));
+        }}
+        onFit={onFitToView}
+      />
     </div>
   );
 }

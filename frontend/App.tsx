@@ -1,12 +1,9 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { Loader2, AlertCircle } from "lucide-react";
 import {
-  Loader2,
-  AlertCircle,
-  Settings,
-  FileText,
-  RefreshCw,
-} from "lucide-react";
-import { ProjectProvider, useProjectNavigation } from "./contexts/ProjectContext";
+  ProjectProvider,
+  useProjectNavigation,
+} from "./contexts/ProjectContext";
 import { KeyboardShortcutsProvider } from "./contexts/KeyboardShortcutsContext";
 import { AppSettingsProvider } from "./contexts/AppSettingsContext";
 import { BackendLifecycleProvider } from "./contexts/BackendLifecycleContext";
@@ -18,20 +15,15 @@ import { Home } from "./views/Home";
 import { Project } from "./views/Project";
 import { SettingsModal, type SettingsTabId } from "./components/SettingsModal";
 import { Button } from "./components/ui/button";
-import { ConnectionIndicator } from "./components/ModelStatusDropdown";
 import { GenerationQueueProvider } from "./contexts/GenerationQueueContext";
-import { GenerationQueuePopover } from "./components/GenerationQueuePopover";
+import { AppTitleBar } from "./components/AppTitleBar";
+import { LogViewer } from "./components/LogViewer";
 
 const loadPythonSetup = () => import("./components/PythonSetup");
-const loadLogViewer = () => import("./components/LogViewer");
 
 const LazyPythonSetup = lazy(async () => {
   const { PythonSetup } = await loadPythonSetup();
   return { default: PythonSetup };
-});
-const LazyLogViewer = lazy(async () => {
-  const { LogViewer } = await loadLogViewer();
-  return { default: LogViewer };
 });
 
 function LoadingPanel() {
@@ -44,35 +36,16 @@ function LoadingPanel() {
 
 function AppContent() {
   const { currentView } = useProjectNavigation();
-  const { processStatus, checkHealth, restart } = useBackend();
+  const { processStatus } = useBackend();
 
   const [pythonReady, setPythonReady] = useState<boolean | null>(null);
   const [backendStarted, setBackendStarted] = useState(false);
   const [firstRunResolved, setFirstRunResolved] = useState(false);
-  const [isReconnecting, setIsReconnecting] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [settingsInitialTab, setSettingsInitialTab] = useState<
     SettingsTabId | undefined
   >(undefined);
-  const [isLogViewerOpen, setIsLogViewerOpen] = useState(false);
   const firstRunCompletionInFlightRef = useRef<Promise<void> | null>(null);
-
-  const handleReconnect = async () => {
-    setIsReconnecting(true);
-    try {
-      await restart();
-      // Attempt health checks in a loop to establish connection quickly
-      for (let i = 0; i < 15; i++) {
-        const healthy = await checkHealth();
-        if (healthy) break;
-        await new Promise((r) => setTimeout(r, 1000));
-      }
-    } catch (e) {
-      logger.error(`Failed to restart/reconnect backend: ${e}`);
-    } finally {
-      setIsReconnecting(false);
-    }
-  };
 
   const isBackendRestarting = processStatus === "restarting";
   const isBackendDead = processStatus === "dead";
@@ -162,7 +135,7 @@ function AppContent() {
 
   if (pythonReady === null) {
     return (
-      <div className="h-screen bg-background flex items-center justify-center">
+      <div className="h-full bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 text-primary animate-spin" />
       </div>
     );
@@ -178,7 +151,7 @@ function AppContent() {
 
   if (isBackendDead) {
     return (
-      <div className="h-screen bg-background flex items-center justify-center p-6">
+      <div className="h-full bg-background flex items-center justify-center p-6">
         <div className="w-full max-w-5xl rounded-xl border border-border bg-card/80 p-6 shadow-2xl">
           <div className="text-center">
             <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
@@ -190,9 +163,7 @@ function AppContent() {
             </p>
           </div>
           <div className="h-[50vh]">
-            <Suspense fallback={<LoadingPanel />}>
-              <LazyLogViewer isOpen={true} onClose={() => {}} embedded={true} />
-            </Suspense>
+            <LogViewer isOpen={true} onClose={() => {}} embedded />
           </div>
           <div className="mt-4 flex justify-center">
             <Button onClick={() => window.location.reload()}>
@@ -206,8 +177,8 @@ function AppContent() {
 
   if (waitingForBackend) {
     return (
-      <div className="relative h-screen w-screen">
-        <div className="h-screen bg-background flex items-center justify-center">
+      <div className="relative h-full w-full">
+        <div className="h-full bg-background flex items-center justify-center">
           <div className="text-center">
             <Loader2 className="h-12 w-12 text-primary animate-spin mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-foreground mb-2">
@@ -233,46 +204,9 @@ function AppContent() {
   };
 
   return (
-    <div className="relative h-screen w-screen">
+    <div className="relative h-full w-full">
       {renderView()}
 
-      <div className="fixed top-[18px] right-3 z-50 flex items-center gap-1.5">
-        <GenerationQueuePopover />
-        <ConnectionIndicator reconnecting={isReconnecting} />
-        <button
-          onClick={handleReconnect}
-          disabled={isReconnecting}
-          className="h-8 w-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-surface-hover disabled:hover:bg-transparent transition-colors disabled:opacity-50"
-          title="Restart Inference Engine"
-        >
-          <RefreshCw
-            className={`h-4 w-4 ${isReconnecting ? "animate-spin" : ""}`}
-          />
-        </button>
-        <button
-          onClick={() => setIsLogViewerOpen(true)}
-          className="h-8 w-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-colors"
-          title="View Backend Logs"
-        >
-          <FileText className="h-4 w-4" />
-        </button>
-        <button
-          onClick={() => setIsSettingsOpen(true)}
-          className="h-8 w-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-colors"
-          title="Settings"
-        >
-          <Settings className="h-4 w-4" />
-        </button>
-      </div>
-
-      {isLogViewerOpen ? (
-        <Suspense fallback={<LoadingPanel />}>
-          <LazyLogViewer
-            isOpen={true}
-            onClose={() => setIsLogViewerOpen(false)}
-          />
-        </Suspense>
-      ) : null}
       {isSettingsOpen ? (
         <SettingsModal
           isOpen={true}
@@ -295,12 +229,15 @@ export default function App() {
       <AppSettingsProvider>
         <ModelProfilesProvider>
           <ProjectProvider>
-            <GenerationQueueProvider>
-              <KeyboardShortcutsProvider>
-                <AppContent />
-                <KeyboardShortcutsModal />
-              </KeyboardShortcutsProvider>
-            </GenerationQueueProvider>
+            <div className="h-screen overflow-hidden">
+              <AppTitleBar />
+              <GenerationQueueProvider>
+                <KeyboardShortcutsProvider>
+                  <AppContent />
+                  <KeyboardShortcutsModal />
+                </KeyboardShortcutsProvider>
+              </GenerationQueueProvider>
+            </div>
           </ProjectProvider>
         </ModelProfilesProvider>
       </AppSettingsProvider>

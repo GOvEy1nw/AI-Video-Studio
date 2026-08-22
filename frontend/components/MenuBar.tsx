@@ -145,9 +145,7 @@ export function MenuBar({ menus, rightContent }: MenuBarProps) {
 
   const renderMenuItem = (item: MenuItem, index: number) => {
     if (item.separator) {
-      return (
-        <div key={`sep-${index}`} className="mx-2 my-1 h-px bg-border" />
-      );
+      return <div key={`sep-${index}`} className="mx-2 my-1 h-px bg-border" />;
     }
 
     return (
@@ -164,7 +162,7 @@ export function MenuBar({ menus, rightContent }: MenuBarProps) {
         <span>{item.label}</span>
         {item.shortcut && (
           <span
-            className={`ml-8 text-[11px] ${item.disabled ? "text-subtle" : "text-muted"}`}
+            className={`ml-8 text-[11px] ${item.disabled ? "text-subtle" : "text-subtle-foreground"}`}
           >
             {item.shortcut}
           </span>
@@ -176,7 +174,7 @@ export function MenuBar({ menus, rightContent }: MenuBarProps) {
   return (
     <div
       ref={menuBarRef}
-      className="relative z-60 flex select-none items-center border-b border-border bg-card"
+      className="relative z-60 flex select-none items-center text-subtle-foreground bg-card rounded-2xl py-1 mt-2 border border-border mr-2 overflow-hidden"
     >
       <div className="flex items-center flex-1">
         {menus.map((menu) => {
@@ -184,7 +182,7 @@ export function MenuBar({ menus, rightContent }: MenuBarProps) {
           const isHelpMenu = menu.id === "help";
 
           return (
-            <div key={menu.id} className="relative">
+            <div key={menu.id} className="relative text-subtle-foreground">
               <button
                 ref={(node) => {
                   if (node) triggerRefs.current.set(menu.id, node);
@@ -205,10 +203,10 @@ export function MenuBar({ menus, rightContent }: MenuBarProps) {
                 onMouseEnter={() => {
                   if (openMenuId) setHoverMenuId(menu.id);
                 }}
-                className={`px-3 py-1.5 text-[13px] font-medium transition-colors ${
+                className={`px-3 py-1 text-[13px] font-medium transition-colors ${
                   isActive
-                    ? "bg-surface-selected text-foreground"
-                    : "text-muted hover:text-foreground"
+                    ? "bg-surface-selected rounded-2xl text-foreground"
+                    : "text-subtle-foreground hover:text-foreground"
                 }`}
               >
                 {menu.label}
@@ -224,7 +222,7 @@ export function MenuBar({ menus, rightContent }: MenuBarProps) {
                   placement="bottom-start"
                   gap={0}
                   role="menu"
-                  className="min-w-[240px] overflow-y-auto rounded-b-lg border border-border bg-popover py-1 shadow-xl"
+                  className="min-w-[240px] overflow-y-auto rounded-2xl border border-border bg-popover mt-2 py-1 shadow-xl"
                 >
                   {/* Help menu has search */}
                   {isHelpMenu && (

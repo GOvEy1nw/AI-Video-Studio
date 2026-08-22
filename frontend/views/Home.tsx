@@ -7,6 +7,7 @@ import {
 import { AivsLogo } from "../components/AivsLogo";
 import { Button } from "../components/ui/button";
 import { FloatingMenu } from "../components/FloatingMenu";
+import { SidebarUtilityButtons } from "../components/SidebarUtilityButtons";
 import type { Project } from "../types/project";
 
 function formatDate(timestamp: number): string {
@@ -57,7 +58,7 @@ function ProjectCard({
             onError={() => setImgError(true)}
           />
         ) : (
-            <Folder className="h-12 w-12 text-subtle-foreground" />
+          <Folder className="h-12 w-12 text-subtle-foreground" />
         )}
         {/* Hover overlay */}
         <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -65,8 +66,8 @@ function ProjectCard({
 
       {/* Info */}
       <div className="p-3">
-          <h3 className="truncate font-medium text-foreground">{project.name}</h3>
-          <p className="mt-1 text-xs text-subtle-foreground">
+        <h3 className="truncate font-medium text-foreground">{project.name}</h3>
+        <p className="mt-1 text-xs text-subtle-foreground">
           {formatDate(project.updatedAt)}
         </p>
       </div>
@@ -97,7 +98,7 @@ function ProjectCard({
               onRename();
               setShowMenu(false);
             }}
-          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-muted-foreground hover:bg-surface-hover"
+            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-muted-foreground hover:bg-surface-hover"
           >
             <Pencil className="h-4 w-4" />
             Rename
@@ -107,7 +108,7 @@ function ProjectCard({
               onDelete();
               setShowMenu(false);
             }}
-          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-400 hover:bg-surface-hover"
+            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-400 hover:bg-surface-hover"
           >
             <Trash2 className="h-4 w-4" />
             Delete
@@ -169,12 +170,14 @@ export function Home() {
   };
 
   return (
-    <div className="h-screen bg-background text-foreground flex">
+    <div className="h-full bg-background text-foreground flex">
       {/* Sidebar */}
       <aside className="w-64 rounded-2xl bg-card m-2 flex flex-col">
         <div className="p-6">
           <AivsLogo className="h-6 w-auto text-foreground mb-2" />
-          <p className="text-muted-foreground text-xs">Local-Only AI Video Studio</p>
+          <p className="text-muted-foreground text-xs">
+            Local-Only AI Video Studio
+          </p>
           <p className="text-subtle-foreground text-2xs">Powered by WanGP</p>
         </div>
 
@@ -203,7 +206,7 @@ export function Home() {
           )}
         </nav>
 
-        <div className="p-4">
+        <div className="space-y-3 p-4">
           <button
             onClick={() => setIsCreating(true)}
             className="w-full px-3 py-2 rounded-lg bg-primary hover:bg-blue-500 text-primary-foreground text-sm font-medium flex items-center justify-center gap-2 transition-colors"
@@ -211,6 +214,7 @@ export function Home() {
             <Plus className="h-4 w-4" />
             New Project
           </button>
+          <SidebarUtilityButtons />
         </div>
       </aside>
 

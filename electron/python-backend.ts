@@ -14,6 +14,7 @@ let isIntentionalShutdown = false
 let lastCrashTime = 0
 const CRASH_DEBOUNCE_MS = 10_000
 let startPromise: Promise<void> | null = null
+let restartPromise: Promise<void> | null = null
 let takeoverInFlight: Promise<void> | null = null
 
 let backendUrl: string | null = null
@@ -575,11 +576,28 @@ export function stopPythonBackend(): void {
 }
 
 export async function restartPythonBackend(): Promise<void> {
-  logger.info('Restarting Python backend...')
-  stopPythonBackend()
-  // Wait 1 second to release ports
-  await new Promise(resolve => setTimeout(resolve, 1000))
-  startPromise = null
-  isIntentionalShutdown = false
-  await startPythonBackend()
+  if (restartPromise) {
+    return restartPromise
+  }
+
+  restartPromise = (async () => {
+    logger.info('Restarting Python backend...')
+    publishBackendHealthStatus({ status: 'restarting' })
+    const pendingStart = startPromise
+    stopPythonBackend()
+    await pendingStart?.catch(() => undefined)
+    // Wait 1 second to release ports
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    isIntentionalShutdown = false
+    await startPythonBackend()
+  })()
+
+  try {
+    await restartPromise
+  } catch (error) {
+    publishBackendHealthStatus({ status: 'dead' })
+    throw error
+  } finally {
+    restartPromise = null
+  }
 }

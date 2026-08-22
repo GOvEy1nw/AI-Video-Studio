@@ -6,6 +6,7 @@ import { useGeneration } from './use-generation'
 const queue: { submit: ReturnType<typeof vi.fn>; active: { id: string } | null; cancel: ReturnType<typeof vi.fn> } = { submit: vi.fn(), active: null, cancel: vi.fn() }
 vi.mock('../contexts/GenerationQueueContext', () => ({ useGenerationQueue: () => queue }))
 vi.mock('../contexts/ProjectContext', () => ({ useProjects: () => ({ currentProjectId: 'project', currentProject: { id: 'project', assets: [] } }) }))
+vi.mock('../contexts/ModelProfilesContext', () => ({ useModelProfiles: () => ({ all: [] }) }))
 
 beforeEach(() => {
   queue.submit.mockReset()

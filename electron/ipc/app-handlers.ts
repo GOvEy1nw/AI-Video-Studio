@@ -174,4 +174,15 @@ export function registerAppHandlers(): void {
     return getBackendHealthStatus()
   })
 
+  ipcMain.handle('set-title-bar-overlay', (_event, theme: unknown) => {
+    if (theme !== 'dark' && theme !== 'light') {
+      throw new Error('Invalid title bar theme')
+    }
+    getMainWindow()?.setTitleBarOverlay(
+      theme === 'dark'
+        ? { color: '#18181b', symbolColor: '#ffffff' }
+        : { color: '#ffffff', symbolColor: '#0f172a' },
+    )
+  })
+
 }

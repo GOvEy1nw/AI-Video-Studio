@@ -21,7 +21,10 @@ export function EditorPreviewWorkspace({
 }: EditorPreviewWorkspaceProps) {
   return (
     <>
-      <div ref={previewAreaRef} className="flex-1 flex min-h-0 min-w-0">
+      <div
+        ref={previewAreaRef}
+        className="flex-1 flex min-h-0 min-w-0 bg-card rounded-2xl mt-2 border border-border overflow-hidden mr-2"
+      >
         {sourceMonitorProps && <SourceMonitor {...sourceMonitorProps} />}
         {sourceMonitorProps && (
           <div
@@ -37,7 +40,10 @@ export function EditorPreviewWorkspace({
                 setSourceSplitPercent(
                   Math.max(
                     20,
-                    Math.min(80, ((moveEvent.clientX - rect.left) / rect.width) * 100),
+                    Math.min(
+                      80,
+                      ((moveEvent.clientX - rect.left) / rect.width) * 100,
+                    ),
                   ),
                 );
               };
@@ -68,7 +74,7 @@ export function EditorPreviewWorkspace({
         </div>
       )}
       <div
-        className="h-1 shrink-0 cursor-row-resize bg-transparent hover:bg-blue-500/40 active:bg-blue-500/60 transition-colors relative group z-10"
+        className="h-2 shrink-0 cursor-row-resize bg-transparent hover:bg-blue-500/40 active:bg-blue-500/60 transition-colors relative group z-10"
         onMouseDown={onTimelineResize}
       >
         <div className="absolute inset-x-0 -top-1 -bottom-1" />

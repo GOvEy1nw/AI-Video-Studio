@@ -1116,6 +1116,10 @@ class GenerationJobSummary(BaseModel):
     operation: str = Field(max_length=128)
     promptPreview: str | None = Field(default=None, max_length=512)
     modelLabel: str | None = Field(default=None, max_length=256)
+    badges: list[Annotated[str, Field(max_length=96)]] | None = Field(
+        default=None, max_length=8
+    )
+    referenceThumbnailUrl: str | None = Field(default=None, max_length=2048)
     projectName: str | None = Field(default=None, max_length=256)
     variationCount: int | None = Field(default=None, ge=1, le=100)
 

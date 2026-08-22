@@ -1,6 +1,7 @@
 import { fireEvent, render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { Asset } from "../../types/project";
+import { getQueueProgressBadges } from "../../contexts/GenerationQueueContext";
 import {
   GenSpaceSelectedGeneration,
   type GenSpaceSelectedGenerationProps,
@@ -60,6 +61,32 @@ const props: Omit<GenSpaceSelectedGenerationProps, "isActive"> = {
 };
 
 describe("GenSpaceSelectedGeneration", () => {
+  it("omits nullable queue counters while showing complete progress detail", () => {
+    const { getByText, queryByText } = render(
+      <GenSpaceSelectedGeneration
+        {...props}
+        asset={null}
+        generation={{
+          ...props.generation,
+          isRunning: true,
+          isSelected: true,
+          statusMessage: "Model loaded",
+          badges: getQueueProgressBadges({
+            phaseIndex: null,
+            phaseCount: null,
+            currentStep: 4,
+            totalSteps: 12,
+            sectionIndex: null,
+            sectionCount: null,
+          }),
+        }}
+      />,
+    );
+
+    expect(getByText(/Step 4\/12/)).toBeTruthy();
+    expect(queryByText(/null\/null/)).toBeNull();
+  });
+
   it("pauses selected media when its workspace becomes inactive", () => {
     const play = vi
       .spyOn(HTMLMediaElement.prototype, "play")

@@ -27,7 +27,7 @@ export function GenSpaceSidebar({
       />
       <div
         data-workflow-catalogue-host
-        className="relative min-w-0 flex-1 overflow-y-auto bg-card m-2 ml-0 rounded-2xl"
+        className="relative min-w-0 flex-1 overflow-y-auto bg-card m-2 ml-0 rounded-2xl border border-border"
       >
         {controller.mode === "image" ? (
           <ImageGenPanel controller={controller.image} />

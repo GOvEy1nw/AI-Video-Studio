@@ -609,7 +609,9 @@ function AssetPreview({
         onLoad={(event) => {
           const image = event.currentTarget;
           if (image.naturalWidth > 0 && image.naturalHeight > 0) {
-            onResolutionChange(`${image.naturalWidth} × ${image.naturalHeight}`);
+            onResolutionChange(
+              `${image.naturalWidth} × ${image.naturalHeight}`,
+            );
           }
         }}
         className="max-h-full max-w-full select-none object-contain"
@@ -683,7 +685,9 @@ function ImageComparePreview({
             onLoad={(event) => {
               const image = event.currentTarget;
               if (image.naturalWidth > 0 && image.naturalHeight > 0) {
-                onResolutionChange(`${image.naturalWidth} × ${image.naturalHeight}`);
+                onResolutionChange(
+                  `${image.naturalWidth} × ${image.naturalHeight}`,
+                );
               }
             }}
             className="h-full w-full select-none object-contain"
@@ -783,7 +787,9 @@ export function GenSpaceSelectedGeneration({
     scale: 1,
     offset: { x: 0, y: 0 },
   });
-  const [decodedResolution, setDecodedResolution] = useState<string | null>(null);
+  const [decodedResolution, setDecodedResolution] = useState<string | null>(
+    null,
+  );
   const activeTakeIndex = asset?.activeTakeIndex ?? 0;
   useEffect(() => {
     setComparisonTakeIndex(null);
@@ -819,7 +825,9 @@ export function GenSpaceSelectedGeneration({
   };
   const activeTake = asset?.takes?.[activeTakeIndex];
   const upscale = asset?.generationParams?.upscale;
-  const title = asset?.prompt || (upscale ? `Upscale ${upscale.scale}x` : "Selected generation");
+  const title =
+    asset?.prompt ||
+    (upscale ? `Upscale ${upscale.scale}x` : "Selected generation");
   const comparedTakes =
     asset?.type === "image" && comparisonTakeIndex !== null
       ? [activeTake, asset.takes?.[comparisonTakeIndex]].filter(
@@ -832,7 +840,7 @@ export function GenSpaceSelectedGeneration({
         [
           "Resolution",
           asset.type === "image" || asset.type === "video"
-            ? decodedResolution ?? "Loading…"
+            ? (decodedResolution ?? "Loading…")
             : asset.resolution || "Original",
         ],
         ...(asset.duration !== undefined
@@ -858,7 +866,7 @@ export function GenSpaceSelectedGeneration({
   return (
     <section
       data-testid="selected-generation-panel"
-      className="absolute inset-y-0 m-2 flex min-w-0 flex-col overflow-hidden rounded-2xl bg-card"
+      className="absolute inset-y-0 m-2 flex min-w-0 flex-col overflow-hidden rounded-2xl bg-card border border-border"
       style={style}
     >
       <header className="flex h-30 shrink-0 items-center justify-between gap-4 bg-card px-5">
@@ -866,8 +874,8 @@ export function GenSpaceSelectedGeneration({
           <div className="flex min-w-0 mb-4 items-center gap-2">
             <h2
               className="min-w-0 truncate text-sm font-semibold text-foreground"
-            title={title}
-          >
+              title={title}
+            >
               {title}
             </h2>
             {asset?.generationParams ? (

@@ -37,7 +37,7 @@ export function SeedSettings({
           disabled={disabled}
           onClick={() => onChange({ seedLocked: !seedLocked, lockedSeed })}
           className={`relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-40 ${
-            seedLocked ? "bg-blue-500" : "bg-muted"
+            seedLocked ? "bg-primary" : "bg-muted"
           }`}
         >
           <span
@@ -106,9 +106,9 @@ export function SeedControl({
         aria-pressed={seedLocked}
         className={`flex items-center gap-1 rounded-md bg-input px-1.5 py-1 text-xs font-medium tracking-wider text-foreground leading-none items-center px-3 py-1.5 whitespace-nowrap transition-colors disabled:opacity-40 ${
           seedLocked
-            ? "bg-blue-500/20 text-blue-300 hover:bg-blue-500/30"
-            : "text-muted hover:bg-blue-500 hover:text-white"
-        } disabled:hover:bg-transparent disabled:hover:text-muted`}
+            ? "bg-primary/15 text-primary hover:bg-primary/25"
+            : "text-muted-foreground hover:bg-surface-hover hover:text-foreground"
+        } disabled:hover:bg-transparent disabled:hover:text-muted-foreground`}
         aria-expanded={open}
         aria-haspopup="true"
         title={seedLocked ? `Locked seed: ${lockedSeed}` : "Random seed"}

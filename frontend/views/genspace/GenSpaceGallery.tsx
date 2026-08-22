@@ -8,7 +8,6 @@ import {
 } from "lucide-react";
 import { memo, type HTMLAttributes, type RefObject } from "react";
 import { GenSpaceResizeHandle } from "./GenSpaceResizeHandle";
-import { getGenSpaceModeAccentStyle } from "./mode-accent";
 import type { GenSpaceMode } from "./types";
 import {
   AssetLibraryImportButton,
@@ -51,6 +50,7 @@ export interface GenSpaceGalleryProps {
     onSelect: () => void;
     cancel: () => void;
   };
+  queue?: React.ReactNode;
 }
 
 function GenSpaceGalleryView({
@@ -66,14 +66,14 @@ function GenSpaceGalleryView({
   filterActive,
   isPanelMode,
   generation,
+  queue,
 }: GenSpaceGalleryProps) {
   const { assets, visibleAssets, showFavorites, selectedBin } = library;
-  const generationProgress = Math.max(0, Math.min(100, generation.progress));
   return (
     <div
       {...dropZoneProps}
       data-testid="genspace-gallery-dropzone"
-      className="absolute inset-y-0 right-0 m-2 ml-0 rounded-2xl bg-card"
+      className="absolute inset-y-0 right-0 m-2 ml-0 flex flex-col overflow-hidden rounded-2xl"
       style={style}
     >
       {onResize && (
@@ -139,7 +139,7 @@ function GenSpaceGalleryView({
       ) : null}
       <GalleryAssetLibrary
         {...library}
-        className="absolute inset-0 pl-4 pt-4"
+        className="min-h-0 flex-1 px-4 py-4 bg-card rounded-2xl mb-2 border border-border"
         headerAction={
           <>
             <AssetLibraryImportButton
@@ -216,78 +216,17 @@ function GenSpaceGalleryView({
           </>
         )}
         leadingContent={
-          <>
-            {generation.isRunning ? (
-              <div
-                role="button"
-                tabIndex={0}
-                aria-label="Select active generation"
-                aria-pressed={generation.isSelected}
-                data-testid="active-generation-card"
-                onClick={generation.onSelect}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    generation.onSelect();
-                  }
-                }}
-                className={`relative aspect-square cursor-pointer overflow-hidden rounded-xl border-2 bg-surface-raised transition-colors ${
-                  generation.isSelected
-                    ? "ring-2"
-                    : "border-transparent hover:border-border-strong"
-                }`}
-                style={{
-                  ...getGenSpaceModeAccentStyle(generation.mode),
-                  backgroundColor:
-                    "color-mix(in srgb, var(--genspace-mode-accent) 22%, var(--color-surface-raised))",
-                  ...(generation.isSelected
-                    ? {
-                        borderColor: "var(--genspace-mode-accent)",
-                        boxShadow:
-                          "0 0 0 2px color-mix(in srgb, var(--genspace-mode-accent) 30%, transparent)",
-                      }
-                    : {}),
-                }}
-              >
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-4">
-                  <div
-                    role="progressbar"
-                    aria-label="Generation progress"
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-valuenow={generationProgress}
-                    className="h-1.5 w-full max-w-32 overflow-hidden rounded-full bg-black/30"
-                  >
-                    <div
-                      className="h-full bg-[var(--genspace-mode-accent)] transition-all"
-                      style={{ width: `${generationProgress}%` }}
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      generation.cancel();
-                    }}
-                    disabled={generation.isCancelling}
-                    className="rounded-md border border-white/15 bg-black/30 px-2 py-1 text-xs text-zinc-200 transition-colors hover:bg-black/50 disabled:cursor-wait disabled:opacity-60"
-                  >
-                    {generation.isCancelling ? "Cancelling..." : "Cancel"}
-                  </button>
-                </div>
+          isImporting ? (
+            <div className="relative aspect-square overflow-hidden rounded-xl bg-surface-raised">
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <LoaderCircle className="mb-2 h-8 w-8 animate-spin text-violet-400" />
+                <p className="text-sm text-muted-foreground">Importing...</p>
               </div>
-            ) : null}
-            {isImporting ? (
-              <div className="relative aspect-square overflow-hidden rounded-xl bg-surface-raised">
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <LoaderCircle className="mb-2 h-8 w-8 animate-spin text-violet-400" />
-                  <p className="text-sm text-muted-foreground">Importing...</p>
-                </div>
-              </div>
-            ) : null}
-          </>
+            </div>
+          ) : null
         }
       />
+      {queue}
     </div>
   );
 }

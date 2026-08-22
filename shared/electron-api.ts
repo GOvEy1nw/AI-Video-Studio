@@ -41,6 +41,7 @@ export interface ElectronAPI {
   getLorasLocation: () => Promise<{ path: string; custom: boolean; defaultPath: string }>; setLorasLocation: (value: string | null) => Promise<{ path: string; custom: boolean; defaultPath: string }>
   openWanGP: () => Promise<void>; downloadModelPacks: (ids: string[]) => Promise<boolean>; cancelModelPackDownload: () => Promise<void>; deleteModelPack: (id: string) => Promise<void>
   startPythonBackend: () => Promise<void>; restartPythonBackend: () => Promise<void>; getBackendHealthStatus: () => Promise<BackendHealthStatus | null>
+  setTitleBarOverlay: (theme: 'dark' | 'light') => Promise<void>
   onPythonSetupProgress: (cb: (data: unknown) => void) => void; removePythonSetupProgress: () => void
   onModelPackProgress: (cb: (data: ModelPackProgress) => void) => void; removeModelPackProgress: () => void
   onBackendHealthStatus: (cb: (data: BackendHealthStatus) => void) => (() => void)
