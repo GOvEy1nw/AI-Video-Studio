@@ -1,6 +1,0 @@
-# #0045 Toggling H3 soundtrack mode while Depth disables another video updates only active videos; restoring Reference can reactivate a stale opposite useAudioTrack value and trigger H3_SOUNDTRACKS_MUST_BE_SYNCHRONIZED.
-
-- 2026-08-12T12:01:19Z `issue`: Toggling H3 soundtrack mode while Depth disables another video updates only active videos; restoring Reference can reactivate a stale opposite useAudioTrack value and trigger H3_SOUNDTRACKS_MUST_BE_SYNCHRONIZED. [frontend/views/genspace/video/VideoMediaInputs.tsx]
-- 2026-08-12T12:02:05Z `attempt`: Global soundtrack synchronization fix compiled, but the new rendered regression failed before exercising it because MediaRoleMenu choices use role=menuitem rather than role=button. [frontend/views/genspace/components/GenSpaceControls.test.tsx] (partial)
-- 2026-08-12T12:02:54Z `attempt`: Made H3 soundtrack selection global across all retained Reference/Depth video cards, including temporarily depth-disabled cards. The focused Depth→disable→toggle→restore regression now passes (GenSpaceControls 12/12). [frontend/views/genspace/video/VideoMediaInputs.tsx] (worked)
-- 2026-08-12T12:03:03Z `fix`: H3 soundtrack state remains synchronized across depth disable/restore transitions by updating every retained H3 video card; focused rendered regression passes 12/12. [frontend/views/genspace/video/VideoMediaInputs.tsx]

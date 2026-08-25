@@ -1,9 +1,0 @@
-# #0177 Durable queue commits hold the queue condition lock through JSON write and fsync, blocking snapshots and progress on disk latency.
-
-- 2026-08-20T23:01:00Z `issue`: Durable queue commits hold the queue condition lock through JSON write and fsync, blocking snapshots and progress on disk latency. [backend/handlers/generation_queue_handler.py]
-- 2026-08-20T23:02:41Z `attempt`: Changed durable commits to build a tentative state under the queue lock, fsync it under only the persistence serializer, then publish after success while preserving live non-durable progress; tests pending. [backend/handlers/generation_queue_handler.py] (partial)
-- 2026-08-20T23:03:08Z `attempt`: Added a blocked-store regression proving snapshots remain responsive and tentative queued state stays invisible until durable save completes; test run pending. [backend/tests/test_generation_queue.py] (partial)
-- 2026-08-20T23:03:47Z `attempt`: First tentative-state publish changed the queue state object identity and poisoned Pyright inference through an unannotated deepcopy assignment; 14 tests passed but rollback identity test and Pyright failed. [backend/handlers/generation_queue_handler.py] (failed)
-- 2026-08-20T23:04:29Z `attempt`: Preserved the original attached GenerationQueueState identity and added explicit candidate typing while publishing only its fields after fsync; rerun pending. [backend/handlers/generation_queue_handler.py] (partial)
-- 2026-08-20T23:05:19Z `attempt`: Blocked-store regression, all 15 focused queue tests, and Pyright pass with fsync outside the queue condition lock and durable publish after success. [backend/handlers/generation_queue_handler.py] (worked)
-- 2026-08-20T23:05:27Z `fix`: Confirmed durable commits keep tentative state invisible, preserve attached state identity, and do not block queue snapshots during disk write/fsync. [backend/handlers/generation_queue_handler.py]

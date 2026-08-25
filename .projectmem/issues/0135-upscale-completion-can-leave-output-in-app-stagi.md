@@ -1,6 +1,0 @@
-# #0135 Upscale completion can leave output in app staging instead of immutable submission project's generated folder without a recoverable persistence failure.
-
-- 2026-08-20T16:34:27Z `issue`: Upscale completion can leave output in app staging instead of immutable submission project's generated folder without a recoverable persistence failure. [frontend/views/genspace/hooks/useGenSpaceResultPersistence.ts]
-- 2026-08-20T16:44:49Z `attempt`: Added bounded retries for transient Windows EACCES, EBUSY, and EPERM errors in the shared native project-asset transfer owner, covering rename and EXDEV copy/unlink paths. (partial)
-- 2026-08-20T16:48:51Z `attempt`: Changed image and video upscale persistence to require a successful project transfer before creating an asset or take; failures retain the submission and completed result and report through the supplied GenSpace local-error callback. (partial)
-- 2026-08-20T16:54:37Z `fix`: Verified the shared transfer retries and upscale persistence guard with focused native and GenSpace regression tests: failed upscale copy no longer creates a project asset/take or resets the completed submission, while successful transfers persist their project-owned path.
