@@ -86,10 +86,8 @@ backend/requirements-dist.txt
 # External WanGP source is configured via WANGP_ROOT; never add local checkouts or runtime data.
 Wan2GP/
 
-.projectmem/events.jsonl
-.projectmem/watch.pid
-.projectmem/watch.log
-.projectmem/runtime/
-.projectmem/local/
+.projectmem/
 
-.projectmem/structure.json
+.codegraph/
+backlog/
+docs/
