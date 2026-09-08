@@ -28,6 +28,7 @@ from api_types import (
     ModelProfileVideoEditOperationPolicy,
     ModelProfileVideoEditPolicy,
     ModelProfileMusicPolicy,
+    ModelProfilePromptComposerPolicy,
     ModelProfileUi,
     ModelProfileWanGPMetadata,
 )
@@ -151,6 +152,11 @@ class ModelProfilesHandler(StateHandlerBase):
                     )
                     for role in profile.input_media.roles
                 ],
+            ),
+            promptComposer=ModelProfilePromptComposerPolicy(
+                promptFormat=profile.prompt_composer.prompt_format,
+                entityMediaMode=profile.prompt_composer.entity_media_mode,
+                voiceReference=profile.prompt_composer.voice_reference,
             ),
             requiredPackIds=list(profile.required_pack_ids),
             systemDependencies=[

@@ -12,13 +12,19 @@ import { GenerateButton } from "../components/GenerateButton";
 import { GenPanelSection } from "../components/GenPanelSection";
 import { PromptActions } from "../components/PromptActions";
 import { PromptEditor } from "../components/PromptEditor";
+import { ReferenceMentionTextarea } from "../components/ReferenceMentionTextarea";
 import type { GenSpaceMediaKind, VideoGenPanelController } from "../types";
 import {
   getH3PromptAliases,
   getH3ReferenceState,
+  isSequenceFreeReferenceRole,
   isVideoAspectRatioLocked,
+  removeSequenceFreeReferences,
 } from "../logic/media-inputs";
+import { getReferenceEntityMediaAvailability } from "../logic/video-prompt-composer";
 import { VideoMediaInputs } from "./VideoMediaInputs";
+import { SequenceComposer } from "./SequenceComposer";
+import { useReferenceLibrary } from "../../../contexts/ReferenceLibraryContext";
 import { VideoModeTabs } from "./VideoModeTabs";
 import { VideoToolInput } from "./VideoToolInput";
 import { getVideoToolLabel } from "./video-tools";
@@ -191,14 +197,50 @@ export function VideoGenPanel({
 }: {
   controller: VideoGenPanelController;
 }) {
-  const { prompt, generation, settings, media, profiles, videoTools, framing } =
-    controller;
+  const {
+    prompt,
+    generation,
+    settings,
+    media,
+    profiles,
+    videoTools,
+    framing,
+    composer,
+  } = controller;
+  const { entities: referenceEntities } = useReferenceLibrary();
+  const libraryMedia = referenceEntities.flatMap((entity) => {
+    const visual = entity.visualReference;
+    const voice = entity.kind === "cast" ? entity.voiceReference : undefined;
+    return [
+      ...(visual
+        ? [
+            {
+              id: `${entity.id}:visual`,
+              name: entity.name,
+              type: visual.type,
+              url: visual.url,
+            },
+          ]
+        : []),
+      ...(voice
+        ? [
+            {
+              id: `${entity.id}:voice`,
+              name: `${entity.name} voice`,
+              type: "audio" as const,
+              url: voice.url,
+            },
+          ]
+        : []),
+    ];
+  });
   const workflow = controller.workflow ?? {
     favouriteIds: [],
     toggleFavourite: () => undefined,
   };
   const videoSettings = settings.value;
   const [stylesOpen, setStylesOpen] = useState(false);
+  const [confirmSequenceMode, setConfirmSequenceMode] = useState(false);
   const h3ReferenceRequestRef = useRef<(type: GenSpaceMediaKind) => void>(
     () => undefined,
   );
@@ -254,6 +296,13 @@ export function VideoGenPanel({
     !isPanelMode &&
     (selectedProfile?.id === "minimax_h3_fast" ||
       selectedProfile?.id === "minimax_h3_quality");
+  const composerPolicy = selectedProfile?.promptComposer ?? {
+    promptFormat: "plain" as const,
+    entityMediaMode: "text-only" as const,
+    voiceReference: false,
+  };
+  const referenceMediaAvailability =
+    getReferenceEntityMediaAvailability(composerPolicy);
   const h3ReferenceState = getH3ReferenceState(media.inputs);
   const h3ReferenceAvailability = h3ReferenceState.availability;
   const aspectRatioDisabled = isVideoAspectRatioLocked(
@@ -482,6 +531,8 @@ export function VideoGenPanel({
           selectedStyle={selectedStyle}
           onOpenStyles={() => setStylesOpen(true)}
           stylesDisabled={generation.isRunning}
+          libraryMedia={libraryMedia}
+          freeReferencesDisabled={composer.value.mode === "sequence"}
         />
       ) : null}
       {isUpscale ? (
@@ -536,16 +587,60 @@ export function VideoGenPanel({
         </div>
       ) : null}
       {!isUpscale ? (
+        !isPanelMode ? (
+          <div className="flex gap-1 px-4 pt-2">
+            <button
+              type="button"
+              onClick={() => composer.setMode("simple")}
+              className={`rounded px-2 py-1 text-xs ${composer.value.mode === "simple" ? "bg-surface-selected text-foreground" : "text-muted-foreground"}`}
+            >
+              Simple
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const hasReferences = media.inputs.some((input) =>
+                  isSequenceFreeReferenceRole(input.role),
+                );
+                if (hasReferences) setConfirmSequenceMode(true);
+                else composer.setMode("sequence");
+              }}
+              className={`rounded px-2 py-1 text-xs ${composer.value.mode === "sequence" ? "bg-surface-selected text-foreground" : "text-muted-foreground"}`}
+            >
+              Sequence
+            </button>
+          </div>
+        ) : null
+      ) : null}
+      {!isUpscale ? (
         <PromptEditor
           value={prompt.value}
           onChange={prompt.setValue}
           mediaMentions={
-            isH3Generation
-              ? h3ReferenceState.activeInputs.flatMap((input) =>
-                  input.alias && input.type
-                    ? [{ alias: input.alias, type: input.type, url: input.url }]
-                    : [],
-                )
+            isH3Generation || referenceEntities.length
+              ? [
+                  ...(isH3Generation
+                    ? h3ReferenceState.activeInputs.flatMap((input) =>
+                        input.alias && input.type
+                          ? [
+                              {
+                                alias: input.alias,
+                                type: input.type,
+                                url: input.url,
+                              },
+                            ]
+                          : [],
+                      )
+                    : []),
+                  ...referenceEntities.map((entity) => ({
+                    alias: entity.token,
+                    type:
+                      entity.visualReference?.type === "video"
+                        ? ("video" as const)
+                        : ("image" as const),
+                    url: entity.visualReference?.url ?? "",
+                  })),
+                ]
               : undefined
           }
           onAddMedia={
@@ -553,15 +648,11 @@ export function VideoGenPanel({
               ? (type) => h3ReferenceRequestRef.current(type)
               : undefined
           }
-          mediaAddDisabled={
-            isH3Generation
-              ? {
-                  image: !h3ReferenceAvailability.image,
-                  video: !h3ReferenceAvailability.video,
-                  audio: !h3ReferenceAvailability.audio,
-                }
-              : undefined
-          }
+          mediaAddDisabled={{
+            image: !isH3Generation || !h3ReferenceAvailability.image,
+            video: !isH3Generation || !h3ReferenceAvailability.video,
+            audio: !isH3Generation || !h3ReferenceAvailability.audio,
+          }}
           onSubmit={generation.submit}
           canSubmit={generation.canSubmit}
           disabled={generation.isRunning}
@@ -608,11 +699,43 @@ export function VideoGenPanel({
               </div>
             ) : undefined
           }
+          children={
+            !isPanelMode ? (
+              <ReferenceMentionTextarea
+                context="main"
+                value={prompt.value}
+                onChange={prompt.setValue}
+                onSubmit={generation.submit}
+                canSubmit={generation.canSubmit}
+                disabled={generation.isRunning}
+                placeholder="The woman sips from a cup of coffee..."
+                allowVisualMedia={referenceMediaAvailability.allowVisualMedia}
+                allowVoiceMedia={referenceMediaAvailability.allowVoiceMedia}
+                mediaAddOptions={
+                  isH3Generation
+                    ? (["image", "video", "audio"] as const).map((type) => ({
+                        type,
+                        disabled: !h3ReferenceAvailability[type],
+                        add: () => h3ReferenceRequestRef.current(type),
+                      }))
+                    : []
+                }
+                className="h-36 w-full resize-none overflow-y-auto bg-transparent px-3 pb-3 pt-3 text-sm leading-5 text-foreground placeholder:text-subtle-foreground focus:outline-hidden"
+              />
+            ) : undefined
+          }
+        />
+      ) : null}
+      {!isPanelMode && composer.value.mode === "sequence" ? (
+        <SequenceComposer
+          composer={composer}
+          allowVisualMedia={referenceMediaAvailability.allowVisualMedia}
+          allowVoiceMedia={referenceMediaAvailability.allowVoiceMedia}
         />
       ) : null}
       {!isUpscale && !isPanelMode ? (
         <div className="flex flex-wrap items-center gap-2 px-4 py-2 text-xs text-muted-foreground">
-          {durationControl}
+          {composer.value.mode === "simple" ? durationControl : null}
           {resolutionControl}
           {aspectRatioControl}
         </div>
@@ -639,6 +762,47 @@ export function VideoGenPanel({
         onClear={() => patchVideoSettings({ styleId: undefined })}
         onClose={() => setStylesOpen(false)}
       />
+      {confirmSequenceMode ? (
+        <div className="fixed inset-0 z-70 flex items-center justify-center bg-overlay/70 p-4 backdrop-blur-xs">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sequence-mode-confirm-title"
+            className="w-full max-w-md rounded-xl border border-border bg-popover p-5 shadow-2xl"
+          >
+            <h2
+              id="sequence-mode-confirm-title"
+              className="text-base font-semibold text-foreground"
+            >
+              Remove free references?
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Sequence mode uses Reference Library entities. Start/end frames
+              and control inputs will be kept.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmSequenceMode(false)}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-surface-hover"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  media.setInputs(removeSequenceFreeReferences);
+                  composer.setMode("sequence");
+                  setConfirmSequenceMode(false);
+                }}
+                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+              >
+                Remove References and Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

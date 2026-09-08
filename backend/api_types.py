@@ -300,6 +300,12 @@ class ModelProfileInputMedia(BaseModel):
     roles: list[ModelProfileInputMediaRole]
 
 
+class ModelProfilePromptComposerPolicy(BaseModel):
+    promptFormat: Literal["plain", "h3"]
+    entityMediaMode: Literal["text-only", "general-reference", "inline-reference"]
+    voiceReference: bool
+
+
 class ModelProfileUi(BaseModel):
     defaultAspectRatio: str
     defaultResolutionTier: str
@@ -473,6 +479,7 @@ class ModelProfileResponse(BaseModel):
     capabilities: ModelProfileCapabilities
     ui: ModelProfileUi
     inputMedia: ModelProfileInputMedia
+    promptComposer: ModelProfilePromptComposerPolicy
     requiredPackIds: list[str]
     systemDependencies: list[ModelProfileSystemDependency]
     videoAudio: ModelProfileVideoAudioPolicy
@@ -1157,7 +1164,7 @@ class GenerationQueueCancelResponse(BaseModel):
 
 
 class GenerationQueuePersistenceRef(BaseModel):
-    kind: Literal["asset", "take", "director_document", "clip_update"]
+    kind: Literal["asset", "take", "director_document", "clip_update", "reference_draft"]
     id: str = Field(min_length=1, max_length=256)
     parentId: str | None = Field(default=None, min_length=1, max_length=256)
 
@@ -1168,7 +1175,7 @@ class GenerationQueueAcknowledgedOutput(BaseModel):
 
 
 class GenerationQueueAcknowledgementRequest(BaseModel):
-    consumer: Literal["electron-project-persistence"]
+    consumer: Literal["electron-project-persistence", "electron-reference-library-persistence"]
     projectId: str = Field(min_length=1, max_length=256)
     persistedAt: str
     outputs: list[GenerationQueueAcknowledgedOutput]

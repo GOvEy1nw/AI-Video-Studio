@@ -1,4 +1,4 @@
-import { Check, Image, Music, Video } from "lucide-react";
+import { BookOpen, Check, Image, Music, Video } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { FloatingMenu } from "../../components/FloatingMenu";
 import { SidebarUtilityButtons } from "../../components/SidebarUtilityButtons";
@@ -9,6 +9,8 @@ import { getQuickGenWorkflow, type QuickGenWorkflowId } from "./workflows";
 export function GenSpaceModeTabs({
   mode,
   onChange,
+  referencesActive = false,
+  onOpenReferences,
   favouriteIds,
   onSelectWorkflow,
   onToggleFavourite,
@@ -17,6 +19,8 @@ export function GenSpaceModeTabs({
 }: {
   mode: GenSpaceMode;
   onChange: (mode: GenSpaceMode) => void;
+  referencesActive?: boolean;
+  onOpenReferences?: () => void;
   favouriteIds: readonly QuickGenWorkflowId[];
   onSelectWorkflow: (workflowId: QuickGenWorkflowId) => void;
   onToggleFavourite: (workflowId: QuickGenWorkflowId) => void;
@@ -159,14 +163,14 @@ export function GenSpaceModeTabs({
             type="button"
             role="tab"
             aria-label={label}
-            aria-selected={mode === value}
+            aria-selected={!referencesActive && mode === value}
             title={label}
             data-genspace-mode={value}
             ref={value === "image" ? firstNavButtonRef : undefined}
             onClick={() => onChange(value)}
             style={getGenSpaceModeAccentStyle(value)}
             className={`genspace-mode-tab flex h-10 w-10 items-center justify-center rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${
-              mode === value
+              !referencesActive && mode === value
                 ? "text-foreground shadow-xs"
                 : "text-subtle-foreground hover:bg-surface-hover hover:text-foreground"
             }`}
@@ -174,6 +178,21 @@ export function GenSpaceModeTabs({
             <Icon className="h-4 w-4" />
           </button>
         ))}
+        <button
+          type="button"
+          role="tab"
+          aria-label="Reference library"
+          aria-selected={referencesActive}
+          title="Reference library"
+          onClick={onOpenReferences}
+          className={`mt-2 flex h-10 w-10 items-center justify-center rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400 ${
+            referencesActive
+              ? "bg-amber-500/20 text-amber-300 shadow-xs"
+              : "text-subtle-foreground hover:bg-surface-hover hover:text-foreground"
+          }`}
+        >
+          <BookOpen className="h-4 w-4" />
+        </button>
       </div>
       {favouriteIds.length ? (
         <div className="mt-4 flex w-full flex-col items-center gap-2 pt-2">

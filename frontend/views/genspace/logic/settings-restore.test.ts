@@ -8,6 +8,7 @@ import { DEFAULT_VIDEO_SETTINGS } from "../constants";
 import { buildSfxGenerationCommand } from "./sfx-request";
 import { buildSpeechGenerationCommand } from "./speech-request";
 import { buildGenSpaceRestorePlan } from "./settings-restore";
+import { compileVideoPrompt, createVideoSequenceDraft } from "./video-prompt-composer";
 
 function asset(generationParams: GenerationParams): Asset {
   return {
@@ -524,5 +525,39 @@ describe("GenSpace settings restoration", () => {
         padding: { left: 25, right: 25 },
       },
     });
+  });
+
+  it("keeps composer-staged reference media out of restored inputs before recompiling", () => {
+    const bethVoice = { type: "audio" as const, path: "C:\\project\\generated\\beth.wav", url: "file:///C:/project/generated/beth.wav", fileName: "beth.wav" };
+    const samVoice = { type: "audio" as const, path: "C:\\project\\generated\\sam.wav", url: "file:///C:/project/generated/sam.wav", fileName: "sam.wav" };
+    const snapshots = [
+      { id: "beth", token: "@beth", kind: "cast" as const, name: "Beth", visualDescription: "", voiceDescription: "", fidelity: "exact" as const, voiceReference: bethVoice },
+      { id: "sam", token: "@sam", kind: "cast" as const, name: "Sam", visualDescription: "", voiceDescription: "", fidelity: "exact" as const, voiceReference: samVoice },
+    ];
+    const composer = {
+      schemaVersion: 1 as const, mode: "simple" as const, sequence: createVideoSequenceDraft(),
+      authoredBrief: '@beth_dialogue "Hi" @sam_dialogue "Hello"', compiledPrompt: "compiled", resolvedDurationSeconds: 5,
+      referencedEntities: snapshots,
+    };
+    const plan = buildGenSpaceRestorePlan(asset({
+      mode: "text-to-video", prompt: "compiled", model: "pro", duration: 5, resolution: "540p", fps: 24, audio: true, cameraMotion: "none",
+      imageInputMedia: [
+        { url: "file:///C:/project/control.mp4", path: "C:\\project\\control.mp4", role: "control_video", type: "video" },
+        { url: bethVoice.url, path: bethVoice.path, role: "reference_audio", type: "audio", alias: "@audio1" },
+        { url: samVoice.url, path: samVoice.path, role: "reference_audio", type: "audio", alias: "@audio2" },
+      ],
+      videoComposer: composer,
+    }), [], DEFAULT_VIDEO_SETTINGS, musicSettings)!;
+
+    expect(plan.media.imageInputs.map((input) => input.role)).toEqual(["control_video"]);
+    const compiled = compileVideoPrompt({
+      brief: '@beth_dialogue "Hi" @sam_dialogue "Hello"',
+      composer: { schemaVersion: 1, mode: "simple", sequence: createVideoSequenceDraft(), referencedEntities: snapshots },
+      entities: [],
+      fallbackSnapshots: snapshots,
+      policy: { promptFormat: "plain", entityMediaMode: "inline-reference", voiceReference: true },
+      retainedRoles: plan.media.imageInputs.map((input) => input.role),
+    });
+    expect(compiled.entityInputs.filter((input) => input.role === "reference_audio")).toHaveLength(2);
   });
 });

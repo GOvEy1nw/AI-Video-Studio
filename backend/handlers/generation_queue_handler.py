@@ -248,7 +248,7 @@ class GenerationQueueHandler:
                     raise HTTPError(400, "INVALID_CLIENT_CONTEXT: acknowledgement outputs require persistence refs.")
                 for ref in cast(list[object], refs):
                     ref_data = cast(dict[str, Any], ref) if isinstance(ref, dict) else None
-                    if ref_data is None or ref_data.get("kind") not in {"asset", "take", "director_document", "clip_update"} or not isinstance(ref_data.get("id"), str):
+                    if ref_data is None or ref_data.get("kind") not in {"asset", "take", "director_document", "clip_update", "reference_draft"} or not isinstance(ref_data.get("id"), str):
                         raise HTTPError(400, "INVALID_CLIENT_CONTEXT: acknowledgement persistence ref is invalid.")
                     if "parentId" in ref_data and ref_data["parentId"] is not None and not isinstance(ref_data["parentId"], str):
                         raise HTTPError(400, "INVALID_CLIENT_CONTEXT: acknowledgement persistence ref parent is invalid.")

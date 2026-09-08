@@ -256,12 +256,12 @@ export function registerFileHandlers(): void {
     return normalizedPath
   })
 
-  ipcMain.handle('copy-to-project-assets', async (_event, srcPath: string, projectId: string) => {
+  ipcMain.handle('copy-to-project-assets', async (_event, srcPath: string, projectId: string, preserveSource = false) => {
     try {
       const resolvedSrc = validatePath(srcPath, getAllowedRoots())
       const assetsRoot = getProjectAssetsPath()
       const destDir = projectAssetCategoryDir(assetsRoot, projectId, 'generated')
-      const imported = await importProjectAsset(resolvedSrc, destDir, 'overwrite', 'move')
+      const imported = await importProjectAsset(resolvedSrc, destDir, preserveSource ? 'suffix' : 'overwrite', preserveSource ? 'copy' : 'move')
       return {
         success: true,
         path: imported.destPath,

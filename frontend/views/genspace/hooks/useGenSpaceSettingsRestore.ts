@@ -27,6 +27,7 @@ import type { VideoToolId } from "../../../types/video-tools";
 import type { AudioSubMode } from "../types";
 import type { SfxSettings } from "../../../types/sfx";
 import type { SpeechSettings } from "../../../types/speech";
+import type { VideoComposerStateV1 } from "../../../types/video-composer";
 import {
   parseRegionPrompt,
   type RegionPromptState,
@@ -60,6 +61,7 @@ export function useGenSpaceSettingsRestore({
   setVideoTool,
   setVideoToolInput,
   setUpscale,
+  setVideoComposer,
   clearError,
 }: {
   assets: Asset[];
@@ -95,6 +97,7 @@ export function useGenSpaceSettingsRestore({
   setVideoTool: (tool: VideoToolId) => void;
   setVideoToolInput: (input: GenSpaceMediaInput | null) => void;
   setUpscale: (value: { method: import("../../../types/upscale").UpscaleMethodId; scale: number }) => void;
+  setVideoComposer: (value: VideoComposerStateV1) => void;
   clearError: () => void;
 }) {
   const pendingMedia = useRef<{
@@ -132,10 +135,19 @@ export function useGenSpaceSettingsRestore({
           setPrompt(plan.prompt);
         }
       } else {
-        setPrompt(plan.prompt);
+        setPrompt(asset.generationParams?.videoComposer?.authoredBrief ?? plan.prompt);
       }
       setVideoMode(plan.videoMode);
       setVideoTool(plan.videoTool);
+      const savedComposer = asset.generationParams?.videoComposer;
+      if (savedComposer?.schemaVersion === 1) {
+        setVideoComposer({
+          schemaVersion: 1,
+          mode: savedComposer.mode,
+          sequence: savedComposer.sequence,
+          referencedEntities: savedComposer.referencedEntities,
+        });
+      }
       setVideoToolInput(plan.media.videoToolInput);
       if (plan.media.upscaleSource && asset.generationParams?.upscale) {
         setUpscale({ method: asset.generationParams.upscale.method, scale: asset.generationParams.upscale.scale });
@@ -186,6 +198,7 @@ export function useGenSpaceSettingsRestore({
       setSettings,
       setVideoMode,
       setVideoTool,
+      setVideoComposer,
       setVideoToolInput,
       setUpscale,
       settings,

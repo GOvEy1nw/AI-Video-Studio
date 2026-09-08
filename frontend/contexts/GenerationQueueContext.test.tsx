@@ -6,7 +6,9 @@ import { copyQueuedOutputToAssetFolder } from '../lib/asset-copy'
 import type { Project } from '../types/project'
 
 const projects = { projects: [] as Project[], addAsset: vi.fn(), addTakeToAsset: vi.fn(), updateAsset: vi.fn(), updateTimeline: vi.fn(), updateDirectorTimeline: vi.fn(), awaitProjectPersistence: vi.fn() }
+const referenceLibrary = { publishGeneratedImage: vi.fn() }
 vi.mock('./ProjectContext', () => ({ useProjects: () => projects }))
+vi.mock('./ReferenceLibraryContext', () => ({ useReferenceLibrary: () => referenceLibrary }))
 vi.mock('../lib/asset-copy', () => ({ copyQueuedOutputToAssetFolder: vi.fn() }))
 
 const fetchMock = vi.fn()
@@ -17,6 +19,7 @@ beforeEach(() => {
   projects.projects = []
   for (const mock of [projects.addAsset, projects.addTakeToAsset, projects.updateAsset, projects.updateTimeline, projects.updateDirectorTimeline, projects.awaitProjectPersistence]) mock.mockReset()
   projects.awaitProjectPersistence.mockResolvedValue(undefined)
+  referenceLibrary.publishGeneratedImage.mockReset()
   vi.mocked(copyQueuedOutputToAssetFolder).mockReset()
   Object.assign(window, { electronAPI: { getBackend: vi.fn().mockResolvedValue({ url: 'http://queue.test', token: '' }) } })
   vi.stubGlobal('fetch', fetchMock)
@@ -120,6 +123,28 @@ describe('GenerationQueueProvider', () => {
     await waitFor(() => expect(detailCalls).toBe(1))
     await new Promise((resolve) => setTimeout(resolve, 100))
     expect(detailCalls).toBe(1)
+  })
+
+  it('stages a completed global reference image without creating a project asset', async () => {
+    let acknowledged = false
+    Object.assign(window, { electronAPI: {
+      getBackend: vi.fn().mockResolvedValue({ url: 'http://queue.test', token: '' }),
+      stageGeneratedReferenceImage: vi.fn().mockResolvedValue({ path: 'C:\\references\\staging\\draft.png', url: 'file:///C:/references/staging/draft.png', fileName: 'draft.png' }),
+    } })
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.endsWith('/api/generation/queue')) return new Response(JSON.stringify({ ...queue, attention: acknowledged ? [] : [{ id: 'reference-job', kind: 'image.generate', status: 'completed', summary: { label: 'Reference image', mediaKind: 'image', operation: 'reference-library-image' } }] }), { status: 200 })
+      if (url.endsWith('/api/generation/jobs/reference-job')) return new Response(JSON.stringify({ id: 'reference-job', kind: 'image.generate', status: 'completed', summary: { label: 'Reference image', mediaKind: 'image', operation: 'reference-library-image' }, clientContext: { schemaVersion: 1, projectId: 'reference-library', intent: { kind: 'reference-library-image', draftId: 'draft-1', stagingId: 'generation-1' } }, result: { kind: 'image.generate', response: { image_path: 'C:\\outputs\\reference.png' } } }), { status: 200 })
+      if (url.endsWith('/acknowledge')) { acknowledged = true; return new Response('{}', { status: 200 }) }
+      throw new Error(`Unexpected request ${url}`)
+    })
+
+    renderHook(() => useGenerationQueue(), { wrapper: GenerationQueueProvider })
+
+    await waitFor(() => expect(referenceLibrary.publishGeneratedImage).toHaveBeenCalledWith('draft-1', expect.objectContaining({ path: 'C:\\references\\staging\\draft.png' })))
+    expect(window.electronAPI.stageGeneratedReferenceImage).toHaveBeenCalledWith('C:\\outputs\\reference.png', 'generation-1')
+    expect(projects.addAsset).not.toHaveBeenCalled()
+    await waitFor(() => expect(acknowledged).toBe(true))
+    expect(fetchMock.mock.calls.find(([url]) => String(url).endsWith('/acknowledge'))?.[1]).toEqual(expect.objectContaining({ body: expect.stringContaining('electron-reference-library-persistence') }))
   })
 
   it('persists an editor gap into the submitted project and timeline', async () => {

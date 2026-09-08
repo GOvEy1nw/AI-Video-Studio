@@ -3,6 +3,7 @@ import type { GenerationSettings } from "../../types/generation";
 import {
   buildDirectorRequestBody,
   buildImageRequestBody,
+  buildReferenceImageRequestBody,
   buildMusicRequestBody,
   buildVideoRequestBody,
 } from "./request-builders";
@@ -161,6 +162,17 @@ describe("generation transport request builders", () => {
           },
         },
       ],
+    });
+  });
+
+  it("builds the fixed curated Reference Library image request", () => {
+    expect(buildReferenceImageRequestBody("A weathered astronaut")).toEqual({
+      prompt: "A weathered astronaut",
+      modelProfileId: "flux2_klein_4b",
+      resolutionTier: "540p",
+      aspectRatio: "1:1",
+      numImages: 1,
+      enhancePrompt: false,
     });
   });
 

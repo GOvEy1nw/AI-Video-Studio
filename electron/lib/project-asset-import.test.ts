@@ -92,6 +92,27 @@ describe('project asset import', () => {
     fs.rmSync(root, { recursive: true, force: true })
   })
 
+  it('stages a same-named source without overwriting existing project media', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aivs-project-stage-'))
+    const existingDir = path.join(root, 'existing')
+    const sourceDir = path.join(root, 'source')
+    const destination = path.join(root, 'generated')
+    fs.mkdirSync(existingDir)
+    fs.mkdirSync(sourceDir)
+    const existing = path.join(destination, 'beth.png')
+    const source = path.join(sourceDir, 'beth.png')
+    fs.mkdirSync(destination)
+    fs.writeFileSync(existing, 'project-original')
+    fs.writeFileSync(source, 'library-copy')
+
+    const staged = await importProjectAsset(source, destination, 'suffix', 'copy')
+
+    expect(staged.destPath).not.toBe(existing)
+    expect(fs.readFileSync(existing, 'utf8')).toBe('project-original')
+    expect(fs.readFileSync(staged.destPath, 'utf8')).toBe('library-copy')
+    fs.rmSync(root, { recursive: true, force: true })
+  })
+
   it('retries a transient Windows move failure', async () => {
     const rename = vi
       .fn<() => Promise<void>>()

@@ -206,6 +206,7 @@ export function buildGeneratedVideoAsset({
       imageInputMedia: snapshot.inputs.map((input) =>
         storedInput(input, snapshot.assetPaths),
       ),
+      videoComposer: snapshot.composer,
     },
     takes: [{ url: finalUrl, path: finalPath, createdAt, seed }],
     activeTakeIndex: 0,

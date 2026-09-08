@@ -118,6 +118,12 @@ export interface ModelProfileInputMedia {
   roles: ModelProfileInputMediaRole[]
 }
 
+export interface ModelProfilePromptComposerPolicy {
+  promptFormat: 'plain' | 'h3'
+  entityMediaMode: 'text-only' | 'general-reference' | 'inline-reference'
+  voiceReference: boolean
+}
+
 export interface ModelProfileUi {
   defaultAspectRatio: string
   defaultResolutionTier: string
@@ -228,6 +234,7 @@ export interface ModelProfile {
   capabilities: ModelProfileCapabilities
   ui: ModelProfileUi
   inputMedia: ModelProfileInputMedia
+  promptComposer?: ModelProfilePromptComposerPolicy
   requiredPackIds: string[]
   systemDependencies: ModelProfileSystemDependency[]
   videoAudio: ModelProfileVideoAudioPolicy

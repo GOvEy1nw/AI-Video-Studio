@@ -53,7 +53,9 @@ function WorkspaceFallback() {
 
 export function Project() {
   const { currentProjectMeta } = useProjectMeta();
-  const { currentTab, setCurrentTab, goHome } = useProjectNavigation();
+  const { currentView, currentTab, setCurrentTab, goHome, setCurrentView } =
+    useProjectNavigation();
+  const isReferenceLibrary = currentView === "references";
   const [visitedTabs, setVisitedTabs] = useState<ReadonlySet<ProjectTab>>(
     () => new Set([currentTab]),
   );
@@ -122,9 +124,12 @@ export function Project() {
               onClick={() => {
                 setVisitedTabs((current) => addVisitedTab(current, tab.id));
                 setCurrentTab(tab.id);
+                setCurrentView("project");
               }}
               className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                currentTab === tab.id
+                (isReferenceLibrary
+                  ? tab.id === "gen-space"
+                  : currentTab === tab.id)
                   ? "bg-surface-selected text-foreground"
                   : "text-muted-foreground hover:text-foreground"
               }`}
@@ -141,12 +146,15 @@ export function Project() {
 
       {/* Visited workspaces stay mounted for state, but inactive layers do not render. */}
       <main className="flex-1 overflow-hidden relative">
-        {visitedTabs.has("gen-space") ? (
+        {visitedTabs.has("gen-space") || isReferenceLibrary ? (
           <div
-            hidden={currentTab !== "gen-space"}
+            hidden={currentTab !== "gen-space" && !isReferenceLibrary}
             className="absolute inset-0 z-10 bg-background"
           >
-            <GenSpace isActive={currentTab === "gen-space"} />
+            <GenSpace
+              isActive={currentTab === "gen-space" || isReferenceLibrary}
+              showReferences={isReferenceLibrary}
+            />
           </div>
         ) : null}
         {visitedTabs.has("director") ? (

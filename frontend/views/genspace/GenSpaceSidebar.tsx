@@ -4,12 +4,17 @@ import { ImageGenPanel } from "./image/ImageGenPanel";
 import { getGenSpaceModeAccentStyle } from "./mode-accent";
 import type { GenSpaceSidebarController } from "./types";
 import { VideoGenPanel } from "./video/VideoGenPanel";
+import { useProjectNavigation } from "../../contexts/ProjectContext";
 
 export function GenSpaceSidebar({
   controller,
+  railOnly = false,
 }: {
   controller: GenSpaceSidebarController;
+  railOnly?: boolean;
 }) {
+  const { currentView, setCurrentView } = useProjectNavigation();
+
   return (
     <div
       className="genspace-mode-theme flex h-full bg-background"
@@ -18,14 +23,23 @@ export function GenSpaceSidebar({
     >
       <GenSpaceModeTabs
         mode={controller.mode}
-        onChange={controller.setMode}
+        onChange={(mode) => {
+          controller.setMode(mode);
+          setCurrentView("project");
+        }}
+        referencesActive={currentView === "references"}
+        onOpenReferences={() => setCurrentView("references")}
         favouriteIds={controller.workflow.favouriteIds}
-        onSelectWorkflow={controller.workflow.select}
+        onSelectWorkflow={(workflowId) => {
+          controller.workflow.select(workflowId);
+          setCurrentView("project");
+        }}
         onToggleFavourite={controller.workflow.toggleFavourite}
         onReorderFavourite={controller.workflow.reorderFavourite}
         onConfirmReorder={controller.workflow.confirmFavouriteOrder}
       />
       <div
+        hidden={railOnly}
         data-workflow-catalogue-host
         className="relative min-w-0 flex-1 overflow-y-auto bg-card m-2 ml-0 rounded-2xl border border-border"
       >

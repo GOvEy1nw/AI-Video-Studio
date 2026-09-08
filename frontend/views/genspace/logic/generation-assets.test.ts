@@ -162,6 +162,17 @@ describe("GenSpace generated asset builders", () => {
     expect(asset.takes?.[0]?.seed).toBe(321);
   });
 
+  it("persists the immutable composer snapshot for Copy Settings", () => {
+    const asset = buildGeneratedVideoAsset({
+      snapshot: {
+        projectId: "project-a", prompt: "compiled", settings: { ...DEFAULT_VIDEO_SETTINGS, duration: 5 }, inputs: [], inputImage: null, inputAudio: null, assetPaths: [],
+        composer: { schemaVersion: 1, mode: "sequence", sequence: { schemaVersion: 1, scenes: [] }, referencedEntities: [], authoredBrief: "@beth", compiledPrompt: "compiled", resolvedDurationSeconds: 5 },
+      },
+      finalPath: "C:\\output.mp4", finalUrl: "file:///C:/output.mp4", createdAt: 1,
+    });
+    expect(asset.generationParams?.videoComposer).toMatchObject({ mode: "sequence", authoredBrief: "@beth", compiledPrompt: "compiled", resolvedDurationSeconds: 5 });
+  });
+
   it("persists Image Upscale source and method metadata", () => {
     const source = { id: "source", url: "file:///C:/source.png", path: "C:\\source.png", role: "upscale_source", type: "image" as const };
     const asset = buildGeneratedImageAsset({

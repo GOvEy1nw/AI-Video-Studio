@@ -12,6 +12,24 @@ import type { SfxSettings } from "../../../types/sfx";
 import type { SpeechSettings } from "../../../types/speech";
 import { getImageModeForProfileId } from "../image/image-profile-options";
 
+const COMPOSER_STAGED_ROLES = new Set([
+  "reference_image",
+  "reference_video",
+  "reference_audio",
+]);
+
+function isComposerStagedInput(
+  input: NonNullable<NonNullable<Asset["generationParams"]>["imageInputMedia"]>[number],
+  composer: NonNullable<NonNullable<Asset["generationParams"]>["videoComposer"]>,
+) {
+  if (!COMPOSER_STAGED_ROLES.has(input.role)) return false;
+  return composer.referencedEntities.some((entity) =>
+    [entity.visualReference, entity.kind === "cast" ? entity.voiceReference : undefined]
+      .filter((media): media is NonNullable<typeof media> => !!media)
+      .some((media) => media.path === input.path || media.url === input.url),
+  );
+}
+
 export function buildGenSpaceRestorePlan(
   asset: Asset,
   projectAssets: Asset[],
@@ -26,8 +44,16 @@ export function buildGenSpaceRestorePlan(
     (params.speech?.schemaVersion === 1 || params.speech?.schemaVersion === 2);
   const isUpscale = params.mode === "upscale" && params.upscale?.schemaVersion === 1;
   const mode = genSpaceModeFromParams(params);
+  const mediaParams = params.videoComposer?.schemaVersion === 1
+    ? {
+        ...params,
+        imageInputMedia: params.imageInputMedia?.filter(
+          (input) => !isComposerStagedInput(input, params.videoComposer!),
+        ),
+      }
+    : params;
   const restoredImageInputs = buildImageInputsFromParams(
-    params,
+    mediaParams,
     projectAssets,
   );
   const editImage =

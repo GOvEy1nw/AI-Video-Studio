@@ -26,6 +26,7 @@ import type { SpeechGenerationRecipe, SpeechSettings } from "../../types/speech"
 import type { Asset } from "../../types/project";
 import type { UpscaleMediaKind, UpscaleMethod, UpscaleMethodId } from "../../types/upscale";
 import type { QuickGenWorkflowId } from "./workflows";
+import type { VideoComposerStateV1, VideoComposerSubmissionV1, VideoSequenceScene, VideoSequenceShot } from "../../types/video-composer";
 
 export type GenSpaceMode = "image" | "video" | "music";
 export type AudioSubMode = "music" | "speech" | "sfx" | "mixer";
@@ -202,6 +203,18 @@ export interface VideoGenPanelController {
   videoTools: GenSpaceVideoToolsController;
   upscale: GenSpaceUpscaleController;
   framing: GenSpaceFramingController;
+  composer: {
+    value: VideoComposerStateV1;
+    setMode: (mode: VideoComposerStateV1["mode"]) => void;
+    updateScene: (id: string, patch: Partial<VideoSequenceScene>) => void;
+    updateShot: (sceneId: string, shotId: string, patch: Partial<VideoSequenceShot>) => void;
+    addScene: () => void;
+    addShot: (sceneId: string) => void;
+    removeScene: (id: string) => void;
+    removeShot: (sceneId: string, shotId: string) => void;
+    moveScene: (id: string, offset: number) => void;
+    moveShot: (sceneId: string, shotId: string, offset: number) => void;
+  };
   workflow?: Pick<GenSpaceSidebarController["workflow"], "favouriteIds" | "toggleFavourite">;
 }
 
@@ -300,6 +313,7 @@ export interface VideoSubmissionSnapshot extends ImageSubmissionSnapshot {
   inputImage: string | null;
   inputAudio: string | null;
   videoTool?: VideoToolId;
+  composer?: VideoComposerSubmissionV1;
 }
 
 export interface MusicSubmissionSnapshot {
