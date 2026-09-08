@@ -10,8 +10,10 @@ import {
   isImageAspectRatioLocked,
   isVideoAspectRatioLocked,
   inferMediaKindForRole,
+  isSequenceFreeReferenceRole,
   normalizeImageInputsForProfile,
   normalizeVideoInputsForProfile,
+  removeSequenceFreeReferences,
   replaceGuideInput,
   nextH3MediaAlias,
 } from "./media-inputs";
@@ -34,6 +36,15 @@ const input = (
 ): GenSpaceMediaInput => ({ id, role, type, url: `file:///${id}` });
 
 describe("GenSpace media input logic", () => {
+
+  it("removes only free Sequence references and keeps frame/task inputs", () => {
+    const inputs = [
+      input("reference", "reference_image", "image"), input("depth", "depth", "video"), input("motion", "human_motion", "video"), input("audio", "audio_to_video", "audio"),
+      input("start", "start_image", "image"), input("end", "end_image", "image"), input("control", "control_video", "video"), input("continue", "continue_video", "video"), input("audio-control", "control_audio", "audio"),
+    ];
+    expect(inputs.filter((item) => isSequenceFreeReferenceRole(item.role)).map((item) => item.id)).toEqual(["reference", "depth", "motion", "audio"]);
+    expect(removeSequenceFreeReferences(inputs).map((item) => item.id)).toEqual(["start", "end", "control", "continue", "audio-control"]);
+  });
   it("clamps image inputs and falls back to the profile default role", () => {
     expect(
       normalizeImageInputsForProfile(

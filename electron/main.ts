@@ -7,6 +7,7 @@ import { registerAppHandlers } from './ipc/app-handlers'
 import { registerFileHandlers } from './ipc/file-handlers'
 import { registerLogHandlers } from './ipc/log-handlers'
 import { registerProjectStorageHandlers } from './ipc/project-storage-handlers'
+import { registerReferenceLibraryHandlers } from './ipc/reference-library-handlers'
 import { registerVideoProcessingHandlers } from './ipc/video-processing-handlers'
 import { initSessionLog } from './logging-management'
 import { stopPythonBackend } from './python-backend'
@@ -25,6 +26,7 @@ if (!gotLock) {
   registerFileHandlers()
   registerLogHandlers()
   registerProjectStorageHandlers()
+  registerReferenceLibraryHandlers()
   registerExportHandlers()
   registerVideoProcessingHandlers()
 

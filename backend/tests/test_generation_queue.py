@@ -136,6 +136,20 @@ def test_completion_acknowledgement_requires_complete_output_receipt(tmp_path):
         queue.shutdown()
 
 
+def test_completion_acknowledgement_accepts_reference_draft_receipt(tmp_path):
+    queue = _queue(tmp_path)
+    try:
+        job_id = _submit(queue, "reference")
+        queue._claim_next()
+        queue._finish(job_id, result={"kind": "image.generate", "response": {"image_paths": ["reference.png"]}})
+        assert queue.acknowledge(job_id, {
+            "projectId": "project",
+            "outputs": [{"outputIndex": 0, "refs": [{"kind": "reference_draft", "id": "draft-1"}]}],
+        })["id"] == job_id
+    finally:
+        queue.shutdown()
+
+
 def test_image_acknowledgement_requires_all_generated_outputs(tmp_path):
     queue = _queue(tmp_path)
     try:

@@ -49,6 +49,9 @@ import { buildSpeechGenerationCommand } from "../logic/speech-request";
 import type { SpeechSettings } from "../../../types/speech";
 import { fileUrlToPath } from "../../../lib/url-to-path";
 import type { UpscaleMethodId } from "../../../types/upscale";
+import type { ReferenceEntity } from "../../../../shared/reference-library";
+import { compileVideoPrompt, type VideoComposerStateV1 } from "../logic/video-prompt-composer";
+import { stageEntityInputs, stageReferenceSnapshots } from "../logic/reference-entity-staging";
 
 interface RetakeInput {
   videoPath: string | null;
@@ -67,6 +70,9 @@ export function useGenSpaceGenerationActions({
   prompt,
   framingSettings,
   promptEnhancementEnabled,
+  composer = { schemaVersion: 1, mode: "simple", sequence: { schemaVersion: 1, scenes: [] } },
+  referenceEntities = [],
+  videoProfiles = [],
   currentProjectId,
   projectAssets,
   settings,
@@ -106,6 +112,9 @@ export function useGenSpaceGenerationActions({
   prompt: string;
   framingSettings: FramingSettings | null;
   promptEnhancementEnabled: boolean;
+  composer?: VideoComposerStateV1;
+  referenceEntities?: readonly ReferenceEntity[];
+  videoProfiles?: ModelProfile[];
   currentProjectId: string | null;
   projectAssets: Asset[];
   settings: GenSpaceSettings;
@@ -209,7 +218,8 @@ export function useGenSpaceGenerationActions({
     const authoredPrompt = isRegionImage
       ? serializeRegionPrompt(regionPrompt)
       : prompt;
-    if (!authoredPrompt.trim() && !(mode === "music" && audioSubmode === "speech" && speechSettings?.references.length === 2)) return;
+    const hasSequencePrompt = composer.mode === "sequence" && composer.sequence.scenes.some((scene) => scene.shots.some((shot) => shot.description.trim()));
+    if (!authoredPrompt.trim() && !hasSequencePrompt && !(mode === "music" && audioSubmode === "speech" && speechSettings?.references.length === 2)) return;
 
     if (mode === "music" && audioSubmode === "sfx") {
       if (!currentProjectId) return;
@@ -313,8 +323,24 @@ export function useGenSpaceGenerationActions({
       return;
     }
 
+    const selectedVideoProfile = videoProfiles.find((profile) => profile.id === settings.videoProfileId);
+    const compiledVideo = mode === "video" && videoMode === "generate"
+      ? compileVideoPrompt({
+          brief: authoredPrompt,
+          composer,
+          entities: referenceEntities,
+          fallbackSnapshots: composer.referencedEntities,
+          reservedAliases: imageInputs.flatMap((input) => input.alias ? [input.alias] : []),
+          retainedRoles: imageInputs.map((input) => input.role),
+          policy: selectedVideoProfile?.promptComposer ?? { promptFormat: "plain", entityMediaMode: "text-only", voiceReference: false },
+        })
+      : null;
+    if (compiledVideo && !compiledVideo.ok) {
+      setLocalError(compiledVideo.error ?? "Unable to compile video prompt.");
+      return;
+    }
     const effectivePrompt = applyFramingPrefix(
-      authoredPrompt,
+      compiledVideo?.prompt ?? authoredPrompt,
       mode === "video" || imageMode === "create"
         ? framingSettings
         : null,
@@ -399,10 +425,30 @@ export function useGenSpaceGenerationActions({
       return;
     }
 
+    const compiledSettings = compiledVideo?.durationSeconds
+      ? { ...settings, duration: compiledVideo.durationSeconds }
+      : settings;
+    if (!currentProjectId) return;
+    let stagedEntityInputs = [];
+    try {
+      stagedEntityInputs = compiledVideo
+        ? await stageEntityInputs(
+            compiledVideo.entityInputs,
+            (path) => window.electronAPI.copyToProjectAssets(path, currentProjectId, true),
+            async (paths) => { await window.electronAPI.deleteProjectAssetFiles({ projectId: currentProjectId, filePaths: paths }); },
+          )
+        : [];
+    } catch (error) {
+      setLocalError(error instanceof Error ? error.message : String(error));
+      return;
+    }
+    const submittedVideoInputs = compiledVideo
+      ? [...imageInputs, ...stagedEntityInputs]
+      : imageInputs;
     const command = buildVideoGenerationCommand({
       prompt: effectivePrompt,
-      settings,
-      imageInputs,
+      settings: compiledSettings,
+      imageInputs: submittedVideoInputs,
       inputImage,
       inputAudio,
       useAudioTrack,
@@ -411,16 +457,24 @@ export function useGenSpaceGenerationActions({
     if (command.persistNormalizedSettings) {
       setSettings(command.normalizedSettings);
     }
-    if (!currentProjectId) return;
     const snapshot: VideoSubmissionSnapshot = {
       projectId: currentProjectId,
       submittedAt: Date.now(),
       prompt: effectivePrompt,
       settings: { ...command.normalizedSettings },
-      inputs: imageInputs.map((input) => ({ ...input })),
+      inputs: submittedVideoInputs.map((input) => ({ ...input })),
       inputImage,
       inputAudio,
-      assetPaths: projectAssets.map(({ url, path }) => ({ url, path })),
+      assetPaths: [...projectAssets.map(({ url, path }) => ({ url, path })), ...stagedEntityInputs.map(({ url, path }) => ({ url, path }))],
+      composer: compiledVideo ? {
+        schemaVersion: 1,
+        mode: composer.mode,
+        sequence: composer.sequence,
+        referencedEntities: stageReferenceSnapshots(compiledVideo.snapshots, stagedEntityInputs),
+        authoredBrief: authoredPrompt,
+        compiledPrompt: effectivePrompt,
+        resolvedDurationSeconds: compiledVideo.durationSeconds ?? command.normalizedSettings.duration,
+      } : undefined,
     };
     await generate(
       command.prompt,
@@ -436,6 +490,7 @@ export function useGenSpaceGenerationActions({
     );
   }, [
     currentProjectId,
+    composer,
     generate,
     generateImage,
     generateMusic,
@@ -462,6 +517,7 @@ export function useGenSpaceGenerationActions({
     promptEnhancementEnabled,
     projectAssets,
     reframeInput,
+    referenceEntities,
     retakeInput,
     setLocalError,
     setSettings,
@@ -469,6 +525,7 @@ export function useGenSpaceGenerationActions({
     settings,
     submitRetake,
     useAudioTrack,
+    videoProfiles,
     videoMode,
     videoToolInput,
     upscaleMethod,

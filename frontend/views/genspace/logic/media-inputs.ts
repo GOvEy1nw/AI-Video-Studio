@@ -82,6 +82,22 @@ export function findGuideInput(
   return inputs.find(({ role }) => GUIDE_MEDIA_ROLE_SET.has(role));
 }
 
+const SEQUENCE_RETAINED_MEDIA_ROLES = new Set([
+  "start_image", "end_image", "control_video", "control_audio", "continue_video", "edit_image", "reframe_source",
+]);
+const SEQUENCE_FREE_REFERENCE_ROLES = new Set([
+  "depth", "human_motion", "human_motion_pose", "canny_edges", "audio_to_video", "audio_guide",
+]);
+
+export function isSequenceFreeReferenceRole(role: string): boolean {
+  return !SEQUENCE_RETAINED_MEDIA_ROLES.has(role) &&
+    (role.startsWith("reference_") || SEQUENCE_FREE_REFERENCE_ROLES.has(role));
+}
+
+export function removeSequenceFreeReferences(inputs: GenSpaceMediaInput[]): GenSpaceMediaInput[] {
+  return inputs.filter((input) => !isSequenceFreeReferenceRole(input.role));
+}
+
 const H3_ALIAS_PATTERN = /@(image|video|audio)[1-9]\d*/g;
 
 export function getH3PromptAliases(prompt: string): string[] {

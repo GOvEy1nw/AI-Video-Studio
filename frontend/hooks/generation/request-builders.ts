@@ -206,3 +206,15 @@ export function buildImageRequestBody(
   }
   return body;
 }
+
+/** Global Reference Library image creation uses the curated Flux Klein 4B square profile. */
+export function buildReferenceImageRequestBody(prompt: string): Record<string, unknown> {
+  return {
+    prompt,
+    modelProfileId: "flux2_klein_4b",
+    resolutionTier: "540p",
+    aspectRatio: "1:1",
+    numImages: 1,
+    enhancePrompt: false,
+  };
+}

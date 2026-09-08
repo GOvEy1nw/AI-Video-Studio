@@ -6,6 +6,7 @@ import { cloneDirectorSequence, normalizeDirectorSequence } from '../lib/directo
 import type { DirectorSequenceV1 } from '../types/director'
 import { logger } from '../lib/logger'
 import { ProjectPersistenceQueue } from './project-persistence-queue'
+import type { VideoComposerStateV1 } from '../types/video-composer'
 
 function createProjectId(name: string, createdAt: number, existingIds: Set<string>): string {
   const date = new Date(createdAt)
@@ -73,6 +74,7 @@ export interface ProjectContextType {
     id: string,
     seed: { seedLocked: boolean; lockedSeed: number },
   ) => void
+  updateProjectVideoComposer: (id: string, composer: VideoComposerStateV1) => void
   
   // Assets
   addAsset: (projectId: string, asset: Omit<Asset, 'id' | 'createdAt'>) => Asset
@@ -124,7 +126,7 @@ export interface ProjectContextType {
 
 type ProjectMeta = Pick<
   Project,
-  'id' | 'name' | 'createdAt' | 'thumbnail' | 'genSpaceSeedLocked' | 'genSpaceLockedSeed'
+  'id' | 'name' | 'createdAt' | 'thumbnail' | 'genSpaceSeedLocked' | 'genSpaceLockedSeed' | 'genSpaceVideoComposer'
 >
 
 export type NavigationContextType = Pick<
@@ -138,6 +140,7 @@ export type ProjectListContextType = Pick<
 export type ProjectMetaContextType = {
   currentProjectMeta: ProjectMeta | null
   updateProjectGenSpaceSeed: ProjectContextType['updateProjectGenSpaceSeed']
+  updateProjectVideoComposer: ProjectContextType['updateProjectVideoComposer']
 }
 export type ProjectAssetsContextType = Pick<
   ProjectContextType,
@@ -720,6 +723,17 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     ))
   }, [])
 
+  const updateProjectVideoComposer = useCallback((
+    id: string,
+    composer: VideoComposerStateV1,
+  ) => {
+    setProjects(prev => prev.map(p =>
+      p.id === id
+        ? { ...p, genSpaceVideoComposer: composer, updatedAt: Date.now() }
+        : p,
+    ))
+  }, [])
+
   const addAsset = useCallback((projectId: string, assetData: Omit<Asset, 'id' | 'createdAt'>): Asset => {
     const newAsset: Asset = {
       ...assetData,
@@ -1125,10 +1139,12 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     thumbnail: currentProject.thumbnail,
     genSpaceSeedLocked: currentProject.genSpaceSeedLocked,
     genSpaceLockedSeed: currentProject.genSpaceLockedSeed,
+    genSpaceVideoComposer: currentProject.genSpaceVideoComposer,
   } : null, [
     currentProject?.createdAt,
     currentProject?.genSpaceLockedSeed,
     currentProject?.genSpaceSeedLocked,
+    currentProject?.genSpaceVideoComposer,
     currentProject?.id,
     currentProject?.name,
     currentProject?.thumbnail,
@@ -1136,7 +1152,8 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const projectMetaValue = useMemo<ProjectMetaContextType>(() => ({
     currentProjectMeta,
     updateProjectGenSpaceSeed,
-  }), [currentProjectMeta, updateProjectGenSpaceSeed])
+    updateProjectVideoComposer,
+  }), [currentProjectMeta, updateProjectGenSpaceSeed, updateProjectVideoComposer])
   const getProjectAssets = useCallback((projectId: string) => (
     projectsRef.current.find((project) => project.id === projectId)?.assets ?? EMPTY_ASSETS
   ), [])
@@ -1241,6 +1258,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     ...projectListValue,
     currentProject,
     updateProjectGenSpaceSeed,
+    updateProjectVideoComposer,
     ...projectAssetsValue,
     ...editorTimelinesValue,
     ...directorTimelinesValue,
@@ -1257,6 +1275,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     retryProjectPersistence,
     awaitProjectPersistence,
     updateProjectGenSpaceSeed,
+    updateProjectVideoComposer,
   ])
   
   return (

@@ -58,6 +58,8 @@ export function VideoMediaInputs({
   selectedStyle,
   onOpenStyles,
   stylesDisabled = false,
+  libraryMedia = [],
+  freeReferencesDisabled = false,
 }: {
   inputs: GenSpaceMediaInput[];
   onChange: Dispatch<SetStateAction<GenSpaceMediaInput[]>>;
@@ -77,6 +79,13 @@ export function VideoMediaInputs({
   selectedStyle?: { id: string; displayName: string };
   onOpenStyles?: () => void;
   stylesDisabled?: boolean;
+  libraryMedia?: readonly {
+    id: string;
+    name: string;
+    type: "image" | "video" | "audio";
+    url: string;
+  }[];
+  freeReferencesDisabled?: boolean;
 }) {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const guideInputRef = useRef<HTMLInputElement>(null);
@@ -183,6 +192,7 @@ export function VideoMediaInputs({
         resolveInputFileUrl={resolveInputFileUrl}
         syncInputFileToGallery={syncInputFileToGallery}
         onReferenceRequestReady={onReferenceRequestReady}
+        freeReferencesDisabled={freeReferencesDisabled}
       />
     );
   }
@@ -284,7 +294,10 @@ export function VideoMediaInputs({
     ) : null;
 
   return (
-    <GenPanelSection title={`References (${inputs.length}/3)`} collapsible={false}>
+    <GenPanelSection
+      title={`References (${inputs.length}/3)`}
+      collapsible={false}
+    >
       {guide && editingGuideId === guide.id ? (
         <GuideMediaTrimEditor
           item={guide}
@@ -311,7 +324,7 @@ export function VideoMediaInputs({
               onClick={onOpenStyles}
               disabled={stylesDisabled}
               aria-haspopup="dialog"
-              className={`flex aspect-square w-full flex-col items-center justify-center rounded-lg border border-dashed text-2xs transition-colors disabled:opacity-40 ${
+              className={`flex aspect-square w-24 flex-col items-center justify-center rounded-lg border border-dashed text-2xs transition-colors disabled:opacity-40 ${
                 selectedStyle
                   ? "border-violet-400/50 bg-violet-400/10 text-violet-200"
                   : "border-border text-muted-foreground hover:border-border-strong hover:text-foreground"
@@ -324,6 +337,7 @@ export function VideoMediaInputs({
             </button>
           ) : null}
           <ReferenceAddButton
+            disabled={freeReferencesDisabled}
             dragActive={guideDragActive}
             onClick={() => guideInputRef.current?.click()}
             onDragEnter={() => setGuideDragActive(true)}
@@ -332,6 +346,38 @@ export function VideoMediaInputs({
             onDrop={(event) => void dropFor("guide")(event)}
           />
         </div>
+        {libraryMedia.length ? (
+          <label className="block text-xs text-muted-foreground">
+            From Reference Library{" "}
+            {freeReferencesDisabled ? "(use @ mentions in Sequence mode)" : ""}
+            <select
+              aria-label="Add reference library media"
+              disabled={freeReferencesDisabled}
+              defaultValue=""
+              onChange={(event) => {
+                const entry = libraryMedia.find(
+                  ({ id }) => id === event.currentTarget.value,
+                );
+                if (entry) {
+                  setSlot(
+                    entry.url,
+                    entry.type === "audio" ? "audio_to_video" : "human_motion",
+                    entry.type,
+                  );
+                }
+                event.currentTarget.value = "";
+              }}
+              className="mt-1 w-full rounded bg-input px-2 py-1.5 text-sm text-foreground"
+            >
+              <option value="">Choose saved media…</option>
+              {libraryMedia.map((entry) => (
+                <option key={entry.id} value={entry.id}>
+                  {entry.name} ({entry.type})
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         {guide ? (
           <div className="relative flex flex-wrap gap-2 overflow-visible">
             <CroppableMediaInputSlot
@@ -443,6 +489,7 @@ function H3MediaInputs({
   resolveInputFileUrl,
   syncInputFileToGallery,
   onReferenceRequestReady,
+  freeReferencesDisabled = false,
 }: {
   inputs: GenSpaceMediaInput[];
   onChange: Dispatch<SetStateAction<GenSpaceMediaInput[]>>;
@@ -455,6 +502,7 @@ function H3MediaInputs({
   onReferenceRequestReady?: (
     request: (type: GenSpaceMediaKind) => void,
   ) => void;
+  freeReferencesDisabled?: boolean;
 }) {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
@@ -562,13 +610,13 @@ function H3MediaInputs({
 
   const openReferencePicker = useCallback(
     (type: GenSpaceMediaKind) => {
-      if (!referenceAvailability[type]) return;
+      if (freeReferencesDisabled || !referenceAvailability[type]) return;
       setPendingRole(H3_REFERENCE_ROLE_FOR_TYPE[type]);
       ({ image: imageInputRef, video: videoInputRef, audio: audioInputRef })[
         type
       ].current?.click();
     },
-    [referenceAvailability],
+    [freeReferencesDisabled, referenceAvailability],
   );
 
   const addReferenceFile = async (file: File) => {
@@ -585,9 +633,10 @@ function H3MediaInputs({
   const dropReference = async (event: React.DragEvent<HTMLElement>) => {
     event.preventDefault();
     if (
-      !referenceAvailability.image &&
-      !referenceAvailability.video &&
-      !referenceAvailability.audio
+      freeReferencesDisabled ||
+      (!referenceAvailability.image &&
+        !referenceAvailability.video &&
+        !referenceAvailability.audio)
     )
       return;
     const asset = readGalleryAsset(event);
@@ -687,9 +736,10 @@ function H3MediaInputs({
           </button>
           <ReferenceAddButton
             disabled={
-              !referenceAvailability.image &&
-              !referenceAvailability.video &&
-              !referenceAvailability.audio
+              freeReferencesDisabled ||
+              (!referenceAvailability.image &&
+                !referenceAvailability.video &&
+                !referenceAvailability.audio)
             }
             onClick={() => referenceInputRef.current?.click()}
             onDragOver={(event) => {

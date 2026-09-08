@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Plus, Folder, MoreVertical, Trash2, Pencil } from "lucide-react";
+import { Plus, Folder, MoreVertical, Trash2, Pencil, BookOpen } from "lucide-react";
 import {
   useProjectList,
   useProjectNavigation,
@@ -122,7 +122,7 @@ function ProjectCard({
 export function Home() {
   const { projects, createProject, deleteProject, renameProject } =
     useProjectList();
-  const { openProject } = useProjectNavigation();
+  const { openProject, setCurrentView } = useProjectNavigation();
   const [isCreating, setIsCreating] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -185,6 +185,10 @@ export function Home() {
           <button className="w-full px-3 py-2 rounded-lg bg-surface-selected text-foreground text-left text-sm font-medium flex items-center gap-2">
             <Folder className="h-4 w-4" />
             Home
+          </button>
+          <button onClick={() => setCurrentView("references")} className="mt-1 w-full px-3 py-2 rounded-lg text-muted-foreground hover:bg-surface-hover hover:text-foreground text-left text-sm font-medium flex items-center gap-2">
+            <BookOpen className="h-4 w-4" />
+            References
           </button>
 
           {projects.length > 0 && (

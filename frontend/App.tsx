@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Loader2, AlertCircle } from "lucide-react";
 import {
   ProjectProvider,
+  useProjectMeta,
   useProjectNavigation,
 } from "./contexts/ProjectContext";
 import { KeyboardShortcutsProvider } from "./contexts/KeyboardShortcutsContext";
@@ -13,6 +14,8 @@ import { useBackend } from "./hooks/use-backend";
 import { logger } from "./lib/logger";
 import { Home } from "./views/Home";
 import { Project } from "./views/Project";
+import { ReferenceLibraryView } from "./views/reference-library/ReferenceLibraryView";
+import { ReferenceLibraryProvider } from "./contexts/ReferenceLibraryContext";
 import { SettingsModal, type SettingsTabId } from "./components/SettingsModal";
 import { Button } from "./components/ui/button";
 import { GenerationQueueProvider } from "./contexts/GenerationQueueContext";
@@ -36,6 +39,7 @@ function LoadingPanel() {
 
 function AppContent() {
   const { currentView } = useProjectNavigation();
+  const { currentProjectMeta } = useProjectMeta();
   const { processStatus } = useBackend();
 
   const [pythonReady, setPythonReady] = useState<boolean | null>(null);
@@ -198,6 +202,8 @@ function AppContent() {
         return <Home />;
       case "project":
         return <Project />;
+      case "references":
+        return currentProjectMeta ? <Project /> : <ReferenceLibraryView />;
       default:
         return <Home />;
     }
@@ -229,6 +235,7 @@ export default function App() {
       <AppSettingsProvider>
         <ModelProfilesProvider>
           <ProjectProvider>
+            <ReferenceLibraryProvider>
             <div className="h-screen overflow-hidden">
               <AppTitleBar />
               <GenerationQueueProvider>
@@ -238,6 +245,7 @@ export default function App() {
                 </KeyboardShortcutsProvider>
               </GenerationQueueProvider>
             </div>
+            </ReferenceLibraryProvider>
           </ProjectProvider>
         </ModelProfilesProvider>
       </AppSettingsProvider>

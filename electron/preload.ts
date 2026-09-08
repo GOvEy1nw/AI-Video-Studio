@@ -6,6 +6,16 @@ type ModelPackProgress = import('./python-setup').ModelPackProgress
 
 // Expose protected methods to the renderer process
 const electronAPI: ElectronAPI = {
+  listReferenceEntities: (): Promise<import('../shared/reference-library').ReferenceEntity[]> =>
+    ipcRenderer.invoke('list-reference-entities'),
+  saveReferenceEntity: (input: import('../shared/reference-library').SaveReferenceEntityInput) =>
+    ipcRenderer.invoke('save-reference-entity', input),
+  deleteReferenceEntity: (id: string): Promise<void> =>
+    ipcRenderer.invoke('delete-reference-entity', id),
+  stageGeneratedReferenceImage: (sourcePath: string, draftId: string): Promise<import('../shared/reference-library').StagedReferenceImage> =>
+    ipcRenderer.invoke('stage-generated-reference-image', sourcePath, draftId),
+  discardStagedReferenceImage: (sourcePath: string): Promise<void> =>
+    ipcRenderer.invoke('discard-staged-reference-image', sourcePath),
   // Get the backend URL and auth token
   getBackend: (): Promise<{ url: string; token: string }> => ipcRenderer.invoke('get-backend'),
   
@@ -56,8 +66,8 @@ const electronAPI: ElectronAPI = {
   // Paths
   getDownloadsPath: (): Promise<string> => ipcRenderer.invoke('get-downloads-path'),
   // Project assets
-  copyToProjectAssets: (srcPath: string, projectId: string): Promise<{ success: boolean; path?: string; url?: string; error?: string }> =>
-    ipcRenderer.invoke('copy-to-project-assets', srcPath, projectId),
+  copyToProjectAssets: (srcPath: string, projectId: string, preserveSource?: boolean): Promise<{ success: boolean; path?: string; url?: string; error?: string }> =>
+    ipcRenderer.invoke('copy-to-project-assets', srcPath, projectId, preserveSource),
   copyGeneratedOutputToProjectAssets: (srcPath: string, projectId: string): Promise<{ success: boolean; path?: string; url?: string; error?: string }> =>
     ipcRenderer.invoke('copy-generated-output-to-project-assets', srcPath, projectId),
   importToProjectAssets: (options: {

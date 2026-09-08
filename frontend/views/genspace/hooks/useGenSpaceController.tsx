@@ -18,6 +18,9 @@ import {
   useProjectNavigation,
 } from "../../../contexts/ProjectContext";
 import { useGeneration } from "../../../hooks/use-generation";
+import { useVideoComposerState } from "./useVideoComposerState";
+import { compileVideoPrompt } from "../logic/video-prompt-composer";
+import { useReferenceLibrary } from "../../../contexts/ReferenceLibraryContext";
 import { useRetake } from "../../../hooks/use-retake";
 import {
   getQueueProgressBadges,
@@ -105,8 +108,13 @@ export function usePromptEnhancementPreference(
 }
 
 export function useGenSpaceController(isActive: boolean) {
-  const { currentProjectMeta, updateProjectGenSpaceSeed } = useProjectMeta();
+  const { entities: referenceEntities } = useReferenceLibrary();
+  const { currentProjectMeta, updateProjectGenSpaceSeed, updateProjectVideoComposer } = useProjectMeta();
   const { currentProjectId } = useProjectNavigation();
+  const composer = useVideoComposerState(
+    currentProjectId,
+    currentProjectMeta?.genSpaceVideoComposer,
+  );
   const {
     assets: projectAssets,
     assetBins,
@@ -474,6 +482,11 @@ export function useGenSpaceController(isActive: boolean) {
   );
 
   useEffect(() => {
+    if (!currentProjectId || composer.projectId !== currentProjectId) return;
+    updateProjectVideoComposer(currentProjectId, composer.value);
+  }, [composer.projectId, composer.value, currentProjectId, updateProjectVideoComposer]);
+
+  useEffect(() => {
     if (!appSettingsLoaded) return;
     if (!currentProjectId) {
       prevProjectIdRef.current = null;
@@ -517,6 +530,9 @@ export function useGenSpaceController(isActive: boolean) {
     prompt,
     framingSettings,
     promptEnhancementEnabled,
+    composer: composer.value,
+    referenceEntities,
+    videoProfiles,
     currentProjectId,
     projectAssets,
     settings,
@@ -765,6 +781,11 @@ export function useGenSpaceController(isActive: boolean) {
       upscale.setMethod(method);
       upscale.setScale(scale);
     },
+    setVideoComposer: (value) => {
+      if (!currentProjectId) return;
+      composer.restore(value);
+      updateProjectVideoComposer(currentProjectId, value);
+    },
     clearError: clearLocalError,
   });
   const gallery = useGenSpaceGallery({
@@ -837,6 +858,20 @@ export function useGenSpaceController(isActive: boolean) {
       activeVideoWorkflowId,
       videoSettings.profileId,
     );
+  const composerValidation = useMemo(() =>
+    mode === "video" && videoMode === "generate"
+      ? compileVideoPrompt({
+          brief: prompt,
+          composer: composer.value,
+          entities: referenceEntities,
+          fallbackSnapshots: composer.value.referencedEntities,
+          reservedAliases: imageInputs.flatMap((input) => input.alias ? [input.alias] : []),
+          retainedRoles: imageInputs.map((input) => input.role),
+          policy: videoProfiles.find((profile) => profile.id === videoSettings.profileId)?.promptComposer ?? { promptFormat: "plain", entityMediaMode: "text-only", voiceReference: false },
+        })
+      : null,
+    [mode, videoMode, prompt, composer.value, referenceEntities, imageInputs, videoProfiles, videoSettings.profileId],
+  );
   const canSubmit = isToolsMode
     ? selectedTool === "upscale"
       ? !!toolInput && !!activeUpscaleSelection.method && activeUpscaleSelection.scale !== null && !isGenerating
@@ -846,7 +881,7 @@ export function useGenSpaceController(isActive: boolean) {
     : isRetakeMode
       ? selectedVideoProfileReady && retakeInput.ready && !!retakeInput.videoPath && !isRetaking
       : mode === "video"
-        ? selectedVideoProfileReady && !!prompt.trim() && !isGenerating
+        ? selectedVideoProfileReady && !!composerValidation?.ok && !!(composerValidation.prompt?.trim()) && !isGenerating
       : mode === "music"
       ? audioSubmode === "music"
         ? musicCanSubmit
@@ -1025,6 +1060,7 @@ export function useGenSpaceController(isActive: boolean) {
         value: framingSettings,
         setValue: setFramingSettings,
       },
+      composer,
       workflow: {
         favouriteIds: favouriteWorkflowIds,
         toggleFavourite: toggleFavouriteWorkflow,

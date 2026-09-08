@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { backendFetch } from '../lib/backend'
 import { copyQueuedOutputToAssetFolder } from '../lib/asset-copy'
 import { useProjects } from './ProjectContext'
+import { useReferenceLibrary } from './ReferenceLibraryContext'
 import { DEFAULT_COLOR_CORRECTION, type Asset, type TimelineClip } from '../types/project'
 import type { GenerationSettings } from '../types/generation'
 import type {
@@ -67,6 +68,7 @@ export function getQueueProgressBadges(progress: GenerationQueueJob['progress'])
 }
 
 export type QueuePersistenceIntent =
+  | { kind: 'reference-library-image'; draftId: string; stagingId: string }
   | { kind: 'image-output'; snapshot: ImageSubmissionSnapshot }
   | { kind: 'video-output'; snapshot: VideoSubmissionSnapshot }
   | { kind: 'reframe-output'; snapshot: ReframeSubmissionSnapshot }
@@ -180,7 +182,7 @@ function findProvenance(assets: Asset[], jobId: string, outputIndex: number) {
 }
 
 type NewAsset = Omit<Asset, 'id' | 'createdAt'>
-type PersistenceRef = { kind: 'asset' | 'take' | 'director_document' | 'clip_update'; id: string; parentId?: string }
+type PersistenceRef = { kind: 'asset' | 'take' | 'director_document' | 'clip_update' | 'reference_draft'; id: string; parentId?: string }
 
 function withProvenance(asset: NewAsset, jobId: string, outputIndex: number): NewAsset {
   return {
@@ -246,6 +248,7 @@ function buildQueuedAsset(job: GenerationQueueJob, finalPath: string, finalUrl: 
 
 export function GenerationQueueProvider({ children }: { children: React.ReactNode }) {
   const { projects, addAsset, addTakeToAsset, updateAsset, updateTimeline, updateDirectorTimeline, awaitProjectPersistence } = useProjects()
+  const { publishGeneratedImage } = useReferenceLibrary()
   const projectsRef = useRef(projects)
   const [snapshot, setSnapshot] = useState<QueueSnapshot>(EMPTY_SNAPSHOT)
   const submitInFlight = useRef(new Map<string, Promise<{ jobId: string; duplicate: boolean }>>())
@@ -355,6 +358,19 @@ export function GenerationQueueProvider({ children }: { children: React.ReactNod
       const job = await detail(jobId)
       if (job.status !== 'completed' || !job.result || !job.clientContext) return false
       const projectId = job.clientContext.projectId
+      const intent = job.clientContext.intent
+      if (intent?.kind === 'reference-library-image') {
+        const paths = resultPaths(job)
+        if (paths.length !== 1) throw new Error('Reference image generation did not return exactly one image')
+        const staged = await window.electronAPI.stageGeneratedReferenceImage(paths[0], intent.stagingId)
+        await publishGeneratedImage(intent.draftId, staged)
+        const acknowledgement = await backendFetch(`/api/generation/jobs/${job.id}/acknowledge`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ consumer: 'electron-reference-library-persistence', projectId, persistedAt: new Date().toISOString(), outputs: [{ outputIndex: 0, refs: [{ kind: 'reference_draft', id: intent.draftId }] }] }),
+        })
+        if (!acknowledgement.ok) throw await queueError(acknowledgement, 'Unable to acknowledge staged reference image')
+        return true
+      }
       const project = projectsRef.current.find((candidate) => candidate.id === projectId)
       if (!project) return false
       const paths = resultPaths(job)
@@ -475,7 +491,7 @@ export function GenerationQueueProvider({ children }: { children: React.ReactNod
     })().finally(() => consumeInFlight.current.delete(jobId))
     consumeInFlight.current.set(jobId, work)
     return work
-  }, [addAsset, addTakeToAsset, awaitProjectPersistence, detail, linkPersistedOutput, updateAsset, updateDirectorTimeline])
+  }, [addAsset, addTakeToAsset, awaitProjectPersistence, detail, linkPersistedOutput, publishGeneratedImage, updateAsset, updateDirectorTimeline])
 
   const refresh = useCallback(async () => {
     const response = await backendFetch('/api/generation/queue')

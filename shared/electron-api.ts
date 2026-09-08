@@ -1,9 +1,15 @@
 import type { ModelPackProgress } from '../frontend/types/progress'
+import type { ReferenceEntity, SaveReferenceEntityInput, StagedReferenceImage } from './reference-library'
 
 export interface LogsResponse { logPath: string; lines: string[]; error?: string }
 export interface BackendHealthStatus { status: 'alive' | 'restarting' | 'dead'; exitCode?: number | null }
 
 export interface ElectronAPI {
+  listReferenceEntities: () => Promise<ReferenceEntity[]>
+  saveReferenceEntity: (input: SaveReferenceEntityInput) => Promise<ReferenceEntity>
+  deleteReferenceEntity: (id: string) => Promise<void>
+  stageGeneratedReferenceImage: (sourcePath: string, draftId: string) => Promise<StagedReferenceImage>
+  discardStagedReferenceImage: (sourcePath: string) => Promise<void>
   getBackend: () => Promise<{ url: string; token: string }>
   getModelsPath: () => Promise<string>
   readLocalFileBytes: (filePath: string) => Promise<{ bytes: Uint8Array; mimeType: string }>
@@ -18,7 +24,7 @@ export interface ElectronAPI {
   openParentFolderOfFile: (filePath: string) => Promise<void>; showItemInFolder: (filePath: string) => Promise<void>
   getLogs: () => Promise<LogsResponse>; getLogPath: () => Promise<{ logPath: string; logDir: string }>; openLogFolder: () => Promise<boolean>
   getResourcePath: () => Promise<string | null>; getDownloadsPath: () => Promise<string>
-  copyToProjectAssets: (srcPath: string, projectId: string) => Promise<{ success: boolean; path?: string; url?: string; error?: string }>
+  copyToProjectAssets: (srcPath: string, projectId: string, preserveSource?: boolean) => Promise<{ success: boolean; path?: string; url?: string; error?: string }>
   copyGeneratedOutputToProjectAssets: (srcPath: string, projectId: string) => Promise<{ success: boolean; path?: string; url?: string; error?: string }>
   importToProjectAssets: (options: { srcPath: string; projectId: string; onDuplicate?: 'reuse' | 'suffix' | 'overwrite' | 'prompt' }) => Promise<{ success: boolean; path?: string; url?: string; fileName?: string; alreadyExisted?: boolean; reusedExisting?: boolean; needsDuplicateChoice?: boolean; error?: string }>
   getProjectAssetsPath: () => Promise<string>

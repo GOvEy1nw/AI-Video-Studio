@@ -169,7 +169,7 @@ Put:
 
 ### Use the shared generation lifecycle
 
-`frontend/hooks/generation/useGenerationJob.ts` owns the active request, abort controller, progress polling, cancellation, terminal-state guards, and unmount cleanup.
+`frontend/contexts/GenerationQueueContext.tsx` owns polling, cancellation, terminal-state handling, and project-scoped persistence. `frontend/hooks/use-generation.ts` owns draft submission and forwards cancellation to the queue context.
 
 - Extend the shared lifecycle rather than creating a second job manager.
 - Generation completion must use the immutable project-scoped submission snapshot, not whatever project or settings happen to be active later.

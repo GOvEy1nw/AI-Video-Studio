@@ -41,6 +41,8 @@ ResolutionTier = Literal["540p", "720p", "1080p", "1440p", "2160p"]
 ProfileStatus = Literal["stable", "experimental", "hidden"]
 LoraSupport = Literal["supported", "unsupported", "future", "experimental"]
 MusicVocalMode = Literal["instrumental", "auto-lyrics", "custom-lyrics"]
+PromptComposerFormat = Literal["plain", "h3"]
+PromptComposerMediaMode = Literal["text-only", "general-reference", "inline-reference"]
 ImageInputRole = Literal[
     "reference_subject",
     "reference_people_objects",
@@ -166,6 +168,13 @@ class InputMediaPolicy:
 
 
 @dataclass(frozen=True)
+class PromptComposerPolicy:
+    prompt_format: PromptComposerFormat = "plain"
+    entity_media_mode: PromptComposerMediaMode = "text-only"
+    voice_reference: bool = False
+
+
+@dataclass(frozen=True)
 class WanGPModelMetadata:
     """WanGP-discovered model metadata kept separate from AiVS curation."""
 
@@ -237,6 +246,7 @@ class ModelProfile:
     masked_edit_references: bool = False
     lora: LoraSupport = "future"
     input_media: InputMediaPolicy = field(default_factory=InputMediaPolicy)
+    prompt_composer: PromptComposerPolicy = field(default_factory=PromptComposerPolicy)
     default_aspect_ratio: AspectRatio = "1:1"
     default_resolution_tier: ResolutionTier = "720p"
     allowed_aspect_ratios: tuple[AspectRatio, ...] = CURATED_ASPECT_RATIOS

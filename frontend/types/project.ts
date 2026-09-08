@@ -19,6 +19,7 @@ import type {
   MusicVocalGender,
   MusicVocalMode,
 } from './music'
+import type { VideoComposerStateV1, VideoComposerSubmissionV1 } from './video-composer'
 
 export interface MusicGenerationMetadataV1 {
   schemaVersion: 1
@@ -149,6 +150,7 @@ export interface GenerationParams {
   music?: MusicGenerationMetadata
   sfx?: SfxGenerationRecipeV1
   speech?: SpeechGenerationRecipe
+  videoComposer?: VideoComposerSubmissionV1
 }
 
 // A single "take" (version) of a generated asset
@@ -568,6 +570,8 @@ export interface Project {
   /** GenSpace seed lock persists per project until changed. */
   genSpaceSeedLocked?: boolean
   genSpaceLockedSeed?: number
+  /** Optional, versioned Quick Gen video authoring state. */
+  genSpaceVideoComposer?: VideoComposerStateV1
 }
 
 export const DEFAULT_GENSPACE_LOCKED_SEED = 42
@@ -578,7 +582,7 @@ export function clampGenSpaceSeed(value: number): number {
   return Math.min(MAX_GENSPACE_SEED, Math.max(0, Math.floor(value)))
 }
 
-export type ViewType = 'home' | 'project'
+export type ViewType = 'home' | 'project' | 'references'
 export type ProjectTab = 'gen-space' | 'director' | 'video-editor'
 
 // Default tracks for new timelines
